@@ -25,7 +25,7 @@ Common to both types:
 | `type` | `"task"` or `"ticket"` | yes | kind of entry | heading `type:` for the two entry types |
 | `date` | `YYYY-MM-DD` | yes | calendar date of the entry | heading date |
 | `title` | string, 1 to 200 chars | yes | short description | heading short description |
-| `unit` | `P-YYYY-MM-DD-HHmm[-suffix]` | task: yes; ticket: no | id of the unit of work | `Prompt document name`, replaced by the identity key |
+| `unit` | unit id, in the trace source's syntax (`ids.unit`) | task: yes; ticket: no | id of the unit of work | `Prompt document name`, replaced by the identity key |
 | `notes` | string, up to 500 chars | no | free notes | `Notes` |
 
 Type `task`:
@@ -47,7 +47,7 @@ Type `ticket`:
 |---|---|---|---|---|
 | `finding` | string, non-empty | yes | the finding | `Ticket` |
 | `priority` | `high`, `medium`, `low` | yes | urgency | `Priority` |
-| `found_in` | `P-...` or `C-...` id | yes | unit or conversation that found it | `Found in` |
+| `found_in` | unit or conversation id, in the trace source's syntax (`ids.ref`) | yes | unit or conversation that found it | `Found in` |
 | `detail` | string, non-empty | no | path of the evidence document | `Detail` |
 
 Unknown fields are allowed and ignored (forward compatibility).

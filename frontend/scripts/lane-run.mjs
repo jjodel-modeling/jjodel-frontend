@@ -1451,6 +1451,38 @@ function limitOption(rest) {
     return limit;
 }
 
+/**
+ * The outcome and fate of an exited lane, through state-cache.json in its folder
+ * (P-2026-10-22-1140): an exited lane's log never changes, so status --all need
+ * not parse it again on every call. The key is what a resume changes: the exit.txt
+ * mtime, the sizes of log.jsonl and stderr.log, the offsets of the latest run. A
+ * cache that does not parse, or whose key differs, is a miss: computed as before
+ * and written back atomically; a write that fails is ignored.
+ */
+function exitedOutcome(f, from) {
+    const cache = join(f.dir, 'state-cache.json');
+    const size = (path) => (existsSync(path) ? statSync(path).size : -1);
+    const key = { exitMtimeMs: statSync(f.exit).mtimeMs, logSize: size(f.log), errSize: size(f.err), logFrom: from.log, errFrom: from.err };
+    try {
+        const c = JSON.parse(readFileSync(cache, 'utf8'));
+        if (c && c.key && Object.keys(key).every((k) => c.key[k] === key[k]) && (c.outcome === null || typeof c.outcome === 'string') && (c.fate === null || typeof c.fate === 'string')) {
+            return { outcome: c.outcome, fate: c.fate };
+        }
+    } catch {
+        // absent or corrupt: a miss
+    }
+    const outcome = lastOutcome(f.log, from.log);
+    const fate = outcome === null ? runFate(f, from) : null;
+    try {
+        const tmp = cache + '.tmp';
+        writeFileSync(tmp, JSON.stringify({ key, outcome, fate }) + '\n');
+        renameSync(tmp, cache);
+    } catch {
+        // a read-only folder: the next call computes again
+    }
+    return { outcome, fate };
+}
+
 function laneState(f, limit) {
     const exited = existsSync(f.exit);
     const running = !exited && isAlive(Number(readTrim(f.pid)));
@@ -1462,9 +1494,11 @@ function laneState(f, limit) {
     // An Outcome line is the result of a turn: while a turn runs, the last one belongs to an earlier turn.
     // It belongs to the latest run only: a resume that dies writes none and inherits none (issue #181).
     const from = latestRunFrom(f);
-    const outcome = running ? null : lastOutcome(f.log, from.log);
+    // An exited lane reads them through the cache; a lane that died without exit.txt has no key and reads the log.
+    const cached = exited ? exitedOutcome(f, from) : null;
+    const outcome = running ? null : cached ? cached.outcome : lastOutcome(f.log, from.log);
     // limit or died: an exited latest run with no Outcome line (issue #181).
-    const fate = outcome === null && !running ? runFate(f, from) : null;
+    const fate = cached ? cached.fate : outcome === null && !running ? runFate(f, from) : null;
     // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, resolved.txt in its folder.
     const closed = outcome === null ? null : OUTCOME.exec(outcome);
     const resolved = closed && closed[1] === 'blocked' && existsSync(f.resolved) ? readTrim(f.resolved) : null;
@@ -1577,7 +1611,12 @@ function statusAll(rest) {
     const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && !chained.has(n) && statSync(join(root, n)).isDirectory()) : [];
     const rows = [['id', 'state', 'outcome', 'elapsed']];
     for (const id of ids.sort().reverse()) {
-        runLines(laneFiles(id));
+        // The one-time write-back of the last runs.jsonl line (AM-7); a failure never stops the listing.
+        try {
+            completeRun(laneFiles(id));
+        } catch {
+            // runLines reports it in status <id>
+        }
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
         rows.push([id, s.state, s.outcome === null ? s.fate || 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);

@@ -28,7 +28,8 @@ import type {
 } from './netTypes';
 import type { SimEventInfo, SimModelView } from './types';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
-import { inDomain } from './netStep';
+import { inDomain, wordWidth } from './netStep';
+import { wordInitialOf, wordWidthOf } from './stateAttributesCodec';
 import { roleDescriptor, roleOfKey, roleValues } from './roleCatalog';
 
 /** A role value: a non-empty string, as the M2 face writes it (R-SIM-2). */
@@ -447,9 +448,10 @@ function outputsOf(
     return out;
 }
 
-/** A domain as the defects print it: `0..3`, `{A, B}`, `{true, false}`. */
-function domainText(domain: Domain): string {
+/** A domain as the defects print it: `0..3`, `{A, B}`, `{true, false}`, `unsigned word[8]` (`[?]` without a width). */
+function domainText(domain: Domain, width?: number): string {
     switch (domain.kind) {
+        case 'word': return `${domain.signed ? 'signed' : 'unsigned'} word[${width ?? '?'}]`;
         case 'boolean': return '{true, false}';
         case 'range': return `${domain.min}..${domain.max}`;
         case 'enum': return `{${domain.literals.join(', ')}}`;
@@ -472,6 +474,7 @@ function declarationDefects(decl: StateAttributeDecl, index: number, view: NetMo
         if (decl.initial !== undefined) defect('exclusive', 'input and initial');
         else if (decl.equation !== undefined) defect('exclusive', 'input and equation');
         if (decl.space !== 'semantic') defect('input', 'an input is semantic');
+        else if (decl.domain?.kind === 'word') defect('input', 'an input is not a word (R-BV-8)');
     } else if ((decl.initial === undefined) === (decl.equation === undefined)) {
         defect('exclusive', decl.equation === undefined ? 'no initial or equation' : 'initial and equation');
     }
@@ -487,7 +490,8 @@ function declarationDefects(decl: StateAttributeDecl, index: number, view: NetMo
         defect('bounds', `bounds ${domain.min}..${domain.max} are not integers`);
     } else if (domain.kind === 'range' && domain.min > domain.max) {
         defect('bounds', `min ${domain.min} > max ${domain.max}`);
-    } else if (decl.equation === undefined && decl.initial !== undefined && !inDomain(decl.initial, domain)) {
+    } else if (domain.kind !== 'word' && decl.equation === undefined && decl.initial !== undefined && !inDomain(decl.initial, domain)) {
+        // A word's initial is checked per element, at its width (`compileNet`, R-BV-7).
         defect('initial', `initial ${String(decl.initial)} outside ${domainText(domain)}`);
     }
     return out;
@@ -542,6 +546,7 @@ export function compileNet(
     }
 
     const declared = new Map<string, Map<string, StateAttributeDecl>>();
+    const widths = new Map<string, Map<string, number>>();
     const attrs = new Map<string, Map<string, SimValue>>();
     const presentation = new Map<string, Map<string, SimValue>>();
     const declarationDefectList: DeclarationDefect[] = [];
@@ -567,12 +572,29 @@ export function compileNet(
                 continue;
             }
             byName.set(decl.name, decl);
+            // R-BV-7: a word's width is the element's own, read once from M; a word initial is checked at it.
+            const word = decl.space === 'semantic' && decl.domain?.kind === 'word' ? decl.domain : null;
+            const width = word ? wordWidthOf(view.values(e, word.widthFeature)) : null;
+            if (typeof width === 'string') {
+                declarationDefectList.push({ index, name: decl.name, code: 'width', message: width, element: e });
+            } else if (typeof width === 'number') {
+                let byAttr = widths.get(e);
+                if (!byAttr) { byAttr = new Map(); widths.set(e, byAttr); }
+                byAttr.set(decl.name, width);
+            }
             // A derived value comes from its equation, an input from the environment at each step (R-SIM-88).
             if (decl.equation !== undefined || decl.input === true || decl.initial === undefined) continue;
+            let initial = decl.initial;
+            if (word && typeof width === 'number') {
+                const vector = wordInitialOf(decl.initial, width, word.signed);
+                // As any initial outside its domain, a mismatched one is reported and stays (R-SIM-71).
+                if (vector) initial = vector;
+                else declarationDefectList.push({ index, name: decl.name, code: 'initial', message: `initial ${String(decl.initial)} outside ${domainText(word, width)}`, element: e });
+            }
             const space = decl.space === 'semantic' ? attrs : presentation;
             let values = space.get(e);
             if (!values) { values = new Map(); space.set(e, values); }
-            values.set(decl.name, decl.initial);
+            values.set(decl.name, initial);
         }
     }
 
@@ -599,6 +621,7 @@ export function compileNet(
         hasEventRole,
         attributes: [...decls],
         declared,
+        ...(widths.size > 0 ? { widths } : {}),
         initial: { marking, attrs, presentation },
         defects,
         declarationDefects: declarationDefectList,
@@ -630,7 +653,8 @@ export function withDerivedInitial(
     for (const [element, values] of derived.attrs) {
         for (const [attr, value] of values) {
             const domain = net.declared.get(element)?.get(attr)?.domain ?? null;
-            if (domain !== null && !inDomain(value, domain)) report(element, attr, `= ${String(value)} outside ${domainText(domain)}`);
+            const width = wordWidth(net, element, attr);
+            if (domain !== null && !inDomain(value, domain, width)) report(element, attr, `= ${String(value)} outside ${domainText(domain, width)}`);
         }
     }
     return { ...net, initial: { ...net.initial, derived }, declarationDefects: defects };

@@ -1,0 +1,167 @@
+// Ghost preview of a planned script (S4b, R-JJD-2): the canvas bar, the synthetic nodes and edges.
+// Colours come from the tokens: --color-canvas-accent is the canvas cyan #06b6d4.
+
+.jj-preview-bar {
+    position: absolute;
+    top: 12px;
+    // Centred on the canvas left of the Properties rail, a fixed overlay (z 900) that would
+    // otherwise cover the buttons; --jj-rail-width is 0px when the rail is hidden.
+    left: calc(50% - var(--jj-rail-width, 0px) / 2);
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 12px;
+    background: var(--color-bg-elevated);
+    border: 1px dashed var(--color-canvas-accent);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    font-size: 12px;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+
+    &__title {
+        font-weight: 600;
+    }
+
+    &__sep {
+        color: var(--color-text-tertiary);
+    }
+
+    &__warnings--on {
+        color: var(--color-warning-text);
+        font-weight: 600;
+    }
+
+    // Planned and real effects of an Apply differ (S4c): shown for a few seconds.
+    &__mismatch {
+        color: var(--color-warning-text);
+    }
+
+    &__btn {
+        margin-left: 4px;
+        padding: 3px 10px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 12px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.6;
+        }
+
+        &--primary {
+            margin-left: 0;
+            border-color: transparent;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: var(--color-text-inverse);
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #334155, #1e293b);
+                opacity: 0.9;
+            }
+        }
+    }
+}
+
+// The synthetic nodes: React Flow's built-in default node, restyled.
+.react-flow__node.jj-preview-node {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1.5px dashed var(--color-canvas-accent);
+    border-radius: var(--radius-node);
+    background: var(--color-canvas-accent-subtle);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    box-shadow: none;
+    pointer-events: none;
+
+    .react-flow__handle {
+        opacity: 0;
+    }
+}
+
+// A planned removal (P-2026-10-25-0020): what the element loses, struck through, beside it.
+.react-flow__node.jj-preview-node--removed {
+    border-color: var(--color-error);
+    background: var(--color-error-subtle);
+    color: var(--color-error-text);
+    text-decoration: line-through;
+}
+
+// The rows planned into a drawn class (P-2026-10-25-0110): a compartment flush under its node.
+.react-flow__node.jj-preview-node.jj-preview-compartment {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 4px 10px;
+    line-height: 18px;
+    text-align: left;
+    border-top-width: 0;
+    border-radius: 0 0 var(--radius-node) var(--radius-node);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+// A removed row, struck where the node draws it, or a removed element struck whole.
+.react-flow__node.jj-preview-node.jj-preview-strike {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-error-subtle);
+    background-image: linear-gradient(var(--color-error), var(--color-error));
+    background-repeat: no-repeat;
+    background-position: 0 50%;
+    background-size: 100% 1.5px;
+    box-sizing: border-box;
+}
+
+.react-flow__node.jj-preview-node.jj-preview-strike--element {
+    border: 1.5px dashed var(--color-error);
+    border-radius: var(--radius-node);
+}
+
+// Warning marker: a small amber dot on the top-right corner.
+.react-flow__node.jj-preview-node--warning::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-warning);
+    box-shadow: 0 0 0 2px var(--color-bg-primary);
+}
+
+.react-flow__edge.jj-preview-edge {
+    pointer-events: none;
+
+    .react-flow__edge-path {
+        stroke: var(--color-canvas-accent);
+        stroke-width: 1.5;
+        stroke-dasharray: 6 4;
+    }
+
+    // The hollow triangle of a ghost generalization (P-2026-10-25-1005).
+    .jj-preview-edge-marker {
+        fill: var(--color-edge-marker-fill, var(--color-bg-primary));
+        stroke: var(--color-canvas-accent);
+        stroke-width: 1;
+    }
+
+    .react-flow__edge-text {
+        fill: var(--color-text-secondary);
+        font-size: 11px;
+    }
+}

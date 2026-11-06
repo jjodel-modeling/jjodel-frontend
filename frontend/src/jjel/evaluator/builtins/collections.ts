@@ -631,5 +631,6 @@ export function getCollectionMethod(name: string): ((...args: any[]) => JjelValu
         at
     };
 
-    return methods[name];
+    // Own keys only: an inherited name (`constructor`, `toString`...) is no method (R-GEN-29).
+    return Object.prototype.hasOwnProperty.call(methods, name) ? methods[name] : undefined;
 }

@@ -7,7 +7,7 @@
  * synchronous; `run` is async only to satisfy the LanguageProvider interface.
  */
 import type { LanguageProvider, ConsoleContext, ConsoleResult } from '../types';
-import type { CodeEntry } from '../../../../types/jodie';
+import type { CodeEntry } from '../../types';
 import { evaluateJjelInJodie } from '../../jodieJjelContext';
 
 export const jjelProvider: LanguageProvider = {
@@ -29,6 +29,7 @@ export const jjelProvider: LanguageProvider = {
             timestamp: Date.now(),
             warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
             rawValue: outcome.ok ? outcome.value : undefined,
+            timedOut: 'timedOut' in outcome && outcome.timedOut ? true : undefined,
         };
         return { entries: [entry] };
     },

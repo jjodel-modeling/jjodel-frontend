@@ -149,7 +149,9 @@ function displayValue(raw: unknown): string {
     if (typeof raw === 'string') {
         try {
             const l: any = LPointerTargetable.fromPointer(raw);
-            if (l?.name) return String(l.name);
+            // Presence, not a truthy name: a nameless target labels '' and is not a broken
+            // chip (R-TXT-46 D4).
+            if (l && typeof l.name === 'string') return l.name;
         } catch {
             // Not a pointer, or a pointer to something that no longer exists: fall through
             // and show the value itself rather than blanking the row.

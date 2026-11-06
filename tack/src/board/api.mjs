@@ -1,6 +1,9 @@
 // The board's JSON API over the store: repositories, sessions, metrics, health. Every response is
 // metadata: ids, counts, times, model ids, ref names and repository toplevels. No session cwd (it may
-// lie below a toplevel), no transcript path, no commit subject, author or changed-file path.
+// lie below a toplevel), no transcript path, no commit subject, author or changed-file path. One exception
+// (slice 9): the waiting lanes of /api/lanes and /api/attention carry the reason and the Recommended: line of
+// their closing message, read from the lane folder per request (waiting.mjs) and never stored.
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { remoteHost, resolveCwd, cloneIdentity } from '../collectors/git/identity.mjs';
@@ -9,6 +12,7 @@ import { commitWithinHour } from '../store/sessions.mjs';
 import { dayOf } from '../metrics/days.mjs';
 import { METRICS, computeAll, loadSelection } from '../metrics/index.mjs';
 import { modelFamily } from '../metrics/layer1.mjs';
+import { FIRST_LINE_MAX, WAIT_PILL, cut } from './waiting.mjs';
 
 export const CONTEXT_THRESHOLD = 200_000;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -63,12 +67,33 @@ export function preselect(db, dir) {
   return hit ? hit.key : null;
 }
 
-/** A query's repository: null for all, a full key for a key or unique prefix; { error } otherwise. */
-export function repoParam(db, value) {
+/** The one line every tab shows for a repository with no recorded session. */
+export const noSessionLine = (name) => `No Claude Code sessions recorded for ${name} yet.`;
+
+/**
+ * The work tree that contains dir when the store holds no repository for it (preselect is null):
+ * { key, name, toplevel, unrecorded: true }, key the one the store would give it (its lowest root commit;
+ * a hash of the toplevel before the first commit). Null outside a git work tree or when the store holds it.
+ */
+export function unrecordedRepo(db, dir) {
+  if (preselect(db, dir)) return null;
+  const r = resolveCwd(dir);
+  if (r.reason) return null;
+  const id = cloneIdentity(r.toplevel);
+  const key = id.reason ? createHash('sha1').update(r.toplevel).digest('hex') : id.roots[0];
+  return { key, name: displayName(r.toplevel, key), toplevel: r.toplevel, unrecorded: true };
+}
+
+/**
+ * A query's repository: null for all, a full key for a key or unique prefix; { error } otherwise. unrecorded
+ * (unrecordedRepo) is accepted too, by key or prefix, when no stored repository matches.
+ */
+export function repoParam(db, value, unrecorded = null) {
   if (value === null || value === '' || value === 'all') return { key: null };
   if (!KEY.test(value)) return { error: 'repo takes a repository key or "all"' };
   const hit = db.prepare("SELECT key FROM repos WHERE substr(key, 1, length(?)) = ?").all(value, value);
   if (hit.length === 1) return { key: hit[0].key };
+  if (!hit.length && unrecorded && unrecorded.key.startsWith(value)) return { key: unrecorded.key };
   return { error: hit.length ? `key prefix ${value} matches ${hit.length} repositories` : `no repository ${value}` };
 }
 
@@ -228,9 +253,13 @@ const median = (xs) => {
  * attention lists, the running cards, the last 24 hours, the lists by state, the lanes that reported unattended
  * decisions, and the median work per kind (done lanes of the last 30 days, at least five, else absent).
  * settingsFor(repo).value(key) reads the settings; updatedMs is the time of the latest lane collection.
+ * waitFor(id, kind) → { reason, recommended, chatUrl } reads a waiting lane's closing message (waiting.mjs, waitReader);
+ * without it the waiting cards carry no text. waitingCards: the waiting lanes, longest waiting first, each with wait:
+ * { kind, pill, reason, recommended, chatUrl, since }. unrecorded (unrecordedRepo): its key answers empty, with noSessionLine.
  */
-export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settingsFor, updatedMs = null } = {}) {
+export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settingsFor, updatedMs = null, waitFor = null, unrecorded = null } = {}) {
   const head = { repo, updatedMs, closure: LANE_CLOSURE };
+  if (repo && unrecorded && repo === unrecorded.key) return { ...head, state: 'empty', reason: noSessionLine(unrecorded.name) };
   if (repo && settingsFor(repo).value('harness.laneRun') === 'off') return { ...head, state: 'off', reason: 'Lanes are turned off for this repository (harness.laneRun)' };
   if (!laneRoot || !existsSync(laneRoot)) return { ...head, state: 'no-root', reason: `No lane-run folder on this machine (${laneRoot})` };
   const rows = db.prepare(LANES).all(repo, repo);
@@ -250,7 +279,8 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
     started: r.started_ms, end: r.end_ms, workMs: r.work_ms ?? null, spanMs: r.end_ms !== null && r.started_ms !== null ? r.end_ms - r.started_ms : null,
     medianMs: r.kind ? medians[r.kind]?.ms ?? null : null, overLimit: r.live === 1 && r.started_ms !== null && now - r.started_ms > limit(r),
     tokensIn: r.tokens_in ?? null, contextPeak: r.context_peak ?? null, cost: r.cost_usd ?? null,
-    outcome: r.outcome, lastOutcome: r.last_outcome ?? null, resolved: r.resolved === 1, adoptions: r.adoptions ?? null,
+    outcome: r.outcome, lastOutcome: r.last_outcome ?? null, stopKind: r.last_outcome === 'hard-stop' ? r.stop_kind ?? 'hard-stop' : null,
+    resumes: r.resumes ?? 0, autoResumes: r.auto_resumes ?? 0, auto: (r.resumes ?? 0) > 0 && r.auto_resumes === r.resumes, resolved: r.resolved === 1, adoptions: r.adoptions ?? null,
     worktree: r.worktree ?? null, mergeState: r.merge_state ?? null, closed: r.closed === 1,
   });
   const cards = rows.map(card);
@@ -273,11 +303,22 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
   const spendToday = db.prepare(`SELECT COALESCE(SUM(s.usd), 0) AS usd FROM lane_spend s JOIN lanes l ON l.id = s.lane_id
     WHERE s.at_ms >= ? AND s.at_ms <= ? AND (? IS NULL OR l.repo_key = ?)`).get(day.getTime(), now, repo, repo).usd;
 
+  // Waiting by what the lane is waiting on: a question, or a stop of kind breakpoint, ceiling or hard-stop.
+  const waitingBy = { question: 0, breakpoint: 0, ceiling: 0, 'hard-stop': 0 };
+  for (const c of waiting) waitingBy[c.lastOutcome === 'question' ? 'question' : c.stopKind]++;
   const idsOf = (xs) => xs.map((c) => c.id);
+  const waitingCards = [...waiting].sort((a, b) => (a.end ?? 0) - (b.end ?? 0) || (a.id < b.id ? -1 : 1)).map((c) => {
+    const kind = c.lastOutcome === 'question' ? 'question' : c.stopKind;
+    const t = waitFor ? waitFor(c.id, kind) : null;
+    return { ...c, wait: { kind, pill: WAIT_PILL[kind], reason: t?.reason ?? '', recommended: t?.recommended ?? '', chatUrl: t?.chatUrl ?? '', since: c.end } };
+  });
+  const staleEnds = [...waitingAll, ...blockedAll].filter((c) => !fresh(c)).map((c) => c.end).filter((x) => x !== null);
   return {
     ...head, state: 'ok', reason: null,
-    tiles: { running: running.length, waiting: waiting.length, blocked: blocked.length, done24: done.length, resolved24: resolved.length, spendToday },
-    attention: { waiting, blocked, staleCount: waitingAll.length + blockedAll.length - waiting.length - blockedAll.filter(fresh).length },
+    tiles: { running: running.length, waiting: waiting.length, waitingBy, blocked: blocked.length, done24: done.length, resolved24: resolved.length, spendToday },
+    attention: { waiting, blocked, staleCount: waitingAll.length + blockedAll.length - waiting.length - blockedAll.filter(fresh).length,
+      staleOldest: staleEnds.length ? Math.min(...staleEnds) : null },
+    waitingCards,
     running,
     last24,
     byState: {
@@ -285,9 +326,46 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
       other: idsOf(last24.filter((c) => !listed.has(c.id))),
     },
     adoptions: cards.filter((c) => c.adoptions > 0).sort((a, b) => (b.end ?? 0) - (a.end ?? 0))
-      .map((c) => ({ id: c.id, front: c.front, chat: c.chat, end: c.end, count: c.adoptions, lastOutcome: c.lastOutcome })),
+      .map((c) => ({ id: c.id, front: c.front, chat: c.chat, end: c.end, count: c.adoptions, lastOutcome: c.lastOutcome, stopKind: c.stopKind, auto: c.auto })),
     medianByKind: medians,
   };
+}
+
+export const ATTENTION_MAX_BYTES = 2048;
+const hhmm = (ms) => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+/**
+ * /api/attention: the shape of Jjodel's lane board answer (frontend/scripts/lane-board/README.md, «The menu bar app's
+ * routes»), from lanesApi of all repositories: v, now, stale, board, waiting, blocked, running, staleCount, staleOldest,
+ * items[] (oldest first; kind question, hard-stop or blocked; firstLine and recommended at most 60 characters) and
+ * runningItems[] (phase and left empty: not tracked). stale: no collection within staleMs. Under 2 KB: titles cut to 60,
+ * then the newest items left out of the list (the counts keep them).
+ */
+export function attentionApi(lanes, { now = Date.now(), staleMs = 60_000 } = {}) {
+  const head = { v: 1, now, stale: lanes.updatedMs === null || lanes.updatedMs === undefined || now - lanes.updatedMs > staleMs };
+  if (lanes.state !== 'ok') {
+    return { ...head, board: lanes.state === 'empty' ? 'ok' : 'error: ' + String(lanes.reason).replace(/\s+/g, ' ').trim(),
+      waiting: 0, blocked: 0, running: 0, staleCount: 0, staleOldest: null, items: [], runningItems: [] };
+  }
+  const t = (s) => cut(s || '', FIRST_LINE_MAX);
+  const items = [
+    ...lanes.waitingCards.map((c) => ({ id: c.id, kind: c.lastOutcome === 'question' ? 'question' : 'hard-stop', laneKind: c.kind ?? '', title: t(c.title),
+      chat: c.chat ?? '', chatUrl: c.wait.chatUrl, firstLine: t(c.wait.reason), recommended: t(c.wait.recommended), since: c.wait.since ?? 0 })),
+    ...lanes.attention.blocked.map((c) => {
+      // As the 4700 board (LIVE_LIMIT_MIN): a live lane waits from its start plus 90 minutes, not its repository's limit.
+      const since = c.live ? (c.started ?? 0) + 90 * 60e3 : c.end ?? c.started ?? 0;
+      return { id: c.id, kind: 'blocked', laneKind: c.kind ?? '', title: t(c.title), chat: c.chat ?? '', chatUrl: '',
+        firstLine: c.live ? 'over its limit since ' + hhmm(since) : 'blocked', recommended: '', since };
+    }),
+  ].sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const runningItems = lanes.running.map((c) => ({ id: c.id, laneKind: c.kind ?? '', title: t(c.title), phase: '', left: '', since: c.started ?? 0 }))
+    .sort((a, b) => a.since - b.since);
+  const out = { ...head, board: 'ok', waiting: items.length, blocked: items.filter((i) => i.kind === 'blocked').length, running: runningItems.length,
+    staleCount: lanes.attention.staleCount, staleOldest: lanes.attention.staleOldest, items, runningItems };
+  while (Buffer.byteLength(JSON.stringify(out)) > ATTENTION_MAX_BYTES && (out.runningItems.length || out.items.length)) {
+    if (out.runningItems.length) out.runningItems.pop(); else out.items.pop();
+  }
+  return out;
 }
 
 export function healthApi(db, { store, lastScan }) {

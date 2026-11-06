@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { AIProvider } from '../../types/jodie';
+import type { ProviderId } from '../../services/ai';
 
 interface JodieMinimizedProps {
-    activeProvider?: AIProvider;
+    activeProvider?: ProviderId;
     hasUnread?: boolean;
     onClick: () => void;
 }

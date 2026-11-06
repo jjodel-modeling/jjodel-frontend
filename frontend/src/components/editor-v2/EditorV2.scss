@@ -1380,6 +1380,14 @@ html[data-mode="advanced"] .editor-v2-toolbar {
 
 // ============================================
 // M1 PALETTE — read-only info panel
+// The Refactoring tab beside this canvas previews on it (R-JJD-16): the palette gives its width to the canvas.
+.editor-v2-palette.editor-v2-palette--collapsed {
+    width: 0;
+    padding: 0;
+    border-right: 0;
+    overflow: hidden;
+}
+
 // Overrides .editor-v2-palette when in model mode
 // ============================================
 .editor-v2-palette--m1 {

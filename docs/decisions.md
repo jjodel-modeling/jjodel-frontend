@@ -4206,6 +4206,17 @@ la scrittura sarebbe avvenuta. Referto:
 `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
 
 
+**R-S1-6** (2026-10-30) — **L'output di una trasformazione JjTL non passa dalla guardia di R-S1-2.** La guardia
+sul nome esplicito resta per i gesti dell'utente e per JjScript. Gli oggetti annidati che STEP 6c di
+`handleExecuteTransformation` materializza nascono senza nome (`{}`) e ricevono `name` per id insieme agli altri
+attributi, sul timer differito: l'output nell'app coincide oggetto per oggetto con quello dell'executor in node,
+fratelli omonimi compresi (riferimenti per nome come i `Ref` di un albero di espressioni). I duplicati che ne
+risultano si aprono come quelli preesistenti (R-S1-4) e chi risolve per nome dichiara l'ambiguita' (R-S1-5); le
+radici mantengono la regola attuale. Decisione di Alfonso, 2026-10-30 15:12, su
+`docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md` §8 (P-2026-10-30-1440). Fuori da questa
+decisione: la rinomina via slot `$name`, che oggi non passa dalla guardia (misurato nello stesso report), resta un
+ticket.
+
 ## Serie R-GT / R-M2 — tre micro fix di core (ratifiche 2026-08-30)
 
 A valle di `discovery_2026-08-30_gettype_finestra_parser.md` e
@@ -5233,7 +5244,8 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Ratified 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010: kept as measured. Without R-VP-60 the
     ends are counted on the trunk's handles; the lane probe after the A3 revert finds no outside label within 4 px of an
     arrowhead at rest, after Auto layout, under DOWN (min 17.52 px), as with it.
-- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, evidence: measured, verified: none, reversible: branch).
+- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, ratified by Alfonso 2026-10-21, evidence: measured,
+  verified: none, reversible: branch).
   **The React Flow handles of an ELK-routed edge sit on its drawn ends (D-B); amends R-VP-49 («the handles keep their
   uniform slots»), the critical-zone lane R-VP-49 deferred to.** A3 of P-2026-10-03-1920, adopted by the chat's GO (RC-21,
   RC-25), RC-30 go-ahead, LIR `docs/lir/lir_2026-10-03_petri_ink_ports.md`. The text of R-VP-49 is not edited. Source: the
@@ -5252,6 +5264,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Withdrawn 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010 (revert `04c13e039`): it touches the
     handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo; it returns after
     Málaga (2026-10-09) as a lane of its own. R-VP-49 stands: handles as on the trunk (34 of 68 ends off after Auto layout).
+  - Reinstated provisional 2026-10-10, P-2026-10-10-0915, awaits Alfonso's ratification.
+  - Ratified by Alfonso 2026-10-21 (session_01Mk7LmH7N6YcSQiKx7oNZP5, 19:15); merged onto the trunk of 2026-10-21 by
+    P-2026-10-21-1925, re-measured there: LIR `docs/lir/lir_2026-10-10_elk_handles_a3.md` §3.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
@@ -5935,6 +5950,72 @@ opened has no menu and keeps the glyph. Decided by the chat `C-2026-10-13-1256` 
 #172, taking the second of his two proposals; the first (the actions as icons in the card, no menu) would amend
 R-REF-3 and is not taken.
 
+## R-CFG — the Configurator round of #166 (#186, #187, #188; decisions 2026-10-14)
+
+Evidence: `docs/discovery/discovery_2026-10-14_166_configurator_usability_plan.md` (`da72802e7`). Memo:
+`docs/ratifiche/claude_2026-10-14_memo_166_configurator.md`. Decided by Juri in chat `C-2026-10-14-1020`, four
+answers to the report's §8.
+
+**R-CFG-1** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The round runs through the lane harness.** One lane per step of the report's §6: #187 (steps 1 and 2) and #186
+Endpoints (step 3) in parallel on their own worktrees, merged into `staging` in that order; #186 «Customize element»
+(step 4) after both. Juri directs every lane; the chat writes the prompts and the GOs.
+
+**R-CFG-2** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The Configurator gets a panel of its own; the Data Manager keeps `InstanceDetail` as it is.** A new component
+under `components/environment/configurator/` replaces `InstanceDetail` in `ConfiguratorTab` (page and developer
+overlay). It reuses the exported pure functions and widgets and edits no critical-zone file. Supersedes, for the
+Configurator only, the choice of 2026-09-28 that the two hosts share one panel (`InstanceDetail.tsx:6-11`).
+R-REF-1..7 keep binding the Data Manager; the Configurator's references follow #187, with R-REF-3's semantics
+(remove unlinks, never deletes) and R-REF-4's writes (raw index, slot re-read at the click).
+
+**R-CFG-3** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The per-role presentation is an optional field of `DProfile`.** `typePresentation`, keyed by metaclass id,
+created at first use, absent read as empty: no migration. Its widget vocabulary is the role's own, not the IR's
+`WidgetKind` (R-B9). Touches `joiner/classes.ts` (D-layer): Layer Impact Report before the diff.
+
+**R-CFG-4** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The project page's Endpoints section is the one place where the environment is configured.** The left-bar entry
+«Configure environment» leads to it; `EnvGenWizardModal` stays in the code, unreached (rule 9). In the UI the
+profile is called «Role»; identifiers, `DProfile` and the `?profile=` parameter keep their names (rule 2).
+
+**R-CFG-5** (2026-10-15, ratified by Juri 2026-10-15, evidence: measured, verified: none, reversible: trunk) —
+**The environment is configured in a dedicated window, opened from an «Endpoints» menu of the top app bar.** The
+menu's items «Editable metaclasses» and «Roles» open the window on that tab; the left-bar entry «Configure
+environment» and Tools › «Configure Environment...» open the same window. Not a section of the project page.
+Developer only: no menu and no window in consumer mode. Amends the placement of R-CFG-4 (one place, the wizard
+unreached, «Role» in the UI all stand). Decided by Juri in chat `C-2026-10-14-1020` after the visual check of
+`P-2026-10-14-1101`: «non voglio gli endpoint a livello di dashboard. deve stare in un menu dedicato», then the top
+bar among three options.
+
+R-CFG-6..9 below: @tmaog's test of the two merged lanes on beta (#187 issuecomment of 2026-10-18, #186 of
+2026-10-17), read by the chat on 2026-10-20; R-CFG-7..9 decided by Juri in chat `C-2026-10-14-1020` the same day.
+
+**R-CFG-6** (2026-10-20, provisional, unattended (RC-25), evidence: read, verified: none, reversible: trunk) —
+**The element on screen shows its direct components extended, at any depth.** Whatever element is the body of the
+Configurator's panel (the selected row or the one reached by «open»), each element its components hold, references
+and compositions alike, renders as a card with its Identity and Attributes editable and its own Components
+simplified (name and summary); a multi-valued component lists its elements as rows that expand into that card. The
+level below stays simplified. Supersedes, for the Configurator, the depth rule of 12c (`rendersInline` at depth 0
+only) and the compact card of a reference at the extended level. Source: @tmaog's «[ISSUE] Correct behavior» on
+#187 and his mockup (screen 3).
+
+**R-CFG-7** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**Every single-valued reference of the Configurator shows a remove (×), required ones included.** It unlinks and
+never deletes (R-REF-3 semantics); a required slot left empty is reported by the validation. Juri chose it over the
+recommendation (optional ones only). The Data Manager keeps R-REF-3.
+
+**R-CFG-8** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The Endpoints window gets «Cancel» beside «Done», and arrows beside its tabs.** «Cancel» closes without saving,
+as Escape and the close button do today: the changes stay in the project, unsaved. Arrows ‹ › move to the previous
+and next tab, beside the click and the keyboard.
+
+**R-CFG-9** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The stand-alone link keeps `&profile=<id>`.** @tmaog asked whether it should read `&role=`; Juri keeps the
+parameter (R-CFG-4 stands). Also adopted from the same test, no decision needed: the Save button changes colour
+while the project has unsaved changes, and the Configurator remembers the instance selected for each type when the
+user switches type and comes back.
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
@@ -6025,6 +6106,127 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   (`initial`, Petri presets) print as JS literals over `$ID`. Raised by the S6 crops (P-2026-10-10-2029): the lecture
   examples were correct but unreadable for students. Implemented by P-2026-10-11-1052; the oracle's «Check» control
   in the Code panel, sharing the result area of «Run», by P-2026-10-11-1053.
+
+
+- **R-GEN-18** (2026-10-23, decided by the chat on Alfonso's «andiamo avanti», unattended, evidence: measured, verified: none, reversible: trunk).
+  **The 3.2 build ships the code generator: `VITE_CODEGEN = true` in `frontend/.env.production` and `frontend/.env.staging`; the Experimental setting «Code generation» stays off by default.** The oracle of slice S6 is already on the trunk (`src/codegen/oracle/`, Check in the Code panel, P-2026-10-11-1053), so by R-GEN-15 it enters 3.2 behind the setting. `check:codegen-lazy` with the flag on, 2026-10-23 17:05: ALL GREEN in both modes, `CodePanel` a dynamic entry outside the eager closure, 20 generator modules outside it, the runner worker named by the CodePanel chunk only. The codegen-pilot front closes with this row; its branch `codegen-pilot` carries nothing the trunk lacks (the discovery report is identical, the log entry is in the archive).
+
+- **R-GEN-19** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The Code panel opens on an M2 canvas under the same rule as on M1, read on that metamodel: setting on, and
+  Advanced mode or `genTemplates` stored.** On M2 it opens on Templates; Output, Run and Check act on a model chosen
+  among the project's models conforming to the metamodel, the first preselected, the choice local to the panel and not
+  persisted; with none, an explained empty state.
+
+- **R-GEN-20** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The Template Editor is a dock tab `codegen_tpl_<metamodelId>`, `cached: true`, opened from the lazy chunk through
+  `DockManager.dock`, one tab per metamodel; not a modal, and not a change to `DockManager`.**
+
+- **R-GEN-21** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **On M2, a click on a model value selects its metaclass on the canvas, and a selected class links the spans of its
+  instances.** Cut first if S1 runs long.
+
+- **R-GEN-22** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The editor writes on Save only (button, Ctrl/Cmd+S), through `templatesPatch` and the `state` setter, one undo
+  step; drafts live in the tab, marked dirty, and a clean draft follows outside writes.**
+
+- **R-GEN-23** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **No Code pill and no Template Editor in consumer mode (`isConsumerMode()`), decided in EditorV2 and in
+  `openTemplateEditor`, so `setting.ts` keeps its zero imports.**
+
+- **R-GEN-24** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The template language is a Monaco language of its own, `jjel-template`, defined under `src/codegen/ui/` (lazy),
+  with markers from `parseTemplate` and a completion provider over a context the open editor sets (the
+  `setCompletionContext` precedent); no JjEL language is added to `src/jjel/`.**
+
+- **R-GEN-25** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **A template record has `mode?: 'text' | 'expression'`, absent read as `expression`; the codec writes it after
+  `body` only when present.** Templates created in the panel and in the Template Editor are `text`. The gallery
+  examples keep their expression bodies.
+
+- **R-GEN-26** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Text bodies parse through `parseTemplateText`, a lexer option `textBody` off by default: `"` is text, the only
+  escape is `\${`, no trim, positions in body coordinates; one engine helper dispatches on `mode` for the engine and
+  the markers.** Monaco gets a `jjel-template-text` language sharing the hole states.
+
+- **R-GEN-27** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The mode toggle converts: expression to text only when one string literal spans the body, text to expression
+  always; a draft edit saved in one undo step.**
+
+- **R-GEN-28** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Generation limits: depth 64 kept; a sticky budget of 2000 ms and 1,000,000 output characters, checked at template
+  calls and holes; when it trips, one error and no code.** Generate stays on the main thread in 3.2.
+
+- **R-GEN-29** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **JjEL member guard for every consumer of the evaluator: `__proto__` and inherited `Object.prototype` names read as
+  missing on dot, `?.`, index and method paths; a member read never yields a native function; builtin method tables
+  answer own keys only; object literal keys are own data properties.**
+
+- **R-GEN-30** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The runner worker also removes `Worker`, `SharedWorker`, `caches` and `navigator.storage`; a CSP on the worker's
+  script response is a hosting matter, outside 3.2, filed as a ticket.**
+
+- **R-GEN-31** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **A generator is a concern of its own, several per metamodel, selectable and independent, stored as a record of the
+  metamodel's `_state`, not as a `DViewPoint` nor a new D-type.** Evidence §3.2, §3.4, §4.
+
+- **R-GEN-32** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **`genTemplates` is the template list of the default generator, unmoved; no migration, R-GEN-3 and R-GEN-12 hold as
+  written.** Other generators and the default's metadata live in one key `genGenerators` `{"v":1,"generators":[...]}`,
+  written through the `state` setter, one undo step per Save. Evidence §5.
+
+- **R-GEN-33** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **A generator declares `name`, `root` (an entry template), `files` (path → entry template) and `target` (`js` or
+  none); absent metadata reads as root `main` else the first template, one file.** Evidence §1.3, §1.5.
+
+- **R-GEN-34** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The STC is the metamodel's and is not declared per generator; `target` is (amends working-model point 5).**
+  Evidence §1.4.
+
+- **R-GEN-35** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Check runs only on a generator whose target is `js`; Run calls `main()` of its `js` file.** Evidence §6.
+
+- **R-GEN-36** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The provenance triple is unchanged; the generator id is carried by the generation result and by the Template
+  Editor's tab and opener, not by each fragment.** Evidence §2.
+
+- **R-GEN-37** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **One Template Editor tab per (metamodel, generator); the default keeps `codegen_tpl_<metamodelId>`.** Amends
+  provisional R-GEN-20. Evidence §6. Superseded by R-GEN-40.
+
+- **R-GEN-38** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Slice order G1..G4, G5 in a lane of its own; G1 alone ships nothing visible.** Evidence §8. Superseded by
+  R-GEN-43.
+
+- **R-GEN-39** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **3.2 ships code generation as it is on the trunk (`genTemplates`, one template list per metamodel); several
+  generators per metamodel ship in 3.3.** The 3.3 work lives on branch `cg-generators` and is not merged into
+  `alfonso-frontend-jjtl` before the 3.2 tag. The double authoring surface of 3.2 (Templates tab of the floating Code
+  panel and the Template Editor tab) is a known limit for its CHANGELOG.
+
+- **R-GEN-40** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **One dock tab per generator is the only authoring surface: the generator's template list on the left, the editor
+  (with the completion of S4) in the middle, and on the right a pane with the conforming-model chooser and three
+  modes, Preview (live generation), Run and Check.** The floating Code panel stops being an editor: the pill on the
+  canvas opens the tab of the generator last used on that metamodel (else the default), and on a model canvas (M1) the
+  tab opens with that model chosen. Supersedes R-GEN-37 and the G3/G4 split of R-GEN-38. The default generator's tab
+  keeps the id `codegen_tpl_<metamodelId>`.
+
+- **R-GEN-41** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Provenance is navigable both ways in the generator tab, in every mode: a fragment that comes from a model element
+  selects that element on the canvas (as `selectOnCanvas` does in the 3.2 panel); every fragment also leads to the
+  template that produced it, opened and selected in the same tab.** The generator id travels on the generation result
+  (R-GEN-36), the template name on the fragment origin.
+
+- **R-GEN-42** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The project's left bar gains a GENERATORS section, beside TRANSFORMS, listing each metamodel's generators (setting
+  on only; absent otherwise), with a «New generator» entry; a click opens the generator tab.** The left bar is eager
+  code: it reads the keys only through `codegen/setting.ts` and reaches the tab only through a dynamic import, so the
+  lazy gate (R-GEN-2) stays green.
+
+- **R-GEN-43** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Slice order on `cg-generators`: G1 codec, G2 generation per file with the generator's target, G3 generator tab
+  with the panel reduced to a launcher and two-way provenance, G4 the left-bar section.** Each slice is its own lane
+  in one chain.
 
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 
@@ -6156,6 +6358,11 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `alfonso-frontend-jjtl` before the freeze of 2026-10-23 enter the release; the chat that owns the front merges them
   without a further go-ahead. Amends the earlier plan that S3 (code generation) waits for 3.2: S3 lands only if it is
   merged before the freeze with the codegen gates green, otherwise it ships in 3.2.x.
+- **R-REL-3** (2026-10-21, ratified by Alfonso 2026-10-21 06:37 «per 1 procediamo subito e non aspettiamo dopo il freeze», evidence: read, verified: none, reversible: trunk).
+  **S3 (bit-vectors in code generation) lands before the 2026-10-23 freeze.** Amends R-REL-2's «S3 lands only if merged
+  before the freeze, otherwise 3.2.x»: the chat launches S3 at once and merges it with the codegen gates green. Same
+  morning, «ok» to: installing Verilator for the oracle step (done, 5.052), a ticket for `0xFF` read as `0`, and the
+  GitHub milestone of front `hw-notation`.
 
 ## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
 
@@ -6240,10 +6447,11 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   rows that name the 2026-10-23 freeze now refer to the 3.2 freeze still to be set. R-LIB-7 and R-LIB-8 are
   unchanged (no sealed notation and no seal guard in 3.2).
 
-Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
+Rows R-LIB-22 (registered as R-LIB-11) and R-LIB-12..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
 
-- **R-LIB-11** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+- **R-LIB-22** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
   **Sealed notations get their own Notations page under BROWSE and a New model flow; they never appear on the Templates page.** The Templates contract is clone and own (case 2), the sealed contract is use and never open (case 1, R-LIB-1, R-LIB-3). Handoff §4, §5. When this ships is bounded by R-LIB-7, which keeps the sealed notations out of 3.2.
+  Registered as R-LIB-11 and renumbered R-LIB-22 on 2026-10-22 by chat C-2026-10-22-1050 on Alfonso's «decidi tu»: R-LIB-11 is the simActive row ratified at 09:20 the same day. Prompts written on 2026-10-19 after 15:01 that cite «R-LIB-11..19» mean this row and R-LIB-12..19.
 - **R-LIB-12** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
   **The user-facing term for a sealed notation is «Built-in».** «Sealed» stays an internal word (code, decisions, reports).
 - **R-LIB-13** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
@@ -6272,6 +6480,9 @@ Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso i
   (run in progress)». First use: the Place view of the `petri-producer-consumer` example draws its tokens under
   `not simActive`, so a place a run has emptied no longer shows its initial marking. Evidence: P-2026-10-19-0930
   (`50ab1d74c`, branch `library-gallery`), IR, UI and sim suites 2793/2793, 9/9 mutants killed, clone probe 178/178.
+
+- **R-LIB-23** (2026-10-22, decided by the chat on Alfonso's «decidi tu», unattended, evidence: read, verified: none, reversible: trunk).
+  **The notation-library front closes on the 3.2 cut; the sealed notations move to a new front, `notation-seal`, opened after the 3.2 tag.** R-LIB-7 and R-LIB-8 keep the S3 seal predicate and the S6 reducer guard off the trunk until after the 3.2 release, so the front's exit (a sealed notation available with its probe) could not be met before the tag. notation-library now exits on the gallery and Templates work: S1, S2, L-B1..L-E merged into alfonso-frontend-jjtl, the RC-23 checks passed (Alfonso 2026-10-19 16:41; chat 2026-10-22, b91c751ac), and the Templates mode fix (P-2026-10-22-1150) merged. notation-seal carries the old exit and the branches `library-seal` and `library-seal-guard` (S3, S6 step 1, unmerged), S6 step 2 (enforcing mode, R-LIB-8 battery), S4, S5, S7 and the Notations page of R-LIB-22. Milestone 13 on jjodel-lanes.
 
 ## R-SHELL — shell visual consolidation (decisions 2026-10-19)
 
@@ -6302,6 +6513,8 @@ Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni»
   #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
   shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced. Source: pilot report after_v2.
 
+- **R-SHELL-6** (2026-10-23, decided by the chat on Alfonso's «andiamo avanti», unattended, evidence: read, verified: none, reversible: trunk).
+  **The shell-ui front closes.** The nine shell lanes of the discovery plan (`docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md`), shell-ui-s1 to shell-ui-s9, are merged into alfonso-frontend-jjtl (first-parent merges, checked 2026-10-23), and the shell token layer (`--shell-*` tokens, `html[data-mode]`) is recorded by R-SHELL-1..5. Later shell work goes to maintenance or to a new front.
 - **R-LIB-21** (2026-10-19, ratified by Alfonso 2026-10-19 20:49 «ok», evidence: read, verified: none, reversible: trunk).
   **Two chats share the front `notation-library`, each with its own scope.** C-2026-10-18-2254 (heir of
   C-2026-10-18-0110) owns the gallery content (catalog, packages, template and example viewpoints, `simActive`) and the
@@ -6336,6 +6549,21 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
   with the harness front. Item 3, the Health tab and banner, goes into Tack, not into the 4700 board (R-TACK-2):
   Tack reads the signals and shows the worst state and the signal that set it. The signals should reuse what the
   Tack store already holds (lane outcome and stop, work time, front and chat per lane) rather than a second reader.
+- **R-TACK-6** (2026-10-21, ratified by Alfonso 2026-10-21 10:09, evidence: read, verified: none, reversible: trunk).
+  **Three kinds of stop, and an auto marker.** Tack shows a lane that ends on `Outcome: hard-stop` as a *breakpoint*
+  (the stop its prompt planned), a *ceiling* (context ceiling with a handoff) or a *hard-stop* (unplanned); a declared
+  `Stop:` line, when lanes write one, wins over the inference. The `Outcome:` token itself is unchanged. Every message a
+  chat sends to a lane in `/lane auto` without Alfonso having answered it starts, after the `[P-...]` bracket, with
+  `[auto]`; Tack counts those resumes and marks the lane with an `auto` pill.
+- **R-TACK-7** (2026-10-21, ratified by Alfonso 2026-10-21 10:19 «via sulle raccomandazioni», evidence: read, verified: none, reversible: trunk).
+  **Monitoring and specification are two halves of Tack** (`tack/docs/design-monitor-vs-spec.md`, report
+  `docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md` §6). The specification lives in the observed repository
+  as `.tack/harness.json`, JSON with the `harness.emf` feature names, exported from the papers model and never read
+  across repositories (Q1, Q2); field syntax goes into the metamodel as `FieldSpec.syntax`, the identifier pattern as
+  `identPattern` of the prompt type (Q3); the KB is read through a manifest committed at each checkpoint, a harness
+  front change (Q6); G18 extends `ArtifactType` with placements and lifecycle policies (Q7); conformance is not in v0
+  (Q8). On Alfonso's «decidi tu» the chat set Q4 (the log bound is 40) and Q5 (the KB list of HARNESS-DOCS §2); the
+  claude.ai project instructions are aligned by Alfonso, outside git.
 
 ## R-OI — ontological instantiation in one model: UML class and object diagrams (decisions 2026-10-20)
 
@@ -6388,9 +6616,36 @@ P-2026-10-20-1835.
 - **R-OI-11** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
   **O2..O5 are built-in live checks computed from the relation's own closure**, reported through the problems registry
   and never blocking (R-VAL-4); a JjEL `closure` operator is its own lane, not part of this front. Question 7.
-- **Awaiting Alfonso:** question 4 of the discovery, one undo step per instantiation. Today an instance with 3 slots
-  costs 5 undo entries and 9 Cmd+Z [M]; one step needs a change to `redux/reducer/reducer.ts` and
-  `redux/action/action.ts` (lane S2u after S2, recommended). S2 ships with the undo count declared until then.
+- **R-OI-12** (2026-10-21, ratified by Alfonso 2026-10-21 06:32 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **One undo step per instantiation is its own core lane (S2u), after the 3.2.0 tag**, with a Layer Impact Report on
+  `redux/reducer/reducer.ts` and `redux/action/action.ts`. Until then S2 declares its count (one instantiation is undone
+  by two Cmd+Z, the first empty, P-2026-10-21-0100). The slice order after S2 is S3a, S3b, S4, S5 (discovery §8); S3a and
+  S3b open with a Layer Impact Report (critical-zone table §3.1).
+- **R-OI-13** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **S3a reports the ontological findings under one problem kind, `instantiation`**: missing slot (warning, with the
+  «Sync slots» action), orphan slot, duplicate slot (O3) and wrong value kind (O5) as errors, each on the instance's
+  object and vertex. A cycle in the generalization is an error on every classifier of the cycle. Only instances whose
+  record is `object` are judged; links wait for S4. Detection costs 3.9 ms at 200 instances (vitest, under load).
+  Discovery P-2026-10-21-1405 (`docs/discovery/discovery_2026-10-21_onto_s3a_slot_problems.md`), question 3.
+- **R-OI-14** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **«Sync slots» works on one instance, inside one S2u undo group**, appends the missing slots with their default
+  values, grows the node box and never shrinks it; a model-wide variant is not built now (200 instances do not fit the
+  10 s group cap). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation (R-OI-9).
+  Discovery P-2026-10-21-1405, questions 2 and 4.
+- **R-OI-15** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Ghost and orphan rows (S3b).** A closure feature with no slot is a ghost row `<name> = ` in the instance's node,
+  drawn from the binding with no store write; typing a value materializes one Slot and one value in one S2u group
+  (empty text writes nothing). Text that does not parse for the feature's type is written as a String value, so the
+  write is not refused (R-VAL-4) and S3a reports the value type. An orphan row keeps its value and carries a generic
+  marker (the lost feature's name cannot be recovered). The missing-slot problem stays beside the ghost row. Editing
+  real slot rows on the canvas is a later slice. Discovery P-2026-10-21-1910
+  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4.
+- **R-OI-16** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **An instance node's box hugs its rows; «a manual resize wins» is not changed.** The UML client's instance view
+  authors no `defaultSize`, so S2 writes no manual box and ghost rows are never clipped; for a view that does author
+  a fixed size, S2, «Sync slots» and materialization grow the box grow-only inside their own group. Replaces option
+  (d) of the S3b report (a sizing lane changing «a manual resize wins» in `nodeSizing.ts` and `jjomTransformers.ts`),
+  which would change the sizing of every resized node outside this front. Question 2.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
@@ -6457,6 +6712,882 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
   export still declares one static `word[N]` per element. Fixed widths per metaclass are not required. Discovery §5.1,
   open question 1.
+- **R-BV-8** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The simulator's word domain (slice S2).** Decided by the chat `C-2026-10-20-2055` under RC-25 (GO on the
+  recommendations of P-2026-10-21-0010; the constructor fix of P-2026-10-21-0055), landed by `9b4ded919`.
+  (1) The width of a `word` attribute is read per element at Reset from its width feature, an integer from 1 to 128
+  (`WORD_MAX_WIDTH`, below the evaluator's 1024), kept in `CompiledNet.widths` and checked by
+  `inDomain(value, domain, width)`: width and signedness must both match. A width that cannot be read is a `'width'`
+  declaration defect named by the element; a word initial is checked per element (a number becomes the vector at that
+  width, a vector must match), and a mismatch is an `'initial'` defect while the value stays (R-SIM-71). (2) A word
+  input is refused at compile (`an input is not a word`); the view files get an inert `word` case only, and the
+  declaration dialog is a later item. (3) The subset checker accepts `bits`/`sbits` with literal arguments. `toNumber`
+  is not added to the verifiable list (an existing test rejects a name shared with a string method); `toVerilog` sits
+  in a separate `NOT_VERIFIABLE_BITVECTOR_METHODS`. (4) `bvToSmv` prints a bit-vector expression as nuXmv text,
+  casting the operand wherever nuXmv reads the signedness differently; there is no `.smv` exporter yet. (5) The
+  simulator's base context gets `bits` and `sbits` through `registerBitVectorConstructors` (exported from
+  `jjel/evaluator/evaluator.ts`, also called by `JjelEvaluator`), and no other global builtin, so that no model name
+  is shadowed there. Measured: without it, `bits(8, 1)` in an action fails with `Function 'bits' is not defined`,
+  which contradicts discovery §5.1. The function lives in `evaluator.ts` rather than `bitvectors.ts`, which cannot
+  import the evaluator. Six mutations, all killed (`docs` closure commit of P-2026-10-21-0055).
+- **R-BV-10** (2026-10-21, provisional, unattended, evidence: measured, verified: probe, reversible: trunk).
+  **The S1 operator semantics is checked against Verilator, and agrees.** Landed by `4b2dc75fd` (P-2026-10-21-0641),
+  the design of discovery §9. `npm run oracle:bv` generates the case table
+  `frontend/src/jjel/__tests__/fixtures/bv-cases.json` (inputs only, fixed seed) and fills `expected` from
+  Verilator 5.052 (`verilator --binary`, one SystemVerilog module per operator family, two-state operands sized and
+  signed explicitly); `bitvectorOracle.test.ts` checks the evaluator row by row in the normal suite, without
+  Verilator. Measured: 4733 rows, 24 operators and methods, widths 1 to 128, both signednesses; 4733 agreements,
+  0 disagreements, 0 rows inexpressible; regeneration byte-identical; five mutations of `bitvectors.ts`, all killed.
+  The one non-literal mapping: `x.ashr(n)` on an unsigned `x` is `$signed(x) >>> n` (IEEE 1800-2017 11.4.10).
+  Icarus as a second opinion is not run. SPEC §7.5.
+- **R-BV-9** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **Bit-vectors in code generation (slice S3).** Decided by the lanes P-2026-10-21-0640 (stopped at the AM-8 ceiling,
+  RC-51) and P-2026-10-21-0700, landed by `35c761ca3`. (1) The JS runtime prelude ports `bitvectors.ts` as text, line
+  by line with the messages verbatim (`$BitVector`, frozen, own keys `__type,width,signed,bits`, `toString`/`toJSON`
+  the Verilog form); it does not inline the module by `Function.prototype.toString`, because measured the minified
+  bundle and vitest rename the module's names and its consts have no runtime name. A parity test keeps the copy from
+  drifting (R-BV-6): every row of `bv-golden.json` (the table `bv-cases.json` of P-2026-10-21-0641 is not on this
+  branch) runs through a printed guard whose vectors sit in σ, so nothing folds, plus a grid of 13 operators and one of
+  every method against the evaluator, value or defect message. (2) `$eq`/`$ne` dispatch to `$bvOp` (a mismatch is a
+  defect); nested equality is `$same` (mismatched vectors unequal); `$cmp`, `$div`, `$mod`, `$and`, `$or` dispatch
+  too. (3) A folded vector prints as `$bv(8, false, 0xffn)` (`bitVectorLiteral`), reused by `valueLiteral`; `plain()`
+  prints a template hole in the Verilog form. (4) The S1 methods no string, date, number or collection has print as
+  `$bvm(recv, 'm', () => [args], nullSafe)`, the arguments evaluated after the receiver and never on null; a shared name
+  (`slice`, `trunc`, `toNumber`) is refused `P-STEP` over a step value, `toVerilog` stays refused `T-METHOD`. A
+  stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
+  Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
+
+## R-JJD: the Jjodie panel redesign (decisions 2026-10-24)
+
+Evidence: the project chat C-2026-10-24-0020 of 2026-10-24 (00:40 «eseguilo con /lane auto e dopo le discovery
+procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of the report), the discovery report
+`docs/discovery/discovery_2026-10-24_jjodie_panel_jjel_live.md` (P-2026-10-24-0020, P-2026-10-24-0115),
+`docs/harness/fronts.json` (front `jjodie-ui`). Target release 3.3; nothing reaches the trunk before 3.2 is released.
+
+- **R-JJD-1** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **Jjodie docks as a grid column of `.dashboard-container` in `ProjectDashboard`, not as a fixed overlay**: the editor
+  shrinks with it. Floating and maximized modes go away. The Properties rail's `right` becomes the dock width through a
+  body variable declared in `styles/tokens/` (default `0px`) and written by the dock; `--jj-canvas-right-inset` stays as
+  it is. The width (420..760, default 460) persists as an optional `dockWidth` on `JodieConfig`, per browser profile,
+  written on pointer-up; `position` and `size` stay readable and unused. Report D1, D7, D8; D-UI-1 is read as «flush
+  with the window side of the canvas» (A4).
+- **R-JJD-2** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **A script's dry run is a pure, read-only effects planner**, not a live run with rollback and not a sandboxed
+  transaction. The effect chips and the ghost preview come only from it. The ghost preview appends synthetic,
+  non-draggable, non-selectable nodes and edges to `flowElements` in `EditorV2.tsx` and creates no D-object; no
+  critical-zone file is touched. Apply compares planned and real effects per metaclass and reports a mismatch.
+  The planner warns when a script writes one end of an opposite pair (A3: opposites are not mirrored, unchanged here).
+  Report D2, D3.
+- **R-JJD-3** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **JjEL live evaluation stays synchronous on the main thread, bounded by an optional `deadline` on
+  `EvaluationContext`** checked in `JjelEvaluator.evaluate`. Multi-selection reaches Jjodie through a new event in
+  `events/registry.ts` that publishes React Flow's selected nodes. Report D4, D6.
+- **R-JJD-4** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **No `add` command**: `set =` on a multi-valued M1 reference appends and `+=` exists. From the language note only
+  the formatter that breaks after `in` remains. Report D5.
+- **R-JJD-5** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **A script file is an optional `DProject.scripts` field, read with `|| []` like `transformations`**, with no
+  VersionFixer migration. It is listed under SCRIPTS and opened as an editor tab. Report A1.
+- **R-JJD-6** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **Apply is one undoable step through a minimal undo group in `reducer.ts`**: the length of
+  `statehistory[user].undoable` is marked at Apply start and the deltas pushed until Apply end are merged through the
+  existing `U.objectMergeInPlace(pastDelta, delta)` path. A core change, authorised for this front only, with tests.
+  Report A2.
+- **R-JJD-7** (2026-10-24, ratified by Alfonso 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **D-UI-1 gets its own row: the Properties rail is flush with the window side of the canvas.** With Jjodie closed that
+  is the viewport edge, as before; with Jjodie docked it is the dock's left edge (R-JJD-1). The dock width stays per
+  browser profile in `JodieConfig.dockWidth`, like every other Jjodie preference; no account-level setting.
+- **R-JJD-8** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **The unattended choices of the night lanes stand.** S1a: outside a project the panel docks to the viewport's right
+  edge; the header Reset restores 460; the handle steps 8 px per arrow key; an unsent draft is lost when the panel moves
+  between a project and another page. S1b: Clear becomes «New conversation», Reset moves to the overflow menu. S4b:
+  preview nodes are filtered out of `getNodes`/`getEdges`; the preview clears only when the model's content no longer
+  matches the plan. S3c: in JjEL mode the input keeps the expression after a submit (spec S3).
+- **R-JJD-9** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **JjEL in the conversation is bounded too**: the S3a deadline applies to conversation evaluations at about 2 s, with
+  a muted «timed out» message, as in live mode (500 ms). A nested `forall` froze the page for more than 30 s before.
+- **R-JJD-10** (2026-10-24, ratified by Alfonso 06:51, evidence: read, verified: none, reversible: branch).
+  **No continuation rule for `in` in the JjScript grammar**: the formatter that breaks long `create` lines before `in`
+  is for display only (R-JJD-4 stands: one command per line). M2 commands in the planner and the script card come in a
+  later lane of this front; until then an M2 script keeps the code block with Run.
+- **R-JJD-11** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **Two follow-ups open on this front**: the Quick tip clears the Properties panel too (a panel-width variable, small
+  lane), and a short discovery on the extra undo entry «Create element» (pointedBy on the new vertices) that a canvas
+  click adds after Apply, which may touch the sync layer.
+- **R-JJD-12** (2026-10-24, ratified by Alfonso 13:47 «si hai il mio si esplicito, fixa anche il ticket», evidence: measured,
+  verified: none, reversible: branch). **The pending `pointedBy` writes are resolved in the same batch**: at the end of
+  `CompositeActionReducer` (`reducer.ts`, before `updateRedundancies_OBSOLETE`) the queue `PendingPointedByPaths` is
+  drained again, so a pointer to an element created later in the batch lands in that batch's delta (option A of
+  `docs/discovery/discovery_2026-10-24_undo_after_apply.md`). A second core change in `reducer.ts` for this front, beside
+  R-JJD-6; it applies to every batch. The same lane fixes the duplicated `vertexs` entry in a new DVertex's `pointedBy`
+  (ticket F8) if its cause is in the reducer or the D-layer and outside the critical zone.
+- **R-JJD-13** (2026-10-24, decided by Alfonso 15:15 «chiudiamo tutto senza aspettare la 3.2», then «Dentro la 3.2»
+  when told that the trunk is also the 3.2 base, evidence: read, verified: none, reversible: trunk).
+  **The Jjodie panel redesign ships in 3.2, not 3.3**: `jjodie-panel` merges into `alfonso-frontend-jjtl` before the
+  3.2 tag, after the closing lanes P-2026-10-24-1520 (M2 scripts) and P-2026-10-24-1521 (megamodel NaN paths, Discard
+  under Playwright), a trunk-into-branch sync and Alfonso's visual GO. Supersedes the target line of this section's
+  evidence paragraph and of P-2026-10-24-0020.
+- **R-JJD-14** (2026-10-24, decided by Alfonso 20:33, evidence: read, verified: none, reversible: trunk).
+  **A saved script is a Refactoring artifact**: the «Refactoring» entry of the artifact menu creates one, Jjodie's
+  `Open as file` and the editor's `Save as file` create one, and a Refactoring is run from a menu on the artifact of
+  the active tab, always through the ghost preview and Apply as one undo (R-JJD-2, R-JJD-6). «Refactoring» is used in a
+  broad sense: an in-place change of a metamodel or of a model, with no guarantee that meaning is preserved. Not
+  «Script», which would cast JjScript as a low-level programming language. Direction, not yet planned: one Refactoring
+  may change a metamodel and, optionally, all its conforming models in the same artifact (coupled evolution), or be
+  applied to a single model.
+- **R-JJD-15** (2026-10-24, unattended decisions of P-2026-10-24-2320/2340 ratified by Alfonso 2026-10-24 ~23:58
+  «merge nel tronco», evidence: measured, verified: none, reversible: trunk). **The refactoring page (mockup A of the
+  design canvas) ships in 3.2** with these choices: the right pane is a compact read-only class-box renderer, not an
+  embedded EditorV2 canvas (the canvas would mount `useJjomSync`, critical zone), and for an M1 target it shows the
+  metamodel with the M1 effects as chips only; plan and preview state are local to the tab, not the global
+  `scriptPreviewStore`; the planner fills `slotValues` for an M2 world only; the wavy underline marks unresolved names
+  with a column range, gutter dots mark every warned line; the editor width lives in
+  `localStorage['jjodel.refactoring.editorWidth']` (480..800, default 600); Jjodie's launcher moves to the right edge on
+  the Refactoring tab only; `.script-tab__target` and `.script-tab__model` stay for the rf1 probe. Log:
+  `docs/log-inbox/jjodie-ui-rfa.md`. Follow-up P-2026-10-25-0005: one Preview label, no empty editor gutter, launcher
+  aligned with the docked panel.
+- **R-JJD-16** (2026-10-25, ratified by Alfonso 2026-10-25 09:54 «decidi tu», evidence: measured, verified: none, reversible: trunk).
+  P-2026-10-25-0020/0040; amends R-JJD-15 on Alfonso's request of 2026-10-25 ~00:12. The decision was delegated to the
+  project chat, which keeps the row as the lanes wrote it.
+  **The Refactoring tab sits beside its target's own tab** (the metamodel tab for M2, the model tab for M1) in a dock
+  split, editor 40 / canvas 60, ratio in `localStorage['jjodel.refactoring.splitRatio']`; never a second instance.
+  Its preview is published to the shared `scriptPreviewStore` with an `owner` and drawn on that real canvas; the
+  bar stays in the tab. The class-box pane remains only as the fallback (window under 1100 px, or the dock cannot
+  place the tab). The helper is `DockManager.openBeside`, not `MyRcDock.tsx`. The legacy last-panel rules of
+  `abstract/style.scss` and the `.not-strip` panel hiding skip the hbox holding a beside Refactoring tab, and only it.
+  Discovery: `docs/discovery/discovery_2026-10-25_refactoring_side_by_side.md`.
+
+## R-RFB: refactoring operations that migrate instance data (decisions 2026-10-24)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-10-24_refactoring_operations.md` (P-2026-10-24-2321,
+merged in `972a30c4e`), section «Decisions awaiting Alfonso»; the project chat C-2026-10-24-0020, Alfonso 2026-10-24
+«ok alle raccomandazioni». Design reference: board «Refactoring B» of the design canvas. All rows: ratified by
+Alfonso as recommended, evidence: read, verified: none, reversible: trunk (docs only, no code yet).
+
+- **R-RFB-1** (2026-10-24). **Syntax: bare verbs** as in the mockup (`extract`, `pull`, `push`, `inline` become
+  reserved words; `rename`, `move`, `set` reused). Slice S2a first counts identifiers named `extract|pull|push|inline`
+  in the bundled examples; if any is found, fall back to one prefix word (`refactor pull up …`).
+- **R-RFB-2** (2026-10-24). **M1 migration copies values into the new slots and then deletes the old feature**; no
+  re-pointing of `DValue.instanceof` through a raw SetFieldAction. No guard bypassed, no core change.
+- **R-RFB-3** (2026-10-24). **One refactoring is a sequence of ordered steps, one TRANSACTION each with a settle,
+  inside one R-JJD-6 undo group**; never a single TRANSACTION (CLAUDE.md rule 12).
+- **R-RFB-4** (2026-10-24). **Lossy operations**: the planner lists every value that will be lost, per model, and
+  Apply stays disabled until the user acknowledges the loss in the preview; no `force` keyword in the script. Lossless
+  operations apply with no extra step.
+- **R-RFB-5** (2026-10-24). **Scope**: every model of the project that conforms to the metamodel is migrated and
+  listed in the plan; no model can be skipped in the first release.
+- **R-RFB-6** (2026-10-24). **The generic `move` stays as it is** (packages, classes); `move attribute … from … to …
+  via …` gets its own parse path through `set_father`. The fix of the current `move` on features waits for slice
+  S0's measurement.
+- **R-RFB-7** (2026-10-24). **Rename warns with the textual occurrences and does not rewrite them**; a rewriting
+  rename is its own discovery.
+- **R-RFB-8** (2026-10-24). **First release**: rename warnings, pull up, extract superclass, set multiplicity (with the
+  loss report of R-RFB-4). Move via, push down, inline class and type change come after.
+
+Open, not decided by these rows (questions 3 and 4 of the report): whether Jjodie's Run and the script editor's Run
+open an undo group too, and whether a filled slot left behind when a superclass is removed is a bug or intended.
+- **R-JJD-17** (2026-10-25, decided by Alfonso 09:43, evidence: read, verified: none, reversible: trunk).
+  **«Run refactoring» lives in the main menu under Tools**, enabled only when it applies: the label names the active
+  artifact («Run refactoring on <name>…»), it lists the Refactorings compatible with that artifact (R-JJD-14), and with
+  none it stays visible but disabled with the reason. Tools stays Advanced-only, so in Basic mode a Refactoring is run
+  from its own tab (`Run on`) or the right-click on the artifact tab, which stays as a shortcut. No «⋯» icon on the tabs.
+
+## R-PLG: the plugin mechanism (decisions 2026-10-31)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-10-31_plugin_mechanism.md` (P-2026-10-31-1800, branch
+`plugin-discovery`, report `1ea149576`), sections 0 and 11; the project chat C-2026-10-31-1743, Alfonso 2026-10-31 17:50
+(plugins can be written by any user; plugins of general interest may receive a certified status) and 22:29 «ok alle
+raccomandazioni». All rows: ratified by Alfonso as recommended, evidence: read, and measured for R-PLG-2 (probe on
+Chromium 151 only), verified: none, reversible: trunk (docs only, no code yet).
+
+- **R-PLG-1** (2026-10-31). **A plugin is untrusted code by default.** Any user may write one; nothing in the design
+  assumes the author is known or benign.
+- **R-PLG-2** (2026-10-31). **One sandbox for every plugin, certified or not.** Plugin code runs only in a Web Worker
+  started from a blob URL inside an `<iframe sandbox="allow-scripts">` without `allow-same-origin`, under a CSP that
+  forbids egress, with the bootstrap script pinned by hash, never by nonce (a nonce let dynamic `import()` out, run 1).
+  Plugin code never runs on the iframe's main thread: it leaks there through WebRTC, self-navigation and
+  `<meta refresh>`, and no shipped CSP directive closes them (measured). A separate origin for plugin frames is not
+  required for the first slice and is required before any third-party plugin can be installed.
+- **R-PLG-3** (2026-10-31). **Plugin UI is a declarative description rendered by the host.** No plugin-owned DOM:
+  it would reopen the three main-thread leaks of R-PLG-2.
+- **R-PLG-4** (2026-10-31). **A plugin writes through JjScript lines**, through the existing guard, planner, preview and
+  `applyAsOneStep`, not through a new typed command list. The host validates at the command, not at `Action.fire`.
+- **R-PLG-5** (2026-10-31). **Every Run is one undo step**: Script Run and chat Run open an undo group as the
+  refactoring Apply does, so the plugin channel and the user's scripts share one undo rule. This is the rule R-RFB-12
+  states on branch `rfo` (not yet on the trunk); when `rfo` merges, R-RFB-12 and this row say the same thing.
+- **R-PLG-6** (2026-10-31). **Opening a project never runs code stored in it without the user's consent.** This covers
+  the classic view fields the reducer executes with `new Function` on open (`reducer.ts:542` to `:862`, found by reading,
+  not yet confirmed with a crafted project). It is fixed before any plugin work, in its own lane, discovery first.
+- **R-PLG-7** (2026-10-31). **A missing or refused plugin degrades explicitly**, marked in authoring and never replaced
+  by a silent default (ViewpointIR v1.2 §10 and §11, R-IRN-3).
+- **R-PLG-8** (2026-10-31). **Certification is a quality attribute, not a privilege.** It is bound to the hash of one
+  plugin version, revocable, and grants no technical capability beyond the narrow ones a manifest declares (network
+  access, for example).
+- **R-PLG-9** (2026-10-31). **The plugin API is a public, versioned contract**, with the weight of an IR schema bump.
+- **R-PLG-10** (2026-10-31). **One role-catalog format** shared by `ontoBindings`, the codegen role reads and the STC
+  roles, adopted in that order, the STC last (its `runSignature` is the hazard).
+- **R-PLG-11** (2026-10-31). **The first slice re-hosts the instance-of semantics** (`bindingReader`, `bindingCheck`)
+  as a worker plugin bound through `ontoBindings v1` and writing `set` lines through `applyAsOneStep`; the JavaScript
+  generator of the codegen pilot is not the first slice.
+
+## R-TXT: a default textual notation for every model (decisions 2026-11-01)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-11-01_default_textual_notation.md` (P-2026-11-01-1709,
+branch `default-textual-notation`, report `f910decbc`, merged `5b069a615`), sections 3 to 5; the project chat
+C-2026-11-01-1713, Alfonso 2026-11-01 19:39 «ok alle raccomandazioni» on the ten questions of §5. All rows: ratified by
+Alfonso as recommended, evidence: read and measured (probes in the app, report §1), verified: none, reversible: trunk
+(docs only, no code yet). The rules D1 to D7 are those of the report's §0 as amended here.
+
+- **R-TXT-1** (2026-11-01). **D6, feature order:** the features of the supertypes first (most general first), then the
+  class's own; within each, attributes before references, in declaration order.
+- **R-TXT-2** (2026-11-01). **D3, strings are always quoted.** Integers in decimal, booleans as `true`/`false`, an
+  enumeration literal unquoted as declared (told apart from a string by the attribute's type being in `enumerations`).
+- **R-TXT-3** (2026-11-01). **D1/D3, names as declared:** class names and enumeration literals are printed exactly as
+  declared, never lower-cased. An object name that is not an identifier is quoted.
+- **R-TXT-4** (2026-11-01). **D5, references:** the target's name when it is unique among the instances of the
+  reference's type in the model; otherwise, or when the target has no `name`, its containment path from the root
+  (`parts[1]`, as `buildContainmentPath`, `eval.ts:879`). A multi-valued reference prints `r [a, b]`.
+- **R-TXT-5** (2026-11-01). **D2, unset:** an attribute is unset when it reads `null` (optional, no declared default) or
+  an empty list (multi-valued). Mandatory and defaulted attributes always print. No `isSet(o, f)` builtin for now.
+- **R-TXT-6** (2026-11-01). **An index read is traced:** `o["f"]` with a string key notifies `readObserver` exactly as
+  the member read `o.f` does (`evaluator.ts:673-677`), so text printed by reflection keeps its model origin. A JjEL
+  change, done in its own lane under R-GEN-10.
+- **R-TXT-7** (2026-11-01). **First deliverable: a shipped generator written in JjGen** (untyped templates `obj(o)`,
+  `feature(o, f)`, `value(a, v)`), not a built-in `defaultText`. A built-in is reconsidered only if the JjGen generator
+  hits a measured limit.
+- **R-TXT-8** (2026-11-01). **Overrides go through the existing metaclass dispatch** (`templates.ts:183-197`): per-class
+  typed hooks that take the object first (`kw(o, f)`, `feature(o, f)`), so the most specific class wins. No new
+  name-based lookup.
+- **R-TXT-9** (2026-11-01). **D7, contextual keywords:** a feature name is a keyword only where it starts a line; a name
+  position accepts an identifier equal to a keyword. Only non-identifiers are quoted.
+- **R-TXT-10** (2026-11-01). **The Ecore import's losses are a ticket:** `defaultValueLiteral` and the literal `value`s
+  are dropped on import, and `DClass.features` is empty afterwards (report §1.1, side finding). Tracked as a ticket on
+  the codegen front, not fixed inside the R-TXT lanes.
+
+Rows 11 to 14: the project chat C-2026-11-01-1713, after P-2026-11-01-1945 and P-2026-11-01-1946 (merged 9e19ecbab and
+0e5d9152d); Alfonso 2026-11-01 20:12 «ok alle raccomandazioni». Ratified as recommended, evidence: read (lane results),
+verified: none, reversible: trunk.
+
+- **R-TXT-11** (2026-11-01). **The reference template is `ref(o, r, t)`**: the owner, the reference, the target, so that
+  R-TXT-4 checks uniqueness among the instances of the reference's type. A containment path is made of segments like
+  `parts[1]` joined by `.`; when the model has several roots it starts with `[k]`, the root's position among them, and
+  a model's only root, when referenced, prints as `[0]`.
+- **R-TXT-12** (2026-11-01). **Tie-break of R-TXT-1:** ancestors are ordered by their own number of ancestors (most
+  general first); ancestors at the same depth follow the declaration order of the supertypes, depth-first from the
+  class. The rule holds for every multiple-inheritance shape, not only the diamond.
+- **R-TXT-13** (2026-11-01). **An index hole has a model origin:** a template hole whose expression is an index read
+  (`o[f.name]`) gets the origin of the last read recorded for it, when that read's value equals the hole's value;
+  otherwise it stays unlinked, as today. Alt+click on reflective output reaches the model.
+- **R-TXT-14** (2026-11-01). **The JjGen generator is the reference implementation of R-TXT, not the final mechanism.**
+  The final mechanism is to be designed as a declarative model of the notation (a textual viewpoint), from which the
+  printer, the EBNF and later a parser are derived, and in which a DSL's overrides are data, not JjGen templates. Until it is
+  ratified, no DSL override is written against the JjGen generator in the repo.
+- **R-TXT-15** (2026-11-01, Alfonso 20:24). **Terminology:** JjGen is the template language of code generation (templates, holes, typed dispatch); JjEL is the expression language, used inside JjGen holes and elsewhere. A generator is written in JjGen, not in JjEL. Rows 7 and 14 were reworded accordingly the same day.
+
+Rows 16 to 20: the project chat C-2026-11-01-1713, Alfonso 2026-11-01 20:47 (base grammar generated from the metamodel and
+not editable except through the metamodel; syntax chosen on top of it, possibly from several styles), 20:54 (indentation
+style accepted), 22:06 «procediamo» on the chat's design for styles, annotations, identity and the source of truth.
+Ratified as recommended, evidence: read (P-2026-11-01-2017 report, Xtext's design as reference), verified: none,
+reversible: trunk (no code yet).
+
+- **R-TXT-16** (2026-11-01). **Three levels, no hand-written grammar in v1.** (1) The **base grammar** is derived
+  automatically from the metamodel by R-TXT-1..12 and cannot be edited; it changes only when the metamodel changes.
+  (2) A **style**, chosen from a catalog, maps the base grammar to a concrete one: block delimiters, assignment form,
+  separators, terminators, comments, quoting. First styles: C-like braces, Pascal/Ada `begin ... end`, then
+  indentation, Lisp, YAML-like, HUTN. Each style is shown unambiguous once, for every base grammar, not per DSL.
+  (3) Optional **syntax annotations on metamodel elements** adjust the result locally: a feature's keyword, a class
+  printed on one line or positionally, a list of enumeration values grouped by subsets of literals, a class as a binary
+  operator with symbol and precedence. The resulting concrete EBNF, annotated with the features, is shown read-only;
+  printer and parser are both derived from it. This replaces the JSON notation model of P-2026-11-01-2017 as the form an
+  author writes; the restricted-JjGen alternative is dropped; the JjGen generator stays the reference of R-TXT-14.
+- **R-TXT-17** (2026-11-01). **The model is the single source of truth**; text and diagrams are views of it. On save,
+  Jjodel can also write the model's text file next to it (with ids, R-TXT-18), for git, review and LLM edits; an edited
+  file comes back by re-import. A text-first model (the text file as the persisted artifact, Xtext's design) is not
+  done until a concrete need is stated.
+- **R-TXT-18** (2026-11-01). **Identity of objects on re-read.** Inside Jjodel's editor, by origins: every printed span
+  carries its object's id as an editor decoration, so a rename or a move keeps the object and a pasted copy is a new
+  object. Outside (re-import), by a cascade: id in the text if present; class and name in the same container; class
+  and name in the model (moves); attribute similarity among unmatched objects of one class (renames). Uncertain matches
+  are always confirmed by the user before applying. Ids in the text are an option of the style, on by default in the
+  exported file; a repeated id makes a new object, with a warning.
+- **R-TXT-19** (2026-11-01). **Applying a text** is a minimal diff (create, update, delete, move) applied as JjScript
+  lines in one undo step (R-PLG-4 path). What the notation does not show is preserved, never cleared; an attribute
+  omitted because unset (R-TXT-5) reads back as unset. Order matters only for features declared ordered in the
+  metamodel. A text that does not parse leaves the model at its last valid state, with the errors marked in the text;
+  deleting an object that other models reference asks for confirmation.
+- **R-TXT-20** (2026-11-01). **Comments and formatting survive.** The text keeps a concrete syntax tree alongside the
+  model (Xtext's node model as reference); model-to-text updates (an edit in a diagram, a style change) rewrite only the
+  spans of the objects that changed.
+
+Rows 21 and 22: the project chat C-2026-11-01-1713, after the addendum of P-2026-11-01-2210/2232 to
+`docs/discovery/discovery_2026-11-01_textual_viewpoint.md` (§A.4, §A.5, §A.9); Alfonso 2026-11-01 23:14 «ok alle
+raccomandazioni». Ratified as recommended, evidence: measured (probes of 2210/2232: round trips, parse counts, times,
+Monaco 0.52.2 headless), verified: none, reversible: trunk.
+
+- **R-TXT-21** (2026-11-01). **The ten answers of §A.9.** (1) The parser is a hand-written interpreter of the concrete
+  grammar, with recovery; nearley stays only as the test oracle for unambiguity (exactly one parse). (2) Syntax
+  annotations live in the metamodel's `_state`, keyed by element id, one record next to the generators. (3) Root
+  classes are derived (classes never contained), with an annotation as override. (4) A grouping by an attribute is
+  allowed only when that attribute is mandatory. (5) A text that differs only in the order of an unordered feature
+  yields no diff. (6) The diff addresses objects by id through handles registered before the run, not by a new
+  JjScript syntax. (7) The cascade's thresholds start at 0.6 with a margin of 0.2, calibrated in step T8. (8) Objects
+  recovered from a broken text are never applied: they show only as outline and markers. (9) A remark the prototype
+  wrote as a comment (`// listed twice: add`) becomes a validation marker, not printed text. (10) A style whose case
+  folding would merge two literals (`FAST`, `Fast`) falls back to the declared case for that metamodel, with a notice.
+- **R-TXT-22** (2026-11-01). **Amends R-TXT-18 on identity inside the editor.** Monaco decorations cannot carry
+  identity alone (measured: a cut collapses them, undo restores the text but not them, text typed at a span's edge
+  falls outside). Inside the editor, too, spans are re-derived from every parse and matched to objects; the previous
+  parse's spans and decorations are the strongest evidence of the match, before the cascade of R-TXT-18. A pasted
+  copy still comes out as a new object.
+
+Row 23: Alfonso 2026-11-01 23:44, on the chat's questions of 23:37 (answers to 2-6: «Sono d'accordo», «Ok»).
+
+- **R-TXT-23** (2026-11-01). **The textual syntax is a viewpoint-like entry of the model, as the Data manager is.**
+  It appears in the toolbar's viewpoint picker next to the viewpoints and the «Data manager» entry (the synthetic-entry
+  pattern of `components/editor-v2/dataManagerOption.ts`), and opens the model's text in a tab of the dock. Among a
+  model's syntaxes the textual entry carries the language's name (by default the metamodel's name). A «New model from
+  text» action opens the same tab on an empty model. The other answers of 23:44: JjEL reads the declared default from
+  `defaultValueLiteral` (lane P-2026-11-01-2350); the Ecore export writes defaults again and the import keeps literal
+  labels and the serializable flag (lane P-2026-11-01-2351); ticket #395 is closed for its items 1 and 2, item 3
+  (`DClass.features`) dropped; origins through template-call arguments go to a low-priority ticket; the codegen front
+  is owned by the project chat C-2026-11-01-1713 from 2026-11-01, no longer by C-2026-10-23-2009.
+
+Row 24: after P-2026-11-01-2320 (T1, merged by P-2026-11-01-2349); Alfonso 2026-11-01 23:50 «ok» on the two questions
+of T1. Ratified as recommended, evidence: measured (T1's corpus and mutation bench), verified: none, reversible: trunk.
+
+- **R-TXT-24** (2026-11-01). **Amends R-TXT-21 (3) and addendum §A.1.** (a) The top level of a text admits every
+  concrete class, because the printer (like the JjGen generator) prints every uncontained object at the top and such
+  objects are common in Jjodel models; restricting the top level to never-contained classes becomes an optional
+  annotation, in step T4. (b) A single-valued containment prints as a block of one object, `f { T }`, as the JjGen
+  generator and T1 do; §A.1's bare `T` is superseded.
+
+Row 25: the morning digest of 2026-11-02 (twelve questions after the night run); Alfonso 06:43 «Ok alle raccomandazioni».
+Ratified as recommended, evidence: read and measured (lane results of the night), verified: none, reversible: trunk.
+
+- **R-TXT-25** (2026-11-02). (1) Undoing «Create model» closes the model's canvas tab (no bare «closed tab» text);
+  first check whether the defect exists for any undone model creation. (2) JjScript M1 `set` accepts lists for
+  many-valued attributes and enumeration literals, so every text the parser accepts can become a model. (3) The textual
+  entry stays behind the code-generation setting while the feature is experimental (confirms the night's RC-21
+  adoption). (4) Text tabs get an app-bar badge like the other tab types. (5, 6) **Amends R-TXT-4 and R-TXT-11 on
+  paths:** every path segment carries a class or feature and an index, so a path is never a bare identifier: a root is
+  `Class[k]` (k = position among the top-level objects of that class), a contained object `feature[k]` even for a
+  single containment, segments joined by `.`; a name is an identifier or a quoted string, so paths and names never
+  coincide. (7) When a style's case folding lands a class keyword on a style word (`End` to `end`), the derivation falls
+  back to the declared case, as for literals (R-TXT-21 (10)). (8) The L-layer getter and setter of
+  `defaultValueLiteral` are restored in `LModelElement.tsx`, and the export reads them instead of `__raw`. (9) A
+  decimal default on an integer attribute is rejected with a notice, as Ecore does. (10) The «off» mode of
+  `check:codegen-lazy` is made independent of `.env.production`, before 3.2. (11) The textual test corpus moves to one
+  shared test module. (12) The language's name is stored as a syntax annotation in step T4; until then the entry shows
+  the metamodel's name. The canvas of a model created from text opens inside the undo group (confirms the night's
+  adoption).
+
+Row 26: Alfonso 2026-11-02 08:34 «pause», on the chat's question of 08:27 about step T6.
+
+- **R-TXT-26** (2026-11-02). **When an edited text is applied to an existing model (T6):** on a pause in typing, and only
+  when the text parses without errors, no match of R-TXT-18/22 is uncertain, and no deletion touches an object that
+  other models reference. Otherwise the markers stay in the text and the model is not touched until the text is fixed
+  or the uncertain matches are confirmed in a small panel. Each application is one undo step (R-TXT-19), and undo
+  restores text and model together. No explicit «Apply» button in v1.
+
+Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026-11-02 09:52 «Ok alle raccomandazioni».
+
+- **R-TXT-27** (2026-11-02). (1) The prototype's CoreSpec declares `Instruction.mnemonic [1..1]`: an instruction
+  without a mnemonic makes no sense, and R-TXT-21 (4) keeps grouping only on mandatory attributes; the change belongs to
+  the prototype's metamodel, not to Jjodel. (2) A class annotated as one-line or positional requires a mandatory name
+  attribute: otherwise the annotation is refused by the style check (an error, not a notice), so that every printed
+  text reads back (R-TXT-19, R-TXT-21 (8)).
+
+Row 28: T4a-2's in-app check (P-2026-11-02-1930); Alfonso 2026-11-02 19:54 «Ok alle raccomandazioni». Ratified as recommended,
+evidence: read (crop of the annotated text), verified: none, reversible: trunk.
+
+- **R-TXT-28** (2026-11-02). **Amends R-TXT-25 (5, 6) and the T4a-1 design on paths.** The first segment of a path uses the
+  class's printed keyword (`nextState machine[0]`), so that a reference names what the text shows; when the keyword is
+  dropped (positional class) it uses the class name. The index k stays the position among the top-level objects of that
+  class. Without annotations nothing changes. Feature segments are not covered by this row.
+
+Row 29: lane P-2026-11-02-2003 measured the mismatch on feature segments; Alfonso 2026-11-02 20:28 «si». Ratified as
+recommended, evidence: measured, verified: none, reversible: trunk.
+
+- **R-TXT-29** (2026-11-02). **Extends R-TXT-28 to feature segments.** A later segment of a path uses the feature's printed
+  keyword (`shelf[0].patrons[1]`), and the feature's name when no keyword is printed for it (dropped or inline). The index
+  is the position in the order the text prints (for a grouped containment, not the model order: amended 2026-11-02
+  20:47, measured by P-2026-11-02-2029), so a path keeps resolving to the same object after a reprint. Without annotations
+  the two orders coincide and nothing changes.
+
+Row 30: P-2026-11-02-2029 measured that an object no group prints disappears from the text; Alfonso 2026-11-02 20:47 «Si».
+Ratified as recommended, evidence: read (code of the grouped print), verified: none, reversible: trunk.
+
+- **R-TXT-30** (2026-11-02). **Objects a grouped containment does not print.** An object whose grouping attribute is unset
+  or outside every subset is not in the text. The Text tab reports it as a visible issue naming count, class and attribute
+  (`2 Book not shown: genre unset`). Step T6 never applies a text while such objects exist, because their absence would read
+  as a deletion. Printing them in a block of their own stays a later option: it changes the grammar.
+  Measured by P-2026-11-02-2113: a mandatory enum left empty reads as its first literal, so the warning rarely fires in
+  the app; it stays as a guard.
+- **R-TXT-31** (2026-11-03). **Answers to the digest of P-2026-11-03-0543**, ratified by Alfonso («ok alle raccomandazioni»).
+  (1) A stale edit stays blocked after an external model change; Reprint discards it. (2) The printer defect on a reference
+  to an object outside the text gets a small fix before T7, independent of the model-to-model reference work. (3) The
+  `ordered` flag comes with T7. (4) The test files red at import get a ticket.
+- **R-TXT-32** (2026-11-03). **Amends R-TXT-4, ratified by Alfonso 2026-11-03 12:06 («ok alle raccomandazioni»).** Evidence: read and measured,
+  report docs/discovery/discovery_2026-11-03_textual_refs_outside_text.md. A reference target the text does not print
+  prints as `@` and its id as a string, `borrowedBy @"<id>"`, in the style's quote; in a many-valued reference too, beside
+  the inner targets. Kept verbatim it writes nothing; deleted it clears or unlinks; retyped to a name or path it is an
+  ordinary retarget; an edited id, or the token at another owner or feature, is refused. It is never re-resolved by name
+  or position. R-TXT-4 is unchanged for targets inside the text.
+- **R-TXT-33** (2026-11-03, Alfonso 14:21). Evidence: read, report docs/discovery/discovery_2026-11-03_textual_t7_moves.md. For R-TXT-19, a feature
+  is declared ordered unless `ordered === false`, the Ecore default: reversing a list in the text reorders the model. For
+  R-TXT-22, a cut followed by a paste of the identical text is certain identity, with no confirmation; any other move is
+  uncertain and confirmed; a paste with the original still in the text is a new object.
+- **R-TXT-34** (2026-11-03, Alfonso 13:53). **The goal of the textual syntax front becomes an IDE-level editor.** (1) Writing
+  expressions with binary operators enters the plan: `driver` reads as `st & (is_sw)` instead of Conj/Disj/ops pyramids,
+  with a round trip to the model. (2) The outline lives inside the Text tab, left of the text, and can be collapsed. (3)
+  This work goes ahead of the rest of the plan; T8 comes after it. One language service derived from grammar and
+  metamodel, wired to the Monaco providers, with no code specific to a metamodel. Acceptance on a non-hardware metamodel
+  first; the Briefs stay a read-only regression check. Order after T7: A tolerant parser with positions together with T9;
+  B semantic highlighting, outline, breadcrumb, folding, go to definition, find references, hover; C expression notation,
+  T4b, T5; D contextual completion, line errors with quick fixes, safe rename, formatting; E T10 with selection synced
+  between text and canvas; F embedded JjEL strings, generated line to model line, then T8. Out for now: debugger, terminal,
+  multi-file editing; the minimap only if Monaco offers it at no cost. R-TXT-21 (8) stands: objects recovered from a broken
+  text are never applied.
+- **R-TXT-35** (2026-11-03, Alfonso 14:21, «ok alle raccomandazioni»). **Amends R-TXT-4: a reference the user did not retype keeps its target.** Evidence: measured,
+  report docs/discovery/discovery_2026-11-03_textual_positional_paths.md (five silent retargets on an untouched path). A
+  printed reference with the same text, owner and feature as in the previous print stays on the object it was printed for
+  and writes nothing, for paths and for names alike. A retyped reference resolves in the edited text as before. A target
+  deleted in the same edit clears the reference. After an application the reprint shows the new path. Paths are not
+  rewritten during an edit or a paste. R-TXT-33 is ratified with this answer, as is holding a cut until its paste, with the
+  status `Cut · paste to move it` and a Delete button.
+- **R-TXT-36** (2026-11-03, Alfonso 21:16). **Step A, answers to the report of P-2026-11-03-1415.** Measured, report: docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md. (1) A lossless
+  concrete syntax tree with trivia on tokens, built by parser and printer. (2) Recovery in A: token insertion and deletion,
+  and descent into skipped blocks; inferring a class keyword is deferred. (3) An optional `unclosed` flag next to
+  `recovered`. (4) Reference errors after a syntax error are secondary warnings, listed after the syntax errors. (5) The
+  match of R-TXT-22 also runs on a broken text, for outline and synced selection only, never for the diff. (6) Linear name
+  resolution in parser and printer, inside A. (7) The printer's half of the tree is inside A, in a separate lane after the
+  parser's; a test of equality between the two trees closes A. Sizes: models in use reach the order of 1,000 objects in a
+  text; no incremental parsing; the budget is 50 ms per keystroke at 1,000 objects; highlighting and outline are measured
+  at B and D. With a broken root, the outline puts recovered objects under an `unknown container` node.
+- **R-TXT-37** (2026-11-03, Alfonso 22:18, «1 ok»). **Commenting an object out asks first.** When the only change of an
+  application is the disappearance of whole objects covered by a comment just typed, the Text tab asks for confirmation
+  instead of applying on the pause (an exception to R-TXT-26). Measured by P-2026-11-03-2152: typing `//` at the start of
+  `Terminal {}` applied the deletion while the user was still typing. Implemented in step D of the IDE plan.
+- **R-TXT-38** (2026-11-03, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step B design, as recommended by
+  P-2026-11-03-2300** (report docs/discovery/discovery_2026-11-03_textual_language_service.md). One language service beside the parser,
+  with no Monaco import, one analysis per text version; a thin adapter registers the language, its six providers, a Monarch
+  tokenizer for the EBNF tab and one theme that also carries the JjScript rules, since a Monaco theme is global; the outline
+  and breadcrumb are React components inside the Text tab, the outline windowed, following the cursor, filterable, with
+  recovered objects under `unknown container`. The typing pause reuses the providers' parse (`planEdit` takes an optional
+  parsed text). Light theme only: Jjodel has no dark theme (D-UI-15). Hover reads an element's GenModel `documentation`
+  and its bounds through optional fields of the textual metamodel. `displayMatch` does not run on every keystroke; a
+  linear `matchObjects` gets a ticket. The paste-back loss of spans (a deleted and pasted-back text keeps no agreed spans,
+  `TextualTab.tsx:803-807`) is fixed in its own fast lane before step B: the agreed text keeps its spans and reference
+  tokens and they return whenever the text equals it again.
+- **R-TXT-39** (2026-11-04, Alfonso 00:00). **Layout of step B, from the mockup Alfonso approved** (a drawing with sample
+  data, not a specification: multiplicities, card texts and grammar in it are not references). (1) The outline shows the
+  grouping of a containment feature (`transitions`) as a node, not only the objects, so outline and breadcrumb follow the
+  structure of the text. (2) An unnamed object is told apart in the outline by a value that distinguishes it (`Transition
+  coin` in the test case); the rule holds for every metamodel with no metamodel-specific code and is proposed in the
+  discovery of B2. (3) The hover card stays open until closed or until a click on the text, and carries «Go to definition»
+  and the list of the lines that use the reference; the discovery measures how far Monaco allows this without forcing it,
+  and if it does not, the chat reports it with a proposal instead of working around it. Go to definition and find
+  references also work through Monaco's shortcuts and context menu. (4) With a broken root, recovered objects sit under
+  the `Unknown container` node (R-TXT-36). The order of the plan and the running lanes are unchanged.
+- **R-TXT-40** (2026-11-04, Alfonso 06:52). **Step C, the additions of the
+  report docs/discovery/discovery_2026-11-04_textual_step_c.md taken as recommended.** (D2) The indentation style ships only
+  with a deletion guard in the Text tab (an edit whose plan deletes objects past the last edited line, or more than one object
+  at once, asks before it applies), and last. (D4) A newline inside a string under a doubling style prints as Pascal's
+  `'line1'#10'line2'` and is read back by the lexer. (D5) Lane order C1a, C1b, C1c, C1d, C3a, C2, C3b, each at five files
+  or fewer; C3a may run before C1 since it shares no file with it. (D6) The annotations form (T4b) is a third mode
+  «Syntax» of the Text tab. The style picker is an optional `style` in the syntax annotations, absent meaning C-like, and a
+  switch changes the record only, never the model. Awaiting Alfonso: D1 (n-ary operators as flat chains, amends R-TXT-16
+  (3)) and D3 (optional name in a one-line head, amends R-TXT-27 (2)); lanes C1a..C1d wait for them.
+- **R-TXT-41** (2026-11-04, Alfonso 06:52, «ok alle raccomandazioni»). **Amends R-TXT-16 (3) and R-TXT-27 (2); answers D1 and D3 of
+  docs/discovery/discovery_2026-11-04_textual_step_c.md.** Measured on the 312 SyncRTL expressions of the Briefs. (D1) An
+  operator class prints as one flat chain with one symbol (binary or prefix); a nested operator of the same class goes in
+  parentheses; with 0 or 1 operand the call form is used, so `Conj(st, Disj(is_sw))` reads `st & or(is_sw)` and the single
+  Disj survives the round trip. (D3) A one-line head may carry an optional name when the grammar check shows that what
+  follows the name cannot be mistaken for it (the LL(1) condition), for every metamodel whose `name` is `[0..1]`; the
+  prototype's metamodel is not changed. R-TXT-40 is ratified with this answer.
+- **R-TXT-42** (2026-11-04, Alfonso 06:52). **Amends R-TXT-39 (3) on the hover card.** Monaco's own hover cannot stay open
+  through its public API (measured by P-2026-11-04-0005: `_sticky = false` in the source). The hover keeps the command links
+  («Go to definition», one per line that uses the reference); a card that stays open opens by an explicit action (a link
+  in the hover or a shortcut) as a Monaco content widget with the tab's own close rules (×, Escape, a click on the text, an
+  edit, its line out of view). Not a forcing of Monaco; implemented in step D.
+- **R-TXT-43** (2026-11-04, Alfonso 06:52). **Extends R-TXT-37.** An application whose effect is the deletion of every object
+  of the model asks for confirmation instead of applying on the pause, as commenting whole objects out does (#204: select
+  all, delete, a pause over 800 ms applied the empty text; a later paste recreated the objects under new ids). Step D.
+- **R-TXT-44** (2026-11-04, Alfonso 15:53, «decidi tu»). **Answers the four open points of C1 (P-2026-11-04-1447), against
+  the goal of a lower cognitive load.** (1) The text is what the model holds: an object the text gives no name stays
+  nameless; when the app assigns its default name to an object created from the text, the same application clears it, in
+  the same undo step. Where the core refuses an empty name, the tab reprints once with the assigned name and the status
+  line says why; it never keeps a text that differs from the model's print. (2) Removing a name from the text applies:
+  the name is cleared, one Undo restores it; `No change` is never shown for an edit that changes the text's meaning.
+  (3) The outline shows one group per containment feature, labelled by its per-item keyword (`input`), whatever the
+  number of items, as R-TXT-39 (1) says for feature groups. (4) Ratified: an optional head name is refused also when
+  every part after it is optional (R-TXT-41 D3 made stricter); the prototype's record uses `roots: 'uncontained'` and
+  the keyword `driver`, since `=` is the symbol of `Eq`; inline refusals scoped to one-line owners; head words reserved
+  after an optional name, a colliding name quoted; call arguments mandatory and single-valued; empty braces omitted only
+  for a positional one-line class whose only part is the optional name.
+- **R-TXT-45** (2026-11-04, Alfonso 16:28, «A»). **Amends R-TXT-44 (1) and (2): an object can be nameless in the model.**
+  The core's read of the identity slot (`name : EString`, LModelElement.tsx, the fallback to `initialName`) falls back
+  only while the slot has never been written; a slot written with the empty string reads as nameless everywhere
+  (canvas, JjEL, export, the Text tab). The textual layer then clears the name the app gives to an object the text
+  leaves nameless, and removing a name from the text leaves the object nameless; the reprint of R-TXT-44 (1) remains
+  only where the core still assigns a name. A core change: its lane runs discovery first with the Layer Impact Report of
+  CLAUDE.md §3.2 and smoke tests on canvas, JjEL and export before the implementation.
+- **R-TXT-46** (2026-11-04, Alfonso 21:15, «sì»). **Answers D1-D10 of the core discovery for R-TXT-45
+  (docs/discovery/discovery_2026-11-04_core_nameless_identity.md §9), each as recommended.** Variant B: an identity slot
+  written with the empty string yields only to `data.name`, never to `initialName` (D1); the empty name never collides in
+  the name-uniqueness checks (D2); CHECK 12 drops `missing_name` for a nameless object (D3); v2-flow reference resolution
+  tests the target's presence, not a truthy name (D4); the XMI import echo of the identity slot is a lane of its own (D5);
+  the Text tab maps the empty name to unset, in the core lane (D6); the core lane lands after the C1e merge (D7); no
+  migration of saved empty slots (D8); `set X.name = null` stays unset and reads the automatic name (D9); a clear from
+  the canvas writes the empty slot (D10). The lane's file list is confirmed: LModelElement.tsx, nameUniqueness.ts,
+  ConformanceValidator.ts, jjomTransformers.ts, IRFormField.tsx, TextualTab.tsx and their tests.
+- **R-TXT-47** (2026-11-05, Alfonso 07:25, «Approvo le 10 decisioni»). **Step C lane C2:
+  the ten recommendations of docs/discovery/discovery_2026-11-05_textual_c2_syntax_form.md, taken during Alfonso's
+  night («prosegui in autonomia», 2026-11-04 23:09), ratified by Alfonso 2026-11-05 07:25.** D1 the Syntax mode as designed (draft, live
+  preview, Save as one undo step, Save disabled on a `checkStyle` error, on an unchanged draft, or while the Text tab
+  holds an unapplied edit); D2 Basic shows language name and style, class keyword, block or one-line layout, feature
+  keyword and per-item keyword, the rest Advanced, a field only where it applies; D3 `{"v":1}` stays written and
+  equals no record; D4 the false «the app named» is fixed by checking the model after the run; D5 a nameless reference
+  target is labelled `: <Class>` on the default view; D6 the same on the IR chip in its own critical-zone lane, low
+  priority; D7 annotations of deleted elements do not block Save and are dropped with one notice; D8 the tab's accent
+  token `#06b6d4`; D9 the bar shows the de-duplicated `checkStyle` errors; D10 lane order C2c, C2a, C2b, then C3b, C2d
+  and C2e alongside. Visual merges of C2b, C2d and C2e wait for Alfonso's GO.
+- **R-TXT-48** (2026-11-05, Alfonso 07:37, «1 e poi 2»). **The literals of the EBNF mode become editable, the structure
+  stays read only.** Inside the EBNF mode only the text between quotes can be edited; rule names, EBNF operators, order
+  and optionality stay locked. Each literal carries the record field it comes from (class keyword, feature keyword
+  including a punctuation keyword, per-item keyword, name keyword, operator symbol, call word), and an edit goes into
+  the same draft as the Syntax form (R-TXT-47), with the same checks (LL(1), style rules, the finding at the literal) and
+  the same Save as one undo step. Two steps: (1) the literals of single elements, the style tokens read only; (2) then
+  the style tokens too (`{`, `}`, `;`, `:=`, `begin` ...): editing one at any place changes it everywhere, written as
+  overrides on top of `style.base`, a custom style; this extends the record and the style checks. Step C, after C2.
+- **R-TXT-49** (2026-11-05, Alfonso 09:26, «ratifico tutto»). **Editable
+  EBNF literals (R-TXT-48): the twelve decisions of docs/discovery/discovery_2026-11-05_textual_ebnf_literals.md §5.3,
+  taken under lane auto (Alfonso 07:38); ratified by Alfonso 2026-11-05 09:26.** D1 the origin is an optional `src` on the `kw` and `p`
+  grammar nodes plus a spans printer, the EBNF text unchanged; D2 a read-only model with decorations and a content widget
+  over the literal; D3 the draft lifted into `ui/useSyntaxDraft.ts`, owned by the Text tab, shared by the Syntax form and
+  the EBNF mode; D4 an empty value means the default for a class keyword, a feature keyword and a call word, and is
+  refused for a per-item keyword, a name keyword, an operator symbol and a group name; D5 a value equal to the printed
+  default is stored as cleared; D6 the draft has no undo of its own, Cmd/Ctrl+Z goes to the app's undo only when the
+  draft is clean; D7 every element literal is editable in Basic and Advanced alike; D8 enumeration literals stay read
+  only; D9 style overrides are whole arrays per parameter in `style`, stored only when different from the base, with a
+  new `style-tokens` rule; D10 switching the base drops the token overrides; D11 the fixed tokens, comments and the string
+  quote stay read only; D12 the record stays at version 1. Lanes L1a, L1b, L2a, L2b; the visual ones (L1b, L2b) merge
+  after the chat's crop check.
+- **R-TXT-50** (2026-11-05, Alfonso 09:26, «ratifico tutto»). **Step C lane
+  C3b: the style check under Indentation, option (a) of P-2026-11-05-0843, taken under lane auto (Alfonso 07:38);
+  ratified by Alfonso 2026-11-05 09:26.** Under the indentation style the LL(1) check is line aware: an optional part of a header line does not
+  start a new line, as the parser reads it, so its FOLLOW ends at the line break and genuine conflicts on the same line
+  stay errors. The Text tab's style picker refuses a style whose `checkStyle` has an error, with its reason, as the
+  Syntax form's Save does (R-TXT-47 D1); the record is not written. Under Indentation a nameless object with no keyword
+  and nothing else set is refused by the style check, since it would print nothing.
+- **R-TXT-51** (2026-11-05, Alfonso 09:22). **Block tokens per element, on top of the language-wide tokens of R-TXT-48
+  (2); step C, after L2a.** Target text: `begin program` / `declaration is` ... `end` / `end program`. (1) A class
+  annotation and a containment feature annotation take optional block open and close tokens; a close of several tokens
+  is allowed (`end program`); the empty block is derived from them. (2) Per-block word tokens join the language-wide
+  reserved names; punctuation tokens join the tokenizer and the `taken` check; `checkStyle` and the parser's recovery
+  (parser.ts:906) read the node's own tokens, not only the style's. (3) A separate slice: a head prefix before the class
+  keyword (`begin program`); a prefix shared among alternatives is refused as an LL(1) conflict. (4) Proposed by
+  Alfonso, ratified 09:26 («ratifico tutto»): overrides survive a base switch among free-layout
+  styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
+  the fields sit in the Syntax form, Advanced.
+- **R-TXT-52** (2026-11-05, Alfonso 22:20, «si alla ratifica»). **Block tokens
+  per element (R-TXT-51): the ten decisions of docs/discovery/discovery_2026-11-05_textual_block_tokens.md, taken under
+  lane auto (Alfonso 15:33, «chiudi C»), for him to ratify.** D1 the target text is reached with per-block tokens alone;
+  the head prefix (R-TXT-51 (3)) follows as its own slice inside step C; D2 per-block words join
+  `grammar.style.reservedNames` during derivation; D3 only per-block tokens survive a base switch, the language-wide
+  overrides are still dropped (R-TXT-49 D10 stands); D4 a grouped containment applies its tokens to each group's block;
+  D5 a per-block token equal to the terminator, the assignment or a list token is refused; D6 unknown keys in a class or
+  feature entry become a notice; D7 the form's language-wide block-token fields of L2a, broken (an override shows empty,
+  typing saves a string the record refuses), are fixed first in lane B0, with a ticket; D8 an empty open or close is
+  refused under free layout; D9 per-block tokens where there is no block are an error and are not applied; D10 the EBNF
+  origin is set per side, so a side the block inherits stays language-wide when edited. Lanes B0, B1, B2, then B3a and
+  B3b for the head prefix.
+- **R-TXT-53** (2026-11-06, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step D, writing
+  aids: decisions D1 to D6 and D8 to D10 of docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §8, taken under
+  lane auto (Alfonso 2026-11-06 20:34, «decidi tu»).** D1 lane order D2a, D2b, D2c, D3a, D3b, D4, D5, D3c, with lane D1
+  (R-TXT-37) waiting for D7; D2 the expected set is computed by the parser under an optional cursor; D3 a reference
+  candidate is written as the printer writes it, never `@"id"`; D4 rename goes through the text, refused on a new error,
+  a changed target or a nameless object; D5 Format keeps comments, drops redundant parentheses, runs only on an
+  applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
+  D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
+  multi-word close. D7 (ask whenever a deleted root is covered by a comment, wider than R-TXT-37) waits for Alfonso.
+
+## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
+project chat C-2026-11-02-1319. All rows: ratified by Alfonso 2026-11-02 19:18 («ok»), evidence: read and measured (discoveries of P-2026-11-02-1330 and 1331), verified: none, reversible: trunk.
+
+- **R-FA-1 (2026-11-02)**: two spellings, mixable: `forall x, y in S` (same collection) and `forall x in A, y in B`.
+  Iteration is the full cartesian product, first variable outermost: without a filter the pair (a, a) and both orders
+  are present, as in OCL `forAll(x, y | ...)`; excluding them is the filter's job.
+- **R-FA-2 (2026-11-02)**: bindings read left to right: a later collection may read an earlier variable
+  (`forall c in classes, a in c.attributes`). Every variable is bound in the filter and in the projection.
+- **R-FA-3 (2026-11-02)**: the result is one flat list. Without a projection each element is a record named by the
+  variables (`{ x, y }`, read as `p.x`). One variable keeps returning the element itself.
+- **R-FA-4 (2026-11-02)**: `exists` takes the same bindings, so `exists ... P` stays equivalent to
+  `(forall ... such that P).isNotEmpty`.
+- **R-FA-5 (2026-11-02)**: a repeated name in one binding list is a parse error. After a collection, a comma continues
+  the bindings only when followed by an identifier and `in` or by an identifier list ending in `in`; so `f(forall x in S, y)` stays two arguments.
+- **R-FA-6 (2026-11-02, amended the same day)**: JjEL implements this in the parser, by desugaring: `forall x in A, <rest>`
+  to `(forall x in A : <rest>).flatten()`, `exists` to nested `exists`. Not `flatMap`, as first written: measured by the
+  discovery of P-2026-11-02-1330, `flatMap` throws on a null, object or string collection where `forall` gives `[]`. No new
+  AST node and no change to an exported type.
+- **R-FA-7 (2026-11-02)**: every language gets the same spellings. JjScript desugars `do` to nested foralls; JjTL iterates
+  the product in the executor, flat in the feature, because a nested `forall` there builds a tree. Validation rules,
+  guards, templates, JjLet and JjModal inherit from the JjEL parser. Supersedes P-2026-10-31-1741, which never ran.
+- **R-FA-8 (2026-11-02)**: from the lanes 1330 and 1331. In `x, y in S`, `S` may not read a name of its own list: parse
+  error, since the copy that `y` ranges over would see the new `x`. In the subset checker, a whole-guard multi-variable
+  `forall` is E-FORALL, and an object literal with more than one entry, each `k: k`, is not E-VALUE. A JjTL `forall` with several
+  variables does not expose the elements' properties unqualified: two elements would collide; one variable keeps doing so.
+
+## R-JTG: one generic JjTL transformation, the order and frame of parts A to D (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 17:38, GO for slice A0 on `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`
+(P-2026-11-02-1425, P-2026-11-02-1612); registered by P-2026-11-02-1742. All rows: ratified by Alfonso, evidence: read,
+verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
+
+- **R-JTG-1 (2026-11-02)**: order A0, A, B, C0, D, C1 if needed; each slice its own lane, prompt and GO.
+- **R-JTG-2 (2026-11-02)**: A0 alone and first: a confirming test of copy on bind, then binding by identity, then the
+  silent fallbacks reported with source element and rule.
+- **R-JTG-3 (2026-11-02)**: two rules on one source keep the throw naming both; with D the most specific rule wins and the
+  throw remains for equal specificity. No declaration-order flag.
+- **R-JTG-4 (2026-11-02)**: a second containment claim is an error naming both containers; a containment cycle is an
+  error; leaving roots is recorded, not warned.
+- **R-JTG-5 (2026-11-02)**: called and lazy rules adopt the sketch of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`, with
+  the environment dynamically scoped, reified as a named parameter of called rules, values as closures; trace key
+  (source, rule, environment). A's specification is written in those terms now, vacuous until B.
+- **R-JTG-6 (2026-11-02)**: a containment resolves (source, rule, caller's environment) and creates the entry on demand
+  when absent: under A a lookup, under B a new environment gives a fresh subtree. A call of a rule not declared `unique`
+  always creates a fresh subtree, even under an environment seen before, so one expression may be placed twice with the
+  same bindings. The double-claim error of R-JTG-4 applies to implicit resolutions and to `unique` rules. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+- **R-JTG-7 (2026-11-02)**: rules meant for lowering are declared `lazy`: they never match in pass 1 and create a target
+  only when a resolution or a call reaches the node. Matched rules stay for the elements the transformation maps as such.
+  Containment under A alone therefore does not serve library expressions; that value arrives with B. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+- **R-FA-9 (2026-11-02), ratified by Alfonso 2026-11-02 23:42 («Vai con tutti»), evidence: measured (P-2026-11-02-2030), verified: none, reversible: trunk**: JjScript `rename` takes
+  an expression. A single name or string after `to`/`as`, followed by the end of the command or by `in <parent>`, stays
+  literal, even when a variable has that name; anything else is a JjEL expression with the `forall` variables and `let`
+  bindings visible. The exception for a trailing `in` keeps `rename attribute a to b in C`, the form taught in
+  `defaultPrompts.ts`. A result that is not a non-empty string is a command error.
+- **R-FA-10 (2026-11-02), ratified by Alfonso 2026-11-02 23:42 («Vai con tutti»), evidence: measured (P-2026-11-02-2105, 2140), verified: none, reversible: trunk**: a variable of a JjScript
+  `forall` used as a command's target denotes the element, by a string `elementId` on `QualifiedName`, never written back; values are unchanged.
+  M2 elements get an `id` in `commands/eval.ts`, as M1 instances have: `c.id` reads in JjEL and `==` is false between two
+  distinct elements of one shape. A pair is taken once with `a.id < b.id`; `a != b` matches both orders.
+- **R-JTG-8 (2026-11-02)**: recommendation to the owner of the kernel metamodel: the `for each`, `where`, guard and
+  substitution source of a template are modelled expressions, not strings, so that the generic transformation interprets
+  no text. Not decided here: it belongs to the hardware prototype, and it sizes the expression sub-language. Provisional,
+  ratified as asked, unattended (P-2026-11-02-2021, from the owner's instruction in the prompt, not a new decision of
+  Alfonso's); evidence: read, verified: none, reversible: trunk.
+- **R-JTG-9 (2026-11-02)**: `__placed` is accepted beside `__nested` on a target placed in a containment; when the nested
+  walk runs, all pointers, root ones included, are written after the tree; the optional `isPlacedIn` is removed with B.
+  Ratified by Alfonso (2026-11-02, ok to the recommendations on P-2026-11-02-2108); evidence: measured, verified: the
+  lane probes, reversible: trunk.
+- **R-JTG-10 (2026-11-03)**: the delegating rule form `= expression` is part of JjTL: it creates no target of its own and
+  returns what the expression lowers to. Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03,
+  registered by P-2026-11-03-0539; evidence: the lanes of slice B, verified: the slice B tests, reversible: trunk.
+- **R-JTG-11 (2026-11-03)**: `extendEnv`, `envHas`, `envLookup` are builtins, reserved for called rules. Extends R-JTG-5,
+  which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the lanes of slice B,
+  verified: the slice B tests, reversible: trunk.
+- **R-JTG-12 (2026-11-03)**: a bound value's matched descendants resolve through the trace; what must be lowered several
+  times is written with lazy rules. Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered
+  by P-2026-11-03-0539; evidence: the lanes of slice B, verified: `called-lazy-rules.test.ts` (P-2026-11-03-0539),
+  reversible: trunk.
+- **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
+  Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
+  lanes of slice B, verified: none, reversible: trunk.
+- **R-JTG-14** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL run
+  is one undo step. The group opens after the executor succeeds and closes when the store has had no writes for 800 ms
+  after the write-back, capped at 180 s; the output tab and its vertices are part of the step. Redo restores the model
+  and does not reopen the tab. Evidence: the probe of P-2026-11-03-1435.
+- **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
+  expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
+  With this, JjEL can be the only parser of a forall collection.
+- **R-FA-12** (2026-11-05, ratified by Alfonso 2026-11-05 15:29, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk):
+  R-FA-11 extends to JjEL methods. A method the value's type does not have (`"4".log2()`) and a library method that
+  throws stop the mapping with an error on every path, never a warning with `null`. Out of it, unchanged: a name that
+  resolves to nothing, a property read on null or on a missing feature; a method called on null and a call on a model
+  element without that feature count as the latter (provisional, unattended, P-2026-11-05-1530). JjEL outside JjTL
+  throws the same error as before. Extends R-FA-11, which stays unchanged. Evidence: `method-failure.test.ts` and the
+  node runs of `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md`.
+- **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
+  `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
+  are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
+  Extends R-JTG-5 and R-JTG-6, which stay unchanged. Evidence: `class2relational.test.ts`, `called-lazy-rules.test.ts`
+  and the app probe of P-2026-11-03-2111.
+- **R-JTG-16** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk):
+  `unique` is allowed on called rules: `unique rule f(x)` returns the same target for a second call with the same
+  arguments and environment, as `unique lazy` does; the double-claim error of R-JTG-4 applies. A rule not declared
+  `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
+- **R-JTG-17** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a
+  rule whose target class is not in the target metamodel is an error before the run writes anything: nothing is
+  written. Nested case, ratified by Alfonso 2026-11-04 (P-2026-11-04-0255): a nested creation of a class the target
+  metamodel lacks, in a feature or in a forall, is the same error, naming the class and where it is created
+  (`object creation in Table.columns`, `forall in B`); it was a warning. Provisional, unattended, not ratified
+  (P-2026-11-04-0015): the error names the rule and the class, as an abstract target's does.
+  Evidence: `language-open-points.test.ts`, `nested-creation-into-features.test.ts`, the app probes of
+  P-2026-11-04-0015 and P-2026-11-04-0255 (no output model, 16 objects before and after; the control run writes 27).
+- **R-JTG-18** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): a
+  `lazy` rule is exempt from R-JTG-3 when its class also has a matched rule: it never matches in pass 1, so it does
+  not compete there. The executor's rejection of a class with both no longer holds. How a binding that reaches a node
+  of such a class is settled is R-JTG-20, provisional.
+  Evidence: `language-open-points.test.ts`, `class2relational.test.ts`, `called-lazy-rules.test.ts`.
+- **R-JTG-19** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): the
+  `such that` of a JjTL `forall` sees bare names as its body does. Provisional, unattended, not ratified
+  (P-2026-11-04-0015): the filter sees exactly the bindings the body sees, so bare names exist only where the body has
+  them, in a one-variable `forall`. Evidence: `language-open-points.test.ts` (P-2026-11-04-0015).
+- **R-JTG-20** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk):
+  proposed by lane P-2026-11-04-0015. A binding that reaches a node whose class has both a matched
+  and a lazy rule (R-JTG-18) is settled by the type of the receiving feature: the lazy rule when only a lazy target
+  fits it, the matched rule's pass 1 target when no lazy target fits, an error naming both when both fit or the type
+  is unknown (`lazyOrMatched`, `executor.ts`). Evidence: `language-open-points.test.ts`; mutation M3 of the lane
+  bench (lazy always wins) is killed by that file only.
+- **R-JTG-21** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk): a JjTL rule multiplicity with an unbounded upper bound fixes
+  no count. `[*]` (the same as `[0..*]`) creates one target per source; `[n..*]` creates n per source, its lower
+  bound. No warning: the warning of P-2026-11-04-0015 is removed. Before, every unbounded bound created one per source: `[3..*]`
+  on 2 sources created 2, now 6. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900).
+- **R-JTG-22** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk):
+  R-JTG-17 reaches every `let` body: a creation of a class the target metamodel lacks, or of an abstract class, inside
+  a let body, in a feature or a forall, at rule level, in a nested let or in a let inside a nested creation, is the
+  same error as for rule and nested targets, nothing is written. Only the shape of the creation stays unchecked in a
+  let body. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900, `06ce85232`). Rewritten 2026-11-04 (P-2026-11-04-1442):
+  the first text said the abstract class stayed unchecked and the amendment said the opposite; this text keeps the amendment.
+
+## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-11-02_196_l0_ai_layer.md` (P-2026-11-02-1020, phase 1,
+`712aae6dd`), section «Questions for Juri»; chat C-2026-11-02-1016. Front `ai-provider`. R-AI-1..4: ratified by Juri
+2026-11-02 as recommended; R-AI-5: adopted by the chat (RC-21). All rows: evidence: measured, verified: agent,
+reversible: trunk (docs only, no code yet).
+
+- **R-AI-1** (2026-11-02, decision ④). **The runtime contract on `AI`, `AIConfig` and `JodieConfig` is dead.** No
+  compatibility facade is kept; the `@RuntimeAccessible` registrations go away with `types/jodie.ts` at L6, and the new
+  provider classes are not registered. L6 announces the break in the CHANGELOG. Measured: zero uses as identifiers in
+  shipped repo content; projects stored on the server are not measured.
+- **R-AI-2** (2026-11-02, rule 4). **Three new dependencies approved for L1, exact-pinned**: `openai` 7.47.0,
+  `@anthropic-ai/sdk` 1.3.0, `@google/genai` 2.32.0 (Apache-2.0). Each is imported dynamically inside provider methods,
+  and L1's gate shows by a build chunk diff that the initial bundle does not grow. A different version is a new decision.
+- **R-AI-3** (2026-11-02, decision ⑤). **Abstract class `BaseProvider`, module `src/services/ai/`**, as in the plan.
+- **R-AI-4** (2026-11-02, decision ⑥). **`cloudflare-worker/` is deleted, but L4 is gated** on two things: a real-key
+  Anthropic run of the spike (`models.list`, `messages`, stream), and the Claude connection `test()` moved to
+  `/v1/messages`, because a bad key on `models.list` is CORS-blocked without the Worker (spike, phase 1). The deployment
+  is removed by Alfonso on his Cloudflare account; the notifications Worker on the same account stays untouched.
+- **R-AI-5** (2026-11-02). **The fifteen corrections to the L1..L6 file lists of the report are adopted** in the
+  frozen spec (adopted by the chat under RC-21, within the lane's files). The deletion of the two files with no
+  importers (`ProviderSelector.tsx`, `ProviderSettings.tsx`) waits for Alfonso (RC-26).
+
+Open items of the frozen spec `docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md` §10, answered by Juri in chat
+C-2026-11-02-1016 on 2026-11-02 (R-AI-6..12: ratified by Juri, R-AI-6..9 and 11..12 as recommended, R-AI-10 against
+the recommendation; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-6** (2026-11-02, O-1). **Key precedence stays as it is today.** L1 measures which of the two stored copies
+  (`jjodie_provider_<name>`, `jjodie-credentials.providers`) wins at load, pins it in a test, and the new store honours
+  that precedence and writes both copies. No data migration.
+- **R-AI-7** (2026-11-02, O-6). **The Claude `test()` is built on `/v1/messages` in L1** (one call, `max_tokens` 1), so
+  from L2 on a bad Claude key reads as AUTH, not NETWORK. This fulfils the second gate of R-AI-4 at L1.
+- **R-AI-8** (2026-11-02, O-3). **An OpenAI 429 with code `insufficient_quota` keeps the RATE category but its own
+  message** («no credit left on the account»), not «retry later». Every other 429 reads as today.
+- **R-AI-9** (2026-11-02, O-2). **`dockWidth` leaves the credentials blob at L2**, into a localStorage key of its own,
+  reading the old value once so the user's width is kept. L1's store preserves the field on round-trip until then.
+- **R-AI-10** (2026-11-02, O-8). **L2 stays one lane of 13 files**; Juri confirms rule 19 for it now, against the
+  recommendation to split it.
+- **R-AI-11** (2026-11-02, O-5). **L2 measures `AIConfig.getStatus` with a test before moving it**; if the label is
+  inverted it fixes it and says so in its log entry, otherwise it moves it as it is.
+- **R-AI-12** (2026-11-02, O-4). **The documentation types leave `types/jodie.ts` for a new `src/types/documentation.ts`
+  at L6.**
+- **R-AI-13** (2026-11-02, measured by chat C-2026-11-02-1016 with Juri's Anthropic key, evidence: measured, verified:
+  agent, reversible: trunk). **The real-key Anthropic gate of R-AI-4 is met, and O-7 is answered.** The L0 spike driver,
+  Anthropic arms only (`~/.jjodel-lanes/spike196/drive3.mjs`, `results3.json`, 6 calls, key scan 0 hits with a 3/3
+  positive control), from Chromium at `http://localhost:3010`, `@anthropic-ai/sdk` 1.3.0 with the direct-browser header
+  on every request: with a valid key `GET /v1/models` 200 (14 models, `access-control-allow-origin: *`),
+  `messages.create` 200 and `messages.stream` 200 on `claude-haiku-5-5`; with an invalid key `messages` 401 readable,
+  `GET /v1/models` blocked by CORS (no status). So the live Claude catalog works without the Worker for a valid key
+  (O-7), and only a bad key on `models.list` reads as NETWORK, which R-AI-7 already avoids. The remaining L4 gate is
+  R-AI-7's Claude `test()` on `/v1/messages`, built in L1. The optional OpenAI credit is not needed for any gate.
+
+L3 shape, answered by Juri in chat C-2026-11-03-0001 on 2026-11-03 (R-AI-14..16: ratified by Juri, R-AI-14 and 15 as
+recommended, R-AI-16 his own answer; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-14** (2026-11-03). **L3 is one lane in two phases**, rule 19 confirmed for up to 13 files: phase 1 moves the
+  four chat consumers and stops for Juri's real-key smoke; phase 2, after his GO, deletes `AIProviderService.ts` and its
+  test and rewrites the catalog test. The smoke falls before the deletion, as spec §7 L3 asks.
+- **R-AI-15** (2026-11-03). **`ChatRequest` gains an optional `signal?: AbortSignal`** (rule 11: optional property
+  only), forwarded by the three providers to their SDK, so `ExplainModal` keeps aborting the HTTP request on close as
+  it does today and `AIMatcher` forwards its own signal.
+- **R-AI-16** (2026-11-03). **The L3 real-key smoke uses the keys Juri has**: Claude, Gemini, Ollama (local), Custom
+  pointed at OpenRouter (an OpenAI-compatible remote server, Juri's key), OpenAI only up to its «no credit» 429, Mistral
+  if Juri finds a key. DeepSeek, Groq and Kimi are covered by mocks of the same `OpenAICompatibleProvider` class.
+
+Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Juri in chat C-2026-11-03-0001 on
+2026-11-03 (R-AI-17..18: ratified by Juri as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-17** (2026-11-03). **Earlier-turn attachments are still sent, as today.** `HistoryMessage` gains optional
+  `images?`/`documents?` (rule 11), the three providers place them on their own turn with the capability check, with
+  tests. The spec's text-only history (§4) is corrected: today `AIProviderService.ts:220-222` (and the other families)
+  re-sends every earlier image and PDF, and Jodie keeps them on its history (`Jodie.tsx:715-724`, `:735`).
+- **R-AI-18** (2026-11-03). **The Custom «requires a Base URL» check moves into `BaseProvider.prepare`**, with today's
+  text («Custom provider requires a Base URL. Set it in Settings.», `AIProviderService.ts:683-685`) and a test, so every
+  chat consumer gets it. `BaseProvider.ts` joins L3's DOVE (14 entries, rule 19 confirmed by this answer).
+- **R-AI-19** (2026-11-03, ratified by Juri as recommended, measured by chat C-2026-11-03-0001 with Juri's keys,
+  Chromium at `http://localhost:3198` on `cc78e8e3f`, evidence: measured, verified: agent, reversible: trunk). **The
+  OpenAI-compatible client sends no `X-Stainless-*` header.** The `openai` SDK adds seven of them (`-OS`, `-Arch`,
+  `-Lang`, `-Package-Version`, `-Runtime`, `-Runtime-Version`, `-Retry-Count`; `-Timeout` on some requests), and the
+  CORS preflight of `api.mistral.ai` («Request header field x-stainless-os is not allowed») and of `api.moonshot.cn`
+  rejects them: chat and `test()` read «Connection error» / «Cannot reach», where a plain `fetch` from the same page gets
+  a readable status (Mistral 429, Kimi 401). The same SDK client with each header set to `null` in `defaultHeaders`
+  sends none and gets the readable status (Mistral 429 `RateLimitError`, Kimi 401 `AuthenticationError`). Ollama and
+  OpenRouter accept the headers; the Anthropic and Google SDKs are unaffected on their own hosts. Fixed in L3, in
+  `OpenAICompatibleProvider.ts`, with a test.
+
+L4 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-20..21: ratified by Juri as recommended;
+evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-20** (2026-11-03). **L4 removes the code first and the folder later, on one branch.** Measured on `staging`
+  `99b380f6f`: `AI.getEndpoint()` has no caller outside tests, and `fetchCatalog`/`fetchAnthropicCatalog`, the only
+  users of `proxyPath`, are imported only by their own test. The `jjodel-ai-proxy` Worker still answers (404 on `/`, 204
+  on the `/v1/anthropic/messages` preflight, 13:2x). One lane deletes the code proxy surface and proves that the bundle
+  no longer names the Worker host. The branch then stays unmerged. After Alfonso confirms that the deployment is
+  removed, a dedicated commit on the same branch deletes `cloudflare-worker/`, the `/cloudflare-worker/node_modules`
+  line of `.gitignore` and the Worker paragraph of `docs/CODEBASE-MAP.md`, and only then is the branch merged. Rule 19
+  is confirmed for that lane. Spec §7 L4 (a) also asks for a smoke from a production origin, which a lane cannot reach.
+  The dist check stands in for it, and the production run goes on Alfonso's test checklist.
+- **R-AI-21** (2026-11-03). **`services/aiModelCatalog.ts` loses its whole dead fetch path**, not only the proxy
+  fallback the spec names (§7 L4 «Modify»). Every export without a live importer outside its own test goes, along with
+  the private helpers that only those exports use and their test cases. The exports that live files still use
+  (`types/jodie.ts`, `ProviderModelSelector.tsx`, `AISettingsContent.tsx`) stay until L6.
+
+L4 merge and L6 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-22..23: ratified by Juri,
+R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-22** (2026-11-03). **The Worker goes later, and the L4 code goes now.** Juri: «il proxy lo eliminiamo dopo».
+  This supersedes the sequencing of R-AI-20. The L4 code part is merged into `staging` (`7816c57ec`, P-2026-11-03-1430).
+  The removal of the `jjodel-ai-proxy` deployment (Alfonso asked first) and a small branch that deletes
+  `cloudflare-worker/`, the `/cloudflare-worker/node_modules` line of `.gitignore` and the Worker paragraph of
+  `docs/CODEBASE-MAP.md` come later; the chat keeps the reminder. Measured: the deployed `origin/staging` `9dc6e3906`
+  uses the Worker only as the Claude `models.list` fallback (`AIProviderService.ts:821`), and `origin/master` names no
+  Worker.
+- **R-AI-23** (2026-11-03). **L6 is three chained lanes on one branch**, `feat/196-l6-consolidation`, with rule 19
+  confirmed for about 30 entries. Lane 1 moves the live runtime readers of `types/jodie.ts` onto `src/services/ai` and
+  deletes the L2 bridge. Lane 2 moves the types, deletes `types/jodie.ts` (and `services/aiModelCatalog.ts` once
+  nothing imports it), carries the tests and writes the CHANGELOG. Lane 3 rewrites `CLAUDE.md` §16 and
+  `docs/CODEBASE-MAP.md` §19. Juri's visual check comes before the merge. The spec's L6 list (§7) names only type
+  importers. Measured on `b443faf2b`, the runtime readers it missed are: `AI[p]` in `AISettingsContent.tsx` (`versions`,
+  `keyPlaceholder`, `initial`, `color`, `bgColor`), `AIAssistantSettings.tsx`, `ProviderConfigModal.tsx` and
+  `ChatMessages.tsx`; `AI.DOCUMENTATION_STORAGE_PREFIX` in `DocumentationService.ts`; `ALL_AI_PROVIDERS` and the
+  `AIProvider` statics; and `applyModelCatalog` (the bridge) in `ProviderModelSelector.tsx`. `ProviderSpec` carries no
+  GUI data, and `src/services/ai` stays free of UI, so the twelve `addGUIinfo` rows move verbatim to a new UI-side table,
+  `components/common/providerVisuals.ts`.
+
+## R-XMI: attribute values of the XMI M1 import (decisions 2026-11-05)
+
+- **R-XMI-1** (2026-11-05, ratified by Alfonso 2026-11-05 15:29 as it stands, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk): the XMI M1
+  import stores an attribute value typed by its declared primitive (EByte, EShort, EInt, ELong as integers; EFloat,
+  EDouble as finite numbers; EBoolean as `true`/`false`, any case); strings and enums are unchanged. Decided by the
+  chat under Alfonso's «decidi tu» (#607). On a bad value: a value that does not parse for its type
+  keeps its text and is an import warning, never NaN or 0, the import is not refused; an integer outside its type's range is stored unclamped
+  with a warning; an ELong beyond 2^53 keeps its text with a warning. Projects saved before the change keep their
+  strings; no migration of saved projects: re-importing the XMI heals them (ratified with the row). Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
+  (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
 
 ## Superate
 

@@ -175,11 +175,12 @@ describe('A — LObject.get_name: uno slot identita\' vuoto non ombreggia piu\' 
         expect(getName(ctx({ rawValues: [], slotValue: '', dataName: '', metaName: 'Edition' }))).toBe('Edition');
     });
 
-    it('uno slot che tiene davvero \'\' non e\' il caso corretto qui: resta come prima', () => {
-        // Dichiarato e non toccato: la finestra misurata ha `slotRaw: []`, non `['']`. Un nome
-        // cancellato di proposito continua a mostrare il ripiego che mostrava prima.
-        expect(getName(ctx({ rawValues: [''], slotValue: 'Edition_0', dataName: 'Edition_1' })))
-            .toBe('Edition_0');
+    it('uno slot che tiene davvero \'\' cede solo a data.name (R-TXT-46 D1, variante B)', () => {
+        // Un nome cancellato di proposito e' senza nome: cede a data.name, mai all'auto-nome.
+        // `slotValue` imita get_values, che sotto la variante B legge anch'esso data.name.
+        expect(getName(ctx({ rawValues: [''], slotValue: 'Edition_1', dataName: 'Edition_1' })))
+            .toBe('Edition_1');
+        expect(getName(ctx({ rawValues: [''], slotValue: '', dataName: '' }))).toBe('');
     });
 
     it('la lettura grezza passa da `__raw.values`, l\'idioma che set_name usa a :6385', () => {

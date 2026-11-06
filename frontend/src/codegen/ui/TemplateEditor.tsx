@@ -7,11 +7,16 @@
  * name. The draft is the template's: the panel keys this editor by name, so selecting another template starts a new
  * draft. Whether the body parses, and whether the name is an identifier, the engine reports at generation, with the
  * position (templates.ts).
+ *
+ * The «Mode» select switches the body between text and expression (S5, R-GEN-27): the body is converted at once
+ * (templateMode.ts) and the mode is part of the draft; a body that cannot be converted keeps its mode, with the reason.
  */
 
 import React, { useState } from 'react';
 import '../oracle/oracle'; // the oracle in the lazy chunk; its probe hook is installed only with the setting on
-import type { TemplateRecord } from '../engine/templates';
+import { modeOf } from '../engine/templates';
+import type { TemplateMode, TemplateRecord } from '../engine/templates';
+import { convertBody } from './templateMode';
 
 export interface TemplateEditorProps {
     readonly template: TemplateRecord;
@@ -27,15 +32,32 @@ export default function TemplateEditor({ template, taken, onSave, onDelete }: Te
     const [name, setName] = useState(template.name);
     const [params, setParams] = useState(template.params.join(', '));
     const [body, setBody] = useState(template.body);
+    const [mode, setMode] = useState<TemplateMode>(modeOf(template));
+    const [modeRefused, setModeRefused] = useState<string | null>(null);
 
     const trimmed = name.trim();
     const problem = trimmed === '' ? 'A template needs a name.' : taken.includes(trimmed) ? `The name ${trimmed} is taken by another template.` : null;
     const nextParams = paramsOf(params);
-    const dirty = trimmed !== template.name || nextParams.join(',') !== template.params.join(',') || body !== template.body;
+    const dirty = trimmed !== template.name || nextParams.join(',') !== template.params.join(',') || body !== template.body
+        || mode !== modeOf(template);
+
+    const switchMode = (to: TemplateMode) => {
+        const converted = convertBody(body, mode, to);
+        if (!converted.ok) {
+            setModeRefused(converted.reason);
+            return;
+        }
+        setModeRefused(null);
+        setBody(converted.body);
+        setMode(to);
+    };
 
     const save = () => {
         if (problem || !dirty) return;
-        onSave({ ...template, name: trimmed, params: nextParams, body });
+        const { mode: _stored, ...rest } = template;
+        // A template saved with no mode keeps none while it stays an expression: its stored bytes do not change.
+        const written = template.mode === undefined && mode === 'expression' ? {} : { mode };
+        onSave({ ...rest, name: trimmed, params: nextParams, body, ...written });
     };
 
     return (
@@ -60,6 +82,18 @@ export default function TemplateEditor({ template, taken, onSave, onDelete }: Te
                         onChange={e => setParams(e.target.value)}
                     />
                 </label>
+                <label className="codegen-panel__field">
+                    <span className="codegen-panel__label">Mode</span>
+                    <select
+                        className="codegen-panel__select"
+                        value={mode}
+                        title="Text: the body is the output, with ${…} holes. Expression: the body is a JjEL expression."
+                        onChange={e => switchMode(e.target.value as TemplateMode)}
+                    >
+                        <option value="text">Text</option>
+                        <option value="expression">Expression</option>
+                    </select>
+                </label>
             </div>
             <label className="codegen-panel__field">
                 <span className="codegen-panel__label">Body</span>
@@ -68,11 +102,12 @@ export default function TemplateEditor({ template, taken, onSave, onDelete }: Te
                     value={body}
                     rows={10}
                     spellCheck={false}
-                    placeholder={'"text with ${holes}"'}
-                    onChange={e => setBody(e.target.value)}
+                    placeholder={mode === 'text' ? 'text with ${holes}' : '"text with ${holes}"'}
+                    onChange={e => { setBody(e.target.value); setModeRefused(null); }}
                 />
             </label>
             {problem && <div className="codegen-panel__hint codegen-panel__hint--error">{problem}</div>}
+            {modeRefused && <div className="codegen-panel__hint codegen-panel__hint--error">{modeRefused}</div>}
             <div className="codegen-panel__actions">
                 <button type="button" className="codegen-panel__button codegen-panel__button--primary" disabled={!!problem || !dirty} onClick={save}>
                     <i className="bi bi-check2" />

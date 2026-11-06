@@ -324,6 +324,26 @@ export interface JjelTextHost {
      * the next and turn a hole that throws into a value. Absent: `evaluate()`.
      */
     evaluateHole?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+    /**
+     * Optional: `left + right`, the `Binary` node `expr`. Evaluates `left()`
+     * then `right()`; with a Text operand returns their concatenation, else
+     * `plain(left, right)` as is. Lets the host attribute each operand.
+     */
+    evaluateConcat?(
+        expr: JjelExpression,
+        left: () => JjelValue,
+        right: () => JjelValue,
+        plain: (left: JjelValue, right: JjelValue) => JjelValue,
+    ): JjelValue;
+    /** Optional: runs around a lambda body and returns `evaluate()` as is. */
+    evaluatePart?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+    /** Optional: `items.map(f)` with a function, `call` being `f` on one item; returns the items mapped by `call`. */
+    mapItems?(items: JjelValue[], call: (item: JjelValue) => JjelValue): JjelValue[];
+    /**
+     * Optional: `items.join(separator)`, the call node `expr` when known. With
+     * a Text item or separator returns their join, else `plain()` as is.
+     */
+    evaluateJoin?(expr: JjelExpression | undefined, items: JjelValue[], separator: JjelValue, plain: () => JjelValue): JjelValue;
 }
 
 // ============================================
@@ -368,6 +388,13 @@ export class EvaluationContext {
      * nothing. Set only by the code generator. Inherited by children, like `stateAccess`.
      */
     readObserver?: (target: JjelObject, property: string, value: JjelValue) => void;
+    /**
+     * Optional time bound (R-JJD-3), an absolute `Date.now()` value in ms.
+     * `JjelEvaluator.evaluate` throws `JjelTimeoutError` once the clock is
+     * past it. `undefined`: no bound, no clock read. Inherited by children,
+     * like `stateAccess`.
+     */
+    deadline?: number;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -449,6 +476,8 @@ export class EvaluationContext {
         // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
         child.textHost = this.textHost;
         child.readObserver = this.readObserver;
+        // Propagate the time bound so lambdas and forall bodies stop too (R-JJD-3).
+        child.deadline = this.deadline;
         child.pushScope();
 
         if (bindings) {

@@ -36,8 +36,9 @@
  * Pure: types from JjEL only.
  */
 
-import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
+import type { ASTLocation, BinaryExpr, JjelExpression, ObjectLiteralExpr } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
+import { literalArgument } from './stateAttributesCodec';
 
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
@@ -77,6 +78,13 @@ export const NOT_VERIFIABLE_METHODS: ReadonlySet<string> = new Set([
     // string
     'matches',
 ]);
+
+/**
+ * Bit-vector methods with no nuXmv word operator (R-BV-8); every other one has one (`bvToSmv.ts`). Apart from
+ * the list above, which holds the methods of the four groups. `toNumber` has none either, but it is also a
+ * string method, and a shared name is never flagged.
+ */
+const NOT_VERIFIABLE_BITVECTOR_METHODS: ReadonlySet<string> = new Set(['toVerilog']);
 
 const SEVERITY: Record<SubsetCode, SubsetSeverity> = {
     'E-NODE': 'error', 'E-DATA': 'error', 'E-SHADOW': 'error', 'E-EAGER': 'error', 'E-NOELSE': 'error',
@@ -246,6 +254,12 @@ function eagerMessage(w: Walk, b: BinaryExpr & { operator: 'and' | 'or' }, idiom
         : `${head} Write: not (${left}) implies ${r}`;
 }
 
+/** `{ x: x, y: y, … }`: the record a forall over several variables yields without a projection. */
+function isVariableRecord(e: JjelExpression): e is ObjectLiteralExpr {
+    return e.type === 'ObjectLiteral' && e.entries.length > 1
+        && e.entries.every(x => x.value.type === 'Identifier' && x.value.name === x.key);
+}
+
 function checkBinder(w: Walk, name: string, at: JjelExpression): void {
     if (GUARD_ROOTS.includes(name)) {
         report(w, 'E-SHADOW', `'${name}' is a reserved root (${GUARD_ROOTS.join(', ')}): name the local variable otherwise.`, at);
@@ -304,11 +318,13 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             return;
         case 'MethodCall':
         case 'NullSafeMethodCall':
-            if (NOT_VERIFIABLE_METHODS.has(e.method)) report(w, 'T-METHOD', `Not verifiable: \`${e.method}\` has no translation to nuXmv.`, e);
+            if (NOT_VERIFIABLE_METHODS.has(e.method) || NOT_VERIFIABLE_BITVECTOR_METHODS.has(e.method)) report(w, 'T-METHOD', `Not verifiable: \`${e.method}\` has no translation to nuXmv.`, e);
             plain(e.object);
             e.args.forEach(asArg);
             return;
         case 'FunctionCall':
+            // A bit-vector constant (R-BV-8): `bits(w, n)` / `sbits(w, n)` with literal arguments is a nuXmv word constant.
+            if ((e.name === 'bits' || e.name === 'sbits') && e.args.every(a => literalArgument(a) !== null)) return;
             report(w, 'E-CALL', `\`${e.name}(…)\` calls a function, and guards have none: builtins such as now() are not available.`, e);
             e.args.forEach(asArg);
             return;
@@ -348,7 +364,9 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             checkBinder(w, e.variable, e);
             plain(e.collection);
             if (e.filter) within(e.filter, [e.variable]);
-            if (e.projection) within(e.projection, [e.variable]);
+            // The record `{ x: x, y: y }` of a forall over several variables is an element, not a verdict (R-FA-3).
+            if (e.projection && isVariableRecord(e.projection)) e.projection.entries.forEach(x => within(x.value, [e.variable]));
+            else if (e.projection) within(e.projection, [e.variable]);
             return;
         case 'Exists':
             checkBinder(w, e.variable, e);
@@ -386,7 +404,8 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
  */
 export function checkGuardSubset(expr: JjelExpression, source?: string): SubsetDiagnostic[] {
     const w: Walk = { out: [], source };
-    if (expr.type === 'ForAll') {
+    // A forall over several variables is `(forall x in A : …).flatten()` (R-FA-6): a collection as well.
+    if (expr.type === 'ForAll' || (expr.type === 'MethodCall' && expr.method === 'flatten' && expr.args.length === 0 && expr.object.type === 'ForAll')) {
         report(w, 'E-FORALL', '`forall` returns a collection, never a verdict: write `coll.all(x => …)` or `exists x in coll | …`.', expr);
     }
     walk(w, expr, new Set(), false);

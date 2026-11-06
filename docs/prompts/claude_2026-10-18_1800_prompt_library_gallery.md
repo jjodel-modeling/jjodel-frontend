@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1800
 Chat: C-2026-10-18-0110
 Front: notation-library
 Lane: full (more than 3 files; new build script and assets, Templates page)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane notation-library · 3fa4b921a · verifica visiva passata 2026-10-18
 Request: Alfonso, 2026-10-18 17:28, «adesso procedi in autonomia fino all'implementazione», on R-LIB-1..6 and `docs/library/catalog.json`
 Depends: P-2026-10-18-1735 (discovery, `docs/discovery/discovery_2026-10-18_notation_library.md`)
 Corregge: —

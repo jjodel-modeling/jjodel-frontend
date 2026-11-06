@@ -213,8 +213,10 @@ describe('trace-monitor', { timeout: 30000 }, () => {
     });
 });
 
-describe('trace-monitor.ts CLI', () => {
-    const cli = (args: string[]) => spawnSync(process.execPath, [...NODE_TS, SCRIPT, ...args], { encoding: 'utf8', timeout: 10000 });
+describe('trace-monitor.ts CLI', { timeout: 120_000 }, () => {
+    // Node start-up with type stripping took over 10 s on a loaded machine (ETIMEDOUT, status null); the bound is for a hang only.
+    const SPAWN_TIMEOUT_MS = 90_000;
+    const cli = (args: string[]) => spawnSync(process.execPath, [...NODE_TS, SCRIPT, ...args], { encoding: 'utf8', timeout: SPAWN_TIMEOUT_MS });
 
     test('kills "3001 accepted": the trunk\'s dev server port is refused before anything listens', () => {
         const r = cli(['--port', '3001']);

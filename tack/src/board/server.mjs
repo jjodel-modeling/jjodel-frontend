@@ -1,6 +1,6 @@
 // tack board: a local page over the store, node:http only, bound to 127.0.0.1. On start it runs an
 // incremental scan (the collectors of slices 2-3), then serves the page and the JSON API of api.mjs;
-// POST /api/rescan repeats the scan. Nothing is written outside the store: the selection lives in
+// POST /api/rescan repeats the scan. Slice 9: GET /api/attention (the 4700 board's shape). Nothing is written outside the store: the selection lives in
 // the URL, the last scan time in memory. Slice 7: /settings and the settings API (writes go to the user
 // file or tack.local.json only), the host load sampler and GET /api/load, and the notifier (notify: true, set
 // by the CLI, off under TACK_NOTIFY=off).
@@ -12,8 +12,9 @@ import { scan, defaultRoot } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
 import { collectLayers, laneLimit } from '../collectors/layers.mjs';
-import { collectLanes, defaultLaneRoot } from '../collectors/lane-run/collect.mjs';
-import { dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
+import { traceSource } from '../collectors/active.mjs';
+import { attentionApi, dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi, unrecordedRepo } from './api.mjs';
+import { waitReader } from './waiting.mjs';
 import { htmlAttributes, loadApi, settingsApi, settingsWrite } from './settings-api.mjs';
 import { createSampler, runningLanes } from '../host/load.mjs';
 import { effectiveSettings, settingsResolver, userSettingsPath } from '../settings/settings.mjs';
@@ -48,7 +49,7 @@ export function laneRefresher({ db, laneRoot, now = Date.now, user, collect = nu
   let last = null;
   const lease = db.prepare('SELECT heartbeat_ms FROM notify_lease WHERE id = 1');
   const heartbeat = () => lease.get()?.heartbeat_ms ?? null;
-  const run = collect ?? ((t) => collectLanes(db, laneRoot, t, { limitMs: laneLimit(db, { user }) }));
+  const run = collect ?? ((t) => traceSource.collect(db, laneRoot, t, { limitMs: laneLimit(db, { user }) }));
   return {
     refresh() {
       const t = now();
@@ -107,20 +108,25 @@ function readBody(req) {
 
 /**
  * Starts the board. store: the store file; root: the transcripts root; cwd: the start directory
- * that picks the preselected repository; port 0 picks a free one; user: the user settings file;
+ * that picks the preselected repository (a git work tree the store does not hold is preselected as unrecorded:
+ * empty answers, never all repositories); port 0 picks a free one; user: the user settings file;
  * notify: run the notifier (the CLI sets it; tests leave it off); transports: the channels, injected
- * by tests; sample: run the load sampler. Resolves to { url, port, preselected, server, close } once listening.
+ * by tests; sample: run the load sampler. Resolves to { url, port, preselected, unrecorded, server, close } once listening.
  */
 export async function startBoard({ store, root = defaultRoot(), cwd = process.cwd(), port = DEFAULT_PORT, scanOnStart = true,
-  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null, laneRoot = defaultLaneRoot() } = {}) {
+  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null, laneRoot = traceSource.root() } = {}) {
   const db = openStore(store);
   const userSettings = () => effectiveSettings({ user });
   const channels = transports ?? defaultTransports(userSettings);
   const meter = sampler ?? (sample ? createSampler({ running: () => runningLanes(db) }).start() : null);
   let lastScan = scanOnStart ? runScan(db, root) : null;
-  const preselected = preselect(db, cwd);
+  const stored = preselect(db, cwd);
+  let unrecorded = stored ? null : unrecordedRepo(db, cwd);
+  let preselected = stored ?? unrecorded?.key ?? null;
   let allowed = new Set();
   const lanes = laneRefresher({ db, laneRoot, user });
+  const waitFor = waitReader(laneRoot);
+  const lanesOf = (repo) => lanesApi(db, { repo, laneRoot, settingsFor: settingsResolver(db, { user }), updatedMs: lanes.updatedMs(), waitFor, unrecorded });
 
   const server = createServer((req, res) => {
     // Bound to 127.0.0.1; the Host check also turns away a DNS-rebound page, the Origin check a cross-site POST.
@@ -133,7 +139,7 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
       if (p === '/api/settings' && req.method === 'POST') {
         return readBody(req).then((body) => {
           if (!body) return json(res, 400, { error: 'a JSON body' });
-          const repo = repoParam(db, body.repo ?? 'all');
+          const repo = repoParam(db, body.repo ?? 'all', unrecorded);
           if (repo.error) return json(res, 400, { error: repo.error });
           const r = settingsWrite(db, { ...body, repo: repo.key }, { user });
           return json(res, r.status, r.body);
@@ -151,27 +157,34 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
       if (p === '/api/rescan') {
         if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
         lastScan = runScan(db, root);
+        // A session recorded since the start turns the unrecorded work tree into a stored repository.
+        if (unrecorded) { const hit = preselect(db, cwd); if (hit) { unrecorded = null; preselected = hit; } }
         return json(res, lastScan.ok ? 200 : 500, { lastScan });
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'GET only' });
       if (p === '/' || p === '/settings') return send(res, 200, 'text/html; charset=utf-8', PAGE.replace('<html lang="en">', `<html lang="en" ${htmlAttributes(user)}>`));
       if (ASSETS[p]) return send(res, 200, ...ASSETS[p]);
       if (p === '/api/settings' || p === '/api/load') {
-        const repo = repoParam(db, url.searchParams.get('repo'));
+        const repo = repoParam(db, url.searchParams.get('repo'), unrecorded);
         if (repo.error) return json(res, 400, { error: repo.error });
         return json(res, 200, p === '/api/settings' ? settingsApi(db, { repo: repo.key, user }) : loadApi(db, meter, { repo: repo.key, user }));
       }
       if (p === '/api/lanes') {
-        const repo = repoParam(db, url.searchParams.get('repo'));
+        const repo = repoParam(db, url.searchParams.get('repo'), unrecorded);
         if (repo.error) return json(res, 400, { error: repo.error });
         lanes.refresh();
-        return json(res, 200, lanesApi(db, { repo: repo.key, laneRoot, settingsFor: settingsResolver(db, { user }), updatedMs: lanes.updatedMs() }));
+        return json(res, 200, lanesOf(repo.key));
+      }
+      // The menu bar app's route, in the shape of Jjodel's lane board (4700): all repositories, no CORS header.
+      if (p === '/api/attention') {
+        lanes.refresh();
+        return json(res, 200, attentionApi(lanesOf(null), { staleMs: LEASE_FRESH_MS }));
       }
       if (p === '/api/health') return json(res, 200, healthApi(db, { store, lastScan }));
-      if (p === '/api/repos') return json(res, 200, { preselected, repos: listBoardRepos(db) });
+      if (p === '/api/repos') return json(res, 200, { preselected, unrecorded, repos: listBoardRepos(db) });
       if (p === '/api/sessions' || p === '/api/metrics' || p === '/api/timeline') {
         const q = (k) => url.searchParams.get(k);
-        const repo = repoParam(db, q('repo'));
+        const repo = repoParam(db, q('repo'), unrecorded);
         const since = dayParam('since', q('since'));
         const until = dayParam('until', q('until'));
         const bad = repo.error ?? since.error ?? until.error;
@@ -193,12 +206,12 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
   const bound = server.address().port;
   allowed = new Set([`127.0.0.1:${bound}`, `localhost:${bound}`]);
   const watcher = notify && !notifyDisabled()
-    ? startWatcher({ db, root, sampler: meter, transports: channels, boardUrl: `http://127.0.0.1:${bound}/`, baseRepo: preselected, user,
+    ? startWatcher({ db, root, sampler: meter, transports: channels, boardUrl: `http://127.0.0.1:${bound}/`, baseRepo: stored, user,
       log: (x) => process.stderr.write(`tack board: ${x}\n`) })
     : null;
   if (watcher) watcher.tick();
   return {
-    url: `http://127.0.0.1:${bound}/`, port: bound, preselected, server, lastScan: () => lastScan, watcher, sampler: meter,
+    url: `http://127.0.0.1:${bound}/`, port: bound, preselected, unrecorded, server, lastScan: () => lastScan, watcher, sampler: meter,
     close: () => new Promise((resolve) => { watcher?.stop(); if (!sampler) meter?.stop(); server.close(() => { db.close(); resolve(); }); }),
   };
 }
@@ -233,7 +246,7 @@ export async function boardCmd(flags) {
   const s = b.lastScan();
   process.stdout.write(`tack board on ${b.url}\n`);
   process.stdout.write(`scan: ${s.ok ? `${s.durationMs} ms, rows added: sessions ${s.added.sessions}, calls ${s.added.calls}, commits ${s.added.commits}` : `failed (${s.error})`}\n`);
-  process.stdout.write(`repository: ${b.preselected ? b.preselected.slice(0, 12) : 'none here, all repositories'}\n`);
+  process.stdout.write(`repository: ${b.unrecorded ? `${b.unrecorded.name}, no recorded session` : b.preselected ? b.preselected.slice(0, 12) : 'none here, all repositories'}\n`);
   process.stdout.write(`notifier: ${b.watcher ? 'on (one per store: the lease decides)' : 'off (TACK_NOTIFY=off)'}\n`);
   if (!flags['no-open']) openBrowser(b.preselected ? `${b.url}?repo=${b.preselected}` : b.url);
   const stop = () => b.close().then(() => process.exit(0));

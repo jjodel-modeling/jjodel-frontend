@@ -81,6 +81,17 @@ export async function executeSet(
             };
         }
 
+        // A list (R-TXT-25 (2)) is the value of a many-valued attribute of a model; before the
+        // parser read lists, a `[` here was a parse error, and it stays an error at M2.
+        if (isLiteralValue(value) && (value as LiteralValue).kind === 'array') {
+            return {
+                success: false,
+                command: 'set',
+                message: 'A list is the value of a many-valued attribute of a model, not of a metamodel property',
+                errors: [{ code: 'LIST_NOT_SUPPORTED', message: `'${property}' does not take a list` }]
+            };
+        }
+
         // `type` is a pointer to a classifier, and which classifiers are admissible depends
         // on what is being typed -- so it does not go through `convertValue`, whose
         // unrestricted project-wide lookup ends in a string fallback (see `resolveSetType`).

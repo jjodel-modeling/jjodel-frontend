@@ -1,0 +1,299 @@
+[
+ {
+  "mutant": "transitions { deleted",
+  "errors": [
+   "3:5 expected \"{\"; found name \"Transition\""
+  ],
+  "rows": [
+   {
+    "cls": "Initial",
+    "state": "partial",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Initial[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition coin"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition stop"
+   },
+   {
+    "cls": "State",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "State[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "State",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Terminal",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Terminal[0]"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "coin"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "push"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "stop"
+   }
+  ]
+ },
+ {
+  "mutant": "transitions } deleted",
+  "errors": [
+   "19:1 expected \"}\" to close the \"{\" at 1:9; found name \"State\""
+  ],
+  "rows": [
+   {
+    "cls": "Initial",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Initial[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition coin"
+   },
+   {
+    "cls": "Transition",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Transition",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition stop"
+   },
+   {
+    "cls": "State",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "State[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "State",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Terminal",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Terminal[0]"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "coin"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "push"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "stop"
+   }
+  ]
+ },
+ {
+  "mutant": "truncated in the 2nd Transition",
+  "errors": [
+   "10:7 expected \"}\" to close the \"{\" at 8:16; found end of text",
+   "10:7 expected \"}\" to close the \"{\" at 2:15; found end of text",
+   "10:7 expected \"}\" to close the \"{\" at 1:9; found end of text",
+   "6:13 no object of type Event is named \"coin\" (may follow from the error at 10:7)"
+  ],
+  "rows": [
+   {
+    "cls": "Initial",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Initial[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "partial",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition coin"
+   },
+   {
+    "cls": "Transition",
+    "state": "unclosed",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition \"model.[paid]\""
+   }
+  ]
+ },
+ {
+  "mutant": "event of the 1st Transition deleted",
+  "errors": [],
+  "rows": [
+   {
+    "cls": "Initial",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Initial[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition Initial[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "Initial",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition stop"
+   },
+   {
+    "cls": "State",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "State[0]"
+   },
+   {
+    "cls": "Transition",
+    "state": "complete",
+    "orphan": false,
+    "parent": "State",
+    "chain": "block > item(transitions, kw transitions) > block > item(transitions)",
+    "label": "Transition push"
+   },
+   {
+    "cls": "Terminal",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "Terminal[0]"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "coin"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "push"
+   },
+   {
+    "cls": "Event",
+    "state": "complete",
+    "orphan": false,
+    "parent": null,
+    "chain": "",
+    "label": "stop"
+   }
+  ]
+ }
+]

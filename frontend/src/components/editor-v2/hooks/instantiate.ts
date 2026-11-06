@@ -513,13 +513,13 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
         result.problems.push(plan.error);
         return result;
     }
-    const group = history.beginUndoGroup();
+    history.beginUndoGroup();
     try {
         await synthesize(modules, adapter.createInstance, get, plan, record, result, placeAt);
     } finally {
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
         // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own.
-        history.endUndoGroup(group);
+        history.endUndoGroup();
     }
     result.ok = result.problems.length === 0;
     return result;

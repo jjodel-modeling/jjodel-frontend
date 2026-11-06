@@ -900,3 +900,131 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9441 with the 9 known import reds, build 0, checks 0); scripts only, lane-run status reads the Outcome of the latest run
 **Notes**: Rollback tag `pre-lane-status-stale` on `8c2616a4a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0102/result.json`.
 **Prompt document name**: 2026-10-20 01:02
+
+## 2026-10-21 — ticket: traceMonitor test fails in merge gates while the dev server holds 3001
+**Ticket**: `frontend/scripts/gates/__tests__/traceMonitor.test.ts` («3001 accepted», «a port in use taken») fails in the full vitest gate of direct merges while Alfonso dev server holds port 3001, and passes 9/9 when run alone. It blocked four merges of front hw-notation on 2026-10-20/21 (P-2026-10-21-0105, -0659, -0845), each cleared by re-run, `lane-run resolve` and a closure by hand. Expected: the test picks a free port it owns, or the gate excludes it when 3001 is taken.
+**Priority**: low
+**Found in**: P-2026-10-21-0845
+
+## 2026-10-21 — fix(lane-monitor-app): external links in the Lane board window open in the browser (P-2026-10-21-1000)
+**Prompt**: `claude_2026-10-21_1000_prompt_lanemon_external_links.md`: the chat link in the «Lane board» webview window did nothing; route external links to the default browser.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/links.rs` (`Route`, `route()`, 3 tests), `tools/lane-monitor-app/src-tauri/src/main.rs` (`follow()`, `.on_navigation`, `.on_new_window` in `open_monitor_window`); commit `c63d12669`; this entry; the prompt's `Status:`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 56 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB); the installed app relaunched (pid alive, tray process running)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the click in the webview is checked by the chat after exit (P8 deroga)
+**Notes**: Cause confirmed as stated: no navigation or new-window handler, so WKWebView dropped `target="_blank"`. tauri 2.12.4 has `WebviewWindowBuilder::on_new_window` (`~/.cargo/registry/src/*/tauri-2.12.4/src/webview/webview_window.rs:315`, `NewWindowResponse::Deny` at `src/webview/mod.rs:257`); both hooks go through `route()`, Browser runs `open <url>`. Board and Cargo.toml untouched.
+**Prompt document name**: 2026-10-21 10:00
+
+## 2026-10-21 — merge: lanemon-links into alfonso-frontend-jjtl (P-2026-10-21-1008)
+**Prompt**: `claude_2026-10-21_1008_prompt_merge_lanemon-links.md`, a direct merge by `lane-run merge --direct`, no session: `lanemon-links` at `74dd1181a` into `alfonso-frontend-jjtl`, merge base `4d56f907f`, 2 commits on the branch side.
+**Files touched**: merge `31ee859e2`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-21_1000_prompt_lanemon_external_links.md`, `tools/lane-monitor-app/src-tauri/src/links.rs`, `tools/lane-monitor-app/src-tauri/src/main.rs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `31ee859e2` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Lane Monitor app rebuilt and relaunched; route() 3 new tests of 56 green; on_new_window Deny in tauri 2.12.4; link click in the Lane board window confirmed by Alfonso 2026-10-21 10:19
+**Notes**: Rollback tag `pre-lanemon-links` on `4d56f907f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1008/result.json`.
+**Prompt document name**: 2026-10-21 10:08
+
+## 2026-10-21 — feat(lane-monitor-app): the tray title shows waiting and running counts (P-2026-10-21-1020)
+**Prompt**: `claude_2026-10-21_1020_prompt_lanemon_tray_counts.md`: the tray title read «0» with 2 lanes running and 0 waiting; show waiting first, then running, each with its sign.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/poll.rs` (`title_for` rewritten, new `tooltip_for` and `lanes`, title test rewritten, new `tooltip_formatter` test), `tools/lane-monitor-app/src-tauri/src/main.rs` (tooltip now calls `poll::tooltip_for`; module doc line 3), `docs/log-inbox/harness.md`, this prompt file (Status). Commit `c42a2abd5`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 57 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB, 5.0M installed); app quit, `ditto` over `~/Applications/Lane Monitor.app`, relaunched; the menu bar item read through System Events shows `⏸1 ▶5`, matching `/api/attention` (waiting 1, blocked 0, running 5)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the tray after exit (P8 deroga); title read as text, not as pixels
+**Notes**: Title `⏸<w>[!] ▶<r>`, zero counts left out, empty at rest; stale/unreachable/pending keep `–`. Choice the prompt left open: blocked > 0 with waiting 0 shows `⏸0!` (the old `0!` kept), so the blocked signal is never lost. Tooltip: «1 lane waiting for you (1 blocked), 2 lanes running»; blocked-only reads «2 lanes blocked». Board and lane-run.mjs untouched (R-TACK-2).
+**Prompt document name**: 2026-10-21 10:20
+
+## 2026-10-21 — ticket: Flaky vitest under load blocks direct merges (traceMonitor port-in-use and others)
+**Ticket**: Under machine load (load average about 100) the vitest gate of lane-run merge --direct fails on tests outside the merged paths, blocking the merge: scripts/gates/__tests__/traceMonitor.test.ts «a port in use taken» failed in P-2026-10-21-1035 and P-2026-10-21-1114; laneRun «JJODEL_MODEL_TRAILER ignored», laneRunDirect «a precondition dropped» and laneBoard tests failed once each. Every one passed on a rerun at load under 20 (/tmp/rerun-1035.log, /tmp/rerun-1114.log). Each time the chat had to resolve the lane and flip the Status by hand, because go refuses a blocked lane. Suggested: make the timing-sensitive tests robust to load (port probes, child process timeouts), or let the direct merge rerun only the failed files once before declaring the gate red.
+**Priority**: medium
+**Found in**: P-2026-10-21-1114
+
+## 2026-10-22 — perf(lane-run): status --all caches the outcome of exited lanes (P-2026-10-22-1140)
+**Prompt**: The board on 4700 timed out (status --all over 15 s, about 740 lanes, every exited log parsed on every call). Cache outcome and fate of exited lanes in state-cache.json, keyed on what a resume changes; replace the discarded runLines call in statusAll with completeRun in a try/catch; tests, real-root measurement, gates.
+**Files touched**: frontend/scripts/lane-run.mjs, frontend/scripts/hooks/__tests__/laneRun.test.ts (be184d551); docs/log-inbox/harness.md, docs/prompts/claude_2026-10-22_1140_prompt_status_all_outcome_cache.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun.test.ts 145 passed (4 new); typecheck:scripts, check:scripts exit 0. Real root: id, state and outcome columns of status --all identical before, at the filling run and at the hitting run; only Date.now-based elapsed minutes moved (2 running lanes, 1 exited without exit.txt, 1 chain)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
+**Notes**: Real root, load 6-8: 8.7 s before, 8.5 s filling, 0.33 s hitting; 735 caches written. Key adds stderr.log size and errFrom to the prompt's list (runFate reads stderr): stricter, never looser. A lane dead without exit.txt has no key and reads the log as before. Mutation bench in the commit message. lane-board.mjs untouched (R-TACK-2).
+**Prompt document name**: 2026-10-22 11:40
+
+## 2026-10-22 — merge: status-cache into alfonso-frontend-jjtl (P-2026-10-22-1147)
+**Prompt**: `claude_2026-10-22_1147_prompt_merge_status-cache.md`, a direct merge by `lane-run merge --direct`, no session: `status-cache` at `ea6fc96fe` into `alfonso-frontend-jjtl`, merge base `a9d439520`, 2 commits on the branch side.
+**Files touched**: merge `0764dcd90`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-22_1140_prompt_status_all_outcome_cache.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0764dcd90` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11536 tests in 402 files, 9 red at import, hooks 961; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat C-2026-10-22-1050: status --all on the trunk 0.31-0.63 s over 741 lanes, 737 state-cache.json, output rows match; the 4700 board still times out for a separate cause (its own synchronous git calls block the event loop), fixed in its own lane
+**Notes**: Rollback tag `pre-status-cache` on `a9d439520` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-22-1147/result.json`.
+**Prompt document name**: 2026-10-22 11:47
+
+## 2026-10-22 — fix(lane-board): git reads off the event loop, status kill on child runtime (P-2026-10-22-1210)
+**Prompt**: The 4700 board answered "lane-run status timed out after 15 s" although status --all takes 0.3-0.6 s: its synchronous git reads blocked the event loop and the kill timer won over a child that had already exited. Make the git reads async with the same arguments, timeouts and caches; decide the kill on the child's own runtime; tests; measure on a 4790 instance under a 20 s busy loop; gates.
+**Files touched**: frontend/scripts/lane-board/lane-board.mjs, frontend/scripts/hooks/__tests__/laneBoardStatusTimer.test.ts (ab4824a83); docs/log-inbox/harness.md, docs/prompts/claude_2026-10-22_1210_prompt_board_status_timer.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Board tests 168 passed in 6 files (6 new); typecheck:scripts, check:scripts exit 0; promptCommitMap equals the HEAD parse on ~/jjodel (995 entries)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
+**Notes**: 4790, warm caches, 20 s busy loop, load 4-13: /api error "" on 5/5 (cold 8.0 s, then 0.5-0.8 s). Old timeout not reproduced at that load; loop stall in the cold round measured instead: max 0.49 s new, 6.6 s on the HEAD copy (4791). /api/attention primes trunk Status before attentionOf. Mutation bench (4 mutants, all red) in the commit message. 4700 agent untouched.
+**Prompt document name**: 2026-10-22 12:10
+
+## 2026-11-01 — ticket: criticalZone.test.ts fails inside lanes started with a critical-zone go-ahead
+**Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` (or wherever the critical-zone hook test lives) fails 4 cases whenever it runs inside a lane started with `--critical-zone-goahead`: the lane's environment carries `JJODEL_CRITICAL_ZONE_GOAHEAD`, and the hook spawned by the test inherits it, so the "ask"/"deny" expectations see a granted go-ahead. Measured by P-2026-11-01-1605 on 2026-11-01: 4 failures on the branch and on trunk `052746160` with the variable set; 70/70 with the variable unset.
+
+Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead variable) from the child environment unless a case sets it on purpose, so vitest baselines inside critical-zone lanes match the ones outside.
+**Priority**: low
+**Found in**: P-2026-11-01-1605
+
+## 2026-11-02 — test(hooks): criticalZone spawns drop an inherited go-ahead (P-2026-11-02-0645)
+**Prompt**: Ticket #393: inside a lane started with --critical-zone-goahead the hook spawned by criticalZone.test.ts inherits JJODEL_CRITICAL_ZONE_GOAHEAD and 4 ask/deny cases fail. Strip the variable from the child environment in the test file only, keep the cases that set it on purpose, prove with the variable unset and set plus a mutation, gates, close the ticket.
+**Files touched**: frontend/scripts/hooks/__tests__/criticalZone.test.ts (3c54c9d3f); docs/log-inbox/harness.md, docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. criticalZone.test.ts 70/70 with the variable unset and with JJODEL_CRITICAL_ZONE_GOAHEAD=P-2026-11-02-0645; check:scripts PASS, typecheck and typecheck:scripts exit 0 (neither covers scripts/hooks/__tests__)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Closes ticket #393 (2026-11-01, found in P-2026-11-01-1605). runScript lives in hookRunner.ts, shared by seven test files and left untouched: a local runZone deletes the variable from process.env around the synchronous spawn and restores it. Mutation (delete commented out): set 66/70, the 4 RC-19 bypass cases red; unset 70/70.
+**Prompt document name**: 2026-11-02 06:45
+
+## 2026-11-02 — merge: criticalzone-test-env into alfonso-frontend-jjtl (P-2026-11-02-0723)
+**Prompt**: Bring `criticalzone-test-env` at ad09563f7 (criticalZone hook tests drop an inherited go-ahead, 3c54c9d3f, ticket #393) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14).
+**Files touched**: merge commit 34bb2c30c (`frontend/scripts/hooks/__tests__/criticalZone.test.ts`, `docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md`, this inbox); `docs/prompts/claude_2026-11-02_0723_prompt_merge_criticalzone-test-env.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (test-only change; chat GO 2026-11-02)
+**Notes**: Gates on 34bb2c30c: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk; hook tests 21 files, 967 = trunk = branch (no new test); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Zero conflicts, no union. Lane board untouched. Step 6 names 81e0aafdf as reset target; the real pre-merge tip was bce1f3ef5 (template fix owed).
+**Prompt document name**: 2026-11-02 07:23
+
+## 2026-11-02 — ticket: Merge prompt template names the wrong reset target when check:addonly fails
+**Ticket**: The merge prompt that `lane-run merge ... --launch` generated for P-2026-11-02-0723 (criticalzone-test-env into alfonso-frontend-jjtl) named `81e0aafdf` in its step 6 as the reset point if `check:addonly` fails. `81e0aafdf` is the closure commit of the previous merge (P-2026-11-02-0656). The real pre-merge tip was `bce1f3ef5`, the commit that adds the merge prompt itself, so a reset to `81e0aafdf` would also drop the merge prompt's own commit. It had no effect because the gate passed; the merge session noticed and reported it.
+
+Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
+**Priority**: low
+**Found in**: P-2026-11-02-0723

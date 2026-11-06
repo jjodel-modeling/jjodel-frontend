@@ -1,0 +1,4 @@
+MEAS  monaco cost  {"N":1000,"chars":67339,"tokens":8000,"semanticAskedAfterEditMs":455.9,"semanticResultToPaintMs":42.7,"decorationsSetAndPaintMs":33.3,"decorationsReplaceSyncMs":3.4}
+MEAS  monaco cost  {"N":6000,"chars":409589,"tokens":48000,"semanticAskedAfterEditMs":454.4,"semanticResultToPaintMs":33.8,"decorationsSetAndPaintMs":43,"decorationsReplaceSyncMs":26}
+PASS  probe ran  null
+ALL PASS

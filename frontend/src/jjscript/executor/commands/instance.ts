@@ -261,6 +261,21 @@ export function resolveInstanceHandle(model: LModel, handle: string): InstanceRe
 }
 
 /**
+ * Resolve a command target to an instance. A target carrying `elementId` (a `forall` variable,
+ * R-FA-10) is that instance of the model, by id, however many share its name; not found there
+ * is a miss, never the name. Any other target is `resolveInstanceHandle` of its name.
+ */
+export function resolveInstanceTarget(model: LModel, target: QualifiedName): InstanceResolution {
+    const name = target.segments.join('::') || target.raw;
+    if (typeof target.elementId === 'string' && target.elementId && target.segments.length === 1) {
+        const obj = allModelInstances(model).find((o: any) => o?.id === target.elementId);
+        if (obj) return { ok: true, value: obj };
+        return { ok: false, reason: `No instance named '${name}' in '${(model as any)?.name ?? 'the model'}'` };
+    }
+    return resolveInstanceHandle(model, name);
+}
+
+/**
  * Generate a unique default name for a new instance.
  * Strategy: <ClassName>, <ClassName>2, <ClassName>3, ... — same as the visual editor.
  *
@@ -308,6 +323,73 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
         case 'string':  return value.value;
         default:        return null;
     }
+}
+
+/** What an attribute admits (R-TXT-25 (2)): one value or a list, and its enumeration if it has one. */
+interface AttributeShape {
+    name: string;
+    many: boolean;
+    enumeration: { name: string; literals: string[] } | null;
+}
+
+type AttributeWrite =
+    | { ok: true; value: string | number | boolean | null }
+    | { ok: true; values: Array<string | number | boolean | null> }
+    | { ok: false; code: string; message: string };
+
+function attributeShape(metaclass: LClass, propName: string): AttributeShape {
+    const attrs: any[] = (metaclass as any).allAttributes ?? (metaclass as any).attributes ?? [];
+    const attr = attrs.find((a) => a?.name === propName);
+    const type = attr?.type;
+    const enumeration = type?.className === 'DEnumerator'
+        ? { name: String(type.name), literals: ((type.literals ?? []) as any[]).map((l) => String(l?.name)) }
+        : null;
+    return { name: propName, many: isManyValued(attr?.upperBound), enumeration };
+}
+
+/**
+ * The value an `=` writes on an attribute. A name is an enumeration literal, `L`, `E.L` or
+ * `E::L`, and only an enum-typed attribute takes one; it is stored by the literal's name. A list
+ * replaces the values of a many-valued attribute, `[]` clears it. Strings, numbers, booleans and
+ * null are written as given, as before.
+ */
+function attributeWrite(shape: AttributeShape, value: LiteralValue | QualifiedName): AttributeWrite {
+    if (isLiteralValue(value) && value.kind === 'array') {
+        if (!shape.many) return { ok: false, code: 'LIST_ON_SINGLE_VALUED', message: `'${shape.name}' holds one value: write it without brackets` };
+        const values: Array<string | number | boolean | null> = [];
+        for (const v of value.values) {
+            const one = attributeScalar(shape, v);
+            if (!one.ok) return one;
+            values.push((one as { value: string | number | boolean | null }).value);
+        }
+        return { ok: true, values };
+    }
+    return attributeScalar(shape, value);
+}
+
+function attributeScalar(shape: AttributeShape, value: LiteralValue | QualifiedName): AttributeWrite {
+    let spelled: { enumName: string; literal: string } | null = null;
+    if (!isLiteralValue(value)) {
+        spelled = value.member
+            ? { enumName: value.segments.join('::'), literal: value.member }
+            : { enumName: value.segments.slice(0, -1).join('::'), literal: value.segments[value.segments.length - 1] ?? value.raw };
+    } else if (value.kind === 'enumLiteral') {
+        spelled = { enumName: value.enum.segments.join('::'), literal: value.literal };
+    } else if (value.kind === 'array') {
+        return { ok: false, code: 'TYPE_MISMATCH', message: 'A list cannot hold a list' };
+    } else {
+        return { ok: true, value: literalToPrimitive(value) };
+    }
+    const e = shape.enumeration;
+    const shown = spelled.enumName ? `${spelled.enumName}.${spelled.literal}` : spelled.literal;
+    if (!e) return { ok: false, code: 'TYPE_MISMATCH', message: `Cannot assign a name '${shown}' to an attribute` };
+    if (spelled.enumName && spelled.enumName !== e.name) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.enumName}' is not the enumeration of '${shape.name}', which is ${e.name}` };
+    }
+    if (!e.literals.includes(spelled.literal)) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.literal}' is not a literal of the enumeration ${e.name} (${e.literals.join(', ')})` };
+    }
+    return { ok: true, value: spelled.literal };
 }
 
 /**
@@ -686,7 +768,7 @@ export async function executeDeleteInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE. Deleting is destructive and irreversible in one gesture: hitting
     // the first of several homonyms is the defect the census names, not a behaviour to keep.
     if (!resolved.ok && resolved.candidates) {
@@ -822,7 +904,7 @@ export async function executeRenameInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE: renaming the wrong homonym is as silent as deleting it.
     if (!resolved.ok && resolved.candidates) {
         return {
@@ -921,7 +1003,7 @@ export async function executeSetInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE before any write: `set` mutates, and writing into the first of
     // several homonyms is a write to an instance the script never named.
     if (!resolved.ok && resolved.candidates) {
@@ -985,18 +1067,21 @@ export async function executeSetInstance(
                 }]
             };
         }
-        if (!isLiteralValue(args.value)) {
+        const shape = attributeShape(metaclass, args.property);
+        const written = attributeWrite(shape, args.value);
+        if (!written.ok) {
             return {
                 success: false,
                 command: 'set',
-                message: `Attribute '${args.property}' expects a literal value`,
-                errors: [{
-                    code: 'TYPE_MISMATCH',
-                    message: `Cannot assign a name '${qualifiedNameToString(args.value as QualifiedName)}' to an attribute`
-                }]
+                message: written.code === 'TYPE_MISMATCH' ? `Attribute '${args.property}' expects a literal value` : written.message,
+                errors: [{ code: written.code, message: written.message }]
             };
         }
-        const primitive = literalToPrimitive(args.value as LiteralValue);
+        const isList = 'values' in written;
+        const primitive = isList ? written.values : written.value;
+        const shownValue = isList
+            ? `[${written.values.map((v) => (typeof v === 'string' && !shape.enumeration ? `"${v}"` : String(v))).join(', ')}]`
+            : (isLiteralValue(args.value) && args.value.kind !== 'enumLiteral' ? literalValueToString(args.value) : String(primitive));
 
         return new Promise((resolve) => {
             try {
@@ -1011,11 +1096,14 @@ export async function executeSetInstance(
                         });
                         return;
                     }
-                    featureProxy.value = primitive;
+                    // A list replaces every value (`LValue.set_values` drops the excess); one value
+                    // goes to the first position, as before.
+                    if (isList) featureProxy.values = primitive;
+                    else featureProxy.value = primitive;
                     resolve({
                         success: true,
                         command: 'set',
-                        message: `Set ${instanceName}.${args.property} = ${literalValueToString(args.value as LiteralValue)}`,
+                        message: `Set ${instanceName}.${args.property} = ${shownValue}`,
                         data: {
                             id: lObject.id,
                             instance: instanceName,

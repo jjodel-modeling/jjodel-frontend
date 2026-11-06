@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instance of Graph.ecore: four nodes and six edges, each with one source and one target. The fixture's edge with
+  two targets is split in two here, as Edge.target is single-valued in the gallery (P-2026-10-18-2300).
+-->
+<Graph xmi:version="2.0"
+       xmlns:xmi="http://www.omg.org/XMI"
+       xmlns="Graph">
+  <nodes xmi:id="n_a" name="A"/>
+  <nodes xmi:id="n_b" name="B"/>
+  <nodes xmi:id="n_c" name="C"/>
+  <nodes xmi:id="n_d" name="D"/>
+  <edges xmi:id="e_ab" source="n_a" target="n_b"/>
+  <edges xmi:id="e_bc" source="n_b" target="n_c"/>
+  <edges xmi:id="e_cd" source="n_c" target="n_d"/>
+  <edges xmi:id="e_da" source="n_d" target="n_a"/>
+  <edges xmi:id="e_ac" source="n_a" target="n_c"/>
+  <edges xmi:id="e_ad" source="n_a" target="n_d"/>
+</Graph>

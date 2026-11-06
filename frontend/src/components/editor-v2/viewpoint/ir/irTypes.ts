@@ -45,6 +45,15 @@ export type Predicate =
      * without a break; saved IR has no VersionFixer (R-B9).
      */
     | { op: 'marked'; path?: PathExpr }
+    /**
+     * Run predicate (P-2026-10-19-0930): true while a simulation run is active on
+     * the model the element belongs to, from its Reset until its Stop, whatever
+     * step it shows; false on every element when no run exists. Read through
+     * ReadCtx.isRunActive, on the `'mark'` channel of `marked`. A view uses it to
+     * step aside for what the run draws itself (the Petri place's initial tokens
+     * beside the run's count). No `path` in v1.
+     */
+    | { op: 'simActive' }
     | { op: 'literal'; value: boolean };
 
 export type Conditional<T> =

@@ -101,6 +101,10 @@ export enum TokenType {
 
 /**
  * Keywords mapping (lowercase to token type)
+ *
+ * `rule`, `lazy` and `unique` are deliberately absent: they are contextual keywords, read
+ * by value at the top level by the parser (SPEC.md §2.1, P-2026-11-02-2224). As entries here
+ * the lowercasing lookup would turn a class `Rule` or a feature `unique` into keywords.
  */
 export const JJTL_KEYWORDS: Record<string, TokenType> = {
     // JjTL-specific

@@ -1,0 +1,486 @@
+// Syntax mode of the Text tab (step C lane C2b, P-2026-11-05-0118) — loaded with the opener's lazy chunk only.
+//
+// A form bar over three panes: the element list, the element's fields, and the preview. Every field reserves its
+// finding line, the preview keeps its width until resized, and Save changes state, never size: nothing moves.
+//
+// Design-system tokens only, none defined here (rule 28): the tab's accent marks the active and the annotated, errors
+// take the error text colour, labels the tertiary text at 11 px, spacing the --space-* grid.
+
+.syntax-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-size: 12px;
+
+    .bi,
+    .bi:hover {
+        font-size: 11px;
+        color: inherit;
+    }
+
+    &__bar {
+        display: flex;
+        flex: 0 0 32px;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 0 var(--space-2) 0 var(--space-3);
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    &__state {
+        min-width: 96px;
+        color: var(--color-text-tertiary);
+
+        &--dirty {
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__stale {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--color-warning-text);
+    }
+
+    &__record {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--color-text-tertiary);
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__spacer {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--color-text-tertiary);
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        height: 22px;
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            color: var(--color-text-disabled);
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--primary:not(:disabled) {
+            border-color: var(--color-canvas-accent);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__main {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+    }
+
+    // The element list.
+    &__list {
+        flex: 0 0 240px;
+        overflow-y: auto;
+        padding: var(--space-2);
+        border-right: 1px solid var(--color-border-secondary);
+    }
+
+    &__filter {
+        width: 100%;
+        height: 24px;
+        margin-bottom: var(--space-2);
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font: inherit;
+        font-size: 11px;
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -1px;
+        }
+    }
+
+    &__list-heading {
+        margin: var(--space-2) 0 var(--space-1);
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+    }
+
+    &__items {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        width: 100%;
+        height: 24px;
+        padding: 0 var(--space-2);
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 12px;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--selected,
+        &--selected:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__item-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &--abstract {
+            font-style: italic;
+        }
+    }
+
+    // Both marks keep their place whether shown or not.
+    &__marks {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+
+    &__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+
+        &--on {
+            background: var(--color-canvas-accent);
+        }
+    }
+
+    .bi.syntax-form__flag {
+        visibility: hidden;
+
+        &--error {
+            visibility: visible;
+            color: var(--color-error-text);
+        }
+
+        &--notice {
+            visibility: visible;
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    // The element's fields.
+    &__editor {
+        flex: 1;
+        min-width: 0;
+        overflow-y: auto;
+        padding: var(--space-3) var(--space-4);
+    }
+
+    &__group {
+        max-width: 480px;
+
+        &--feature {
+            margin-top: var(--space-2);
+            padding-top: var(--space-2);
+            border-top: 1px solid var(--color-border-secondary);
+        }
+    }
+
+    &__heading,
+    &__subheading {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0 0 var(--space-2);
+        color: var(--color-text-primary);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    &__subheading {
+        font-family: var(--font-mono);
+        font-weight: 500;
+    }
+
+    &__tag {
+        padding: 0 var(--space-1);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+        font-weight: 400;
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        &--toggle {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            column-gap: var(--space-2);
+            align-items: center;
+
+            .syntax-form__label {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            .syntax-form__toggle {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            .syntax-form__finding {
+                grid-column: 1 / -1;
+            }
+        }
+    }
+
+    &__label {
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+    }
+
+    // The app's global input rules set a taller box and another font: the form's inputs keep the tab's 24 px.
+    input.syntax-form__input,
+    select.syntax-form__input,
+    input.syntax-form__filter {
+        box-sizing: border-box;
+        min-height: 0;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    input[type='checkbox'] {
+        width: 14px;
+        height: 14px;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        appearance: auto;
+    }
+
+    input.syntax-form__input {
+        line-height: 22px;
+    }
+
+    &__input {
+        height: 24px;
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+
+        &::placeholder {
+            color: var(--color-text-disabled);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -1px;
+        }
+    }
+
+    &__toggle {
+        margin: 0;
+        accent-color: var(--color-canvas-accent);
+    }
+
+    &__checks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1) var(--space-3);
+    }
+
+    &__check {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: 12px;
+
+        input {
+            accent-color: var(--color-canvas-accent);
+        }
+    }
+
+    // Reserved, empty or not.
+    &__finding {
+        height: 16px;
+        overflow: hidden;
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+        line-height: 16px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__element-fault,
+    &__advanced-note,
+    &__empty {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+    }
+
+    &__element-fault--error {
+        color: var(--color-error-text);
+    }
+
+    // The preview.
+    &__splitter {
+        flex: 0 0 4px;
+        border-left: 1px solid var(--color-border-secondary);
+        cursor: col-resize;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+    }
+
+    &__preview {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        min-width: 240px;
+        max-width: 70%;
+    }
+
+    &__preview-bar {
+        display: flex;
+        flex: 0 0 28px;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 0 var(--space-2);
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: 11px;
+    }
+
+    &__preview-title {
+        color: var(--color-text-tertiary);
+    }
+
+    &__preview-modes {
+        display: inline-flex;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    &__preview-mode {
+        min-width: 48px;
+        height: 20px;
+        padding: 0 var(--space-2);
+        border: 0;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        & + & {
+            border-left: 1px solid var(--color-border-secondary);
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--active,
+        &--active:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__preview-error {
+        display: flex;
+        gap: var(--space-1);
+        padding: var(--space-1) var(--space-2);
+        color: var(--color-error-text);
+        font-size: 11px;
+    }
+
+    &__preview-body {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+    }
+}

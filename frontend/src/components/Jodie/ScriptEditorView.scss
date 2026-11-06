@@ -1,0 +1,121 @@
+// ScriptEditorView — the Jjodie panel's editor of a generated script (S5, R-JJD-2).
+// Existing tokens only (styles/tokens/), no variable defined here (Rule 28).
+// Icon colours sit on the `<i>` with a two-class selector, to beat the global
+// `i.bi { color: var(--font-color-1) }` rule (0,1,1), as ScriptCard.scss does.
+
+.jj-script-editor {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 12.5px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-primary);
+    }
+
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px 2px 4px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 12px;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-secondary); }
+        i.bi { color: var(--color-text-secondary); }
+    }
+
+    &__name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__count {
+        flex: none;
+        color: var(--color-success-hover);
+        font-size: 11.5px;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-primary);
+    }
+
+    &__action {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 9px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 11.5px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) { background: var(--color-bg-secondary); }
+        &:disabled { color: var(--color-text-tertiary); cursor: default; }
+        &[aria-pressed='true'] { border-color: var(--color-canvas-accent); background: var(--color-bg-secondary); }
+        i.bi { color: inherit; }
+    }
+
+    &__editor {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__pane {
+        position: absolute;
+        inset: 0;
+
+        &--hidden { visibility: hidden; }
+    }
+
+    // The green margin bar of an edited line (Monaco `linesDecorationsClassName`). Monaco places it
+    // by its own layout, but editors/skeleton.scss forces every margin to 30px with the line numbers
+    // at 0-20px (`!important`), so the bar is pinned into the 20-30px gap, clear of the text.
+    &__edited-line {
+        left: 23px !important;
+        width: 3px !important;
+        background: var(--color-success);
+    }
+
+    &__status {
+        padding: 6px 12px;
+        border-top: 1px solid var(--color-border-primary);
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &--valid { color: var(--color-success-hover); }
+        &--error { color: var(--color-error); }
+    }
+}
+
+// The conversation stays mounted while the editor is open (S5): hidden, not unmounted.
+.jodie-conversation {
+    display: contents;
+
+    &--hidden { display: none; }
+}

@@ -37,16 +37,23 @@ const JJEL_KEYWORDS_OWN = new Map<string, JjelTokenType>(Object.entries(JJEL_KEY
  * `interpolation` lexes the holes of a double-quoted `"…${…}…"`, for
  * `parseTemplate` (R-GEN-10). Off by default: without it a hole lexes as
  * before and every parse of it fails. Single-quoted strings never interpolate.
+ *
+ * `textBody` lexes the whole source as the inside of one interpolated string,
+ * for `parseTemplateText` (R-GEN-26): no opening quote, `"` and `'` are text,
+ * the end of input closes it, the only escape is `\${`. Implies
+ * `interpolation`; off by default.
  */
 export interface JjelLexerOptions {
     actionMode?: boolean;
     interpolation?: boolean;
+    textBody?: boolean;
 }
 
 export class JjelLexer {
     private source: string;
     private actionMode: boolean;
     private interpolation: boolean;
+    private textBody: boolean;
     private tokens: JjelToken[] = [];
     private errors: JjelLexerError[] = [];
     private start: number = 0;
@@ -58,16 +65,21 @@ export class JjelLexer {
     constructor(source: string, options?: JjelLexerOptions) {
         this.source = source;
         this.actionMode = options?.actionMode === true;
-        this.interpolation = options?.interpolation === true;
+        this.textBody = options?.textBody === true;
+        this.interpolation = options?.interpolation === true || this.textBody;
     }
 
     /**
      * Tokenize the source string
      */
     tokenize(): JjelLexerResult {
-        while (!this.isAtEnd()) {
-            this.start = this.current;
-            this.scanToken();
+        if (this.textBody) {
+            this.textBodyString();
+        } else {
+            while (!this.isAtEnd()) {
+                this.start = this.current;
+                this.scanToken();
+            }
         }
 
         this.tokens.push({
@@ -419,6 +431,54 @@ export class JjelLexer {
         }
 
         this.advance(); // Closing "
+        this.pushToken(JjelTokenType.STRING, text, textStart, this.current, textLine, textColumn);
+    }
+
+    /**
+     * The whole source as a text body (R-GEN-26): the tokens of
+     * `interpolatedString`, with the first text token starting at offset 0 and
+     * the final `STRING` ending at the end of input. Every character is text
+     * but `${`, which opens a hole, and `\${`, which writes `${`; a backslash
+     * anywhere else is itself. Holes are skipped as in `interpolatedString`.
+     */
+    private textBodyString(): void {
+        let text = '';
+        let textStart = 0;
+        let textLine = 1;
+        let textColumn = 1;
+
+        while (!this.isAtEnd()) {
+            const c = this.peek();
+
+            if (c === '\\' && this.peekNext() === '$' && this.source[this.current + 2] === '{') {
+                this.advance(); // backslash
+                this.advance(); // $
+                this.advance(); // {
+                text += '${';
+            } else if (c === '$' && this.peekNext() === '{') {
+                this.pushToken(JjelTokenType.STRING_PART, text, textStart, this.current, textLine, textColumn);
+                this.advance(); // $
+                this.advance(); // {
+                const holeStart = this.current;
+                const holeLine = this.line;
+                const holeColumn = this.current - this.lineStart + 1;
+                if (!this.skipHole()) {
+                    this.error('Unterminated string interpolation');
+                    return;
+                }
+                this.pushToken(JjelTokenType.DOLLAR_LBRACE, this.source.substring(holeStart, this.current),
+                    holeStart, this.current, holeLine, holeColumn);
+                this.advance(); // }
+                text = '';
+                textStart = this.current;
+                textLine = this.line;
+                textColumn = this.current - this.lineStart + 1;
+            } else {
+                text += c;
+                this.advanceInString();
+            }
+        }
+
         this.pushToken(JjelTokenType.STRING, text, textStart, this.current, textLine, textColumn);
     }
 

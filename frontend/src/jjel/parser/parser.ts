@@ -116,6 +116,23 @@ export class JjelParser {
     }
 
     /**
+     * A text body (R-GEN-26): the tokens of a `textBody` lexer, always one
+     * `InterpolatedStringExpr`, also with no hole (one text part) or empty (no
+     * part), never a `Literal`; the input must end with it.
+     */
+    parseTextBody(): JjelParserResult {
+        try {
+            const expression = this.interpolatedString();
+            if (!this.isAtEnd()) {
+                throw this.error(this.peek(), `Unexpected '${this.peek().value}' after the end of the text`);
+            }
+            return { expression, errors: this.errors };
+        } catch (error) {
+            return { expression: null, errors: this.errors };
+        }
+    }
+
+    /**
      * An action, `<target> := <expression>` (R-SIM-17, R-SIM-40): the target
      * ends in `.[attribute]`, never a read-only one, and the input ends with
      * the expression. Expects the tokens of an action-mode lexer (`ASSIGN`).
@@ -724,19 +741,21 @@ export class JjelParser {
     // ============================================
 
     /**
-     * forall = FORALL IDENT IN nullCoalesce [('such that' | '|') expression] [COLON expression]
+     * forall   = FORALL bindings [('such that' | '|') expression] [COLON expression]
+     * bindings = names IN nullCoalesce (',' names IN nullCoalesce)*      -- R-FA-1, R-FA-5
+     * names    = IDENT (',' IDENT)*
      * At least one of filter or ':' projection must be present.
      * '|' is an alias for 'such that' (filter separator).
      * Uses nullCoalesce (not expression) for collection to avoid consuming keywords.
+     * One variable builds the ForAll node as always. Several are desugared (R-FA-6, amended
+     * by docs/discovery/discovery_2026-11-02_jjel_forall_multivar.md F1): `forall x in A, <rest>`
+     * is `(forall x in A : <rest>).flatten()`; the filter and the projection go to the innermost
+     * forall, and without a projection it yields the record `{ x, y, ... }` (R-FA-3).
      */
-    private forAll(): ForAllExpr {
+    private forAll(): JjelExpression {
         const startToken = this.peek();
         this.consume(JjelTokenType.FORALL, "Expected 'forall'");
-        const varToken = this.consume(JjelTokenType.IDENTIFIER, "Expected variable name after 'forall'");
-        this.consume(JjelTokenType.IN, "Expected 'in' after variable name");
-
-        // Collection: stop before 'such', 'that', ':', '|', keywords
-        const collection = this.nullCoalesce();
+        const bindings = this.bindings('forall');
 
         let filter: JjelExpression | undefined;
         let projection: JjelExpression | undefined;
@@ -756,27 +775,49 @@ export class JjelParser {
             throw this.error(this.peek(), "forall requires 'such that' / '|' clause, ':' projection, or both");
         }
 
-        return {
-            type: 'ForAll',
-            variable: varToken.value,
-            collection,
-            filter,
-            projection,
-            location: this.makeLocation(startToken, this.previous()),
+        const location = this.makeLocation(startToken, this.previous());
+        if (bindings.length === 1) {
+            return {
+                type: 'ForAll',
+                variable: bindings[0].name,
+                collection: bindings[0].collection,
+                filter,
+                projection,
+                location,
+            };
+        }
+
+        const record: ObjectLiteralExpr = {
+            type: 'ObjectLiteral',
+            entries: bindings.map(b => ({ key: b.name, value: { type: 'Identifier', name: b.name, location } as IdentifierExpr })),
+            location,
         };
+        const last = bindings[bindings.length - 1];
+        let inner: JjelExpression = {
+            type: 'ForAll',
+            variable: last.name,
+            collection: last.collection,
+            filter,
+            projection: projection ?? record,
+            location,
+        };
+        for (let i = bindings.length - 2; i >= 0; i--) {
+            const outer: ForAllExpr = { type: 'ForAll', variable: bindings[i].name, collection: bindings[i].collection, projection: inner, location };
+            inner = { type: 'MethodCall', object: outer, method: 'flatten', args: [], location };
+        }
+        return inner;
     }
 
     /**
-     * exists = EXISTS IDENT IN nullCoalesce ('such that' | '|') expression
+     * exists = EXISTS bindings ('such that' | '|') expression
      * NOTE: ':' is NOT accepted for exists — use 'such that' or '|' instead.
+     * Several variables nest (R-FA-4, R-FA-6): `exists x in A, <rest> such that P` is
+     * `exists x in A such that (exists <rest> such that P)`.
      */
     private exists(): ExistsExpr {
         const startToken = this.peek();
         this.consume(JjelTokenType.EXISTS, "Expected 'exists'");
-        const varToken = this.consume(JjelTokenType.IDENTIFIER, "Expected variable name after 'exists'");
-        this.consume(JjelTokenType.IN, "Expected 'in' after variable name");
-
-        const collection = this.nullCoalesce();
+        const bindings = this.bindings('exists');
 
         if (this.match(JjelTokenType.SUCH)) {
             this.consume(JjelTokenType.THAT, "Expected 'that' after 'such'");
@@ -788,15 +829,60 @@ export class JjelParser {
             throw this.error(this.peek(), "exists requires 'such that' or '|' followed by predicate");
         }
 
-        const predicate = this.expression();
+        let predicate = this.expression();
 
+        const location = this.makeLocation(startToken, this.previous());
+        for (let i = bindings.length - 1; i > 0; i--) {
+            predicate = { type: 'Exists', variable: bindings[i].name, collection: bindings[i].collection, predicate, location };
+        }
         return {
             type: 'Exists',
-            variable: varToken.value,
-            collection,
+            variable: bindings[0].name,
+            collection: bindings[0].collection,
             predicate,
-            location: this.makeLocation(startToken, this.previous()),
+            location,
         };
+    }
+
+    /**
+     * The binding list of forall / exists, one entry per variable, left to right; the names of
+     * `x, y in S` share the collection node. A name bound twice is an error (R-FA-5), and so is a
+     * collection of `x, y in S` that reads a name of its own list but the last: the copy of S that
+     * y ranges over would read the new x (discovery F2).
+     */
+    private bindings(keyword: 'forall' | 'exists'): Array<{ name: string; collection: JjelExpression }> {
+        const out: Array<{ name: string; collection: JjelExpression }> = [];
+        const seen = new Set<string>();
+        do {
+            const names = [this.consume(JjelTokenType.IDENTIFIER, out.length === 0 ? `Expected variable name after '${keyword}'` : "Expected variable name after ','")];
+            while (this.match(JjelTokenType.COMMA)) {
+                names.push(this.consume(JjelTokenType.IDENTIFIER, "Expected variable name after ','"));
+            }
+            this.consume(JjelTokenType.IN, names.length === 1 ? "Expected 'in' after variable name" : "Expected 'in' after variable names");
+            for (const n of names) {
+                if (seen.has(n.value)) throw this.error(n, `Variable '${n.value}' is bound twice in one ${keyword}`);
+                seen.add(n.value);
+            }
+
+            // Collection: stop before 'such', 'that', ':', '|', ',', keywords
+            const collection = this.nullCoalesce();
+            for (const n of names.slice(0, -1)) {
+                if (readsName(collection, n.value)) {
+                    throw this.error(n, `The collection of '${names.map(t => t.value).join(', ')} in …' reads '${n.value}', which the list itself binds: rename the variable`);
+                }
+            }
+            for (const n of names) out.push({ name: n.value, collection });
+        } while (this.bindingContinues() && this.match(JjelTokenType.COMMA));
+        return out;
+    }
+
+    /** At ',' after a collection: the bindings go on only if `IDENT (',' IDENT)* in` follows (R-FA-5). */
+    private bindingContinues(): boolean {
+        const at = (k: number) => this.tokens[this.current + k]?.type;
+        if (at(0) !== JjelTokenType.COMMA || at(1) !== JjelTokenType.IDENTIFIER) return false;
+        let k = 1;
+        while (at(k + 1) === JjelTokenType.COMMA && at(k + 2) === JjelTokenType.IDENTIFIER) k += 2;
+        return at(k + 1) === JjelTokenType.IN;
     }
 
     /**
@@ -999,6 +1085,27 @@ export class JjelParser {
 }
 
 /**
+ * `e` reads the free name `name`: a lambda parameter, a forall / exists variable of the same name
+ * hide it below their binder. Used by the binding list of forall / exists (discovery F2).
+ */
+function readsName(node: unknown, name: string): boolean {
+    if (node === null || typeof node !== 'object') return false;
+    if (Array.isArray(node)) return node.some(n => readsName(n, name));
+    const e = node as JjelExpression;
+    switch (e.type) {
+        case 'Identifier':
+            return e.name === name;
+        case 'Lambda':
+            return !e.params.includes(name) && readsName(e.body, name);
+        case 'ForAll':
+            return readsName(e.collection, name) || (e.variable !== name && (readsName(e.filter, name) || readsName(e.projection, name)));
+        case 'Exists':
+            return readsName(e.collection, name) || (e.variable !== name && readsName(e.predicate, name));
+    }
+    return Object.entries(e).some(([k, v]) => k !== 'location' && readsName(v, name));
+}
+
+/**
  * Convenience function to parse tokens into an AST
  */
 export function parse(tokens: JjelToken[]): JjelParserResult {
@@ -1074,6 +1181,31 @@ export function parseTemplate(source: string): JjelParserResult {
 
     const parser = new JjelParser(tokens, { interpolation: true });
     return parser.parseStrict();
+}
+
+/**
+ * Parse a template body in text mode (R-GEN-26): the whole source is the inside
+ * of one interpolated string (lexer option `textBody`), so the result is an
+ * `InterpolatedStringExpr` whose positions are already the body's own. Holes
+ * parse as in `parseTemplate`.
+ */
+export function parseTemplateText(source: string): JjelParserResult {
+    const lexer = new JjelLexer(source, { textBody: true });
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            expression: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens, { interpolation: true });
+    return parser.parseTextBody();
 }
 
 /**

@@ -1,0 +1,178 @@
+// ScriptCard — a generated JjScript in a Jjodie reply, collapsed (S2, R-JJD-2).
+// Existing tokens only (styles/tokens/), no variable defined here (Rule 28).
+// Icon colours sit on the `<i>` with a two-class selector, to beat the global
+// `i.bi { color: var(--font-color-1) }` rule (0,1,1), as ConsumerProposal.scss does.
+
+.jj-script-card {
+    margin: var(--space-2) 0;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-card);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 12.5px;
+    overflow: hidden;
+
+    &--previewing {
+        border-color: var(--color-canvas-accent);
+    }
+
+    &__summary {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        padding: 10px 12px 8px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-secondary); }
+        &:focus-visible { outline: 2px solid var(--color-canvas-accent); outline-offset: -2px; }
+    }
+
+    &__status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+
+        .bi { color: inherit; }
+    }
+
+    // The one-line texts take the row's width and give the bubble none of theirs: the message
+    // column is a flex item at `min-width: auto` (JodieWindow.css), so a nowrap min-content would
+    // widen the reply past the panel instead of truncating here.
+    &__status-text,
+    &__name,
+    &__warnings-text {
+        flex: 1 1 0;
+        min-width: 0;
+        contain: inline-size;
+    }
+
+    &__status-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__status--planned { color: var(--color-canvas-accent); }
+    &__status--applied { color: var(--color-success); }
+    &__status--error { color: var(--color-error-text); }
+
+    &__title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    &__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+    }
+
+    &__lines {
+        flex-shrink: 0;
+        color: var(--color-text-tertiary);
+        font-size: 11.5px;
+    }
+
+    &__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__chip {
+        padding: 1px 7px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 999px;
+        background: var(--color-bg-secondary);
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 11.5px;
+        white-space: nowrap;
+    }
+
+    &__warnings {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        color: var(--color-warning-text);
+        font-size: 11.5px;
+
+        .bi { color: var(--color-warning); }
+    }
+
+    &__warnings-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px 8px;
+        border-top: 1px solid var(--color-border-primary);
+    }
+
+    &__action {
+        padding: 2px 9px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 11.5px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) { background: var(--color-bg-secondary); }
+        &:disabled { color: var(--color-text-tertiary); cursor: default; }
+    }
+
+    &__disclosure {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        padding: 2px 4px;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-size: 11.5px;
+        cursor: pointer;
+
+        .bi { color: inherit; }
+        &:hover { color: var(--color-text-primary); }
+    }
+
+    &__code {
+        padding: 0 12px 10px;
+    }
+}
+
+// The code inside the card keeps its own frame: the S1b bleed for code next to prose
+// (MarkdownMessage.css, 0,4,0) is for a block sitting directly in the bubble.
+.jodie-message-assistant .jodie-message-bubble .jj-script-card .jj-script-card__code .md-code-block {
+    margin: 0;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 6px;
+}
+
+// A reply that is only a script card drops the bubble's box, as a code-only reply does (JodieWindow.css).
+.jodie-message-assistant .jodie-message-bubble:has(.jj-script-card):not(:has(.md-paragraph, .md-heading, .md-list, .md-blockquote, .md-table-wrapper, .md-hr)) {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+}

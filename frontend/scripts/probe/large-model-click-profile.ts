@@ -43,7 +43,38 @@
  *                         "type"    one character typed in the Properties name field
  *                         "commit"  Enter in that field (the store write of the new name)
  *                         "vp"      switching to the viewpoint CLICK_VP2 (default «Harness / Authority»)
+ *                         "stale"   after "vp": node sizes in place against a fresh mount, per change of
+ *                                   inherited CSS (fonts, theme, a widening <style> and its removal);
+ *                                   not profiled (P-2026-10-21-1355)
+ *                         "audit"   dev only, last: targeted store writes, each followed by a count of
+ *                                   the rendered nodes whose data differs from a fresh transform
+ *                                   (stale nodes); not profiled (P-2026-10-21-0035)
  *       CLICK_STACKS    "1": sample the callers of LModel.name (slows the run; counts only)
+ *     Round 3 (P-2026-10-21-0905): every step also reports the saves that ran in it (U.compressedState,
+ *     ProjectsApi.save: start, length, silent, caller frames), the long tasks inside them, and storage
+ *     writes over 20,000 chars. More CLICK_STEPS:
+ *                         "idle"    CLICK_IDLE_MS (20000) with nothing done: saves and long tasks
+ *                         "lat"     input latency, profiler off: CLICK_LAT_N (10) clicks, pointerdown to the
+ *                                   first frame with .mm-node.selected; CLICK_LAT_DRAGS (3) drags of
+ *                                   CLICK_LAT_MOVES (20) moves, pointermove to the first frame in which the
+ *                                   node's transform moved; Event Timing per interaction (INP-like); p50/p95
+ *                         "session" drag, 3 s, rename (type + Enter), 3 s, drag back, profiled over
+ *                                   CLICK_SESSION_MS (30000) from the first edit; long tasks split by cause
+ *                                   (inside a save, else the last edit before them), first 20 s and total
+ *                                   CLICK_LAT_DURING_SAVE=1 starts a U.compressedState before each drag
+ *     CLICK_ABLATE also takes "minimap": localStorage jjodel.showMinimap=false before the editor mounts.
+ *     CLICK_LAYOUTS "1": count the layouts the intrinsic measure forces (P-2026-10-21-1010). Every read of
+ *                   offsetWidth/offsetHeight on an `.ir-node-content` at `max-content` is a measure read; the
+ *                   reads of one synchronous stretch are one burst (the measures of one commit). A read
+ *                   forces a layout when it is the first of its burst, or when the element read
+ *                   before it is no longer at `max-content` (restored in between). Also notes the size of every
+ *                   canvas node after the open, for a before/after comparison.
+ *     CLICK_FIT "1": after the open settles and before a node is picked, sets the viewport over the
+ *                   bounding box of the node positions (P-2026-11-02-0233). Positions only, sizes are not
+ *                   read: they differ between builds that measure only visible nodes, the positions do not.
+ *                   When minZoom clamps the fit, the viewport centres on the node nearest the box centre.
+ *                   The React Flow store is reached through the fiber of the pane's `.react-flow`; the
+ *                   viewport asked and the one obtained are noted ("fit") and kept in the json.
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -85,6 +116,47 @@ globalThis.__name = (f) => f;
     new PerformanceObserver((l) => { for (const e of l.getEntries()) P.longtasks.push({ start: e.startTime, ms: e.duration }); })
       .observe({ type: 'longtask', buffered: true });
   } catch (e) { P.err = 'longtask observer: ' + e; }
+  // Round 3 (P-2026-10-21-0905): Event Timing entries, save records, big storage writes, and the
+  // input-to-frame watch (pointerdown to the first frame with the selection ring; pointermove to
+  // the first frame in which the dragged node's transform moved).
+  P.events = []; P.saves = []; P.storage = []; P.marks = []; P.watch = null; P.recStart = 0;
+  try {
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) P.events.push({ name: e.name, start: e.startTime, ps: e.processingStart, pe: e.processingEnd, dur: e.duration, iid: e.interactionId || 0 }); })
+      .observe({ type: 'event', durationThreshold: 16, buffered: true });
+  } catch (e) { P.err = 'event observer: ' + e; }
+  const si = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (k, v) {
+    const t = performance.now();
+    try { return si.call(this, k, v); }
+    finally { const n = String(v).length; if (n > 20000) P.storage.push({ k: String(k).slice(0, 40), len: n, ms: Math.round(performance.now() - t), t }); }
+  };
+  const onInput = (e) => {
+    const w = P.watch; if (!w) return;
+    if (w.kind === 'select' && e.type === 'pointerdown' && w.t0 == null) w.t0 = e.timeStamp;
+    if (w.kind === 'drag') {
+      if (e.type === 'pointerdown') w.down = true;
+      else if (e.type === 'pointerup') w.down = false;
+      else if (e.type === 'pointermove' && w.down) { w.moves++; w.pending.push(e.timeStamp); }
+    }
+  };
+  for (const t of ['pointerdown', 'pointermove', 'pointerup']) window.addEventListener(t, onInput, true);
+  const frame = () => {
+    const w = P.watch;
+    if (w) {
+      const now = performance.now();
+      const n = document.querySelector('.react-flow__node[data-id="' + w.id + '"]');
+      if (w.kind === 'select' && w.t0 != null) {
+        if (w.rf == null && n && n.classList.contains('selected')) w.rf = now - w.t0;
+        if (w.ring == null && n && n.querySelector('.mm-node.selected')) w.ring = now - w.t0;
+      }
+      if (w.kind === 'drag' && w.pending.length) {
+        const tr = n ? n.style.transform : '';
+        if (tr !== w.lastTr) { w.lastTr = tr; for (const t of w.pending) w.lat.push(now - t); w.pending = []; }
+      }
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
   const origWarn = console.warn;
   console.warn = function (...a) {
     if (P.recording) { const s = String(a[0]); if (s.includes('returned a different result') || s.includes('Selector')) { P.warns++; if (P.warnSamples.length < 3) P.warnSamples.push(s.slice(0, 300)); } }
@@ -268,9 +340,30 @@ function analyse(profile: Prof) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────────────────────
+const ABLATE = new Set((process.env.CLICK_ABLATE || '').split(',').filter(Boolean));
 const browser = await chromium.launch({ args: ['--enable-precise-memory-info'] });
 const ctx = await browser.newContext({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT } });
 await ctx.addInitScript({ content: INIT });
+// MiniMap ablation: the editor reads this key once, when it mounts (EditorV2.tsx minimapVisible).
+if (ABLATE.has('minimap')) await ctx.addInitScript({ content: `try { localStorage.setItem('jjodel.showMinimap', 'false'); } catch (e) {}` });
+const LAYOUTS = process.env.CLICK_LAYOUTS === '1';
+if (LAYOUTS) await ctx.addInitScript({ content: `(() => {
+  const S = window.__measureLayouts = { bursts: [], cur: null, last: null };
+  for (const k of ['offsetWidth', 'offsetHeight']) {
+    const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, k);
+    Object.defineProperty(HTMLElement.prototype, k, { ...d, get() {
+      if (this.classList && this.classList.contains('ir-node-content') && this.style.width === 'max-content') {
+        if (!S.cur) {
+          S.cur = { layouts: 0, els: new Set() }; S.bursts.push(S.cur); S.last = null;
+          queueMicrotask(() => { S.cur = null; });
+        }
+        if (!S.last || (S.last !== this && S.last.style.width !== 'max-content')) S.cur.layouts++;
+        S.last = this; S.cur.els.add(this);
+      }
+      return d.get.call(this);
+    } });
+  }
+})();` });
 await seed(ctx, false);
 const page = await ctx.newPage();
 const pageErrors: string[] = [];
@@ -330,6 +423,25 @@ note('after open', facts);
       ];
     })()`);
     note('instruments', inst);
+    // Every save, recording or not (P-2026-10-21-0905): U.compressedState and ProjectsApi.save, with
+    // start, end, the silent flag and the synchronous caller frames.
+    const saveInst = await page.evaluate(`(async () => {
+      const U = window.U || ${PROD ? 'null' : "(await import('/src/common/U.tsx')).U"};
+      const PA = window.ProjectsApi, P = window.__perfclick;
+      const wrapS = (obj, name, label) => {
+        if (!obj || typeof obj[name] !== 'function') return label + ': missing';
+        const o = obj[name];
+        obj[name] = async function (...a) {
+          const rec = { label, t0: performance.now(), t1: 0, silent: !!(a[1] && a[1].silent),
+            stack: String(new Error().stack).split('\\n').slice(2, 7).map(s => s.trim().replace(/^at /, '').replace(/\\(?https?:\\/\\/[^/]+/, '').replace(/\\?[^:]*/, '')).join(' < ') };
+          P.saves.push(rec);
+          try { return await o.apply(this, a); } finally { rec.t1 = performance.now(); }
+        };
+        return label + ': ok';
+      };
+      return [wrapS(U, 'compressedState', 'compressedState'), wrapS(PA, 'save', 'ProjectsApi.save')];
+    })()`);
+    note('save instruments', saveInst);
 }
 
 // Strips run on the live store before the canvas tab opens (in-page only; the fixture is untouched).
@@ -360,7 +472,19 @@ if (STRIP.size) {
 }
 
 // ── Profiled interaction: reset the page instruments, profile, act, settle, collect ────────────
-const RESET = `(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.recording = true; })()`;
+const RESET = `(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.events = []; P.marks = []; P.recStart = performance.now(); P.recording = true; })()`;
+/** Saves and big storage writes since the last RESET, times relative to it (P-2026-10-21-0905). */
+const SAVES = `(() => {
+      const P = window.__perfclick, t0 = P.recStart, now = performance.now();
+      const cs = P.saves.filter(s => s.label === 'compressedState' && (s.t1 === 0 || s.t1 >= t0));
+      const inSave = (l) => cs.some(s => l.start < (s.t1 || now) && l.start + l.ms > s.t0);
+      const lts = P.longtasks.filter(inSave);
+      return {
+        saves: P.saves.filter(s => s.t1 === 0 || s.t1 >= t0).map(s => ({ label: s.label, at: Math.round(s.t0 - t0), ms: Math.round((s.t1 || now) - s.t0), done: s.t1 > 0, silent: s.silent, stack: s.stack })),
+        storage: P.storage.filter(s => s.t >= t0).map(s => ({ k: s.k, len: s.len, ms: s.ms, at: Math.round(s.t - t0) })),
+        saveLongtasks: lts.map(l => Math.round(l.ms)), saveLongtaskSum: Math.round(lts.reduce((a, l) => a + l.ms, 0)),
+      };
+    })()`;
 const COLLECT = `(() => {
       const P = window.__perfclick; P.recording = false;
       const byType = {};
@@ -398,12 +522,14 @@ async function profiled(step: string, act: () => Promise<unknown>) {
     const wallMs = Date.now() - t0;
     const { profile } = await cdp.send('Profiler.stop') as any;
     const rec: any = await page.evaluate(COLLECT);
+    rec.save = await page.evaluate(SAVES);
     await loadChunkMaps(profile);
     const cpu = analyse(profile);
     const file = join(OUTDIR, `perfclick-${LABEL}-${step}.cpuprofile`);
     writeFileSync(file, JSON.stringify(profile));
     Object.assign(rec, { step, acted, actMs, settledMs: Math.round(settledMs), wallMs, profile: file, cpu });
-    note(`step ${step}`, { acted, wallMs, actMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, busyMs: cpu.busyMs, dispatches: rec.dispatches, byType: rec.byType, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), calls: rec.calls });
+    note(`step ${step}`, { acted, wallMs, actMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, busyMs: cpu.busyMs, dispatches: rec.dispatches, byType: rec.byType, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), calls: rec.calls, save: rec.save });
+    note(`step ${step} modules self`, cpu.modSelfTop.slice(0, 12));
     note(`step ${step} top components`, rec.topComponents.slice(0, 15));
     if (rec.callers) note(`step ${step} callers`, rec.callers);
     console.log(`TOP10 self time, ${step} (ms, function @ module:line)`);
@@ -463,6 +589,11 @@ const settled0 = await page.evaluate(settle(SETTLE_MS, 240000));
 facts = await page.evaluate(FACTS);
 note('before clicks', { settledMs: settled0, ...facts, viewpoints: facts.viewpoints.length });
 result.before = facts;
+if (LAYOUTS) note('node sizes', await page.evaluate(`(() => {
+  const ns = [...document.querySelectorAll('.react-flow__node')].map(n => [n.getAttribute('data-id'), n.offsetWidth, n.offsetHeight]);
+  ns.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  return { nodes: ns.length, edges: document.querySelectorAll('.react-flow__edge').length, first3: ns.slice(0, 3), all: ns.map(n => n[1] + 'x' + n[2]).join(',') };
+})()`));
 
 const paneSel = opened.id ? `[role="tabpanel"][aria-labelledby$="-tab-${opened.id}"]` : '';
 // Clickable = a point of the node's on-screen rect (5x5 grid, centre first) hit-tests to the node
@@ -486,6 +617,58 @@ const CLICKABLE = `(() => {
   }
   return out;
 })()`;
+// CLICK_FIT: viewport over the bounding box of the node positions, the same on every build.
+if (process.env.CLICK_FIT === '1') {
+    const fit: any = await page.evaluate(`(async () => {
+      const pane = document.querySelector(${JSON.stringify(paneSel)}) || document;
+      const rf = pane.querySelector('.react-flow');
+      if (!rf) return { error: 'no .react-flow in the pane' };
+      const fk = Object.keys(rf).find(k => k.startsWith('__reactFiber$'));
+      let store = null;
+      for (let f = fk ? rf[fk] : null; f && !store; f = f.return) {
+        const v = f.memoizedProps && f.memoizedProps.value;
+        if (v && typeof v.getState === 'function' && v.getState().nodeLookup && v.getState().panZoom) store = v;
+      }
+      if (!store) return { error: 'no React Flow store above .react-flow' };
+      const s = store.getState();
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, n = 0;
+      for (const node of s.nodeLookup.values()) {
+        if (node.hidden) continue;
+        const p = node.internals.positionAbsolute;
+        x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); n++;
+      }
+      if (!n) return { error: 'no node in the store' };
+      // A fixed allowance for the last node's extent stands in for the sizes.
+      x1 += 200; y1 += 100;
+      const W = s.width, H = s.height;
+      const want = 0.9 * Math.min(W / (x1 - x0), H / (y1 - y0));
+      const zoom = Math.max(s.minZoom, Math.min(1, want));
+      // Clamped by minZoom the box overflows the pane and its centre can be empty (the open
+      // viewport of ticket #419 is that centre): centre on the node nearest to it instead.
+      let cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, near = null;
+      if (want < s.minZoom) {
+        let best = Infinity;
+        for (const node of s.nodeLookup.values()) {
+          if (node.hidden) continue;
+          const p = node.internals.positionAbsolute, d = (p.x - cx) ** 2 + (p.y - cy) ** 2;
+          if (d < best || (d === best && node.id < near)) { best = d; near = node.id; }
+        }
+        const p = s.nodeLookup.get(near).internals.positionAbsolute;
+        cx = p.x + 100; cy = p.y + 50;
+      }
+      const asked = { x: Math.round(W / 2 - cx * zoom), y: Math.round(H / 2 - cy * zoom), zoom: +zoom.toFixed(4) };
+      await s.panZoom.setViewport(asked, { duration: 0 });
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const [tx, ty, tz] = store.getState().transform;
+      return { nodes: n, bbox: [x0, y0, x1, y1].map(Math.round), pane: [W, H], minZoom: s.minZoom, near, asked,
+               got: { x: Math.round(tx), y: Math.round(ty), zoom: +tz.toFixed(4) } };
+    })()`);
+    note('fit', fit);
+    result.fit = fit;
+    check('fit viewport applied', !fit.error, JSON.stringify(fit));
+    await page.waitForTimeout(1500);
+    await page.evaluate(settle(SETTLE_MS, 240000));
+}
 let nodeHits: Array<[string, number, number]> = await page.evaluate(CLICKABLE) as any;
 for (let z = 0; nodeHits.length < NODES && z < 6; z++) {
     // Zoom out with the wheel on the pane centre (React Flow zoomOnScroll).
@@ -520,12 +703,13 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     const wallMs = Date.now() - t0;
     const { profile } = await cdp.send('Profiler.stop') as any;
     const rec: any = await page.evaluate(COLLECT);
+    rec.save = await page.evaluate(SAVES);
     await loadChunkMaps(profile);
     const cpu = analyse(profile);
     const file = join(OUTDIR, `perfclick-${LABEL}-click${k + 1}.cpuprofile`);
     writeFileSync(file, JSON.stringify(profile));
     Object.assign(rec, { click: k + 1, node: id, clickReturnedMs, settledMs: Math.round(settledMs), wallMs, profile: file, cpu });
-    note(`click ${k + 1}`, { node: id, wallMs, clickReturnedMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, topDispatches: rec.topDispatches, dispatchMsTop: rec.dispatchMsTop, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), commitRenderMs: rec.commitRenderMs, warns: rec.warns, busyMs: cpu.busyMs, selected: rec.selected, sel: rec.sel, calls: rec.calls });
+    note(`click ${k + 1}`, { node: id, wallMs, clickReturnedMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, topDispatches: rec.topDispatches, dispatchMsTop: rec.dispatchMsTop, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), commitRenderMs: rec.commitRenderMs, warns: rec.warns, busyMs: cpu.busyMs, selected: rec.selected, sel: rec.sel, calls: rec.calls, save: rec.save });
     note(`click ${k + 1} dispatch types`, rec.byType);
     note(`click ${k + 1} slowest dispatches`, rec.slowest);
     note(`click ${k + 1} top components`, rec.topComponents);
@@ -560,6 +744,78 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     await page.waitForTimeout(1000);
 }
 
+// ── Round 3 steps (P-2026-10-21-0905) ──────────────────────────────────────────────────────────
+const pct = (a: number[], p: number) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return Math.round(s[Math.min(s.length - 1, Math.floor(p * s.length))]); };
+const latStats = (a: number[]) => ({ n: a.length, p50: pct(a, 0.5), p95: pct(a, 0.95), max: a.length ? Math.round(Math.max(...a)) : null });
+/** Event Timing since the last RESET: per interaction (interactionId), its longest entry (the INP measure). */
+const INTERACTIONS = `(() => { const by = {}; for (const e of window.__perfclick.events) if (e.iid) by[e.iid] = Math.max(by[e.iid] || 0, e.dur);
+  const byName = {}; for (const e of window.__perfclick.events) (byName[e.name] = byName[e.name] || []).push(Math.round(e.dur));
+  return { inp: Object.values(by).map(Math.round), byName }; })()`;
+const dragOnce = async (x: number, y: number, dx: number, moves: number) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, y, { steps: moves });
+    await page.mouse.up();
+};
+const nameInputFocus = async (): Promise<string | null> => page.evaluate(`(() => { const L = window.store.getState().idlookup, d = L[(window.store.getState()._lastSelected || {}).modelElement];
+  const i = d ? [...document.querySelectorAll('input[type="text"], input:not([type])')].find(i => i.value === d.name && i.checkVisibility()) : null;
+  if (!i) return null; i.focus(); i.setSelectionRange(i.value.length, i.value.length); return i.value; })()`) as Promise<string | null>;
+
+// idle: nothing done for CLICK_IDLE_MS after a settled canvas; does any save run, any long task?
+if (STEPS.has('idle')) {
+    const IDLE_MS = Number(process.env.CLICK_IDLE_MS || 20000);
+    await page.evaluate(RESET);
+    await page.waitForTimeout(IDLE_MS);
+    const rec: any = await page.evaluate(COLLECT);
+    const save = await page.evaluate(SAVES);
+    result.idle = { ms: IDLE_MS, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, commits: rec.commits, save };
+    note('idle', result.idle);
+}
+
+// lat: input latency as felt, profiler off. CLICK_LAT_N selection clicks on different nodes
+// (pointerdown to the first frame showing .mm-node.selected), then CLICK_LAT_DRAGS drags of
+// CLICK_LAT_MOVES moves (each pointermove to the first frame in which the node's transform moved).
+if (STEPS.has('lat') && nodeHits.length) {
+    const N = Number(process.env.CLICK_LAT_N || 10), DRAGS = Number(process.env.CLICK_LAT_DRAGS || 3), MOVES = Number(process.env.CLICK_LAT_MOVES || 20);
+    const ring: number[] = [], rf: number[] = [], inpClick: number[] = [], misses: string[] = [];
+    for (let k = 0; k < N; k++) {
+        const [id, px, py] = nodeHits[Math.floor(k * nodeHits.length / N)];
+        await page.evaluate(RESET);
+        await page.evaluate(`window.__perfclick.watch = { kind: 'select', id: ${JSON.stringify(id)}, t0: null, rf: null, ring: null }`);
+        await page.mouse.click(px, py);
+        await page.evaluate(settle(1500, 60000));
+        const w: any = await page.evaluate(`(() => { const w = window.__perfclick.watch; window.__perfclick.watch = null; return w; })()`);
+        const it: any = await page.evaluate(INTERACTIONS);
+        if (w.ring != null) ring.push(w.ring); else misses.push(id);
+        if (w.rf != null) rf.push(w.rf);
+        if (it.inp.length) inpClick.push(Math.max(...it.inp));
+    }
+    const dragLat: number[] = [], inpDrag: number[] = [], perDrag: any[] = [];
+    const [did, dx0, dy0] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
+    for (let d = 0; d < DRAGS; d++) {
+        await page.evaluate(RESET);
+        await page.evaluate(`(() => { const n = document.querySelector('.react-flow__node[data-id="${did}"]');
+          window.__perfclick.watch = { kind: 'drag', id: ${JSON.stringify(did)}, down: false, moves: 0, pending: [], lat: [], lastTr: n ? n.style.transform : '' }; })()`);
+        const dir = d % 2 === 0 ? 1 : -1;
+        // CLICK_LAT_DURING_SAVE=1: a full save starts (not awaited) right before the drag, so the
+        // moves land while async-lz-string runs its chunks.
+        if (process.env.CLICK_LAT_DURING_SAVE === '1') await page.evaluate(`(() => { const L = window.store.getState().idlookup;
+          const proj = Object.values(L).find(d => d && d.className === 'DProject'); window.U.compressedState(proj); return 1; })()`);
+        const t0 = Date.now();
+        await dragOnce(dir > 0 ? dx0 : dx0 + 100, dy0, 100 * dir, MOVES);
+        const gestureMs = Date.now() - t0;
+        await page.evaluate(settle(1500, 60000));
+        const w: any = await page.evaluate(`(() => { const w = window.__perfclick.watch; window.__perfclick.watch = null; return { moves: w.moves, lat: w.lat, pending: w.pending.length }; })()`);
+        const it: any = await page.evaluate(INTERACTIONS);
+        dragLat.push(...w.lat);
+        if (it.inp.length) inpDrag.push(Math.max(...it.inp));
+        perDrag.push({ gestureMs, moves: w.moves, framed: w.lat.length, unframed: w.pending, ...latStats(w.lat) });
+    }
+    result.lat = { select: { ring: latStats(ring), rf: latStats(rf), inp: latStats(inpClick), misses }, drag: { move: latStats(dragLat), inp: latStats(inpDrag), perDrag } };
+    note('lat select', result.lat.select);
+    note('lat drag', result.lat.drag);
+}
+
 // Interactions besides selection (CLICK_STEPS), on the first clicked node (P-2026-10-20-2305).
 if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('commit'))) {
     const [, px, py] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
@@ -588,7 +844,194 @@ if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('com
         }
     }
 }
+// session: three edits spaced like a user (drag, 3 s, rename, 3 s, drag back), profiled over
+// CLICK_SESSION_MS from the first edit, plus any save still running then. Long tasks split by
+// cause: inside a U.compressedState call ("save"), else the last edit started before them.
+if (STEPS.has('session') && nodeHits.length) {
+    const SESSION_MS = Number(process.env.CLICK_SESSION_MS || 30000);
+    const [, px, py] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
+    const mark = (k: string) => page.evaluate(`window.__perfclick.marks.push([${JSON.stringify(k)}, performance.now()])`);
+    await page.evaluate(RESET);
+    await cdp.send('Profiler.start');
+    const t0 = Date.now();
+    await mark('drag1'); await dragOnce(px, py, 100, 10);
+    await page.waitForTimeout(3000);
+    await mark('rename');
+    const found = await nameInputFocus();
+    check('session: name field found', found !== null, String(found));
+    if (found !== null) { await page.keyboard.type('y'); await page.keyboard.press('Enter'); }
+    await page.waitForTimeout(3000);
+    await mark('drag2'); await dragOnce(px + 100, py, -100, 10);
+    await mark('idle');
+    const left = SESSION_MS - (Date.now() - t0);
+    if (left > 0) await page.waitForTimeout(left);
+    // A save still in flight at the end of the window is waited for (cap 30 s).
+    await page.evaluate(`(async () => { for (let i = 0; i < 120 && window.__perfclick.saves.some(s => s.t1 === 0); i++) await new Promise(r => setTimeout(r, 250)); })()`);
+    const wallMs = Date.now() - t0;
+    const { profile } = await cdp.send('Profiler.stop') as any;
+    const split: any = await page.evaluate(`(() => {
+      const P = window.__perfclick, t0 = P.recStart, now = performance.now();
+      const cs = P.saves.filter(s => s.label === 'compressedState' && (s.t1 === 0 || s.t1 >= t0));
+      const cause = (l) => { if (cs.some(s => l.start < (s.t1 || now) && l.start + l.ms > s.t0)) return 'save';
+        let k = 'before'; for (const [name, t] of P.marks) if (l.start >= t) k = name; return k; };
+      const by = {};
+      for (const l of P.longtasks) { const c = cause(l), e = by[c] || (by[c] = { n: 0, ms: 0, max: 0, first20s: 0 });
+        e.n++; e.ms += l.ms; e.max = Math.max(e.max, l.ms); if (l.start - t0 < 20000) e.first20s += l.ms; }
+      for (const e of Object.values(by)) { e.ms = Math.round(e.ms); e.max = Math.round(e.max); e.first20s = Math.round(e.first20s); }
+      return { byCause: by, total: Math.round(P.longtasks.reduce((a, l) => a + l.ms, 0)),
+        first20s: Math.round(P.longtasks.filter(l => l.start - t0 < 20000).reduce((a, l) => a + l.ms, 0)),
+        marks: P.marks.map(([k, t]) => [k, Math.round(t - t0)]), timeline: P.longtasks.map(l => [Math.round(l.start - t0), Math.round(l.ms)]) };
+    })()`);
+    {
+        const rec: any = await page.evaluate(COLLECT);
+        const save = await page.evaluate(SAVES);
+        await loadChunkMaps(profile);
+        const cpu = analyse(profile);
+        const file = join(OUTDIR, `perfclick-${LABEL}-session.cpuprofile`);
+        writeFileSync(file, JSON.stringify(profile));
+        result.session = { wallMs, sessionMs: SESSION_MS, ...split, save, dispatches: rec.dispatches, commits: rec.commits, busyMs: cpu.busyMs, modSelfTop: cpu.modSelfTop, fnSelfTop: cpu.fnSelfTop.slice(0, 15), profile: file };
+        note('session split', { wallMs, total: split.total, first20s: split.first20s, byCause: split.byCause, marks: split.marks, busyMs: cpu.busyMs });
+        note('session saves', save);
+        note('session timeline', split.timeline);
+        note('session modules self', cpu.modSelfTop.slice(0, 12));
+        console.log('TOP15 self time, session');
+        for (const [f, ms] of cpu.fnSelfTop.slice(0, 15)) console.log(`  ${String(ms).padStart(9)}  ${f}`);
+    }
+    writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
+}
 if (STEPS.has('vp')) await profiled('vp', () => page.evaluate(activateVp(VP2)));
+
+// Staleness of the intrinsic measure cache (P-2026-10-21-1355), not profiled. Sizes of every canvas
+// node in place (S) against the sizes after a fresh mount (F: viewpoint off and back on, so every
+// IRNodeContent unmounts and its entry is dropped), per change of inherited CSS: none (fonts), the
+// theme attribute on <html>, a <style> in <head> that widens the IR text (positive control: it must
+// move some size), and its removal. stale = nodes whose S and F differ.
+if (STEPS.has('stale')) {
+    const SIZES = `(() => [...document.querySelectorAll('.react-flow__node')]
+      .map(n => [n.getAttribute('data-id'), n.offsetWidth + 'x' + n.offsetHeight]))()`;
+    const settled = () => page.evaluate(settle(SETTLE_MS, 240000));
+    const sizes = async () => { await settled(); return await page.evaluate(SIZES) as [string, string][]; };
+    const differ = (a: [string, string][], b: [string, string][]) => {
+        const m = new Map(b);
+        return a.filter(([id, s]) => m.get(id) !== s).length + Math.abs(a.length - b.length);
+    };
+    let controlMoved = 0, controlRemeasured = 0;
+    // CLICK_LAYOUTS: the IR contents measured in place since a mark (a measure read is a cache miss).
+    const mark = () => page.evaluate(`window.__measureLayouts ? window.__measureLayouts.bursts.length : -1`) as Promise<number>;
+    const measuredSince = (n0: number) => page.evaluate(`(() => { const S = window.__measureLayouts; if (!S) return -1;
+      const els = new Set(); for (const b of S.bursts.slice(${n0})) for (const e of b.els) els.add(e); return els.size; })()`) as Promise<number>;
+    // Both viewpoints: a node whose box is a view default or a manual size (every BPMN node of the
+    // harness fixture) does not follow its content, so only a viewpoint with derived boxes discriminates.
+    for (const v of [VP, VP2]) {
+        const tag = v.replace(/^.*\/ */, '');
+        let irOff = -1, lastRemeasured = -1;
+        const fresh = async () => {
+            await page.evaluate(activateVp('-'));
+            await settled();
+            irOff = await page.evaluate(`document.querySelectorAll('.ir-node-content').length`) as number;
+            await page.evaluate(activateVp(v));
+            return sizes();
+        };
+        const sub = async (name: string, change: string | null) => {
+            const n0 = await mark();
+            if (change) await page.evaluate(change);
+            const s = await sizes();
+            lastRemeasured = n0 < 0 ? -1 : await measuredSince(n0);
+            const irOn = await page.evaluate(`document.querySelectorAll('.ir-node-content').length`) as number;
+            const f = await fresh();
+            const stale = differ(s, f);
+            note(`stale ${tag} ${name}`, { nodes: s.length, stale, irContent: irOn, remeasured: lastRemeasured, irContentWhileOff: irOff });
+            check(`stale ${tag} ${name}`, stale === 0 && s.length > 0 && irOff === 0, `${stale} of ${s.length} nodes, ${irOff} IR contents while off`);
+            return s;
+        };
+        await page.evaluate(activateVp(v));
+        await settled();
+        await sub('fonts', null);
+        const s1 = await sub('theme', `document.documentElement.setAttribute('data-theme', 'dark')`);
+        await page.evaluate(`document.documentElement.setAttribute('data-theme', 'light')`);
+        const s2 = await sub('style', `(() => { const s = document.createElement('style'); s.id = 'perfclick-stale';
+          s.textContent = '.ir-node-content, .ir-node-content * { letter-spacing: 12px !important; font-size: 28px !important; }';
+          document.head.appendChild(s); })()`);
+        controlRemeasured += Math.max(0, lastRemeasured);
+        // In place, and only the nodes whose box the hook writes (inline width): their new size is a cache miss.
+        const written = new Set(await page.evaluate(`[...document.querySelectorAll('.react-flow__node')]
+          .filter(n => n.style.width).map(n => n.getAttribute('data-id'))`) as string[]);
+        const before = new Map(s1);
+        const moved = s2.filter(([id, sz]) => written.has(id) && before.get(id) !== sz).length;
+        note(`stale ${tag} control`, { moved, movedAll: differ(s2, s1), written: written.size });
+        controlMoved += moved;
+        const s3 = await sub('style removed', `document.getElementById('perfclick-stale').remove()`);
+        note(`stale ${tag} restored`, { differFromTheme: differ(s3, s1) });
+    }
+    // A box derived from the reading moves only on a viewpoint that has one; elsewhere the control is the
+    // in-place re-measure after the style lands (the epoch reached the cache), which needs CLICK_LAYOUTS.
+    check('stale control: the style reaches the cache', controlMoved > 0 || controlRemeasured > 0,
+        `${controlMoved} hook-sized nodes moved in place, ${controlRemeasured} IR contents re-measured in place`);
+}
+
+// Staleness audit (P-2026-10-21-0035), dev only: after each targeted store write, compare the
+// data every rendered canvas node holds (props of the node component, read off its fiber) with
+// a fresh jjomVertexToRFNode of its vertex. A node whose fields differ is stale: the sync did
+// not re-transform it. Not profiled; the writes are not undone (the probe ends here).
+if (STEPS.has('audit') && !PROD) {
+    result.audit = await page.evaluate(`(async () => {
+      const T = await import('/src/components/editor-v2/utils/jjomTransformers.ts');
+      const LP = window.LPointerTargetable, S = () => window.store.getState().idlookup;
+      const wait = (ms) => new Promise(r => setTimeout(r, ms));
+      const rendered = () => {
+        const out = new Map();
+        for (const el of document.querySelectorAll('.react-flow__node[data-id]')) {
+          const id = el.getAttribute('data-id'), k = Object.keys(el).find(k => k.startsWith('__reactFiber'));
+          const stack = [el[k] && el[k].child]; let n = 0;
+          while (stack.length && n++ < 300) { const x = stack.pop(); if (!x) continue; const p = x.memoizedProps;
+            if (p && p.id === id && p.data && typeof p.data === 'object') { out.set(id, p.data); break; }
+            if (x.sibling) stack.push(x.sibling); if (x.child) stack.push(x.child); }
+        }
+        return out;
+      };
+      const sig = (d) => JSON.stringify([d.label, d.instanceOfClassName, !!d.isSingleton, !!d.isAbstract,
+        (d.features || []).map(f => [f.featureName, f.value, f.typeName || '', !!f.isMany, !!f.required]),
+        (d.attributes || []).map(a => [a.name, a.type]), (d.references || []).map(r => [r.name, r.type && r.type.name, r.opposite || '']),
+        (d.operations || []).map(o => [o.name, o.returnType, (o.parameters || []).map(p => p.name + ':' + p.type)]),
+        (d.literals || []).map(l => l.name)]);
+      const audit = (label, extra) => { const R = rendered(); const stale = [];
+        for (const [id, d] of R) { const v = LP.fromPointer(id); const f = v && T.jjomVertexToRFNode(v); if (f && sig(f.data) !== sig(d)) stale.push(id); }
+        return { label, rendered: R.size, stale: stale.length, staleIds: stale.slice(0, 4), ...extra }; };
+      const out = [audit('rest')];
+      const R0 = rendered(), L0 = S();
+      const vOf = new Map(); for (const vid of R0.keys()) { const d = L0[vid]; if (d && typeof d.model === 'string') vOf.set(d.model, vid); }
+      const U = (await import('/src/common/U.tsx')).U, alerts = []; U.alert = (...a) => { alerts.push(a.slice(0, 3).map(String).join(' | ').slice(0, 140)); };
+      const vals = (oid) => { const d = rendered().get(vOf.get(oid)); return d ? (d.features || []).map(f => f.value).join('|').slice(0, 160) + (d.isSingleton !== undefined ? ' isSingleton=' + d.isSingleton : '') : null; };
+      const rename = (id, v) => { const x = LP.fromPointer(id); try { x.name = v; } catch (e) {} if (S()[id].name === v) return 'name';
+        try { x['$name'].value = v; } catch (e) {} return S()[id].name === v ? '$name' : 'not landed'; };
+      const write = async (label, f) => { let extra; alerts.length = 0; try { extra = await f(); } catch (e) { extra = { error: String(e).slice(0, 120) }; } await wait(1500); const L1 = S();
+        if (extra && extra.c && L1[extra.c]) extra.cAfter = { final: L1[extra.c].final, isSingleton: L1[extra.c].isSingleton, rendered: vals(extra.c) };
+        if (extra && extra.o) extra.oRendered = vals(extra.o);
+        if (alerts.length) extra.alerts = alerts.slice(0, 3); out.push(audit(label, extra)); };
+      const objs = [...vOf.keys()].filter(id => L0[id] && L0[id].className === 'DObject');
+      const classes = [...vOf.keys()].filter(id => L0[id] && L0[id].className === 'DClass');
+      if (objs.length) {
+        // M1 rows: an attribute slot edit (covered by the hash: positive control), a reference target
+        // renamed, the metaclass renamed, the M2 attribute of a slot renamed.
+        await write('m1 attribute slot edit', () => { for (const o of objs) for (const fv of (L0[o].features || [])) { const d = L0[fv], m = d && L0[d.instanceof];
+          if (m && m.className === 'DAttribute' && L0[m.type] && L0[m.type].className !== 'DEnumerator' && (d.values || []).length && typeof d.values[0] === 'string') { LP.fromPointer(fv).value = d.values[0] + '_e'; return { o, fv }; } } return { none: 1 }; });
+        await write('m1 reference target renamed', () => { const L = S(); for (const o of objs) for (const fv of (L[o].features || [])) { const d = L[fv];
+          for (const t of (d && d.values) || []) if (typeof t === 'string' && vOf.has(t) && t !== o) { const before = vals(o); const how = rename(t, S()[t].name + '_r'); return { o, t, how, newName: S()[t].name, before }; } } return { none: 1 }; });
+        await write('m1 metaclass renamed', () => { const o = objs[0], mc = S()[o].instanceof; const how = rename(mc, S()[mc].name + '_r'); return { o, mc, how }; });
+        await write('m1 M2 attribute renamed', () => { const L = S(); for (const o of objs) for (const fv of (L[o].features || [])) { const m = L[L[fv] && L[fv].instanceof];
+          if (m && m.className === 'DAttribute') { const how = rename(m.id, m.name + '_r'); return { o, a: m.id, how }; } } return { none: 1 }; });
+      }
+      if (classes.length) {
+        // M2 rows: issue #67 (final first, then singleton), a reference's type class renamed.
+        await write('m2 final then singleton (#67)', async () => { const L = S(); const c = classes.find(id => { const l = LP.fromPointer(id); return !l.isSingleton && !l.final && !(l.extendedBy || []).length && !(l.instances || []).length; });
+          if (!c) return { none: 1 }; const lc = LP.fromPointer(c); lc.final = true; await wait(1500); const finalLanded = S()[c].final; lc.isSingleton = true; return { c, finalLanded, isSingleton: S()[c].isSingleton }; });
+        await write('m2 reference type renamed', () => { const L = S(); for (const c of classes) for (const r of (L[c].references || [])) { const t = L[r] && L[r].type;
+          if (typeof t === 'string' && t !== c && vOf.has(t)) { const how = rename(t, S()[t].name + '_r'); return { c, t, how }; } } return { none: 1 }; });
+      }
+      return out;
+    })()`);
+    for (const a of result.audit || []) note('audit', a);
+}
 
 // Micro-benchmark on the first selected object: what one `name` and one `fullname` read cost,
 // and how many LObject.name reads each one makes (counters above, recording on).
@@ -617,13 +1060,37 @@ if (result.clicks.length && result.clicks[0].selected) {
       const U = window.U || ${PROD ? 'null' : "(await import('/src/common/U.tsx')).U"};
       const L = window.store.getState().idlookup, proj = Object.values(L).find(d => d && d.className === 'DProject');
       if (!U || !U.compressedState || !proj) return { error: 'no U.compressedState' };
-      const out = [];
-      for (let i = 0; i < 2; i++) { const t = performance.now(); const s = await U.compressedState(proj); out.push({ ms: Math.round(performance.now() - t), chars: s.length }); }
-      return { runs: out };
+      const out = [], P = window.__perfclick;
+      for (let i = 0; i < 2; i++) {
+        const lt0 = P.longtasks.length, t = performance.now(); const s = await U.compressedState(proj);
+        const lts = P.longtasks.slice(lt0).filter(l => l.start >= t);
+        out.push({ ms: Math.round(performance.now() - t), chars: s.length, longtasks: lts.length, longtaskSum: Math.round(lts.reduce((a, l) => a + l.ms, 0)), longtaskMax: Math.round(Math.max(0, ...lts.map(l => l.ms))) });
+      }
+      // The two halves of compressedState (dev only: the replacer is a module import): the
+      // JSON.stringify with proxyToIdReplacer, and the input length async-lz-string gets
+      // (it yields with setTimeout(0) every 10,000 input chars, compressor.ts:148).
+      let split = null;
+      if (${!PROD}) {
+        const { proxyToIdReplacer } = await import('/src/model/unproxy.ts');
+        const st = { ...window.store.getState() };
+        let t = performance.now(); const j1 = JSON.stringify(st, proxyToIdReplacer); const replacerMs = performance.now() - t;
+        t = performance.now(); const j2 = JSON.stringify(st); const plainMs = performance.now() - t;
+        split = { stringifyReplacerMs: Math.round(replacerMs), stringifyPlainMs: Math.round(plainMs), jsonChars: j1.length, plainChars: j2.length, lzYields: Math.ceil(j1.length / 10000) };
+      }
+      return { runs: out, split };
     })()`);
     note('bench save', result.benchSave);
 }
 
+if (LAYOUTS) {
+    result.measureLayouts = await page.evaluate(`(() => {
+      const b = window.__measureLayouts.bursts;
+      const per = b.map(x => x.layouts), els = b.map(x => x.els.size);
+      return { bursts: b.length, layouts: per.reduce((a, c) => a + c, 0), maxLayoutsPerBurst: Math.max(0, ...per),
+        burstsWithMoreThanOne: per.filter(x => x > 1).length, elementsRead: els.reduce((a, c) => a + c, 0), maxElementsPerBurst: Math.max(0, ...els) };
+    })()`);
+    note('measure layouts', result.measureLayouts);
+}
 result.pageErrors = pageErrors.slice(0, 20);
 result.failures = failures;
 writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));

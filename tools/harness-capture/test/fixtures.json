@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "lane": "P-2026-01-01-1000",
+  "cases": [
+    {
+      "id": "single",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n",
+        "runs.jsonl": "{\"kind\": \"start\", \"session\": null, \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n"
+      }
+    },
+    {
+      "id": "resume",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n",
+        "input-2.md": "[P-2026-01-01-1000] GO.\nContinue.\n",
+        "runs.jsonl": "{\"kind\": \"start\", \"session\": null, \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n{\"kind\": \"resume\", \"session\": \"session-a\", \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n"
+      }
+    },
+    {
+      "id": "chain",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n",
+        "runs.jsonl": "{\"kind\": \"chain\", \"session\": null, \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n"
+      }
+    },
+    {
+      "id": "missing-ledger",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n"
+      }
+    },
+    {
+      "id": "ambiguous",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n",
+        "input-2.md": "Prompt-ID: P-2026-01-02-2000\n",
+        "runs.jsonl": "{\"kind\": \"start\", \"session\": \"session-b\", \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n"
+      }
+    },
+    {
+      "id": "incomplete",
+      "files": {
+        "input-1.md": "Prompt-ID:",
+        "runs.jsonl": "{\"kind\": \"start\", \"session\": null, \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\n{\"kind\":\"resume\""
+      }
+    },
+    {
+      "id": "malformed-ledger",
+      "files": {
+        "input-1.md": "# Example\nPrompt-ID: P-2026-01-01-1000\n\n## Requirement\nPreserve entry order.\n",
+        "session.txt": "session-a\n",
+        "worktree.txt": "/not-followed/removed-worktree\n",
+        "prompt.txt": "/not-followed/external-prompt.md\n",
+        "started.txt": "1700000000000\n",
+        "exit.txt": "0\n",
+        "runs.jsonl": "{\"kind\": \"start\", \"session\": null, \"at\": \"2026-01-01T10:00:00+0100\", \"logFrom\": 0}\nnot json\n"
+      }
+    },
+    {
+      "id": "empty",
+      "files": {}
+    },
+    {
+      "id": "dedup",
+      "files": {
+        "input-1.md": "identical\n",
+        "input-2.md": "identical\n"
+      }
+    }
+  ]
+}

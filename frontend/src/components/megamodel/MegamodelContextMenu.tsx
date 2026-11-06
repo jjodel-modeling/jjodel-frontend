@@ -16,6 +16,8 @@ export interface MenuItem {
     danger?: boolean;
     disabled?: boolean;
     separator?: boolean;
+    /** Tooltip of the item, e.g. why it is disabled. */
+    title?: string;
 }
 
 interface MegamodelContextMenuProps {
@@ -93,6 +95,7 @@ const MegamodelContextMenu: React.FC<MegamodelContextMenuProps> = ({ x, y, items
                         key={i}
                         className={`mm-context-menu__item${item.danger ? ' mm-context-menu__item--danger' : ''}`}
                         disabled={item.disabled}
+                        title={item.title}
                         onClick={() => {
                             item.action();
                             onClose();

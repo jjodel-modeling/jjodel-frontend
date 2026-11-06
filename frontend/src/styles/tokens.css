@@ -111,6 +111,18 @@
   --color-blue-900: #1e3a8a;
 
   /* ========================================
+     COLORS - Template levels (Templates page, R-LIB-19, P-2026-10-19-1615)
+     The badge, the chip dot and the card share them. Violet has no grade
+     here: its two values exist as level tokens only.
+     ======================================== */
+  --color-level-beginner-bg: var(--color-green-100);
+  --color-level-beginner-fg: var(--color-green-700);
+  --color-level-intermediate-bg: var(--color-blue-100);
+  --color-level-intermediate-fg: var(--color-blue-700);
+  --color-level-advanced-bg: #ede9fe;   /* violet-100 */
+  --color-level-advanced-fg: #6d28d9;   /* violet-700 */
+
+  /* ========================================
      SEMANTIC COLORS - Backgrounds
      ======================================== */
   --color-bg-primary: #ffffff;

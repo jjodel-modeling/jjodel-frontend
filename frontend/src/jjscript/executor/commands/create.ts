@@ -25,6 +25,7 @@ import { resolveSuperclasses, superclassNames } from '../superclassResolution';
 // Import Jjodel model types and actions
 import {
     DClass,
+    DModel,
     DAttribute,
     DReference,
     DOperation,
@@ -337,7 +338,10 @@ export async function executeCreate(
             };
         }
 
-        if (!parentElement && needsParent(elementType)) {
+        // A parent that was named and resolved nowhere is refused for every type: a class, enum or
+        // package handed `father: undefined` was made with no father, listed by nothing, and reported
+        // as created (P-2026-11-03-0000, defect 2).
+        if (!parentElement && (parent || needsParent(elementType))) {
             const expected = kindLabel(parentKinds);
             const rule = PARENT_RULE_BY_ELEMENT_TYPE[elementType];
             const notFound = `${expected} '${parent ? qualifiedNameToString(parent) : ''}' not found.${rule ? ' ' + rule : ''}`;
@@ -1061,6 +1065,9 @@ async function createPackage(
     return new Promise((resolve) => {
         try {
             const parentId = parent?.id || parent;
+            // `Constructors.DPackage` reads `fatherType.cname` whenever there is a father, to pick
+            // `packages` (model) or `subpackages` (package): without it every create threw on `cname`.
+            const fatherType = parent?.className === 'DModel' ? DModel : DPackage;
 
             // DPackage.new(name, uri, prefix, father, persist, fatherClass)
             const newPkg = DPackage.new(
@@ -1068,7 +1075,8 @@ async function createPackage(
                 options?.nsUri,
                 options?.nsPrefix,
                 parentId,
-                true
+                true,
+                fatherType
             );
 
             resolve({

@@ -47,6 +47,12 @@
  *   resolved and each right-hand side evaluated on σ, in order, as
  *   `makeActionOracle` does; only then `$apply` writes `next`. A second write
  *   to one target throws, the core's double assignment.
+ * - A bit-vector (R-BV) is a `$BitVector`, built by `$bv(width, signed, bits)`:
+ *   the operators take its path when either operand is one, with the
+ *   evaluator's defects as throws, and a method no other receiver has prints
+ *   as `$bvm` (R-BV-9). The `$bv…` helpers port `builtins/bitvectors.ts`
+ *   line by line, messages verbatim; `__tests__/printer.bitvector.test.ts`
+ *   runs them against that module.
  *
  * The differential test (`__tests__/printer.differential.test.ts`) runs the
  * printed code against the evaluator on random σ.
@@ -62,6 +68,13 @@
 
 import { JjelEvaluator, isJjelObject } from '../../../jjel/evaluator';
 import type { EvaluationContext, JjelValue } from '../../../jjel/evaluator';
+import { isBitVector } from '../../../jjel/evaluator/context';
+import type { JjelBitVector } from '../../../jjel/evaluator/context';
+import { BITVECTOR_METHOD_NAMES } from '../../../jjel/evaluator/builtins/bitvectors';
+import { getCollectionMethod } from '../../../jjel/evaluator/builtins/collections';
+import { getDateMethod } from '../../../jjel/evaluator/builtins/dates';
+import { getNumberMethod } from '../../../jjel/evaluator/builtins/numbers';
+import { getStringMethod } from '../../../jjel/evaluator/builtins/strings';
 import type {
     ASTLocation, BinaryOperator, ExistsExpr, JjelAction, JjelExpression, LambdaExpr, MethodCallExpr,
     NullSafeMethodCallExpr, StateAccessExpr,
@@ -153,28 +166,239 @@ function $own(o, k) { return o !== null && o !== undefined && Object.prototype.h
 function $set(o, k, v) { Object.defineProperty(o, k, { value: v, writable: true, enumerable: true, configurable: true }); }
 function $isObject(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
 function $describe(v) { return v === null ? 'null' : Array.isArray(v) ? 'array(' + v.length + ')' : typeof v; }
+// ── Bit-vectors: jjel/evaluator/builtins/bitvectors.ts, ported line by line (R-BV-9), messages verbatim. ──
+class $BitVector {
+  constructor(width, signed, bits) {
+    if (bits < 0n || (bits >> BigInt(width)) !== 0n) throw new Error('internal: ' + bits + ' is not a canonical ' + width + '-bit payload');
+    this.__type = 'BitVector';
+    this.width = width;
+    this.signed = signed;
+    this.bits = bits;
+    Object.freeze(this);
+  }
+  toString() { return $bvVerilog(this); }
+  toJSON() { return $bvVerilog(this); }
+}
+const $BV_MAX_WIDTH = 1024;
+function $bv(width, signed, bits) { return new $BitVector(width, signed, bits); }
+/** A bit-vector as context.ts isBitVector reads one: a structured clone of one is one too. */
+function $isBV(v) { return v !== null && typeof v === 'object' && v.__type === 'BitVector' && typeof v.bits === 'bigint'; }
+function $bvValue(x) { return x.signed ? BigInt.asIntN(x.width, x.bits) : x.bits; }
+function $bvVerilog(x) { return x.width + "'" + (x.signed ? 's' : '') + 'h' + x.bits.toString(16).padStart(Math.ceil(x.width / 4), '0'); }
+function $bvOperand(v) {
+  if ($isBV(v)) return v.width + '-bit ' + (v.signed ? 'signed' : 'unsigned');
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'collection';
+  if (typeof v === 'object' && '__jjelFunction' in v) return 'function';
+  return typeof v;
+}
+function $bvShow(v) {
+  if ($isBV(v)) return $bvVerilog(v);
+  if (typeof v === 'string') return "'" + v + "'";
+  if (v === null || typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return $bvOperand(v);
+}
+function $bvNoTruth(x) { return new Error('A bit-vector has no truth value: compare it explicitly, e.g. x != ' + (x.signed ? 'sbits' : 'bits') + '(' + x.width + ', 0)'); }
+function $bvPair(label, a, b) {
+  if ($isBV(a) && $isBV(b) && a.width === b.width && a.signed === b.signed) return [a, b];
+  throw new Error(label + ' needs two bit-vectors of the same width and signedness, got ' + $bvOperand(a) + ' and ' + $bvOperand(b));
+}
+function $bvCompare(label, a, b) {
+  const [x, y] = $bvPair(label, a, b);
+  const vx = $bvValue(x);
+  const vy = $bvValue(y);
+  return vx < vy ? -1 : vx > vy ? 1 : 0;
+}
+/** A binary operator with a bit-vector operand; \`+\` with a string is $add's. */
+function $bvOp(op, a, b) {
+  const label = "'" + op + "'";
+  switch (op) {
+    case '+': { const [x, y] = $bvPair(label, a, b); return $bv(x.width, x.signed, BigInt.asUintN(x.width, x.bits + y.bits)); }
+    case '-': { const [x, y] = $bvPair(label, a, b); return $bv(x.width, x.signed, BigInt.asUintN(x.width, x.bits - y.bits)); }
+    case '*': { const [x, y] = $bvPair(label, a, b); return $bv(x.width, x.signed, BigInt.asUintN(x.width, x.bits * y.bits)); }
+    case '==': { if (a === null || b === null) return false; const [x, y] = $bvPair(label, a, b); return x.bits === y.bits; }
+    case '!=': { if (a === null || b === null) return true; const [x, y] = $bvPair(label, a, b); return x.bits !== y.bits; }
+    case '<': return $bvCompare(label, a, b) < 0;
+    case '<=': return $bvCompare(label, a, b) <= 0;
+    case '>': return $bvCompare(label, a, b) > 0;
+    case '>=': return $bvCompare(label, a, b) >= 0;
+    case '/':
+    case '%':
+      throw new Error(label + ' is not defined on bit-vectors yet (R-BV-4)');
+    case 'and':
+    case 'or':
+      throw new Error(label + ' needs booleans, got ' + $bvOperand(a) + ' and ' + $bvOperand(b) + ': a bit-vector has no truth value');
+    default:
+      throw new Error(label + ' is not defined on bit-vectors');
+  }
+}
+function $bvArity(method, args, n) {
+  if (args.length !== n) throw new Error('x.' + method + ' expects ' + n + ' argument' + (n === 1 ? '' : 's') + ', got ' + args.length);
+}
+function $bvInt(method, name, v, min, max) {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < min || v > max) throw new Error('x.' + method + ': ' + name + ' must be an integer from ' + min + ' to ' + max + ', got ' + $bvShow(v));
+  return v;
+}
+function $bvVector(method, position, v) {
+  if (!$isBV(v)) throw new Error('x.' + method + ': argument ' + position + ' must be a bit-vector, got ' + $bvOperand(v));
+  return v;
+}
+function $bvAmount(method, v) {
+  if ($isBV(v)) return v.bits;
+  if (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0) return BigInt(v);
+  throw new Error('x.' + method + ': the amount must be a non-negative integer or a bit-vector, got ' + $bvShow(v));
+}
+function $bvBitwise(method, x, args, f) {
+  $bvArity(method, args, 1);
+  const [p, q] = $bvPair('x.' + method, x, args[0]);
+  return $bv(p.width, p.signed, BigInt.asUintN(p.width, f(p.bits, q.bits)));
+}
+const $BV_METHODS = new Map([
+  ['slice', (x, args) => {
+    $bvArity('slice', args, 2);
+    const hi = $bvInt('slice', 'hi', args[0], 0, x.width - 1);
+    const lo = $bvInt('slice', 'lo', args[1], 0, hi);
+    const w = hi - lo + 1;
+    return $bv(w, false, BigInt.asUintN(w, x.bits >> BigInt(lo)));
+  }],
+  ['bit', (x, args) => {
+    $bvArity('bit', args, 1);
+    const i = $bvInt('bit', 'i', args[0], 0, x.width - 1);
+    return $bv(1, false, (x.bits >> BigInt(i)) & 1n);
+  }],
+  ['concat', (x, args) => {
+    if (args.length < 1) throw new Error('x.concat expects at least 1 argument, got 0');
+    let width = x.width;
+    let acc = x.bits;
+    args.forEach((arg, k) => {
+      const y = $bvVector('concat', k + 1, arg);
+      width += y.width;
+      if (width > $BV_MAX_WIDTH) throw new Error('x.concat: the result would be wider than ' + $BV_MAX_WIDTH + ' bits');
+      acc = (acc << BigInt(y.width)) | y.bits;
+    });
+    return $bv(width, false, acc);
+  }],
+  ['replicate', (x, args) => {
+    $bvArity('replicate', args, 1);
+    const n = $bvInt('replicate', 'n', args[0], 1, Math.floor($BV_MAX_WIDTH / x.width));
+    let acc = 0n;
+    for (let k = 0; k < n; k++) acc = (acc << BigInt(x.width)) | x.bits;
+    return $bv(n * x.width, false, acc);
+  }],
+  ['zext', (x, args) => {
+    $bvArity('zext', args, 1);
+    const w = $bvInt('zext', 'the width', args[0], x.width, $BV_MAX_WIDTH);
+    return $bv(w, x.signed, x.bits);
+  }],
+  ['sext', (x, args) => {
+    $bvArity('sext', args, 1);
+    const w = $bvInt('sext', 'the width', args[0], x.width, $BV_MAX_WIDTH);
+    return $bv(w, x.signed, BigInt.asUintN(w, BigInt.asIntN(x.width, x.bits)));
+  }],
+  ['trunc', (x, args) => {
+    $bvArity('trunc', args, 1);
+    const w = $bvInt('trunc', 'the width', args[0], 1, x.width);
+    return $bv(w, x.signed, BigInt.asUintN(w, x.bits));
+  }],
+  ['and', (x, args) => $bvBitwise('and', x, args, (p, q) => p & q)],
+  ['or', (x, args) => $bvBitwise('or', x, args, (p, q) => p | q)],
+  ['xor', (x, args) => $bvBitwise('xor', x, args, (p, q) => p ^ q)],
+  ['not', (x, args) => {
+    $bvArity('not', args, 0);
+    return $bv(x.width, x.signed, BigInt.asUintN(x.width, ~x.bits));
+  }],
+  ['shl', (x, args) => {
+    $bvArity('shl', args, 1);
+    const n = $bvAmount('shl', args[0]);
+    if (n >= BigInt(x.width)) return $bv(x.width, x.signed, 0n);
+    return $bv(x.width, x.signed, BigInt.asUintN(x.width, x.bits << n));
+  }],
+  ['shr', (x, args) => {
+    $bvArity('shr', args, 1);
+    const n = $bvAmount('shr', args[0]);
+    if (n >= BigInt(x.width)) return $bv(x.width, x.signed, 0n);
+    return $bv(x.width, x.signed, x.bits >> n);
+  }],
+  ['ashr', (x, args) => {
+    $bvArity('ashr', args, 1);
+    const n = $bvAmount('ashr', args[0]);
+    const k = n >= BigInt(x.width) ? BigInt(x.width) : n;
+    return $bv(x.width, x.signed, BigInt.asUintN(x.width, BigInt.asIntN(x.width, x.bits) >> k));
+  }],
+  ['asSigned', (x, args) => {
+    $bvArity('asSigned', args, 0);
+    return $bv(x.width, true, x.bits);
+  }],
+  ['asUnsigned', (x, args) => {
+    $bvArity('asUnsigned', args, 0);
+    return $bv(x.width, false, x.bits);
+  }],
+  ['toNumber', (x, args) => {
+    $bvArity('toNumber', args, 0);
+    const v = $bvValue(x);
+    const max = BigInt(Number.MAX_SAFE_INTEGER);
+    if (v > max || v < -max) throw new Error('x.toNumber: ' + $bvVerilog(x) + ' is beyond the safe integers (2^53-1)');
+    return Number(v);
+  }],
+  ['toVerilog', (x, args) => {
+    $bvArity('toVerilog', args, 0);
+    return $bvVerilog(x);
+  }],
+]);
+function $typeName(v) {
+  if (v === null) return 'null';
+  if (typeof v === 'boolean') return 'Boolean';
+  if (typeof v === 'number') return Number.isInteger(v) ? 'Integer' : 'Double';
+  if (typeof v === 'string') return 'String';
+  if (Array.isArray(v)) return 'Array';
+  if ($isBV(v)) return 'BitVector';
+  return 'Object';
+}
+/**
+ * x.m(…) for a bit-vector method no other receiver has (R-BV-9): the evaluator's callMethod on a vector. The
+ * arguments come as a thunk, evaluated after the receiver as the evaluator does, and never on a null one.
+ */
+function $bvm(x, method, args, nullSafe) {
+  if (x === null) {
+    if (nullSafe) return null;
+    throw new Error("Cannot call method '" + method + "' on null");
+  }
+  const a = args();
+  if ($isBV(x)) {
+    const m = $BV_METHODS.get(method);
+    if (m !== undefined) return m(x, a);
+    if (a.length === 0 && (method === 'width' || method === 'signed')) return x[method];
+  }
+  throw new Error("Unknown method '" + method + "' for type " + $typeName(x));
+}
 function $truthy(v) {
   if (v === null) return false;
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
   if (typeof v === 'string') return v.length > 0;
   if (Array.isArray(v)) return v.length > 0;
+  if ($isBV(v)) throw $bvNoTruth(v);
   return true;
 }
-function $eq(a, b) {
+/** Equality inside arrays and objects (evaluator.ts isEqual): two vectors of another width or signedness are unequal. */
+function $same(a, b) {
   if (a === b) return true;
   if (a === null || b === null) return a === b;
+  if ($isBV(a) || $isBV(b)) return $isBV(a) && $isBV(b) && a.width === b.width && a.signed === b.signed && a.bits === b.bits;
   if (typeof a !== typeof b) return false;
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => $eq(x, b[i]));
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => $same(x, b[i]));
   if ($isObject(a) && $isObject(b)) {
     const ka = Object.keys(a);
     const kb = Object.keys(b);
-    return ka.length === kb.length && ka.every(k => $eq(a[k], b[k]));
+    return ka.length === kb.length && ka.every(k => $same(a[k], b[k]));
   }
   return false;
 }
-function $ne(a, b) { return !$eq(a, b); }
-function $cmp(a, b) {
+/** ==: a bit-vector operand takes its own path (R-BV-3), where a mismatched pair is a defect. */
+function $eq(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('==', a, b) : $same(a, b); }
+function $ne(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('!=', a, b) : !$same(a, b); }
+function $cmp(a, b, op) {
+  if ($isBV(a) || $isBV(b)) return $bvCompare("'" + op + "'", a, b);
   if (a === b) return 0;
   if (a === null) return -1;
   if (b === null) return 1;
@@ -183,30 +407,48 @@ function $cmp(a, b) {
   if (typeof a === 'boolean' && typeof b === 'boolean') return (a ? 1 : 0) - (b ? 1 : 0);
   return String(a).localeCompare(String(b));
 }
-function $lt(a, b) { return $cmp(a, b) < 0; }
-function $gt(a, b) { return $cmp(a, b) > 0; }
-function $le(a, b) { return $cmp(a, b) <= 0; }
-function $ge(a, b) { return $cmp(a, b) >= 0; }
+function $lt(a, b) { return $cmp(a, b, '<') < 0; }
+function $gt(a, b) { return $cmp(a, b, '>') > 0; }
+function $le(a, b) { return $cmp(a, b, '<=') <= 0; }
+function $ge(a, b) { return $cmp(a, b, '>=') >= 0; }
 function $add(a, b) {
+  if ($isBV(a) || $isBV(b)) {
+    if (typeof a === 'string' || typeof b === 'string') return ($isBV(a) ? $bvVerilog(a) : String(a ?? '')) + ($isBV(b) ? $bvVerilog(b) : String(b ?? ''));
+    return $bvOp('+', a, b);
+  }
   if (typeof a === 'string' || typeof b === 'string') return String(a ?? '') + String(b ?? '');
   if (typeof a === 'number' && typeof b === 'number') return a + b;
   if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b];
   return null;
 }
-function $sub(a, b) { return typeof a === 'number' && typeof b === 'number' ? a - b : null; }
+function $sub(a, b) {
+  if ($isBV(a) || $isBV(b)) return $bvOp('-', a, b);
+  return typeof a === 'number' && typeof b === 'number' ? a - b : null;
+}
 function $mul(a, b) {
+  if ($isBV(a) || $isBV(b)) return $bvOp('*', a, b);
   if (typeof a === 'number' && typeof b === 'number') return a * b;
   if (typeof a === 'string' && typeof b === 'number') return a.repeat(Math.max(0, Math.floor(b)));
   return null;
 }
 /** By zero: null, never Infinity. */
-function $div(a, b) { return typeof a === 'number' && typeof b === 'number' && b !== 0 ? a / b : null; }
-function $mod(a, b) { return typeof a === 'number' && typeof b === 'number' && b !== 0 ? a % b : null; }
-function $neg(v) { return typeof v === 'number' ? -v : null; }
+function $div(a, b) {
+  if ($isBV(a) || $isBV(b)) return $bvOp('/', a, b);
+  return typeof a === 'number' && typeof b === 'number' && b !== 0 ? a / b : null;
+}
+function $mod(a, b) {
+  if ($isBV(a) || $isBV(b)) return $bvOp('%', a, b);
+  return typeof a === 'number' && typeof b === 'number' && b !== 0 ? a % b : null;
+}
+function $neg(v) {
+  if (typeof v === 'number') return -v;
+  if ($isBV(v)) return $bv(v.width, v.signed, BigInt.asUintN(v.width, -v.bits));
+  return null;
+}
 function $not(v) { return !$truthy(v); }
 /** Both operands arrive evaluated: JjEL's and/or never short-circuit. */
-function $and(a, b) { return $truthy(a) && $truthy(b); }
-function $or(a, b) { return $truthy(a) || $truthy(b); }
+function $and(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('and', a, b) : $truthy(a) && $truthy(b); }
+function $or(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('or', a, b) : $truthy(a) || $truthy(b); }
 /** x.[a]: the stored value, then the derived one; neither throws, never a silent null. */
 function $read(s, id, a) {
   const own = $own(s.attrs, id) ? s.attrs[id] : undefined;
@@ -223,9 +465,9 @@ function $marked(s, id) { return $tokens(s, id) !== 0; }
 /** count(p) and sum(f) as the builtins: JavaScript truthiness, numbers only. */
 function $count(vs) { let c = 0; for (const v of vs) if (v) c++; return c; }
 function $sum(vs) { let t = 0; for (const v of vs) if (typeof v === 'number') t += v; return t; }
-/** The value of an action: a boolean, a number or a string. */
+/** The value of an action: a boolean, a number, a string or a bit-vector (actionEvaluator.ts isSimValue). */
 function $value(v) {
-  if (typeof v === 'boolean' || typeof v === 'number' || typeof v === 'string') return v;
+  if (typeof v === 'boolean' || typeof v === 'number' || typeof v === 'string' || $isBV(v)) return v;
   throw new Error('the value is ' + $describe(v) + ', not a boolean, a number or a string');
 }
 /** next: σ's marking and attributes with the writes of one step, all at once; derived values are the core's to rebuild. */
@@ -262,6 +504,13 @@ const BINARY: Record<BinaryOperator, string> = {
 
 /** The collection methods that expand over a collection of M, element by element. */
 const EXPANDED: ReadonlySet<string> = new Set(['all', 'any', 'none', 'count', 'sum']);
+
+/**
+ * The bit-vector methods no string, date, number or collection has (R-BV-9): on any other receiver the evaluator
+ * throws, as `$bvm` does. A shared name (`toNumber`) is refused over a step value, its receiver's type unknown.
+ */
+const BITVECTOR_ONLY: ReadonlySet<string> = new Set([...BITVECTOR_METHOD_NAMES, 'width', 'signed'].filter(m =>
+    !getStringMethod(m) && !getDateMethod(m) && !getNumberMethod(m) && !getCollectionMethod(m)));
 
 /** The not-verifiable codes this printer refuses with the errors. */
 const REFUSED_NOT_VERIFIABLE: ReadonlySet<SubsetCode> = new Set(['T-METHOD']);
@@ -332,12 +581,18 @@ function numberLiteral(n: number): string {
     return n < 0 ? `(${n})` : String(n);
 }
 
+/** A bit-vector as the call that rebuilds it in the generated code, e.g. `$bv(8, false, 0xffn)` (R-BV-9). */
+export function bitVectorLiteral(v: JjelBitVector): string {
+    return `$bv(${v.width}, ${v.signed}, 0x${v.bits.toString(16)}n)`;
+}
+
 /** A value of M as a JavaScript constant; `null` when it has no form (a metaclass, a function, an object). */
 function constant(v: JjelValue, refs?: ReadonlyMap<string, string>): string | null {
     if (v === null) return 'null';
     if (typeof v === 'boolean') return String(v);
     if (typeof v === 'string') return q(v);
     if (typeof v === 'number') return numberLiteral(v);
+    if (isBitVector(v)) return bitVectorLiteral(v);
     if (Array.isArray(v)) {
         const parts = v.map(x => constant(x, refs));
         return parts.includes(null) ? null : `[${parts.join(', ')}]`;
@@ -416,8 +671,12 @@ function bindLambda(scope: EvaluationContext, lambda: LambdaExpr, item: JjelValu
     return scope.child(Object.fromEntries(lambda.params.map((p, i) => [p, i === 0 ? item ?? null : null])));
 }
 
-/** all, any, none, count and sum with a lambda, over a collection of M, element by element. */
+/** all, any, none, count and sum with a lambda, over a collection of M, element by element; a bit-vector method. */
 function methodCall(w: Walk, e: MethodCallExpr | NullSafeMethodCallExpr, scope: EvaluationContext): string {
+    if (BITVECTOR_ONLY.has(e.method)) {
+        const args = e.args.map(a => print(w, a, scope)).join(', ');
+        return `$bvm(${print(w, e.object, scope)}, ${q(e.method)}, () => [${args}], ${e.type === 'NullSafeMethodCall'})`;
+    }
     if (dependsOnStep(e.object)) {
         refuse(w, 'P-STEP', `'${e.method}' is called on a value known only in the step: it has no translation.`, e);
         return 'null';

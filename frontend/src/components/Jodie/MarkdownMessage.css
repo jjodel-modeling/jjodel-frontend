@@ -461,3 +461,43 @@
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* ========================================
+   S1b: code blocks in Jjodie messages
+   ======================================== */
+
+/* Soft wrap with a hanging indent of 4ch on wrapped lines. Each line is a
+   .md-code-line (MarkdownRenderer wrapLines); the first visual line starts at the
+   line's left edge, continuation lines 4ch further in. With line numbers the
+   inline number column (min-width 2.5em, padding included: border-box) is part
+   of the first line, so the indent is measured from the code, not from the number. */
+.jodie-message-bubble .md-code-block .md-code-content code {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere;
+}
+
+.jodie-message-bubble .md-code-block .md-code-line {
+    display: block;
+    padding-left: 4ch;
+    text-indent: -4ch;
+}
+
+.jodie-message-bubble .md-code-block--numbered .md-code-line {
+    padding-left: calc(2.5em + 4ch);
+    text-indent: calc(-2.5em - 4ch);
+}
+
+/* No nested card padding: next to prose, the code block bleeds to the bubble's
+   edges instead of sitting as a second padded card inside it. The code-only case
+   is handled in JodieWindow.css (the bubble drops its own box there). */
+.jodie-message-assistant .jodie-message-bubble:has(.md-paragraph, .md-heading, .md-list, .md-blockquote, .md-table-wrapper, .md-hr) {
+    overflow: hidden;
+}
+
+.jodie-message-assistant .jodie-message-bubble:has(.md-paragraph, .md-heading, .md-list, .md-blockquote, .md-table-wrapper, .md-hr) .md-code-block {
+    margin-left: calc(-1 * var(--space-3));
+    margin-right: calc(-1 * var(--space-3));
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+}

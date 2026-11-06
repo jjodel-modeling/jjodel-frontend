@@ -603,6 +603,94 @@ describe('Parser: forall', () => {
         const r = parseOk('forall x in items : x.name');
         expect(r.ast!.command).toBe('eval');
     });
+
+    it('delegates a JjEL forall / exists over several variables to eval whole (R-FA, P-2026-11-02-1330)', () => {
+        for (const src of [
+            'forall x, y in items such that x.p < y.p : x.name + y.name',
+            'forall x in a, y in b : x.name + y.name',
+            'exists x, y in items such that x != y and x.name == y.name',
+        ]) {
+            const r = parseOk(src);
+            expect(r.ast!.command).toBe('eval');
+            expect((r.ast!.args as EvalArgs).expression).toBe(src);
+        }
+    });
+});
+
+describe('Parser: forall...do over several variables (R-FA-7, P-2026-11-02-1332)', () => {
+    /** The chain of ForAllArgs, outermost first. */
+    function chain(src: string): ForAllArgs[] {
+        const out: ForAllArgs[] = [];
+        let a = parseOk(src).ast!.args as ForAllArgs;
+        for (;;) {
+            out.push(a);
+            if (a.body.command !== 'forall') return out;
+            a = a.body.args as ForAllArgs;
+        }
+    }
+
+    it('x, y in S desugars to two nested foralls over the same collection, the filter on the innermost', () => {
+        const c = chain('forall a, b in classes such that a != b and a.name == b.name do rename b to dup');
+        expect(c.map(f => f.variable)).toEqual(['a', 'b']);
+        expect(c.map(f => f.collectionExpr)).toEqual(['classes', 'classes']);
+        expect(c[0].filterExpr).toBeUndefined();
+        expect(c[1].filterExpr).toBe('a != b and a.name == b.name');
+        expect(c[1].body.command).toBe('rename');
+    });
+
+    it('x in A, y in B reads a dependent collection and keeps the filter on the innermost', () => {
+        const c = chain('forall c in classes, x in c.attributes such that x.name == id do delete x');
+        expect(c.map(f => f.variable)).toEqual(['c', 'x']);
+        expect(c.map(f => f.collectionExpr)).toEqual(['classes', 'c.attributes']);
+        expect(c[0].filterExpr).toBeUndefined();
+        expect(c[1].filterExpr).toBe('x.name == id');
+        expect(c[1].body.command).toBe('delete');
+    });
+
+    it('the two spellings mix, and a block body sits on the innermost', () => {
+        const c = chain('forall p in S, k, m in p.children do\n  rename k to m\n  delete m\nend');
+        expect(c.map(f => f.variable)).toEqual(['p', 'k', 'm']);
+        expect(c.map(f => f.collectionExpr)).toEqual(['S', 'p.children', 'p.children']);
+        expect(c[2].body.command).toBe('block');
+    });
+
+    it('a comma inside parentheses or without IDENT in after it stays in the collection', () => {
+        expect(chain('forall x in f(a, b in c) do delete x')).toHaveLength(1);
+        expect(chain('forall x in [a, b] do delete x')[0].collectionExpr).toBe('[a, b]');
+    });
+
+    it('a repeated name is a parse error', () => {
+        for (const src of ['forall x, x in S do delete x', 'forall x in S, x in T do delete x']) {
+            const r = parse(src);
+            expect(r.success).toBe(false);
+            expect(r.errors![0].message).toContain("Variable 'x' is bound twice");
+        }
+    });
+
+    it('the collection of x, y in S may not read x', () => {
+        const r = parse('forall x, y in x.children do delete y');
+        expect(r.success).toBe(false);
+        expect(r.errors![0].message).toContain("reads 'x'");
+    });
+
+    it('a single variable is unchanged', () => {
+        const r = parseOk('forall c in classes such that c.abstract do abstract c');
+        const a = r.ast!.args as ForAllArgs;
+        expect(a).toMatchObject({ command: 'forall', variable: 'c', collectionExpr: 'classes', filterExpr: 'c.abstract' });
+        expect(a.body.command).toBe('abstract');
+    });
+
+    it('without do the several-variable form is a JjEL query', () => {
+        for (const src of [
+            'forall a, b in classes such that a != b : a.name',
+            'forall c in classes, x in c.attributes : x.name',
+            'forall c in classes, x in c.attributes such that x.name == id',
+        ]) {
+            const r = parseOk(src);
+            expect(r.ast!.command).toBe('eval');
+            expect((r.ast!.args as EvalArgs).expression).toBe(src);
+        }
+    });
 });
 
 // ─── BLOCK ───────────────────────────────────────────────────
