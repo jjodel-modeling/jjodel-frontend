@@ -2207,3 +2207,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — parser only, no UI.
 **Notes**: Red first 17/18. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Identity test killed 4/4 mutants (bench in `e23c3870c`). Readings: block tokens are kind `block` (D2b maps them to keywords); a cursor before a token the parse reads gives what was tested up to it; after an output, `input` is out of order and not offered; free layout offers `=` on the next line.
 **Prompt document name**: 2026-11-06 21:18
+
+## 2026-11-06 — feat(codegen): D2b, completion candidates in the language service (P-2026-11-06-2146)
+**Prompt**: Step D lane D2b (report §3.3 C2, C3, §8; D3, D10): the printer's reference, path and name writers exported as one pure function the printer calls; `completionsAt` in the language service on D2a's expected set; tests in `completion.test.ts`.
+**Files touched**: `frontend/src/codegen/textual/printer.ts` (`b0b1139df`), `frontend/src/codegen/textual/languageService.ts` (`387e558d7`), `frontend/src/codegen/textual/__tests__/completion.test.ts` (`b0b1139df`, `387e558d7`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — language service only, no UI.
+**Notes**: Red first: C3 1/19, C2 14/33. Print tests unchanged and green after `textNaming`. Bench in `387e558d7`: 7/7 mutants killed. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Range: the ID word the cursor is in or ends, else the cursor; the parse cursor goes to the word's start. Orphans of a broken text get a root path from `textNaming`.
+**Prompt document name**: 2026-11-06 21:46
