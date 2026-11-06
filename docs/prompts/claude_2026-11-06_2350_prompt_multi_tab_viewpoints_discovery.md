@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2350
 Chat: C-2026-11-06-2333
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 177e95c9f (continued by P-2026-11-07-0030 after the RC-51 ceiling)
 Lane: full (discovery, read only; the Phase 2 lanes will touch the critical zone)
 Depends: R-MT-1..4, R-LAY-10..16, R-SIM-29, R-SIM-33
 Worktree: ~/jjodel-w-multitab, branch multi-tab, at this prompt's commit on alfonso-frontend-jjtl (no node_modules: if a probe needs them, the P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
