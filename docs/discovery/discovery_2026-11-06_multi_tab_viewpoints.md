@@ -357,3 +357,69 @@ Numbering follows the draft of the P-2026-11-06-2350 handoff, which §3.1, §3.4
 | L9 | Only if Q10 is answered yes: a check that fails on a new `state.viewpoint` reader under `components/editor-v2/` (allow-list of the readers left after L5) | one script under `frontend/scripts/`, `package.json` script entry (no new dependency) | no | no | no | L5 |
 
 **L1 stands alone** (no viewpoint plumbing, no critical zone) and fixes a live defect without multi-tab, so it comes first. **L0b also stands alone** (critical zone, LIR) and answers a question about today's trunk; it is ordered beside L1 rather than folded into L3, because if the regression is live it must not wait for the multi-tab chain. L2, L3 and L5 change nothing visible while every tab still starts from the root and only one tab per model can exist; the multi-tab behaviour becomes visible with L6.
+
+## 8. Dependencies and risks
+
+- **Duplicate vertices and M2 edges (§3.7)**: the strongest risk. Unreachable until L6; L4 must land first, and L6 declares the dependency.
+- **Registry and badge wipes on unmount (§3.2, §4.2)**: already live between tabs of different models (both mounted, §2.3), so L4 and L4b also fix today's behaviour; not measured (§6).
+- **Layout switch after `242a82bcd` (§3.4)**: possibly a live regression on the trunk, independent of multi-tab (L0b).
+- **Anti-bounce lag (§3.2, §4.1)**: a drag or a click in one tab defers the other tab's re-transform by about 350 ms. Accepted as the cost of a mirrored drag; not a lane.
+- **R-LAY-19's freeze held in prose only**: R3 and R8 were added after it (§1.2). Every lane from L2 to L5 can add a reader again; L9 would hold it in a machine (Q10).
+- **Undo across viewpoints (§4.4)**: a Cmd+Z can revert an invisible layout write of another tab (Q11).
+- **Same-file lanes**: `useJjomSync.ts` is in L0b, L3 and L4; `EditorSwitch.tsx` and `Toolbar.tsx` in L1 and L2; `EditorV2.tsx` in L2 and L7. They run in sequence, never in parallel lanes (P13).
+
+## 9. Open questions
+
+- **Q1** Where does the per-tab viewpoint live?
+  Recommended: React state of the tab (`EditorSwitch`), exposed by an optional `viewpointId` on `EditorContext`; no Redux slice keyed by tab id (§2.6).
+- **Q2** What does the toolbar picker write?
+  Recommended: the tab's state, plus `activateViewpoint` (project default and root) because the tab whose picker is used is the focused one.
+- **Q3** What does a tab show when its viewpoint is deleted or deactivated?
+  Recommended: abstract syntax (`null`), as the picker does for an unknown id; never another viewpoint chosen for the user.
+- **Q4** Does the classic editor get per-tab viewpoints?
+  Recommended: no; classic is shut down since Fase 5a (`EditorSwitch.tsx:123-129`) and stays on the project default.
+- **Q5** How is a tab opened on a chosen viewpoint?
+  Recommended: a context-menu item «Open in new tab ▸ <viewpoint>» on the model row (Tree View, model rail); no drag gesture in the first cut.
+- **Q6** Two tabs on one (model, viewpoint) share the stored viewport key: which wins?
+  Recommended: last writer wins, as the default for the next opening; live pan and zoom stay in each tab's React Flow store.
+- **Q7** What do the global readers (Tree View, Properties rail, new-view parenting) follow?
+  Recommended: the focused tab, through the root and project values that the tab writes when it gains focus (L2).
+- **Q8** Simulator panel with two tabs on one model: controls in every tab, or only in the focused one?
+  Recommended: in every tab, unchanged; the run is one per model, so the panels stay consistent; L8 only if the smoke shows a conflict.
+- **Q9** Open the §3.4 probe now, independently of multi-tab?
+  Recommended: yes, as lane L0b on the trunk, beside L1.
+- **Q10** Hold R-LAY-19's freeze on new `state.viewpoint` readers in a machine?
+  Recommended: yes, a check script after L5 (lane L9), allow-listing the readers left.
+- **Q11** Undo across tabs on different viewpoints?
+  Recommended: accept the one D-layer stack per user (R-UNDO-1); no per-tab undo.
+- **Q12** L1, the mount-only restore at `EditorSwitch.tsx:93`: what replaces it?
+  Recommended: it runs only when the mounting tab is the dock's active tab; focus-driven activation arrives with L2, not in L1.
+- **Q13** Who populates a model with several instances mounted?
+  Recommended: the first mounted instance owns the populate effect and hands it over on unmount; the others render only.
+
+## 10. Decisions taken (unattended)
+
+- §6 probe **not run**, although the load gate allowed it (11.04 and 4.36): no background tasks in this lane, and no gesture reaches a second tab on one model yet. Its questions are moved to the first step of L0b, L1, L4 and L4b.
+- Two claims of the P-2026-11-06-2350 handoff corrected, not carried: `jjomTransformers.ts` has no `selected` read (§4.1); `redux/store.tsx:160` is the declaration of the root field, not a restore (§5).
+- Lane numbering kept from the handoff draft, which §3.1, §3.4 and §3.7 cite; L0b and L4b inserted. R3 (`EditorV2.tsx:4041`) moved from L5 to L2 to keep L5 at five files.
+- L4 and L4b ordered before L6 (L6 makes §3.7 and §4.2 reachable by a gesture).
+- No migration proposed (§5): the stored shape does not change.
+
+## 11. Decisions awaiting Alfonso
+
+- Q1 to Q13 (§9), and in particular **Q5** (the gesture), **Q8** (the simulator panel) and **Q11** (undo), where R-MT says nothing.
+- The lane order of §7, and whether L1 and L0b open now on the trunk, before the multi-tab chain.
+
+## 12. Files read
+
+Under `/Users/alfonso/jjodel-w-multitab/frontend/src/` (both sessions):
+
+- `utils/lastViewpoint.ts`, `common/U.tsx`, `common/DV.tsx` (not opened: cited by Rule 14 only), `redux/store.tsx`, `redux/VersionFixer.tsx`, `redux/action/action.ts`, `redux/selectors/selectors.ts`, `api/persistance/projects.ts`, `joiner/classes.ts`
+- `components/abstract/tabs/EditorSwitch.tsx`, `components/abstract/tabs/TabDataMaker.tsx`, `components/abstract/tabs/ModelTab.tsx`, `components/abstract/tabs/MetamodelTab.tsx`, `components/abstract/DockManager.tsx`, `components/abstract/Dock.tsx`, `components/dock/MyRcDock.tsx`, `pages/components/Navbar.tsx`, `codegen/ui/canvasSelection.ts`, `codegen/textual/ui/openTextualTab.tsx`
+- `components/editor-v2/EditorV2.tsx`, `components/editor-v2/Toolbar.tsx`, `components/editor-v2/ActiveEditorContext.tsx`, `components/editor-v2/contexts/EditorContext.tsx`, `components/editor-v2/utils/viewportInset.ts`
+- `components/editor-v2/hooks/useJjomSync.ts`, `components/editor-v2/hooks/useM1ReferenceEdges.ts`, `components/editor-v2/hooks/useJjomSelection.ts`, `components/editor-v2/hooks/useHistory.ts`, `components/editor-v2/sync/syncState.ts`, `components/editor-v2/sync/canvasToJjom.ts`, `components/editor-v2/sync/vertexSnapshot.ts`, `components/editor-v2/utils/jjomTransformers.ts`, `components/editor-v2/utils/portDistribution.ts`, `components/editor-v2/utils/handlePosition.ts`, `components/editor-v2/nodes/nodeSizing.ts`
+- `components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `components/editor-v2/viewpoint/ir/irResolveCore.ts`, `components/editor-v2/viewpoint/ir/irResolve.ts`, `components/editor-v2/viewpoint/ir/useIRContainment.ts`, `components/editor-v2/viewpoint/ir/IRForm.tsx`, `components/editor-v2/viewpoint/ir/useContentSize.ts`, `components/editor-v2/viewpoint/ir/useIRFormView.ts`, `components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `view/viewPoint/metaclassPalette.ts`, `view/viewElement/view.tsx`, `components/viewParenting/ViewParentingFields.tsx`, `components/TreeViewSidebar/treeViewScope.ts`
+- `components/editor-v2/problems/registry.ts`, `components/editor-v2/problems/ConformanceProblemSync.tsx`, `components/editor-v2/problems/UniquenessProblemSync.tsx`, `components/editor-v2/problems/SimCheckProblemSync.tsx`, `components/editor-v2/problems/ValidationFreshnessSync.tsx`, `model/validation/validationContext.ts`, `components/validation/ValidationRulesModal.tsx`
+- `components/editor-v2/sim/simRunState.ts`, `components/editor-v2/sim/SimulationPanel.tsx`, `components/editor-v2/preview/scriptPreviewStore.ts`
+
+Docs: `/Users/alfonso/jjodel-w-multitab/docs/decisions.md` (R-MT, R-LAY, R-LAY-19), `docs/discovery/discovery_2026-10-21_jjomsync_incremental.md`, `docs/prompts/claude_2026-11-06_2350_prompt_multi_tab_viewpoints_discovery.md`, `docs/prompts/claude_2026-11-07_0030_prompt_multi_tab_viewpoints_discovery_cont.md`, `~/.jjodel-lanes/P-2026-11-06-2350/handoff.md`.
