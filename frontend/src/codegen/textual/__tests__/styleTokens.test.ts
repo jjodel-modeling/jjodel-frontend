@@ -6,7 +6,13 @@
  * Mutations each test kills are in its name; the bench is in the commit bodies.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The Text tab's imports that reach Monaco and the store, mocked as ebnfIslands.test.ts does (section 7).
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 import { resolveAnnotations, withStyleOptions } from '../annotations';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
@@ -25,6 +31,7 @@ import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import type { TextObject } from '../metamodel';
 import { FIXTURE, metamodelOf, objectsOf } from './spec';
+import { ebnfOfDraft, styleEntryName, styleSwitchRecord } from '../ui/TextualTab';
 
 const EMPTY_MM: TextMetamodel = { classes: [], enumerations: [] };
 const EMPTY_IDS: ElementIds = { classes: {}, features: {}, enums: {} };
@@ -310,6 +317,43 @@ describe('(6) the form\'s token rows, lane B0 (P-2026-11-05-2220; Corregge P-202
     it('Basic announces a token override in effect (mutant: the token rows not counted)', () => {
         const n = advancedInEffect(PORT_CLIKE, 'language');
         expect(advancedInEffect({ ...PORT_CLIKE, style: { blockOpen: ['begin'], list: { close: '>' } } }, 'language')).toBe(n + 2);
+    });
+});
+
+describe('(7) the picker under token overrides, lane L2b (P-2026-11-05-2350)', () => {
+    const decoded = (record: SyntaxAnnotations | null) => ({ record, issues: [] });
+    const OVERRIDDEN: SyntaxAnnotations = { ...PORT_PASCAL, style: { base: 'pascal', blockClose: ['end', '.'] } };
+    const PER_BLOCK: SyntaxAnnotations = { ...PORT_PASCAL, features: { ...PORT_PASCAL.features, F_Module_inputs: { blockOpen: ['is'] } } };
+
+    it('the selected base reads <name> (custom) under a language-wide override, plain without (mutants: the label never custom; always custom)', () => {
+        expect(styleEntryName(decoded(OVERRIDDEN), 'pascal')).toBe('Pascal/Ada (custom)');
+        expect(styleEntryName(decoded(PORT_PASCAL), 'pascal')).toBe('Pascal/Ada');
+        expect(styleEntryName(decoded(null), 'clike')).toBe('C-like');
+        expect(styleEntryName(decoded({ ...PORT_CLIKE, style: { list: { close: '>' } } }), 'clike')).toBe('C-like (custom)');
+    });
+
+    it('only the selected base is custom, and per-block tokens or options do not count (mutants: every entry custom; the per-block entries counted; any style key counted)', () => {
+        expect(styleEntryName(decoded(OVERRIDDEN), 'clike')).toBe('C-like');
+        expect(styleEntryName(decoded(OVERRIDDEN), 'indent')).toBe('Indentation');
+        expect(styleEntryName(decoded(PER_BLOCK), 'pascal')).toBe('Pascal/Ada');
+        expect(styleEntryName(decoded({ ...PORT_PASCAL, style: { base: 'pascal', blankBeforeContainment: true } }), 'pascal')).toBe('Pascal/Ada');
+    });
+
+    it('switching the base drops the language-wide overrides and keeps the per-block ones (R-TXT-49 D10, R-TXT-52 D3)', () => {
+        const both: SyntaxAnnotations = { ...PER_BLOCK, style: OVERRIDDEN.style };
+        const switched = styleSwitchRecord(decoded(both), 'clike')!;
+        expect(switched.style).toBeUndefined();
+        expect(switched.features).toEqual(PER_BLOCK.features);
+        expect(styleEntryName(decoded(switched), 'clike')).toBe('C-like');
+        expect(styleSwitchRecord(decoded(both), 'pascal')).toBeNull();
+    });
+
+    it('the style tokens keep their islands in the EBNF mode (mutant: a style origin mapped to no field)', () => {
+        const shown = ebnfOfDraft(PORT_MM, PORT_IDS, readDraft(PORT_MM, PORT_IDS, OVERRIDDEN).grammar)!;
+        const style = shown.islands.filter(i => i.src.k === 'style');
+        expect(style.length).toBeGreaterThan(0);
+        expect(style.every(i => i.at.element === 'language')).toBe(true);
+        expect(style.some(i => i.text === '.' && i.at.field === 'language.blockClose')).toBe(true);
     });
 });
 
