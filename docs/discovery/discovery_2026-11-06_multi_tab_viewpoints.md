@@ -256,3 +256,57 @@ Written by the continuation P-2026-11-07-0030 (session `97d37565`), on HEAD `816
 - M1 reference edges are not exposed: `markCanvasEdgePair` writes a module-level `Set` synchronously (`useM1ReferenceEdges.ts:177`), and B's guard reads it (`:148`). Inheritance edges use the same pair guard (editor-v2 `CLAUDE.md` §3.4) and are covered by it.
 
 **Consequence**: with two tabs on one model, a D-first addition of a class, an object or an M2 reference can produce **two vertices for one element, or two M2 edges for one reference**. Read, not measured (§6). This is the strongest risk of the front: today it is unreachable only because no gesture opens a second tab on one model (§2.1). It is the first check of the first critical-zone lane (L4, §7): reproduce with Families.ecore and two tabs on the metamodel, add a reference from Properties, count the DVoidEdges with that `refId`. Fix shape: one populate owner per model (a module-level per-model owner, the first mounted instance, handed over on unmount), so that the other instances only render. Precedent for the ref-count half: `preview/scriptPreviewStore.ts:117`, `:125`, `:139`, `let installed = 0;` … `if (installed++ === 0) {` … `if (--installed === 0) {`, a listener installed once whatever the number of `EditorV2` instances.
+
+## 4. State that is one per project today
+
+Written by P-2026-11-07-0030 on HEAD `8168b608f`. Verdicts: **compatible** (R-MT holds with no change), **needs a key** (a lane), **needs a decision** (a Q).
+
+### 4.1 Selection [read] — compatible in the D-layer, needs a lane for the highlight
+
+- `hooks/useJjomSelection.ts:79`: «Select one element and deselect all others in the same graph». It calls `lElement.select(DUser.current)` (`:109`) after `sub.deselect(DUser.current)` on the other sub-elements (`:104`), and writes the root `_lastSelected {node, view, modelElement}` (`redux/store.tsx:152-156`). The graph is one per model (§3.1): selection is per (user, model element), which is what R-MT-2 wants.
+- `:93` `if (allIds.length > 0) markCanvasUpdatedBatch(allIds);`: a selection marks every sub-element in the shared anti-bounce set (§3.2), so every tab on that model defers its re-transform for about 350 ms after a click in another tab.
+- **No canvas reader of the D selection.** `command grep -c -i "selected" components/editor-v2/utils/jjomTransformers.ts` = 0, exit 1; positive control on the same file, `effectiveLayoutOf` = 8. `isSelected` under `components/editor-v2/{utils,hooks,nodes}` appears only in `useJjomSelection.ts`. `EditorV2.tsx:1640-1646`: «React Flow's `n.selected` (above) only tracks flow-initiated selection and is unsuitable for this», and `_lastSelected.modelElement` is the «Canonical selection channel». A click in tab A therefore does **not** highlight the element in tab B: R-MT-2 «highlights it in every tab» needs a lane (L7) that derives each instance's highlight from `_lastSelected.modelElement`. Not critical zone if done in `EditorV2.tsx` and the node components. (Correction to the handoff of P-2026-11-06-2350, which placed edge `selected` reads in `jjomTransformers.ts:536-538`: there are none on this HEAD.)
+- Not persisted: the save resets it, `if ((object as DGraphElement).isSelected) (object as DGraphElement).isSelected = {};` (`common/U.tsx:434`).
+
+### 4.2 Problem registry and validation [read] — needs a key (lifecycle)
+
+- `problems/registry.ts:135` `const problems = new Map<string, NodeProblem>();`, module level, with `ownerModelId?` (`:128`) and per-node ids (`conformanceProblemId(nodeId)`, `ConformanceProblemSync.tsx:73`; `` `${CLASSIFIER_KIND}:${v.elementId}@${nodeId}` ``, `UniquenessProblemSync.tsx:217`). Nodes are vertices, one per model (§3.1), so two tabs write the **same** ids: the badges are shared by construction, which is right.
+- The producers are mounted per `EditorV2` instance (`EditorV2.tsx:5121-5124`: `UniquenessProblemSync`, `ConformanceProblemSync`, `SimCheckProblemSync`, `ValidationFreshnessSync`, each with `modelid`). Two tabs run each scan twice (idempotent: same ids, same values) and — the defect — **each unmount clears for the model**: `ConformanceProblemSync.tsx:122-123` `return () => { for (const id of ownedIds.current) clearProblem(id); };`, `SimCheckProblemSync.tsx:65-66` `if (modelid) clearSimCheckProblems(modelid);`, `ValidationFreshnessSync.tsx:74` `return () => { resetFreshness(modelid); };`. Closing tab B wipes tab A's conformance and sim-check badges and resets its validation freshness until the next scan. Same class as §3.2; fix shape the same ref count per model (`scriptPreviewStore.ts:117-139`). `problems/` is in CLAUDE.md §3.1, not in the §3.2 trigger: no LIR, but a lane of its own (L4b).
+- Validation viewpoints are not activated through the active viewpoint: the rules live on a fixed record read by id, `const vp = idlookup[VALIDATION_VIEWPOINT_ID];` (`model/validation/validationContext.ts:86`; also `ValidationRulesModal.tsx:138`). **Compatible.**
+
+### 4.3 Simulator [read] — run compatible, panel needs a decision
+
+- `sim/simRunState.ts:136` `policies`, `:138` `runs`, `:148` `pendings`, `:168` `views` are `Map<string, …>` keyed by **model id**: `getSimRun(modelId)` (`:241`), `getSimView(modelId)` (`:445`), `getSimPolicy(modelId)` (`:479`); `getSimNodeState(objectId)` (`:253`) by object. R-MT-3 «run owned by the model, observed by every tab» already holds in the state.
+- The panel is per instance: `EditorV2.tsx:5270` `{modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}`. Two tabs on one model show two panels driving one run (step, continue, grab from either); `SimulationPanel.tsx:936` mounts `SimCanvasLayer` per instance, which is the observing half and is correct per tab. Whether the controls should appear in every tab or only in the focused one is Q8.
+
+### 4.4 Undo [read] — compatible, one consequence to accept
+
+- JjOM mode uses the D-layer stack only: `EditorV2.tsx:2962-2969`, «a single undo system, the D-layer's (R-UNDO-1)», `UndoAction.new(1, DUser.current, false).commit();`. Per user, per project, not per tab. The RF-snapshot `useHistory` (`hooks/useHistory.ts:27-28`, refs per instance) serves the non-JjOM path (`EditorV2.tsx:2972-2976`).
+- Consequence: layout writes are D-writes (`canvasToJjom.ts`, into `layoutByViewpoint`), so Cmd+Z in tab A on viewpoint V1 can undo a drag made in tab B on V2, with no visible change in A. R-MT does not speak to it; Q11.
+
+### 4.5 Jjodie ghost preview [read] — compatible
+
+`EditorV2.tsx:1764` `useEffect(() => installScriptPreviewListener(...), []);` is reference-counted (`preview/scriptPreviewStore.ts:117` `let installed = 0;`, `:125`, `:139`), and `useScriptPreview(modelid)` (`:1765`; definition `scriptPreviewStore.ts:147`, «The preview of `modelId`, or null when there is none or it belongs to another model») is keyed by model. Every tab on the model shows the ghosts; their geometry comes from each instance's own drawn rows (`EditorV2.tsx:1766-1767`), so a ghost follows the tab's viewpoint. **Compatible**, and the pattern the §3.2 and §4.2 fixes can copy.
+
+### 4.6 Minimap [read] — compatible
+
+`EditorV2.tsx:5052` `<MiniMap` inside the instance's `ReactFlowProvider` (§2.5): per tab. The visibility toggle is a localStorage key per model (§2.5), shared by tabs of one model; R-MT does not contradict it.
+
+### 4.7 Textual tab [read] — not concerned
+
+Opened by a sentinel option of the picker that returns before `activateViewpoint` (`Toolbar.tsx:378-383`, §1.5); not a reader of the active viewpoint.
+
+### 4.8 Summary
+
+| State | Keyed by today | Verdict | Lane / Q |
+|---|---|---|---|
+| Selection (D) | user × model element | compatible | — |
+| Selection highlight across tabs | RF `n.selected`, per instance | needs a lane | L7 |
+| Problem registry | node id, owner model | needs a key (unmount lifecycle) | L4b |
+| Validation rules | fixed viewpoint id | compatible | — |
+| Simulator run | model id | compatible | — |
+| Simulator panel | per instance | needs a decision | Q8 |
+| Undo (JjOM) | user | compatible, consequence | Q11 |
+| Jjodie ghost | model id, ref-counted listener | compatible | — |
+| Minimap | per instance | compatible | — |
+| Textual tab | separate tab | not concerned | — |
