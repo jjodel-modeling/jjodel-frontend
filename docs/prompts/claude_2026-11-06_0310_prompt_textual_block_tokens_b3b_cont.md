@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-0310
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · no code · app check step 3 pass, probe ALL PASS · log entry and Status flips uncommitted (RC-17)
 Lane: full (continuation; code committed, the app check's step 3 and the docs left)
 Depends: P-2026-11-06-0242 (handoff ~/.jjodel-lanes/P-2026-11-06-0242/handoff.md; items (1)-(3) committed, 65a842fe2)
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens (the same tree)

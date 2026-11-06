@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-0242
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · ca03ff90d, 65a842fe2 · gates green · app check 10/10 (step 3 in P-2026-11-06-0310) · soft ceiling, continued by P-2026-11-06-0310
 Lane: full (parser, printer, Syntax form; tests)
 Depends: P-2026-11-06-0147 and P-2026-11-06-0215 (the prefix in the core, on this branch; gap 6 of the 0147 handoff), R-TXT-51 (3), R-TXT-52 D1
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens

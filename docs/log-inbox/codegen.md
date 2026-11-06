@@ -2129,3 +2129,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Benches: (1) 4/4; (2) 10/10 after a C-like `{` case; (3) 4/4; (4) 9 mutants, 8 killed, the `prefixed` argument of ownOf equivalent (the D8 loop refuses with the same message). D8 rule in the body of `961f43a3f`: an empty open applies only with an applied prefix, a mandatory head name becomes required, an optional one refuses it. Gap for B3b: parser.ts:523 FIRST of an open-less block, :1100 message, head read by position in printer, parser :705, syntaxForm :382.
 **Prompt document name**: 2026-11-06 02:15
+
+## 2026-11-06 — feat(codegen): B3b, the head prefix in the readers and the Syntax form (P-2026-11-06-0242, P-2026-11-06-0310)
+**Prompt**: `claude_2026-11-06_0242_prompt_textual_block_tokens_b3b.md` items (1)-(5), continued after the soft context ceiling by `claude_2026-11-06_0310_prompt_textual_block_tokens_b3b_cont.md` from the 0242 handoff: the class keyword by origin in parser, printer and syntax form; a `class.prefix` field in the Syntax form and the `classPrefix` island in the EBNF mode; gates; app check.
+**Files touched**: `frontend/src/codegen/textual/parser.ts`, `printer.ts`, `syntaxForm.ts`, `ui/SyntaxForm.tsx` (one line), `__tests__/blockTokens.test.ts`; commits `ca03ff90d` (1), `65a842fe2` (2); this entry and the two Status lines, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `65a842fe2`: typecheck exit 0; vitest 14413 passed, 2 skipped, 3 red at import (baseline); build exit 0; check:codegen-lazy ALL GREEN (off, on); check:docs red only on Check B, the trunk's `hw-notation.md:1307` entry, not this lane's.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Benches: (1) 5/5 killed; (2) 15/15 killed. App check port 3542, probe and crops b3b-1..5 in ~/.jjodel-lanes/P-2026-11-06-0242/: Head prefix row in Advanced, preview `begin program cpu { ... end program`, EBNF island begin edited to start then discarded, a prefix shared by the roots Module and Bool refused once at both fields ("also at the head prefix of"), Save blocked. Decisions 1-5 in the commit bodies and the 0242 handoff.
+**Prompt document name**: 2026-11-06 03:10
