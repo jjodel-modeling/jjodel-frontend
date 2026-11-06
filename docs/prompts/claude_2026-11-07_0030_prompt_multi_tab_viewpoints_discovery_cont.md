@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0030
 Chat: C-2026-11-06-2333
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 177e95c9f
 Lane: full (discovery continuation, read only)
 Depends: P-2026-11-06-2350 (handoff ~/.jjodel-lanes/P-2026-11-06-2350/handoff.md)
 Worktree: ~/jjodel-w-multitab, branch multi-tab, at this prompt's commit (on top of 145c2b7c6)
