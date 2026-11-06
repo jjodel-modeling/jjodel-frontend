@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-06-2302
 Chat: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH
 Request: none (rendered by lane-run, no chat URL known for https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH)
 Lane: full (merge; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane merge · ad6da074b · verifica visiva passata 2026-11-06 (C2e crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/, Alfonso GO 23:01)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-06-2302 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

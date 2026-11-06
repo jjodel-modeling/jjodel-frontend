@@ -2272,3 +2272,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 7/7 on port 3541, crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/; Alfonso's GO pending (R-TXT-47)
 **Notes**: No stock host shows a reference through IRFormField (manager passes hostReferences, IRForm.tsx:392; configurator: attributes only); the probe mounts the real IRForm directly. Ticket: referenceName (ReferenceWidget.tsx:51-60) labels a nameless target '' and ListWidget.tsx:89 falls back to the raw pointer id; a lane of its own (Alfonso 22:28).
 **Prompt document name**: 2026-11-06 20:41
+
+## 2026-11-06 — merge: textual-c2e-ir-chip into alfonso-frontend-jjtl (P-2026-11-06-2302)
+**Prompt**: `claude_2026-11-06_2302_prompt_merge_textual-c2e-ir-chip.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2e-ir-chip` at `53359fde7` into `alfonso-frontend-jjtl`, merge base `fc79098ad`, 4 commits on the branch side.
+**Files touched**: merge `ad6da074b`: 7 files from the branch side (`docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2041_prompt_textual_c2e_ir_chip.md`, `frontend/src/components/editor-v2/utils/__tests__/namelessRefTarget.test.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/utils/namelessTargetLabel.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRFormField.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ad6da074b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14459 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: C2e crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/, Alfonso GO 23:01
+**Notes**: Rollback tag `pre-textual-c2e-ir-chip` on `7d171b504` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2302/result.json`.
+**Prompt document name**: 2026-11-06 23:02
