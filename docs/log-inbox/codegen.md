@@ -2311,3 +2311,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: D1 crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/ checked by the chat
 **Notes**: Rollback tag `pre-textual-d1-comment-guard` on `8049bf81b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2326/result.json`.
 **Prompt document name**: 2026-11-06 23:26
+
+## 2026-11-06 — docs: step E discovery, T10 and synced selection (P-2026-11-06-2337)
+**Prompt**: `claude_2026-11-06_2337_prompt_textual_e_discovery.md`, read-only discovery of step E (T10, scenario 2, selection synced between text and canvas both ways)
+**Files touched**: docs/discovery/discovery_2026-11-06_textual_e_sync.md (new, 8 section commits a5283f565..f0a90f80f); docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md (Status flip, uncommitted)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: T10 is unimplemented (reprint sets the whole value, comments lost); recursive per-object splice proposed. Selection: SELECT_NODE in, CANVAS_SELECTION_CHANGED out, both existing; no §3.1 file, no §3.2 trigger; optional _lastSelected write drafted as an LIR. Not measured: Monaco cursor sources on typing, rc-dock unmount of a hidden canvas (R1, R2). Five lanes E1a..E3, decisions E1..E10 to ratify.
+**Prompt document name**: 2026-11-06 23:37
