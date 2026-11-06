@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2337
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · discovery, no code · report docs/discovery/discovery_2026-11-06_textual_e_sync.md (a5283f565..f0a90f80f) · hard stop, E1-E10 to ratify
 Lane: full (discovery, read only)
 Depends: step D under way (D1, D2a-c, C2e merged), docs/sessioni/sessione_2026-11-03_textual_ide_plan.md (step E), R-TXT-34
 Worktree: ~/jjodel-w-texte, branch textual-e-sync, from 8049bf81b (own node_modules)
