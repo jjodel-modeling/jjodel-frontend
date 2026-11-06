@@ -7589,6 +7589,49 @@ R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: ag
   strings; no migration of saved projects: re-importing the XMI heals them (ratified with the row). Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
   (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
 
+## R-DCN: Dynamic Classification Notation, viewpoints of dynamic classes and their simulation (decisions 2026-11-06)
+
+Evidence: the project chat C-2026-11-06-2159 of 2026-11-06 (22:13 «sì a tutti i consigli» on the eight
+recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_2026-11-06_dcn_metamodel_simulation.md`,
+`docs/harness/fronts.json` (front `dcn`). Discovery owed: P-2026-11-06-2240.
+
+- **R-DCN-1** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The DCN extends the R-OI UML metamodel; it is not a separate language.** Static classes, viewpoints, dynamic
+  classes and their instances live in one model, with the instantiation of R-OI-1. The object diagram reuses the R-OI
+  creation menu, slot synthesis, «Sync slots», ghost and orphan rows and the `instantiation` problem kind. No
+  cross-link `instanceof` references between two metamodels, as in the LNCS 16470 chapter. Spec §3, §4.
+- **R-DCN-2** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The dynamic classification of an instance is derived, never stored.** It is the set of dynamic classes of each
+  viewpoint whose invariant holds on the instance's slot values. No reference on the instance names its current
+  class; reclassification is a consequence of every step, never a step. In the exporter it is a `DEFINE`. Spec §6.
+- **R-DCN-3** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **An instance has slots for every feature of its static class and of every dynamic class of its viewpoints.** A
+  slot of an inactive dynamic class is dormant: it keeps its value and cannot be read outside its class. Access is
+  enforced by the static check W1 (spec §5), not by a runtime tri-state. Slots are never created or removed during a
+  run. Amends R-OI-13 for this client: a dormant slot is not orphan and raises no problem; the amendment is owed to
+  the instance-of front before slice 2.
+- **R-DCN-4** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The default run policy is Interleave with Random choices; Sync stays available.** In Interleave every
+  contribution of a viewpoint (a redefinition of an invoked operation, a monitor of a tick) is a transition labelled
+  with its viewpoint, ordered through the existing «Choices: Ask | Random» policy: the cross-viewpoint transition
+  system of the SoSyM paper. In Sync all contributions form one parallel assignment and two writes of one slot are
+  the double-assignment defect of R-SIM-17. Spec §6.
+- **R-DCN-5** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **Trajectory constraints start with two bounded patterns, BoundedPersistence and BoundedResponse.** They are
+  watches (R-SIM-137) with a counter per instance and export as bounded `LTLSPEC`. Free LTL comes after the .smv
+  exporter. Spec §3, §7, §9.
+- **R-DCN-6** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **Unbounded `Integer` attributes are simulated but not exported.** The exporter reports a problem for each; only
+  Boolean, Enumeration and Range attributes are verifiable, as the simulator's finite domains of 2026-10-10.
+- **R-DCN-7** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **JjEL gains one accessor, `self.in(V::D)`, true when dynamic class D of viewpoint V is active for `self`.** It is
+  written into `docs/spec/concern_languages.md` before any lane implements it; no other DCN construct enters JjEL.
+- **R-DCN-8** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **DCN simulation is a second engine nucleus, guarded commands over slots, next to the Petri nucleus.** It shares
+  run state, panel, trace, watches, scenarios, I/O board and exporter. It knows roles, not the DCN metaclasses: a
+  STC profile «Dynamic classification» maps Viewpoint, dynamic classifier, Invariant, Operation, Redefinition,
+  Monitor and Instance-of onto a metamodel, so another metamodel with viewpoints and invariants can use it. Spec §8.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
