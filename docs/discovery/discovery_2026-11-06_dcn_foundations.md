@@ -475,3 +475,72 @@ the 3.2.0 tag. Twenty lanes; the file lists are the expected ones, and each lane
 Two Rule 11 points are carried in the lanes' prompts, not decided here: the optional instance key on
 `StateAttributeDecl` (L4.2) is an optional property and admitted; new `HaltReason` members (L4.4) and a member
 target on the action node (L3.4) widen exported unions and need the prompt to authorize them.
+
+## 7. Decisions Q1..Q13
+
+Numbered as the references in §1..§5 already use them (Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q10); the prompt's names are in
+brackets. Each is a recommendation, not a decision (R-DCN-1..8 are not reopened).
+
+**Q1 [Q-base] Is slice 2 cut from `oi-s2u`, or does it wait for the trunk?** Neither for most of it. L2.1..L2.4 need
+only S1, which is on the trunk byte for byte (§1.1); cutting from `oi-s2u` would carry unmerged S2 code into `dcn`
+and later a fan-in with `oi-s3b`, whose base is the older `oi-s2u` (§1.2). Only L2.5 needs S2 synthesis.
+Recommended: cut L2.1..L2.4 from `dcn` on the trunk now; L2.5 and every object-level lane wait for the R-OI merge after 3.2.0.
+
+**Q2 [Q-classifier] Is `DynamicClass` a Classifier in the R-OI binding sense, or a feature source only?** As a
+`Class` it inherits `ownedAttributes` and enters the creation menu through `instantiableClassifiers`
+(`bindingReader.ts:100-110`), against spec §4 «The classifier of an instance is always a `StaticClass`». As a
+feature source it is reached by the L2.1 path and never offered as a classifier; its attributes stay `Property`
+(`Slot.definingFeature : Property`, §1.3).
+Recommended: feature source only: `DynamicClass extends NamedElement` with its own `Property [0..*]` list, three-hop path.
+
+**Q3 Placeless `CompiledNet` on the existing step, or a separate step function?** A guarded command is a transition
+with empty preset and postset; the existing `step` then gives guards, actions, `domain` and double-assignment halts,
+trace, scenarios and watches unchanged (§3.2). The DCN-only parts (classification, completeness, exclusivity,
+Interleave/Sync, redefinition expansion) sit around it in `dcnStep.ts` either way. R-DCN-8 says «next to, not
+inside»; a separate compiler emitting the shared compiled form keeps the nucleus out of `netCompile.ts`, and L4.1
+makes the choice reversible.
+Recommended: a separate DCN compiler emitting a placeless `CompiledNet` on the shared step; Alfonso confirms it reads R-DCN-8.
+
+**Q4 Slot syntax.** Reads `self.battery` need σ-backed handles anyway (§3.4); writes either `self.[battery]` with
+per-slot state declarations, or `self.battery := e` in a DCN action mode (L3.4, a Rule 11 widening).
+Recommended: reads `self.battery` through σ handles, writes `self.battery := e` in a DCN action mode, fixed in L3.1.
+
+**Q5 [Q-range] Two integer bounds, or a data type?** A `RangeType` under `DataType` breaks the value kind of S2/S3a,
+chosen by the type's name (`instantiate.ts:230-233`), and every literal in such a slot fails O5; two bounds on
+`Property` with type `Integer` pass every R-OI surface unchanged (§2.2).
+Recommended: two optional integer bounds on `Property`, type `Integer`, names distinct from `lower`/`upper`, W-checked in L2.4.
+
+**Q6 Ids of invocation events and contribution selectors.** Composite strings change the scenario text; nucleus-owned
+ids do not touch `scenarioCodec.ts` (§3.3). Must be fixed before the first DCN scenario is saved.
+Recommended: nucleus-owned opaque ids per (instance, operation) and (viewpoint, contribution), fixed in L4.2.
+
+**Q7 Operation arguments.** R-SIM-16 keeps free event parameters out of scope; R-SIM-88 inputs are asked at the press
+(`netTypes.ts:96-104`).
+Recommended: arguments as R-SIM-88 inputs asked at the press; no event instance per argument tuple.
+
+**Q8 Blank invariant and `isSingleton`.** A blank `Expression` reads as `true` (`ConformanceValidator.ts:240-260`),
+so a class with no invariant is always active; no R-OI rule refuses a second instance of a singleton (§2.3).
+Recommended: both are W-check errors in L2.4; no creation-menu filter.
+
+**Q9 Inherited viewpoints in the closure.** A subclass of a `StaticClass` with viewpoints: does it get their slots?
+Recommended: yes, `featureSources` applied at every level of the generalization, as L2.1 already specifies (§1.3).
+
+**Q10 Exporter in TypeScript or as a codegen generator.** `bvToSmv` prints the expressions W5 also compiles; a codegen
+generator (`codegen/engine/__tests__/fixtures/generator-smv.json` is the precedent) would re-derive them in templates.
+Recommended: TypeScript over `bvToSmv` leaves, so W5 and the export share the compiled guards.
+
+**Q11 [Q-fixture] Where the drone fixture of the LNCS 16470 chapter lives.** The UML fixture it extends is a browser
+probe, `frontend/scripts/probe/uml-class-object-fixture.ts`; an importable example lives as
+`codegen/examples/<name>/<name>.json` plus `frontend/public/examples/codegen/<name>.jjodel`, written by
+`frontend/scripts/examples/build-codegen-examples.ts` (`codegen/examples/__tests__/importable.test.ts:2-7`). The
+example freezes the metamodel; it should not freeze before the nucleus runs.
+Recommended: `frontend/scripts/probe/dcn-drone-fixture.ts` beside the UML fixture; the importable example only after L4.5.
+
+**Q12 [Q-amendment] Who writes the R-OI-13 amendment.** The code is S1 on the trunk and the R-OI consumers inherit it
+with no edit (§1.2); the oi branches do not touch `model/ontological/`, so they merge over L2.1 without conflict.
+R-OI-13 is provisional and branch-reversible, so the instance-of front must see the change.
+Recommended: this front writes L2.1 on the trunk; the chat writes the amending row and the instance-of front ACKs it.
+
+**Q13 Order of W1..W4 and the `self.in` parse.** Spec §10 puts W1..W4 (slice 2) before `self.in` (slice 3), but W1's
+guard and W2's edge read `self.in(V::D)`, which does not parse today (§4).
+Recommended: run L3.1 and L3.2 before L2.4, as the §6 order does; slice numbers stay as the spec has them.
