@@ -32,7 +32,7 @@ export type FieldId =
     | 'language.name' | 'language.style' | 'language.classCase' | 'language.literalCase' | 'language.blankBeforeContainment' | 'language.roots'
     | 'language.blockOpen' | 'language.blockClose' | 'language.assign' | 'language.terminator' | 'language.list.open' | 'language.list.separator' | 'language.list.close'
     | 'class.keyword' | 'class.positional' | 'class.layout' | 'class.nameKeyword' | 'class.namePattern'
-    | 'class.operatorSymbol' | 'class.operatorPrecedence' | 'class.operatorAssoc' | 'class.operatorCall' | 'class.blockOpen' | 'class.blockClose'
+    | 'class.operatorSymbol' | 'class.operatorPrecedence' | 'class.operatorAssoc' | 'class.operatorCall' | 'class.blockOpen' | 'class.blockClose' | 'class.prefix'
     | 'feature.keyword' | 'feature.itemKeyword' | 'feature.positional' | 'feature.inline' | 'feature.groupBy' | 'feature.value' | 'feature.blockOpen' | 'feature.blockClose'
     | 'enum.subsets';
 
@@ -110,6 +110,8 @@ const CLASS_BLOCK: readonly Spec[] = [
     { id: 'class.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens', reset: true },
     { id: 'class.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens', reset: true },
 ];
+/** The head prefix of R-TXT-51 (3) (B3b, P-2026-11-06-0242): tokens before the class keyword, a row before the block rows; it inherits nothing. */
+const CLASS_PREFIX: Spec = { id: 'class.prefix', label: 'Head prefix', tier: 'advanced', input: 'tokens', reset: true };
 const FEATURE_BLOCK: readonly Spec[] = [
     { id: 'feature.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens', reset: true },
     { id: 'feature.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens', reset: true },
@@ -129,7 +131,7 @@ const STYLE_TOKENS: readonly Spec[] = [
     { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text', reset: true },
 ];
 
-const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...CLASS_BLOCK, ...FEATURE, ...FEATURE_BLOCK, ...ENUM].map(s => [s.id, s.label]));
+const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...CLASS_BLOCK, CLASS_PREFIX, ...FEATURE, ...FEATURE_BLOCK, ...ENUM].map(s => [s.id, s.label]));
 
 /** A style parameter's field, and back. */
 const tokenField = (param: StyleParam): FieldId => `language.${param}` as FieldId;
@@ -279,7 +281,7 @@ export function fieldsOf(mm: TextMetamodel, ids: ElementIds, element: ElementKey
 /**
  * The per-block token rows of a class or a feature (B2, R-TXT-51), Advanced only: on a concrete class and a containment,
  * each side with the tokens it inherits as the placeholder (Q1); elsewhere only while the draft sets them, so that their
- * refusal (D9, an abstract class) has a field and a Reset.
+ * refusal (D9, an abstract class) has a field and a Reset. A class's Head prefix row (B3b) comes first, by the same rule.
  */
 export function blockTokenFields(mm: TextMetamodel, ids: ElementIds, element: ElementKey, mode: InterfaceMode, draft: SyntaxAnnotations | null): FormField[] {
     const kind = kindOf(element);
@@ -292,7 +294,9 @@ export function blockTokenFields(mm: TextMetamodel, ids: ElementIds, element: El
     });
     if (kind === 'class') {
         const c = cx.classById(id);
-        return c && (!c.isAbstract || setsBlock(classEntry(draft, id))) ? rows(CLASS_BLOCK) : [];
+        if (!c) return [];
+        const entry = classEntry(draft, id);
+        return [...(!c.isAbstract || entry.prefix !== undefined ? [CLASS_PREFIX] : []), ...(!c.isAbstract || setsBlock(entry) ? rows(CLASS_BLOCK) : [])];
     }
     const f = cx.featureById(id);
     return f && (f.kind === 'containment' || setsBlock(featureEntry(draft, id))) ? rows(FEATURE_BLOCK) : [];
@@ -324,6 +328,7 @@ export function fieldValue(record: SyntaxAnnotations | null, ref: FieldRef): unk
         case 'class.operatorCall': return c.operator?.call;
         case 'class.blockOpen': return c.blockOpen;
         case 'class.blockClose': return c.blockClose;
+        case 'class.prefix': return c.prefix;
         case 'feature.keyword': return f.keyword === '' ? undefined : f.keyword;
         case 'feature.itemKeyword': return f.itemKeyword;
         case 'feature.positional': return f.keyword === '' ? true : undefined;
@@ -407,6 +412,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
         case 'class.operatorCall': return cls(operator('call'));
         case 'class.blockOpen': return cls(side('blockOpen'));
         case 'class.blockClose': return cls(side('blockClose'));
+        case 'class.prefix': return cls(c => put(c, 'prefix', value));
         case 'feature.keyword': return feat(f => put(f, 'keyword', value));
         case 'feature.itemKeyword': return feat(f => put(f, 'itemKeyword', value));
         case 'feature.positional': return feat(positional);
@@ -426,7 +432,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
 /** How many Advanced fields of an element the record sets, applicable or not: Basic announces them, nothing in effect hides (D2). */
 export function advancedInEffect(record: SyntaxAnnotations | null, element: ElementKey): number {
     const kind = kindOf(element);
-    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? [...CLASS, ...CLASS_BLOCK] : kind === 'feature' ? [...FEATURE, ...FEATURE_BLOCK] : ENUM;
+    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? [...CLASS, ...CLASS_BLOCK, CLASS_PREFIX] : kind === 'feature' ? [...FEATURE, ...FEATURE_BLOCK] : ENUM;
     const set = (s: Spec): boolean => !isCleared(fieldValue(record, { element, field: s.id }));
     const advanced = specs.filter(s => s.tier === 'advanced' && set(s)).length;
     return advanced + (kind === 'class' && fieldValue(record, { element, field: 'class.layout' }) === 'call' ? 1 : 0);
@@ -459,13 +465,26 @@ const joinNames = (xs: readonly string[]): string => (xs.length < 2 ? xs.join(''
 
 const objectRuleNamed = (g: ConcreteGrammar, name: string): ObjectRule | undefined => g.rules.find((r): r is ObjectRule => r.t === 'object' && r.name === name);
 
-/** The class keyword of an object rule as printed (styleCheck.ts `headKeyword`). */
+/** The class keyword of an object rule as printed, found by its origin as styleCheck.ts `headKeyword` finds it (B3b). */
 function headKeyword(r: ObjectRule): string {
-    const first = r.body.t === 'seq' ? r.body.items[0] : r.body;
-    return first?.t === 'kw' ? first.text : '';
+    const items = r.body.t === 'seq' ? r.body.items : [r.body];
+    const kw = items.find(x => x.t === 'kw' && x.src?.k === 'class');
+    return kw?.t === 'kw' ? kw.text : '';
+}
+
+/** The head prefix of an object rule as derived (B3a): its leading tokens of origin `classPrefix`. */
+function headPrefix(r: ObjectRule): string[] {
+    const items = r.body.t === 'seq' ? r.body.items : [r.body];
+    const out: string[] = [];
+    for (const x of items) {
+        if ((x.t !== 'kw' && x.t !== 'p') || x.src?.k !== 'classPrefix') break;
+        out.push(x.text);
+    }
+    return out;
 }
 
 function classField(message: string): FieldId | undefined {
+    if (PREFIX_MESSAGE.test(message)) return 'class.prefix';
     if (/layout/.test(message)) return 'class.layout';
     if (/name pattern/.test(message)) return 'class.namePattern';
     if (/name keyword|name annotation/.test(message)) return 'class.nameKeyword';
@@ -493,6 +512,9 @@ function styleField(message: string): FieldId {
     if (/blankBeforeContainment/.test(message)) return 'language.blankBeforeContainment';
     return 'language.style';
 }
+
+/** B3a's refusals of a class's head prefix (annotations.ts, concreteGrammar.ts). */
+const PREFIX_MESSAGE = /^prefix is not a list of tokens|^the prefix token |: a prefix goes on its concrete classes|: the prefix is not applied/;
 
 /** The messages about an element's own block tokens (concreteGrammar.ts, annotations.ts, styleCheck.ts, B1). */
 const OWN_BLOCK_MESSAGE = /(^|: )blockOpen and blockClose |^(blockOpen|blockClose) is |^the (blockOpen|blockClose) token |^the block open .* is the block close too/;
@@ -553,6 +575,12 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         const entry = prefix === 'class' ? classEntry(draft, idOf(element)) : featureEntry(draft, idOf(element));
         return BLOCK_SIDES.filter(s => entry[s]?.includes(token)).map(s => ({ element, field: `${prefix}.${s}` as FieldId }));
     };
+    /** «is a prefix token of C» (B3a): C's Head prefix row. */
+    const prefixOwnerAt = (): FieldRef[] => {
+        const owner = /is a prefix token of (\w+)/.exec(message)?.[1];
+        const k = owner === undefined ? undefined : classKey(owner);
+        return k === undefined ? [] : [{ element: k, field: 'class.prefix' }];
+    };
     const isFeaturePath = (w: string): boolean => !w.includes(' ') && w.includes('.') && !w.startsWith('style.');
     /** A `style.<param>` finding: the parameter's fields first, then the Style row, until L2b gives the parameter a row. */
     const styleAt = (w: string): FieldRef[] => {
@@ -604,14 +632,15 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         return { at: one(k, classField(message)), message };
     }
     if (where.startsWith('rule ')) {
-        // A position: the classes whose printed keyword is a token the conflict names.
+        // A position: the classes whose printed keyword is a token the conflict names, or whose head prefix starts with one (B3b).
         const tokens = new Set(quoted(message));
         const classes = Object.values(g.objects).filter(r => tokens.has(headKeyword(r))).map(r => classKey(r.cls));
-        return { at: keywords(classes), message };
+        const prefixed = Object.values(g.objects).filter(r => tokens.has(headPrefix(r)[0] ?? '')).flatMap(r => one(classKey(r.cls), 'class.prefix'));
+        return { at: [...keywords(classes), ...prefixed], message };
     }
     if (isFeaturePath(where)) {
         const k = featureKey(where);
-        if (!ll1) return { at: [...one(k, featureField(message)), ...tokenOwnerAt()], message };
+        if (!ll1) return { at: [...one(k, featureField(message)), ...tokenOwnerAt(), ...prefixOwnerAt()], message };
         if (k === undefined) return { at: [], message };
         // LL(1) at a feature: two positional features cannot be told apart; else the keyword and its inline forms.
         const owner = where.slice(0, where.lastIndexOf('.'));
@@ -790,6 +819,8 @@ export function literalField(mm: TextMetamodel, ids: ElementIds, src: LiteralSrc
         // B2: an own per-block token edits its element's side; an inherited one has the style origin (R-TXT-52 D10).
         case 'classBlock': return ofClass(src.cls, src.side === 'open' ? 'class.blockOpen' : 'class.blockClose');
         case 'featureBlock': return ofFeature(src.feature, src.side === 'open' ? 'feature.blockOpen' : 'feature.blockClose');
+        // B3b: a prefix token edits its class's Head prefix.
+        case 'classPrefix': return ofClass(src.cls, 'class.prefix');
         default: return undefined;
     }
 }
@@ -826,6 +857,7 @@ const LITERAL_NAME: Readonly<Record<LiteralSrc['k'], string>> = {
     feature: 'a feature keyword', itemKeyword: 'a per-item keyword', subset: 'a group name',
     literal: 'an enumeration literal', style: 'a style token', fixed: 'a fixed token',
     classBlock: 'a block token of a class', featureBlock: 'a block token of a containment',
+    classPrefix: 'a prefix token of a class',
 };
 
 /** D4: the origins whose empty value is their default; for the others clearing would remove a structure. */
@@ -833,7 +865,7 @@ const EMPTY_IS_DEFAULT: ReadonlySet<LiteralSrc['k']> = new Set(['class', 'featur
 
 /** Why a value is not well formed for an origin's field, or undefined. */
 function malformed(k: LiteralSrc['k'], value: string): string | undefined {
-    if (k === 'style' || k === 'classBlock' || k === 'featureBlock') { const why = styleTokenFault(value); return why ? `"${value}" ${why}` : undefined; }
+    if (k === 'style' || k === 'classBlock' || k === 'featureBlock' || k === 'classPrefix') { const why = styleTokenFault(value); return why ? `"${value}" ${why}` : undefined; }
     if (k === 'feature') return IDENTIFIER.test(value) || PUNCTUATION_KEYWORD.test(value) ? undefined : `"${value}" is not an identifier or a run of punctuation`;
     if (k === 'operatorSymbol') return IDENTIFIER.test(value) || SYMBOL_RUN.test(value) ? undefined : `"${value}" is neither an identifier nor a run of symbol characters`;
     return IDENTIFIER.test(value) ? undefined : `"${value}" is not an identifier`;
@@ -874,6 +906,12 @@ export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnno
         // B2: the element's own side with its token replaced; equal to the inherited side, setField clears it.
         const own = fieldValue(draft, at);
         if (!Array.isArray(own) || own[src.index] === undefined) return { ok: false, reason: `${what}: the token is not in the block` };
+        return { ok: true, draft: setField(draft, at, own.map((t, i) => (i === src.index ? value : t))), at };
+    }
+    if (src.k === 'classPrefix') {
+        // B3b: the class's prefix with its token replaced; it inherits nothing, so nothing is cleared.
+        const own = fieldValue(draft, at);
+        if (!Array.isArray(own) || own[src.index] === undefined) return { ok: false, reason: `${what}: the token is not in the prefix` };
         return { ok: true, draft: setField(draft, at, own.map((t, i) => (i === src.index ? value : t))), at };
     }
     const cleared = value === literalDefault(mm, ids, draft, src);

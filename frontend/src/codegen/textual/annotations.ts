@@ -37,6 +37,8 @@ export interface ClassAnnotation {
     /** R-TXT-51: the tokens that open and close the class's block, over the style's; a side not given is the style's (lane B1). */
     readonly blockOpen?: readonly string[];
     readonly blockClose?: readonly string[];
+    /** R-TXT-51 (3): the tokens printed before the class keyword (`begin` of `begin program P`), by the rule of a block side (lane B3a). */
+    readonly prefix?: readonly string[];
 }
 
 export interface FeatureAnnotation {
@@ -127,6 +129,7 @@ export interface ResolvedClass {
     readonly operator?: OperatorAnnotation;
     readonly blockOpen?: readonly string[];
     readonly blockClose?: readonly string[];
+    readonly prefix?: readonly string[];
 }
 
 export interface ResolvedFeature {
@@ -164,7 +167,7 @@ const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test
 /** The two sides of a per-block token annotation (R-TXT-51), in the order a record writes them. */
 const BLOCK_SIDES = ['blockOpen', 'blockClose'] as const;
 /** The keys of a class entry and of a feature entry; any other is a notice (R-TXT-52 D6). */
-const CLASS_KEYS: readonly string[] = ['keyword', 'layout', 'name', 'operator', ...BLOCK_SIDES];
+const CLASS_KEYS: readonly string[] = ['keyword', 'layout', 'name', 'operator', ...BLOCK_SIDES, 'prefix'];
 const FEATURE_KEYS: readonly string[] = ['keyword', 'inline', 'itemKeyword', 'groupBy', 'value', ...BLOCK_SIDES];
 
 /**
@@ -342,7 +345,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const cls = ids.classes[id];
         if (cls === undefined) { error('classes', `no class has the id ${JSON.stringify(id)}`); continue; }
         const where = `class ${cls}`;
-        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation; blockOpen?: readonly string[]; blockClose?: readonly string[] } = {};
+        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation; blockOpen?: readonly string[]; blockClose?: readonly string[]; prefix?: readonly string[] } = {};
         unknownKeys(a, CLASS_KEYS, where);
         if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
         if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line' || a.layout === 'call') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block, line or call`); }
@@ -371,6 +374,15 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
             }
         }
         blockSides(a, where, out);
+        // B3a: the head prefix, by the rule of a block side; whether it applies is the derivation's.
+        if (a.prefix !== undefined) {
+            if (!Array.isArray(a.prefix)) error(where, 'prefix is not a list of tokens');
+            else {
+                const bad = a.prefix.map(t => [t, tokenFault(t)] as const).find(([, why]) => why);
+                if (bad) error(where, `the prefix token ${JSON.stringify(bad[0])} ${bad[1]}`);
+                else out.prefix = [...a.prefix];
+            }
+        }
         classes[cls] = out;
     }
 

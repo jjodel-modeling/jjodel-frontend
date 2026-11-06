@@ -62,11 +62,18 @@ export interface StyleFinding {
 
 const isWord = (s: string): boolean => /^\w/.test(s);
 
-/** The class keyword of an object rule, as the style's case printed it. */
+/** The class keyword of an object rule, as the style's case printed it; found by its origin, so a head prefix is never it (B3a, report §3.2). */
 function headKeyword(r: ObjectRule): string {
-    const first = r.body.t === 'seq' ? r.body.items[0] : r.body;
-    return first?.t === 'kw' ? first.text : '';
+    const items = r.body.t === 'seq' ? r.body.items : [r.body];
+    const kw = items.find(x => x.t === 'kw' && x.src?.k === 'class');
+    return kw?.t === 'kw' ? kw.text : '';
 }
+
+/** Whether an object rule starts with a head prefix (B3a): a positional class then starts with it, not with a name. */
+const hasPrefix = (r: ObjectRule): boolean => {
+    const first = r.body.t === 'seq' ? r.body.items[0] : r.body;
+    return (first?.t === 'kw' || first?.t === 'p') && first.src?.k === 'classPrefix';
+};
 
 /** The items of an object rule's body: one `opt` per feature, in R-TXT-1 order; a one-line class has them after its head. */
 function bodyItems(r: ObjectRule): readonly GrammarNode[] {
@@ -141,7 +148,8 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
         const byKw = new Map<string, Set<ObjectRule>>();
         for (const a of alts) {
             if (a.t !== 'rule') continue;
-            for (const o of objectsNamed(a.name)) byKw.set(headKeyword(o), (byKw.get(headKeyword(o)) ?? new Set()).add(o));
+            // B3a: a positional class with a prefix starts with it, which the LL(1) check compares.
+            for (const o of objectsNamed(a.name)) if (headKeyword(o) !== '' || !hasPrefix(o)) byKw.set(headKeyword(o), (byKw.get(headKeyword(o)) ?? new Set()).add(o));
         }
         for (const [kw, os] of byKw) {
             if (os.size > 1) error('distinct-classes', where, `the keyword "${kw}" starts ${os.size} classes: ${[...os].map(o => o.cls).join(', ')}`);

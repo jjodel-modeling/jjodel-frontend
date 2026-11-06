@@ -86,7 +86,8 @@ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
  */
 export function pathKeyword(g: ConcreteGrammar, cls: string): string {
     const body = g.objects[cls]?.body;
-    const head = body?.t === 'seq' ? body.items[0] : body;
+    // B3b: the head keyword by its origin, so a head prefix before it is never the first segment (report §3.2).
+    const head = (body?.t === 'seq' ? body.items : body ? [body] : []).find(x => x.t === 'kw' && x.src?.k === 'class');
     return head?.t === 'kw' ? head.text : applyCase(cls, g.classCase);
 }
 
@@ -351,8 +352,8 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         if ((c.kind === 'item' || c.kind === 'list') && c.feature === feat) fn();
         else within({ kind: 'item', feature: feat }, fn);
     };
-    /** The first keyword of an object rule's body: its class keyword (`parseText` reads it with the role `class`). */
-    const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' && r.body.items[0]?.t === 'kw' ? [r.body.items[0]] : [])));
+    /** The class keyword of each object rule, by its origin (`parseText` reads it with the role `class`); a head prefix keeps its own (B3b). */
+    const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'kw' && x.src?.k === 'class') : [])));
 
     // C3b: the INDENT and DEDENT of an indented block, zero-width, placed where the next token is written (or at the end).
     let marks: { kind: 'emitted'; start: number; end: number; role: TokenRole }[] = [];
