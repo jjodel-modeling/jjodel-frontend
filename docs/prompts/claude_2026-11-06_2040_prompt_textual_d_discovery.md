@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2040
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · discovery, no code · report docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md (9b292d83b..b171c599a) · hard stop, D1-D10 to ratify
 Lane: full (discovery, read only)
 Depends: step C closed (fc79098ad, docs/sessioni/sessione_2026-11-03_textual_ide_plan.md «Status after step C»), R-TXT-34, R-TXT-37
 Worktree: ~/jjodel-w-textd, branch textual-d-writing-aids, from fc79098ad (own node_modules)
