@@ -239,7 +239,7 @@ step and part of the panel's text.
 | Outcome and status | `netTypes.ts:370-377`: `fired \| discard \| quiescence \| halted \| inadmissible`; `NetRunStatus = 'Not started' \| 'Running' \| 'Terminated' \| 'Deadlock' \| 'Halted'` | neutral (the five run states) |
 | Oracles | `netTypes.ts:289-318` `GuardOracle(site, event, state)`, `ActionOracle(site, event, state)` returning `SimAssignment { element; attr; value }` | neutral in shape; `ActionSite` names Petri sites |
 | Run record | `components/editor-v2/sim/simRunState.ts:81-117` `SimRun { net: CompiledNet; config: NetConfiguration; ... trace?; keptConfigs?; snapshot? }` | coupled through `net` |
-| Trace step | `simRunState.ts:62-66` `SimTraceStep { event; selector; kind; ... }` | neutral |
+| Trace step | `simRunState.ts:70` `SimTraceStep { event; selector; kind; ... }` | neutral |
 | Policy: «Choices: Ask \| Random», k | `simRunState.ts:123-126` `SimPolicy { choices; k }` | neutral |
 | Step back, slider | `simRunState.ts:320-335` `configAt` replays with `step(run.net, ...)` (`:331`); `simStepBack` `:406`, `simSetView` `:431` | neutral except the one call at `:331` |
 | Scenarios | `model/simulation/scenarioCodec.ts:5-13`: per step `event`, `selector`, `kind`, `inputs` (element id, attribute name, value), `expect` a JjEL text | neutral, no Petri field |
@@ -279,7 +279,7 @@ separate compiler emitting the shared compiled form is «inside» is Q3, not reo
 ### 3.3 σ as slot values in the snapshot, step back and scenario codecs
 
 **Read.** It fits as it is. A slot value is `attrs.get(instanceId).get(featureKey)`, `marking` is the empty map; the
-kept configurations hold `NetConfiguration` (`simRunState.ts:112` `keptConfigs?: readonly NetConfiguration[]`),
+kept configurations hold `NetConfiguration` (`simRunState.ts:111` `keptConfigs?: readonly NetConfiguration[]`),
 which is σ plus the event; a scenario step names inputs by (element id, attribute name) (`scenarioCodec.ts:12-13`).
 Two encodings to fix, both strings in the existing types: the event of an invocation `op(o, Op, args)` (a
 `(instance, operation)` pair, while `SimTraceStep.event` is an event instance id) and the selector of a contribution
@@ -305,7 +305,7 @@ asked at the press (`netTypes.ts:96-104` `InputRead`). Q7.
   target is a declared state attribute: `StateAttributeDecl` (`netTypes.ts:48-61`) whose `metaclass` is «DClass id:
   every instance that is a kind of it carries the attribute».
 - Reads of model slots go to the frozen M: `model/simulation/guardContext.ts:4-9` «`freezeSnapshot` runs once per
-  run over the model M ... deep-frozen», with `self` a pool handle from `handleById` (`guardContext.ts:58-60`).
+  run over the model M ... deep-frozen», with `self` a pool handle from `handleById` (`guardContext.ts:52`).
 
 Two gaps for DCN, the second not anticipated by the prompt:
 
@@ -322,7 +322,7 @@ Two gaps for DCN, the second not anticipated by the prompt:
    «a JjEL `closure` operator is its own lane, not part of this front»). Whatever the write form, the DCN nucleus
    must bind `self` (and every instance reachable by name) to a handle built from σ, one member per slot of the
    closure, at each evaluation; the frozen pool cannot serve, since σ changes per step and the snapshot refuses
-   caller-bound functions (`guardContext.ts:39-41`). Watches over slots (coherence φ, spec §7) need the same handle
+   caller-bound functions (`guardContext.ts:31-32`). Watches over slots (coherence φ, spec §7) need the same handle
    in `evaluateOutput`.
 
 Recommendation (Q4): reads `self.battery` through σ-backed handles of the DCN nucleus, writes `self.battery := e`
