@@ -738,3 +738,46 @@ describe('(9) B3a: the style check reads the class keyword by its origin', () =>
         expect(errors(named(bare)).filter(([rule]) => rule === 'distinct-classes')).toEqual([['distinct-classes', 'Model', 'the keyword "" starts 2 classes: Program, Statement']]);
     });
 });
+
+describe('(10) B3a: D8 for a prefixed head, an empty open', () => {
+    /** Reading B of report §3.1: `begin` the prefix, `program` the keyword, `P` the name, the block with no open. */
+    const READING_B: SyntaxAnnotations = { ...P5, classes: { ...P5.classes, cP: { keyword: 'program', prefix: ['begin'], blockOpen: [], blockClose: ['end', 'program'] } } };
+    const emptyOpen = { level: 'error', where: 'class Program', message: 'blockOpen is empty: a block needs a token on each side; not applied' };
+
+    it('reading B: a prefixed class with an empty open prints the target, reads back and checks clean; its mandatory name is required (mutant: the empty open refused with a prefix)', () => {
+        const g = named(READING_B);
+        expect(namedIssues(READING_B)).toEqual([]);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        expect(roundTrip(g, NAMED_OBJECTS).trimEnd()).toBe(['begin program P', ...TARGET_TEXT.split('\n').slice(1)].join('\n'));
+        expect(roundTrip(g, [{ id: 'p', cls: 'Program', slots: { name: 'P' } }]).trimEnd()).toBe('begin program P end program');
+        expect(concreteGrammarEbnf(g).split('\n')[1]).toMatch(/^Program +::= "begin" "program" name=NAME \["declaration" "is"/);
+    });
+
+    it('with no prefix, or a refused one, the empty open is refused as today (mutant: an empty open applied without a prefix)', () => {
+        const bare = withEntries({ cP: { keyword: '', blockOpen: [], blockClose: ['end', 'program'] } });
+        expect(issuesOf(bare)).toEqual([emptyOpen]);
+        const refusedPrefix = withEntries({ cP: { keyword: '', prefix: [';'], blockOpen: [], blockClose: ['end', 'program'] } });
+        expect(issuesOf(refusedPrefix)).toEqual([
+            { level: 'error', where: 'class Program', message: 'the prefix token ";" is the terminator of the style pascal; not applied' },
+            emptyOpen,
+        ]);
+        // The open refused is the style's, the close still its own.
+        const b = blocks(grammar(refusedPrefix))[0];
+        expect([b.open, b.close]).toEqual([['begin'], ['end', 'program']]);
+    });
+
+    it('an optional name right before the open-less body refuses the empty open (mutant: the optional name kept before an empty open)', () => {
+        const ids: ElementIds = { ...NIDS, features: { ...NIDS.features, fPN: { owner: 'Program', name: 'name' } } };
+        expect(issuesOf(READING_B, NMM, ids)).toEqual([{ level: 'error', where: 'class Program', message: 'blockOpen is empty: the optional name of Program would stand right before its body; not applied' }]);
+        // With the name after the features, behind its keyword, the head holds no name and the empty open applies.
+        const behind: SyntaxAnnotations = { ...READING_B, classes: { ...READING_B.classes, cP: { ...READING_B.classes?.cP, name: { keyword: 'called' } } } };
+        expect(issuesOf(behind, NMM, ids)).toEqual([]);
+    });
+
+    it('an empty close stays refused with a prefix, and so does a containment\'s empty open (mutant: any empty side applied with a prefix)', () => {
+        const close = withEntries({ cP: { keyword: '', prefix: ['begin'], blockClose: [] } });
+        expect(issuesOf(close)).toEqual([{ level: 'error', where: 'class Program', message: 'blockClose is empty: a block needs a token on each side; not applied' }]);
+        const feature = withEntries({ cP: { keyword: '', prefix: ['begin'] } }, { fDecls: { keyword: 'declaration', blockOpen: [] } });
+        expect(issuesOf(feature)).toEqual([{ level: 'error', where: 'Program.declarations', message: 'blockOpen is empty: a block needs a token on each side; not applied' }]);
+    });
+});

@@ -454,13 +454,16 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
     const styleBlockTokens = new Set([...style.blockOpen, ...style.blockClose, ...style.emptyBlock]);
     const hasOwn = (a: OwnBlock): boolean => a.blockOpen !== undefined || a.blockClose !== undefined;
     const noBlock = (where: string, name: string, why: string): void => refuse(where, `blockOpen and blockClose apply to a block, and ${name} has none (${why}); not applied`);
-    const ownOf = (where: string, a: OwnBlock): void => {
+    // B3a (D8 reconsidered): an empty open of a class with a prefix, kept until the prefix is known to apply.
+    const emptyOpens = new Set<string>();
+    const ownOf = (where: string, a: OwnBlock, prefixed = false): void => {
         if (style.layout === 'indent') { remark(where, `blockOpen and blockClose are ignored under the style ${style.id}: a block is its indentation`); return; }
         const out: OwnBlock = {};
         for (const side of ['blockOpen', 'blockClose'] as const) {
             const ts = a[side];
             if (ts === undefined) continue;
-            if (!ts.length) { refuse(where, `${side} is empty: a block needs a token on each side; not applied`); continue; }
+            if (!ts.length && side === 'blockOpen' && prefixed) emptyOpens.add(where);
+            else if (!ts.length) { refuse(where, `${side} is empty: a block needs a token on each side; not applied`); continue; }
             const bad = ts.find(t => insideItem.has(t) && !styleBlockTokens.has(t));
             if (bad !== undefined) { refuse(where, `the ${side} token "${bad}" is ${insideItem.get(bad)} of the style ${style.id}; not applied`); continue; }
             out[side] = ts;
@@ -473,7 +476,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         const sh = shapes.get(cls);
         if (!sh) refuse(where, `${cls} is abstract: blockOpen and blockClose go on its concrete classes; not applied`);
         else if (sh.line || sh.call) noBlock(where, cls, sh.line ? 'layout line' : 'layout call');
-        else ownOf(where, a);
+        else ownOf(where, a, !!a.prefix?.length);
     }
     const concreteKeys = new Set(objectRules.flatMap(r => r.features.map(f => featureKey(f.feature))));
     for (const [key, a] of Object.entries(A?.features ?? {})) if (hasOwn(a) && concreteKeys.has(key)) ownOf(key, a);
@@ -518,6 +521,23 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         if (bad !== undefined) { refuse(where, `the prefix token "${bad}" is ${prefixFault(bad)} of the style ${style.id}; not applied`); continue; }
         prefixes.set(cls, a.prefix);
         for (const t of a.prefix) if (/^\w/.test(t)) blockWords.add(t); else if (!prefixTaken.has(t)) prefixTaken.set(t, cls);
+    }
+    // D8 reconsidered: under free layout a class's block may have no open when its prefix applies, so that its FIRST is
+    // the prefix's and never the block's, and no optional name stands right before the body: a mandatory one becomes
+    // required in the head. Otherwise the empty open is refused as today, and the block opens with the style's.
+    for (const r of objectRules) {
+        const where = `class ${r.cls}`;
+        const own = ownBlocks.get(where);
+        const sh = shapes.get(r.cls);
+        if (!emptyOpens.has(where) || !own || !sh) continue;
+        const headName = r.named && sh.nameKeyword === undefined;
+        const why = !prefixes.has(r.cls) ? 'a block needs a token on each side'
+            : headName && !A?.mandatoryName.has(r.cls) ? `the optional name of ${r.cls} would stand right before its body` : undefined;
+        if (why === undefined) { if (headName) shapes.set(r.cls, { ...sh, nameRequired: true }); continue; }
+        refuse(where, `blockOpen is empty: ${why}; not applied`);
+        const { blockOpen: _open, ...rest } = own;
+        if (hasOwn(rest)) ownBlocks.set(where, rest);
+        else ownBlocks.delete(where);
     }
     /** The keyword a feature prints, a punctuation one refused when it is a token of the style or an operator. */
     const keywordOf = (f: TextFeature): string => {
