@@ -2285,3 +2285,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: C2e crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/, Alfonso GO 23:01
 **Notes**: Rollback tag `pre-textual-c2e-ir-chip` on `7d171b504` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2302/result.json`.
 **Prompt document name**: 2026-11-06 23:02
+
+## 2026-11-06 — feat(codegen): D1, commenting an object out asks first (P-2026-11-06-2301)
+**Prompt**: `claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`: R-TXT-37 with R-TXT-53 D7, a deletion whose object's carried span lies inside a comment asks on the pause with the C3b guard, naming the objects, even with other changes in the same pause.
+**Files touched**: `87ca3f547`: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
+**Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
+**Prompt document name**: 2026-11-06 23:01
