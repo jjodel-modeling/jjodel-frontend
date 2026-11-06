@@ -327,3 +327,69 @@ Two gaps for DCN, the second not anticipated by the prompt:
 
 Recommendation (Q4): reads `self.battery` through σ-backed handles of the DCN nucleus, writes `self.battery := e`
 in a DCN action mode, decided in the languages concern together with `self.in(V::D)`, in slice 3.
+
+## 4. `self.in(V::D)`
+
+**Read**, on HEAD. No implementation.
+
+- **`::` has no meaning in JjEL** (H4 falsified). `frontend/src/jjel/lexer/lexer.ts:111-121`: a `:` not followed by
+  `=` is `JjelTokenType.COLON`, so `V::D` lexes as `IDENTIFIER COLON COLON IDENTIFIER` and fails in the argument
+  list. Search: `grep -rn "'::'\|COLON_COLON\|DOUBLE_COLON\|DoubleColon"` over `jjel jjscript jjtl` without tests
+  returns hits in `jjscript/parser/lexer.ts:111` (`this.createToken('OPERATOR', '::')`) and
+  `jjscript/parser/parser.ts:1471` (`enumLiteral`) and none under `jjel/`: the JjScript hits are the positive
+  control of the same command. The only `::` near JjEL is nuXmv output: `model/simulation/bvToSmv.ts:180` prints
+  word concatenation as ``(${parts.map(toUnsigned).join(' :: ')})``, text emitted, never parsed.
+- **`self.in` already parses as a member.** `in` is a keyword (`jjel/types/tokens.ts:121` `'in': JjelTokenType.IN,`,
+  used by `forall x in ...`, `parser.ts:861`), but a member name after `.` admits every non-literal keyword:
+  `parser.ts:66-69` `MEMBER_NAME_TYPES = ... IDENTIFIER, ...Object.values(JJEL_KEYWORDS).filter(...)`, consumed at
+  `:432` by `consumeMemberName`. So `self.in(x)` is a method call today; only the `V::D` argument is new syntax.
+- **The precedent to follow is the state operator.** `.[x]` is a dedicated AST node (`jjel/types/ast.ts:318-327`
+  `StateAccessExpr`), evaluated through an accessor the caller puts on the context
+  (`jjel/evaluator/context.ts:270` `export interface JjelStateAccess`, `:378` `stateAccess?: JjelStateAccess;`,
+  inherited by child scopes `:475`; dispatched at `evaluator.ts:357` `case 'StateAccess':`). The marking is read the
+  same way (`X.[marked]`, `jjel/stateReserved.ts:22` `readOnlyAttributes: ['marked', 'tokens']`). The analogue: a
+  `ClassificationTest { object; viewpoint; dynamicClass }` node, produced by the parser for a member call `in` whose
+  single argument is a qualified name, and a `classification?` accessor on `EvaluationContext` that the DCN nucleus
+  binds (σ-backed, §3.4) and that is absent elsewhere.
+- **Placement, file by file**: `jjel/lexer/lexer.ts` (one token `::`, the `:` case), `jjel/types/tokens.ts` (the
+  token type), `jjel/types/ast.ts` (the node), `jjel/parser/parser.ts` (the call form at the member-call site near
+  `:432`), `jjel/evaluator/evaluator.ts` and `context.ts` (the dispatch and the accessor); `model/simulation/guardContext.ts`
+  only to thread the accessor into `buildGuardContext`; `model/jjelTriState.ts` unchanged: an expression evaluated
+  without the accessor throws, which is the existing `exception` entrance (`jjelTriState.ts:22`
+  `'exception' | 'non-boolean' | 'absent-identifier'`). Six to seven files: two lanes (lexer, parser and AST;
+  evaluator and context) under Rule 19.
+- **What `docs/spec/concern_languages.md` must say first.** Its identity rules (`:51-56`) say «Non OCL-compatible
+  ... no `oclIsTypeOf`»; `self.in(V::D)` is close to OCL's `oclIsInState` and must be justified against that line.
+  It must also fix: (a) `::` is a JjEL token with one use, the qualified name `V::D` as the argument of `in`, not
+  JjScript's `Enum::Lit` (`jjscript/parser/parser.ts:1471`); (b) what `self.in` means outside a DCN run
+  (validation, the Console): absent accessor and an `exception` verdict, or a derivation from M's slot values
+  through the invariants (R-DCN-2 makes the classification derived, so it is computable on M too); (c) W1 (spec §5)
+  is the only access control on dormant slots, so `self.in` is a test, not a guard on reads (R-DCN-3); (d) whether
+  `in` with a non-qualified argument stays a plain method call; and the slot syntax of §3.4 (reads `self.battery`,
+  writes `self.battery := e` in a DCN action mode), since it changes the action grammar of R-SIM-40.
+
+## 5. Exporter
+
+**Read**, on HEAD. There is no `.smv` exporter to extend.
+
+- `frontend/src/model/simulation/bvToSmv.ts:13-14`: «There is no `.smv` exporter: this is what its lane consumes.»
+  It translates a bit-vector JjEL expression into nuXmv text with its type (`:244` `export function bvToSmv(e:
+  JjelExpression, leaves: SmvLeaves): SmvText`), booleans and integer literals included (`:249-250`). Reusable for
+  spec §9 as the expression printer of `DEFINE`, `INVARSPEC`, guards and `next(...)` right-hand sides, with the
+  `leaves` callback mapping a slot read of instance `o` to its `VAR` name. Enumeration literals and ranges beyond
+  its switch are for the exporter lane to measure.
+- **The `.smv` preview of the Simulation roles modal does not exist.** `grep -c smv
+  frontend/src/components/editor-v2/sim/SimRolesModal.tsx` is 0, while the same search finds `bvToSmv.ts` (positive
+  control). It was dropped on 2026-10-03: `docs/decisions.md:2563` «the `.smv` Export preview of R-SIM-103 is
+  dropped».
+- **A template generator for `.smv` exists in codegen**: `frontend/src/codegen/engine/__tests__/fixtures/generator-smv.json`
+  (`"generator": "smv"`, metamodel `SyncRTL`, JjEL templates), a test fixture of the code generator. A DCN `.smv`
+  could be a codegen generator over the DCN metamodel instead of TypeScript. Q10.
+- **W5 by enumeration cannot reuse `boundExploration.ts` as it is** (H5 falsified). `boundExploration.ts:5-8`: a
+  breadth-first search «over the firing rule of the step with guards and triggers left out»; it reads markings only
+  (`:26-28` «reads only the compiled net ... no JjEL»). W5 is a property of the invariants over the product of the
+  finite domains they read, with no step and no reachability: per tuple, count the invariants of the viewpoint that
+  hold (≥ 2 on a non-overlapping viewpoint, 0 on a complete one). What carries over is the shape: a pure module, a
+  cap (`BOUND_EXPLORATION_CAP = 2000`, `:36`), a closed / cap verdict. The evaluation is the invariant's compiled
+  guard over a σ built per tuple, i.e. the DCN nucleus's oracle; ranges like the drone's distance and speed make
+  the product large, so «not decided» at the cap, as R-DCN-6 does for `Integer`.
