@@ -2207,3 +2207,42 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step D discovery report)
 **Notes**: Rollback tag `pre-textual-d-writing-aids` on `fc79098ad` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2058/result.json`.
 **Prompt document name**: 2026-11-06 20:58
+
+## 2026-11-06 — feat(codegen): D2a, the expected set at a cursor (P-2026-11-06-2118)
+**Prompt**: Step D lane D2a (report §3.3 C1, §8; D2, D10): optional `ParseOptions.cursor`, `TextParseResult.expected` of `ExpectedItem`s, tests on the probe's cursors, a no-cursor identity test on the corpus.
+**Files touched**: `frontend/src/codegen/textual/parser.ts` (`c4a545aa3`), `frontend/src/codegen/textual/__tests__/completion.test.ts` new (`c4a545aa3`, `e23c3870c`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — parser only, no UI.
+**Notes**: Red first 17/18. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Identity test killed 4/4 mutants (bench in `e23c3870c`). Readings: block tokens are kind `block` (D2b maps them to keywords); a cursor before a token the parse reads gives what was tested up to it; after an output, `input` is out of order and not offered; free layout offers `=` on the next line.
+**Prompt document name**: 2026-11-06 21:18
+
+## 2026-11-06 — feat(codegen): D2b, completion candidates in the language service (P-2026-11-06-2146)
+**Prompt**: Step D lane D2b (report §3.3 C2, C3, §8; D3, D10): the printer's reference, path and name writers exported as one pure function the printer calls; `completionsAt` in the language service on D2a's expected set; tests in `completion.test.ts`.
+**Files touched**: `frontend/src/codegen/textual/printer.ts` (`b0b1139df`), `frontend/src/codegen/textual/languageService.ts` (`387e558d7`), `frontend/src/codegen/textual/__tests__/completion.test.ts` (`b0b1139df`, `387e558d7`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — language service only, no UI.
+**Notes**: Red first: C3 1/19, C2 14/33. Print tests unchanged and green after `textNaming`. Bench in `387e558d7`: 7/7 mutants killed. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Range: the ID word the cursor is in or ends, else the cursor; the parse cursor goes to the word's start. Orphans of a broken text get a root path from `textNaming`.
+**Prompt document name**: 2026-11-06 21:46
+
+## 2026-11-06 — feat(codegen): D2c, the completion provider of the Text tab (P-2026-11-06-2213)
+**Prompt**: Step D lane D2c (report §3.3 C4, §8): a `CompletionItemProvider` in `registerTextualMonaco` on `completionsAt` and the session's reading, kinds, ranges, literal docs, style punctuation as triggers; tests in `languageService.test.ts`; app check with crops on the port corpus.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts` (`f5fb02d8b`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 8/8 PASS, 5 crops in `~/.jjodel-lanes/P-2026-11-06-2213/`, GO pending.
+**Notes**: Red first 6/6; bench 7/7 killed (in `f5fb02d8b`). Gates: typecheck 0; vitest 534 passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. `TextualReading` gains optional `mm`. Triggers: the catalog styles' punctuation, filtered per request by the reading's style. After `=` the port offers operand keywords only (operands are new Refs, not references); references shown at `peer`. Focused suggest row overflows the widget's right edge: no app rule names it.
+**Prompt document name**: 2026-11-06 22:13

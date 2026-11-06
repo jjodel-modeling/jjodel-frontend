@@ -13,6 +13,8 @@
  * A broken text is analysed as it parsed: its recovered objects show here, for display only, and are never applied
  * (R-TXT-21 (8)). Identity across versions (`displayMatch`) is not computed here: it is quadratic (finding F4), and no
  * query of B1 needs a model id.
+ *
+ * Completion (D2b, `completionsAt`) is a query of its own: it parses the text again with the cursor (D2a).
  */
 
 import type { ConcreteGrammar } from './concreteGrammar';
@@ -20,8 +22,9 @@ import { applyCase } from './concreteGrammar';
 import type { TextAttribute, TextClass, TextEnumeration, TextFeature, TextMetamodel, TextReference } from './metamodel';
 import { isOuterRef } from './metamodel';
 import type { ItemNode, ListNode, ObjectNode, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
-import { commentsOf } from './parser';
-import { pathKeyword } from './printer';
+import { commentsOf, parseText, tokenizeText } from './parser';
+import type { TextNaming } from './printer';
+import { pathKeyword, textNaming } from './printer';
 import { featureTable } from './textMatch';
 
 /** What a token is for highlighting. `feature` is a feature's keyword, `keyword` any other word of the notation. */
@@ -91,6 +94,18 @@ export interface TextAnalysis {
     hoverAt(offset: number): TextHover | null;
 }
 
+/**
+ * A candidate of completion (D2b, report §3.3 C2): the text to write, what it is, and the range of the text it replaces,
+ * the word the cursor is in or ends, else the cursor alone.
+ */
+export interface TextCompletion extends TextRange {
+    readonly label: string;
+    /** `keyword`: a keyword or a style token, a block's own and the head prefix included; `reference`: a target's name or path. */
+    readonly kind: 'keyword' | 'literal' | 'reference';
+    /** A literal's hover, as `hoverAt` gives it: Markdown paragraphs. */
+    readonly doc?: readonly string[];
+}
+
 /** The unknown-container group's name (R-TXT-36). */
 export const UNKNOWN_CONTAINER = 'unknown container';
 
@@ -122,6 +137,13 @@ interface TokenInfo {
 }
 
 const code = (s: string): string => '`' + s.replace(/`/g, "'") + '`';
+
+/** The hover of the literal `lit` of the enumeration `e`. */
+function literalHover(e: TextEnumeration | undefined, lit: string): string[] {
+    const doc = e?.literalDocs?.[lit];
+    return [`${code(lit)} : enumeration ${code(e?.name ?? '?')}`, ...(e ? [`literals ${e.literals.map(code).join(', ')}`] : []),
+        ...(doc ? [doc] : []), ...(e?.doc ? [e.doc] : [])];
+}
 
 function bounds(f: TextFeature, decl: TextAttribute | TextReference | undefined): string {
     if (decl?.lower === undefined && decl?.upper === undefined) return f.many ? 'many-valued' : 'single-valued';
@@ -394,12 +416,7 @@ export function analyzeText(text: string, parsed: TextParseResult, grammar: Conc
                 const f = i.item ? featureOf(cls, i.item.feature) : undefined;
                 const e = f ? enums.get(f.type) : undefined;
                 const lit = e?.literals.find(l => applyCase(l, grammar.literalCase) === t.v) ?? t.v;
-                const doc = e?.literalDocs?.[lit];
-                return {
-                    ...range,
-                    contents: [`${code(lit)} : enumeration ${code(e?.name ?? '?')}`, ...(e ? [`literals ${e.literals.map(code).join(', ')}`] : []),
-                        ...(doc ? [doc] : []), ...(e?.doc ? [e.doc] : [])],
-                };
+                return { ...range, contents: literalHover(e, lit) };
             }
             default: return i.item ? { ...range, contents: featureHover(cls, i.item.feature) } : null;
         }
@@ -521,6 +538,52 @@ function distinguishing(text: string, o: ObjectNode): { value: string; feature: 
  * holds a keyword token itself and contains objects is a group node labelled with that keyword, so a grouped containment
  * gives two levels and an inline one, printing no keyword, none (R-TXT-39 (1)). Unnamed objects are labelled by rule C4'.
  */
+/**
+ * What may be written at `offset` of `text` (D2b, report §3.3 C2, decisions D3 and D10), from the parser's expected set
+ * at the word the cursor is in or ends, else at the cursor (D2a). Keywords and style tokens as written, a block's tokens
+ * among them, a multi-word close whole and its rest once begun; enumeration literals as the text writes them, with their
+ * hover; the objects of the text a reference may name, written as the printer writes them (`textNaming`: the name when
+ * unique among the targets, else the path), never `@"id"`. No candidate for a new name or a value. In the order the
+ * parser tested them, without repeats.
+ */
+export function completionsAt(text: string, offset: number, grammar: ConcreteGrammar, mm: TextMetamodel): TextCompletion[] {
+    const word = tokenizeText(text, grammar).tokens.find(t => t.k === 'ID' && t.start < offset && offset <= t.end);
+    const range: TextRange = word ? { start: word.start, end: word.end } : { start: offset, end: offset };
+    const parsed = parseText(text, grammar, { cursor: range.start });
+    const enums = new Map<string, TextEnumeration>(mm.enumerations.map(e => [e.name, e]));
+    /** The enumeration a literal rule reads: a grouping's derived rule names it on its literals (concreteGrammar.ts). */
+    const enumOf = (rule: string): TextEnumeration | undefined => {
+        const r = grammar.rules.find(x => x.t === 'enum' && x.name === rule);
+        const first = r?.t === 'enum' && r.body.t === 'alt' ? r.body.alts[0] : undefined;
+        const src = first?.t === 'kw' ? first.src : undefined;
+        return enums.get(src?.k === 'literal' ? src.enumName : rule);
+    };
+    const out: TextCompletion[] = [];
+    const seen = new Set<string>();
+    const add = (label: string, kind: TextCompletion['kind'], doc?: readonly string[]): void => {
+        const key = `${kind} ${label}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ label, kind, ...range, ...(doc ? { doc } : {}) });
+    };
+    let naming: TextNaming | undefined;
+    for (const e of parsed.expected ?? []) {
+        switch (e.kind) {
+            case 'kw': case 'p': case 'block': add((e.words ?? [e.matcher.replace(/^(ID|P):/, '')]).join(' '), 'keyword'); break;
+            case 'lit': add(e.matcher.replace(/^ID:/, ''), 'literal', literalHover(e.rule === undefined ? undefined : enumOf(e.rule), e.literal ?? e.matcher)); break;
+            case 'xref': {
+                // One item per matcher of the reference (a name, a string, `@`): the targets once, `@"id"` never (D3).
+                const targets = e.targets ?? [];
+                naming ??= textNaming(grammar, parsed.objects);
+                for (const o of parsed.objects) if (targets.includes(o.cls)) add(naming.ref(targets, o), 'reference');
+                break;
+            }
+            case 'tok': break;
+        }
+    }
+    return out;
+}
+
 export function textOutline(text: string, parsed: TextParseResult, grammar: ConcreteGrammar): TextOutline {
     const byId = new Map(parsed.objects.map(o => [o.id, o]));
     const top: MutableOutline[] = [];

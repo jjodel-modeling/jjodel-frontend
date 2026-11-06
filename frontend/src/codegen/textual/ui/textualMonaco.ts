@@ -1,7 +1,8 @@
 /**
  * The Monaco side of the Text tab (step B1, R-TXT-38; design in docs/discovery/discovery_2026-11-03_textual_language_service.md):
  * the language `jjodel-textual` with six providers on the language service (semantic tokens, document symbols, folding
- * ranges, definition, references, hover), a Monarch tokenizer for the EBNF tab, and one light theme (D-UI-15).
+ * ranges, definition, references, hover), a Monarch tokenizer for the EBNF tab, and one light theme (D-UI-15). Step D lane
+ * D2c adds the seventh, completion (docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §3.3 C4).
  *
  * A Monaco theme is global: the theme here is the JjScript theme (`vs`, the JjTL colours on the `.jjscript` tokens) plus
  * the rules of the text and of the EBNF, so a JjScript editor beside the tab keeps its colours. The semantic token types
@@ -16,11 +17,13 @@ import type * as Monaco from 'monaco-editor';
 import { jjscriptThemeRules } from '../../../jjscript/editor/jjscriptLanguage';
 import { jjtlTheme } from '../../../jjtl/editor/jjtlTheme';
 import type { ConcreteGrammar } from '../concreteGrammar';
-import { analyzeText, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
-import type { SemanticRole, TextAnalysis, TextRange, TextSymbol } from '../languageService';
+import { analyzeText, completionsAt, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
+import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
 import type { ParseOptions, TextParseResult } from '../parser';
+import { STYLE_CATALOG } from '../style';
+import type { NotationStyle } from '../style';
 
 export const TEXTUAL_LANGUAGE_ID = 'jjodel-textual';
 export const EBNF_LANGUAGE_ID = 'jjodel-ebnf';
@@ -31,6 +34,14 @@ export const TEXTUAL_REVEAL_COMMAND = 'jjodel.textual.reveal';
 const HOVER_USE_LINES = 12;
 
 const tokenType = (role: SemanticRole): string => `textual-${role}`;
+
+/** The characters a style's punctuation ends with, letters never: typing one asks for completion (D2c, report §3.3 C4). */
+const styleTriggers = (s: NotationStyle): string[] => [...new Set(
+    [...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close]
+        .filter(t => t && !/\w/.test(t.slice(-1))).map(t => t.slice(-1)),
+)];
+/** Monaco takes its trigger characters once, so the catalog's together; a request reads its own style's (`styleTriggers`). */
+const CATALOG_TRIGGERS = [...new Set(Object.values(STYLE_CATALOG).flatMap(styleTriggers))];
 
 /** The colours of the design tokens: slate base, cyan accents (styles/tokens). */
 const SLATE_900 = '0f172a';
@@ -102,6 +113,8 @@ export interface TextualReading {
     readonly grammar: ConcreteGrammar;
     readonly parsed: TextParseResult;
     readonly analysis: TextAnalysis;
+    /** The metamodel the text was read against: completion reads its enumerations (D2c). */
+    readonly mm?: TextMetamodel;
 }
 
 export interface TextualSession {
@@ -127,7 +140,7 @@ export function openTextualSession(model: Monaco.editor.ITextModel, input: Textu
             if (base) {
                 const text = model.getValue();
                 const parsed = parseText(text, base.grammar, { keep: input.keep() });
-                value = { text, grammar: base.grammar, parsed, analysis: analyzeText(text, parsed, base.grammar, base.mm) };
+                value = { text, grammar: base.grammar, parsed, analysis: analyzeText(text, parsed, base.grammar, base.mm), mm: base.mm };
             }
             cache = { version, value };
             return value;
@@ -248,6 +261,35 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             if (!r || !h) return null;
             const links = linksOf(model, r.analysis, offset).map(value => ({ value, isTrusted: trusted }));
             return { range: rangeOf(model, h), contents: [...h.contents.map(value => ({ value })), ...links] };
+        },
+    });
+
+    // Step D lane D2c: the candidates of `completionsAt`, on a session's reading only. A cursor parse is one more parse of
+    // the text per request (report §3.3 C4); `sortText` keeps the parser's order, which Monaco would otherwise sort by label.
+    const kindOf: Record<TextCompletion['kind'], Monaco.languages.CompletionItemKind> = {
+        keyword: monaco.languages.CompletionItemKind.Keyword,
+        literal: monaco.languages.CompletionItemKind.EnumMember,
+        reference: monaco.languages.CompletionItemKind.Reference,
+    };
+    monaco.languages.registerCompletionItemProvider(TEXTUAL_LANGUAGE_ID, {
+        triggerCharacters: CATALOG_TRIGGERS,
+        provideCompletionItems: (model, position, context) => {
+            const r = readingOf(model);
+            if (!r?.mm) return { suggestions: [] };
+            if (context.triggerKind === monaco.languages.CompletionTriggerKind.TriggerCharacter
+                && !styleTriggers(r.grammar.style).includes(context.triggerCharacter ?? '')) return { suggestions: [] };
+            const all = completionsAt(r.text, model.getOffsetAt(position), r.grammar, r.mm);
+            const width = String(all.length).length;
+            return {
+                suggestions: all.map((c, i) => ({
+                    label: c.label,
+                    kind: kindOf[c.kind],
+                    insertText: c.label,
+                    range: rangeOf(model, c),
+                    sortText: String(i).padStart(width, '0'),
+                    ...(c.doc ? { documentation: { value: c.doc.join('\n\n') } } : {}),
+                })),
+            };
         },
     });
 
