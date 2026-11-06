@@ -304,3 +304,35 @@ second, unrelated «T8» in `decisions.md:5703` is a harness ticket of 2026-10-0
    attribute changes), re-import without ids, count right and wrong matches per threshold. A test bench, not UI.
 
 T8 writes the model through the existing apply path only. Every file above is in `codegen/textual/`.
+
+## 7. Critical zone
+
+### 7.1 Every file each piece would touch, against CLAUDE.md §3.1 and §3.2
+
+| piece | files | §3.1 table | §3.2 trigger |
+|---|---|---|---|
+| JjEL islands, highlighting, checking, completion | `codegen/textual/{metamodel.ts, jjelIslands.ts (new), languageService.ts}`, `codegen/textual/ui/{TextualTab.tsx, textualMonaco.ts}`, `codegen/ui/templateCompletion.ts`, tests | no | no: no sync file, no D-layer write; `TextualTab.tsx:161` reads `a.type?.id` from the L-layer, read only |
+| JjEL imports | `jjel/lexer`, `jjel/parser` (read only, as `ConformanceValidator.ts:16` does) | no | no |
+| Tracing | `events/registry.ts` (one constant), `codegen/ui/GeneratorPane.tsx`, `codegen/textual/ui/TextualTab.tsx`, `codegen/textual/selectionSync.ts` (E2a's module), tests | no | no: a CustomEvent and a reveal, no store write (E2's `_lastSelected` write stays E's) |
+| T8 | `codegen/textual/{style.ts, printer.ts, textMatch.ts, textDiff.ts}`, `ui/{TextualTab.tsx, TextConfirmPanel.tsx}`, a pure `textFile.ts` (new), tests | no | no new write path: the import applies through `planTextEdit` and `applyTextEdit` (`textApply.ts:74`), JjScript lines in one undo step (R-TXT-19), which already ship |
+
+Not touched and not to be imported: `viewpoint/ir/pathExpr.ts` (a §3.1 directory; its JjEL subset is the IR's, not a
+model value's) and `editor-v2/problems/` (user validation rules are M2 data, outside F).
+
+`events/registry.ts` is outside `codegen/`: not a layer of rule 20 (D, L, sync, view, JjOM), but a file outside the front,
+so the lane prompt names it (rule 1).
+
+### 7.2 Layer Impact Report, draft
+
+No piece is inside the critical zone, so no report is owed. Draft content for the one piece that writes a model, T8's
+import, so the lane can confirm it in one line:
+
+```
+Layers touched: JjOM and D-layer through the existing JjScript apply path only (applyTextEdit, one undo step).
+What changes: none in the write path; a new caller (import) and a new evidence (ids) before the cascade.
+What does NOT change: DVertex.new / DVoidEdge.new2/new3 are not called; no TRANSACTION is added; sync hooks untouched.
+Cross-layer: the canvas follows the model through useJjomSync as after any text edit.
+Smoke: export a model, re-import it unchanged -> zero ops; rename one object in the file -> one rename by id.
+```
+
+If a T8 lane finds it needs a creator or a TRANSACTION outside that path, it stops (rule 12, §3.2).
