@@ -371,3 +371,50 @@ Smoke-test scenarios potentially affected:
   - open a model, Jodie targets it (useJjomSelection.ts:207-215 unchanged).
   - a caret move in the text, then Cmd+Z in the canvas: undoes the last model change, not the selection.
 ```
+
+## 8. Verification
+
+### 8.1 What exists (read)
+
+No textual probe has clicked the canvas yet: the session of 2026-11-01 says «The probe diagram edit was a direct model
+write, not a canvas click» (`sessione_2026-11-01_default-textual-notation.md:105`), and a grep of the lane folders for
+`page.mouse.click|page.mouse.down` together with `react-flow` finds none among the textual probes (measured; the files
+with `page.mouse` and `react-flow` are three, `P-2026-11-04-2206`, `P-2026-11-04-2255`, `P-2026-11-05-0148`, and they
+move the mouse away for crops, `P-2026-11-05-0148/probe.mjs:67`, they do not click nodes). The pieces to copy:
+
+- **Setup** (direct calls, declared as such): the fixture `scene_3_DemoESM.jjodel` loaded as in
+  `P-2026-11-02-0235/probe.mjs:9`; the model's canvas waited for by counting `.react-flow__node` in the model's pane
+  (`[role="tabpanel"][aria-labelledby$="-tab-<modelId>"]`, the same probe, line 169); the Text tab opened by a dynamic
+  import of `openTextualTab` in the page (`P-2026-11-06-2041/probe.mjs:83`); the split by `DockManager.dock.dockMove(tab,
+  panel, 'right')` in the page, until E9 lands. DemoESM is not a hardware metamodel, as R-TXT-34 asks for acceptance.
+- **The canvas's bounding box**: `flowBox` (`P-2026-11-05-0148/probe.mjs:156`).
+
+### 8.2 Real gestures for each check (design)
+
+| Check | Gesture (real) | Readout |
+|---|---|---|
+| Canvas selects text | `page.mouse.click` at the centre of `.react-flow__node[data-id="<id>"]`'s bounding box in the model's pane | the highlight decoration's class in `.textual-tab .view-overlays`, its line; `.react-flow__node.selected` |
+| Multi-selection | Shift held (`page.keyboard.down('Shift')`) and a second node click | two highlights, the scroll on the second |
+| Clear | a click on an empty point of `.react-flow__pane` | no highlight |
+| Text selects canvas | `page.mouse.click` on a line of `.textual-tab .view-lines`; then `ArrowDown` presses | `.react-flow__node.selected[data-id]` is the object of the caret's span; viewport moved only when the node was outside |
+| Typing does not select | a character typed inside an object's span | the selected node unchanged; no `SELECT_NODE` (a listener counter in the page) |
+| Scenario 2, rename | a double-click on the object's name row in the node (`ObjectNode.tsx:1368` `startRowEdit`, or `handleDoubleClick` at 1197/1290), typing, Enter | the text keeps a comment typed before (own line and trailing), only the renamed line and its referrers' tokens differ (a line diff of `getValue()` before and after) |
+| Scenario 2, attribute | the same gesture on an attribute row | only that object's own lines differ |
+| Scenario 2, delete | a node click, then Backspace (`EditorV2.tsx:3124-3126`) | the object's lines and their comments gone, every other comment kept |
+| Scenario 2, fallback | a diagram edit while a text edit is pending | the tab marks the text stale, as today (no splice) |
+
+A text gesture is a mouse click or a key press in the Monaco editor; a canvas gesture is a mouse click or a key press in
+the canvas's container. Calling `SELECT_NODE` or a model setter from the probe is a direct call and is reported as such,
+never as a gesture (plan rule, `sessione_2026-11-03_textual_ide_plan.md:7`).
+
+### 8.3 Crops each lane needs
+
+- **T10 wiring**: the text with two comments before; the node row in edit; the text after the rename, both comments in
+  place; the text after the delete. Crops of the split (text and canvas in one image).
+- **Text to canvas**: the split with the caret in an object and its node ringed; after two `ArrowDown`, the next
+  object's node ringed.
+- **Canvas to text**: the split after a node click, the object's span highlighted; after the Shift click, two; after the
+  pane click, none.
+- **Open beside (E9)**: the dock after the picker opens the Text tab with the canvas shown.
+
+E's crops go to Alfonso (plan, line 7).
