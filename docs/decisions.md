@@ -7311,6 +7311,17 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
   D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
   multi-word close. D7 (ask whenever a deleted root is covered by a comment, even with other changes in the same pause; wider than R-TXT-37) ratified by Alfonso 2026-11-06 22:28; C2e option A (a shared helper for the nameless-target label) approved at the same time.
+- **R-TXT-54** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step E, T10 and
+  synced selection: decisions E1 to E10 of docs/discovery/discovery_2026-11-06_textual_e_sync.md, taken under lane auto
+  (Alfonso 2026-11-06 23:31, «Procedi con E e poi F con /lane auto»).** E1 a canvas selection highlights and scrolls the
+  text, it never moves the caret; E2 a caret move also writes `_lastSelected` so the Properties panel follows (the tree
+  view's pattern, not an undo step); E3 T10 replaces the text with `setValue`, so the pre-diagram text never sits on the
+  editor's undo stack; E4 the innermost span holding the caret is selected, a caret outside every span does nothing; E5
+  a caret on a reference token selects the token's owner, not its target; E6 nodes only in E, edges later; E7 an outline
+  click also selects on the canvas; E8 a canvas selection with no span in the text is silent; E9 the Text tab opens
+  beside the canvas, in its own lane, last; E10 T10 keeps each object's typed text when its print is unchanged,
+  recursing into children, and falls back to the full reprint when it cannot splice safely. No piece touches the
+  critical zone; lanes E1a, E1b, E2a, E2b, E3.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
