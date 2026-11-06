@@ -382,9 +382,15 @@ describe('instantiate: one undo entry per instantiation, one deadline per instan
         await Promise.all([import('../../../../joiner'), import('../createAdapter'), import('../../../../redux/reducer/reducer')]);
     });
 
-    it('two calls started back to back are two undo entries in order, each undone by one undo to the exact idlookup (Q1)', async () => {
+    it('a call made while another holds its undo group runs after it: two entries in order, each undone exactly (Q1)', async () => {
+        // The second click comes once the first instantiation has opened its group and waits for its writes. Not in the
+        // same tick: two calls loading the mocked modules at once get the mock for one of them only (vitest), and the
+        // mutant without the queue then died of a module load, not of these assertions (bench, P-2026-11-06-2225).
         const before = setup();
-        const [a, b] = await Promise.all([instantiate('Book', bare as any, place), instantiate('Magazine', bare as any, place)]);
+        const first = instantiate('Book', bare as any, place);
+        for (let i = 0; i < 200 && h.depth === 0; i++) await new Promise(resolve => setTimeout(resolve, 5));
+        expect(h.depth).toBe(1);
+        const [a, b] = await Promise.all([first, instantiate('Magazine', bare as any, place)]);
         expect([a.problems, b.problems]).toEqual([[], []]);
         expect(h.depth).toBe(0);
         expect(h.entries).toHaveLength(2);
