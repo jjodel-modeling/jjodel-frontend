@@ -13,6 +13,46 @@
 This report is a set of hypotheses with evidence, not a definitive reference. Whoever uses it downstream rereads
 the real files. Tags: **read** (a file read in this phase), **measured** (a run in this phase).
 
+## 0. Answer in brief
+
+Written by the continuation P-2026-11-06-2250 (session `89586af2-04c8-4b5b-9be8-c14b035b6e64`) on top of §1..§5,
+which it does not rewrite. The next section keeps its old number 0; the questions are in §7, not §6 as §1.3 says.
+
+**H1, partly falsified.** A dynamic-class feature is orphan today on every R-OI surface, but no consumer decides it:
+all read `featureClosure`/`slotDiff` of `model/ontological/bindingReader.ts`, which is S1 and already on the trunk.
+The R-DCN-3 amendment is one optional binding role `featureSources` plus `dormantOwner`, five pure files (§1.4).
+
+**H2, half holds.** `Expression` and `Action` are core attribute types with a syntactic check in conformance.
+No `Range` data type exists; two integer bounds on `Property`, type `Integer`, fit S2/S3a unchanged (§2.2).
+
+**H3, falsified for state, codecs and watches; holds for compiler, step and panel text.** σ, trace, scenarios,
+watches and policy are nucleus-neutral; the coupling is `SimRun.net` and one replay call (`simRunState.ts:331`).
+A guarded command is a placeless transition on the existing `step` (§3.2, Q3). Slot reads on R-OI need σ-backed
+handles: `self.battery` does not resolve on an `InstanceSpecification` (§3.4).
+
+**H4, falsified.** `::` has no meaning in JjEL; `self.in(...)` already parses as a member call, only `V::D` is new.
+The precedent is `StateAccessExpr` with a caller-bound accessor (§4).
+
+**H5, falsified.** `boundExploration.ts` reads markings only; W5 is a new pure module over the product of finite
+domains, reusing its shape and cap (§5). There is no `.smv` exporter; `bvToSmv.ts` is its expression printer.
+
+**Plan** (§6): 17 lanes, slice 2 first with the binding amendment on the trunk now; every lane on an object
+diagram waits for `oi-s2u`/`oi-s3b` on the trunk after 3.2.0. **Decisions awaiting Alfonso** (§7):
+
+- Q1 base: `Recommended: L2.1 on the trunk now; object-level lanes wait for the R-OI merge after 3.2.0.`
+- Q2 classifier: `Recommended: DynamicClass extends NamedElement with its own Property list, feature source only.`
+- Q3 nucleus form: `Recommended: a DCN compiler emitting a placeless CompiledNet on the shared step.`
+- Q4 slot syntax: `Recommended: reads self.battery via σ handles, writes in a DCN action mode, fixed in L3.1.`
+- Q5 range: `Recommended: two optional integer bounds on Property, type Integer, W-checked.`
+- Q6 ids: `Recommended: nucleus-owned opaque ids per (instance, operation) and (viewpoint, contribution).`
+- Q7 arguments: `Recommended: R-SIM-88 inputs asked at the press.`
+- Q8 blank invariant, isSingleton: `Recommended: both W-check errors in L2.4.`
+- Q9 inherited viewpoints: `Recommended: yes, sources applied at every level of the generalization.`
+- Q10 exporter: `Recommended: TypeScript over bvToSmv, sharing the compiled guards with W5.`
+- Q11 fixture: `Recommended: frontend/scripts/probe/dcn-drone-fixture.ts; importable example after slice 4.`
+- Q12 amendment: `Recommended: this front writes the code on the trunk; the R-OI front ACKs a decisions row.`
+- Q13 order: `Recommended: run L3.2 (parse of self.in) before the W1..W4 lane L2.4.`
+
 ## 0. Hypotheses under test
 
 - **H1** The R-OI instance level computes the features of an instance from the classifier and its superclasses
