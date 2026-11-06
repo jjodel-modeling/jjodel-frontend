@@ -315,8 +315,71 @@ detection works on the data the tab has: the deleted root's carried span lies in
 
 ## 8. Lane plan and decisions
 
-(pending)
+Paths under `frontend/src/codegen/textual/`. None of these files is in the CLAUDE.md §3.1 table, and none is a §3.2
+trigger (no sync file, no D-layer creator): every lane is outside the critical zone unless stated.
+
+| lane | what | files (≤ 5) | visual | critical zone |
+|---|---|---|---|---|
+| D1 | R-TXT-37: a deletion whose root is covered by a comment asks first (§7.3) | `ui/TextualTab.tsx`, `__tests__/deletionGuard.test.ts` | yes (bar text) | no |
+| D2a | expected set at a cursor: `ParseOptions.cursor`, `TextParseResult.expected` (§3.3 C1) | `parser.ts`, `__tests__/completion.test.ts` (new) | no | no |
+| D2b | completion candidates: `completionsAt` in the service; the printer's reference and name writers exported (C2, C3) | `languageService.ts`, `printer.ts`, `__tests__/completion.test.ts` | no | no |
+| D2c | Monaco completion provider, trigger characters (C4) | `ui/textualMonaco.ts`, `__tests__/languageService.test.ts` | yes (suggest widget) | no |
+| D3a | structured fixes on parse errors: optional `fix` on `TextParseError` (insert token, near names, paths, keywords; §4.3) | `parser.ts`, `__tests__/tolerant.test.ts` | no | no |
+| D3b | code action provider; conformance violations as markers on the object and feature spans, with their fixes | `ui/textualMonaco.ts`, `ui/TextualTab.tsx`, `conformanceMarks.ts` (new, pure), `__tests__/conformanceMarks.test.ts` (new) | yes | no files changed in the zone; imports `model/conformance/useConformance` (read only, L-layer) |
+| D4 | safe rename: `renameEdits` with the reparse check, `RenameProvider` (§5) | `languageService.ts`, `ui/textualMonaco.ts`, `__tests__/languageService.test.ts` | yes (rename box) | no |
+| D5 | formatting: print plus comments put back by owner; range format by top-level splice (§6.2) | `format.ts` (new), `ui/textualMonaco.ts`, `__tests__/format.test.ts` (new) | yes | no |
+| D3c | user validation-rule problems as markers, after a run | `ui/TextualTab.tsx`, `conformanceMarks.ts`, `__tests__/conformanceMarks.test.ts` | yes | imports `components/editor-v2/problems/registry.ts`, a §3.1 directory, read only: the lane prompt names it (Rule 20) |
+
+Every lane ends with typecheck 0, build, the textual tests green; D2a and D3a also with the mutation note of CLAUDE.md
+§5: without `cursor`, the parse result is identical on the whole textual corpus (a test that compares).
+
+Decisions, one recommendation each:
+
+- **D1 Order.** D1 first (a measured defect, two files), then D2a, D2b, D2c, D3a, D3b, D4, D5, D3c last.
+  Recommended: as listed; D2a and D3a are both in `parser.ts` and never run in parallel.
+- **D2 Where the expected set is computed.** In the parser, under a cursor option, recording the nodes tested at the
+  cursor's token, nullable ones included (F2-F5). Recommended: this, not message parsing and not a second grammar walker.
+- **D3 How a reference candidate is written.** As the printer writes it: the name when unique among the targets, else
+  the path (R-TXT-4, R-TXT-28), through one exported function the printer also calls; `@"id"` is never offered.
+  Recommended: yes.
+- **D4 Rename route.** The text route: Monaco edits from `referencesAt`, refused when the reparsed text has a new error or
+  a reference changes target; on an applicable parse only; a nameless object is refused in D, insertion of a name is a
+  later slice. Recommended: yes.
+- **D5 What Format keeps.** Comments always (R-TXT-20); redundant parentheses dropped in D, documented, undoable with
+  the editor's undo; keeping them by printer hints is a later slice. Format only on an applicable parse. Recommended:
+  yes.
+- **D6 What a quick fix is.** A text edit only, applied by the pause like typing, never a model write. Recommended: yes.
+- **D7 R-TXT-37 scope.** Ask whenever any deleted root is covered by a comment, even with other changes in the same
+  pause, a superset of the row's «only change». Recommended: yes; it needs Alfonso's ratification as it reads the row
+  wider.
+- **D8 Conformance markers.** Warning severity, source `conformance`, never blocking the apply (they speak of the model,
+  not of the text), placed on the carried spans so they follow typing. Recommended: yes.
+- **D9 Validation-rule markers.** Only after the user runs validation (the producer is not reactive,
+  `registry.ts:35-36`), lane D3c, low priority. Recommended: yes.
+- **D10 Step C tokens in completion.** Per-block tokens and the head prefix are offered as keywords; a multi-word close
+  is offered whole, and its remainder once begun (F4). Recommended: yes.
 
 ## 9. Risks and open questions
 
-(pending)
+Risks:
+
+- R1. `parser.ts` (1395 lines) is on the hot path of every provider; a cursor collection inside `canAt`/`hit` must leave
+  the result unchanged without a cursor. Guarded by the comparison test of §8.
+- R2. Extracting the printer's `ref`/`path`/`name` closures can change a print. Guarded by the existing print round-trip
+  tests; the lane runs them before and after.
+- R3. That a conformance `objectId` is the id the tab's spans carry is read, not measured (§4.2); D3b measures it first.
+- R4. Rename does not rewrite names inside JjEL strings or validation rules (step F); a rename can break a rule that
+  names the object. D4 says so in the rename's message, or the lane counts such rules first.
+- R5. The R-TXT-37 detection relies on the carried span staying on the object while `//` is typed at its start;
+  `NeverGrowsWhenTypingAtEdges` (`TextualTab.tsx:1105`) suggests it does; the probe shifted the spans by hand, so the
+  app check of D1 measures it in Monaco.
+- R6. `ui/TextualTab.tsx` (2047 lines) is touched by D1, D3b, D3c and by C2e if it opens: lanes serialize on it.
+- R7. Formatting under the Indentation style moves comments across INDENT and DEDENT; D5 tests both layouts.
+
+Open questions:
+
+1. D7: ratify asking on any comment-covered deletion, beyond R-TXT-37's «only change»?
+2. D5: drop redundant parentheses on Format in D, or keep them from the start?
+3. D8: conformance markers as non-blocking warnings, or errors?
+4. D4: refuse the rename of a nameless object in D, with name insertion later?
+5. D1: is the lane order right, with R-TXT-37 before completion?
