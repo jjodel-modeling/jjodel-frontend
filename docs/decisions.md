@@ -7709,6 +7709,44 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
 - **R-MT-4** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
   **Two tabs on the same model and the same viewpoint are allowed and share the layout.** No special case: a drag in
   one moves the node in the other.
+- **R-MT-5** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The tab's viewpoint is React state of the tab, exposed by an optional `viewpointId` on `EditorContext`.** No Redux
+  slice keyed by tab id. Q1 of `docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md`.
+- **R-MT-6** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The toolbar picker writes the tab's state and `activateViewpoint`**, since the tab whose picker is used is the
+  focused one; the project value stays the default for the next opening (R-MT-1). Q2.
+- **R-MT-7** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **A tab whose viewpoint is deleted or deactivated falls back to abstract syntax**, never to another viewpoint chosen
+  for the user. Q3.
+- **R-MT-8** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The classic editor gets no per-tab viewpoint**; it stays on the project default. Q4.
+- **R-MT-9** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **A second tab on a model opens from a context-menu item «Open in new tab ▸ <viewpoint>» on the model row** (Tree View,
+  model rail); no drag gesture in the first cut. Q5.
+- **R-MT-10** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Two tabs on one (model, viewpoint) share the stored viewport, last writer wins**, as the default for the next
+  opening; live pan and zoom stay in each tab's React Flow store. Q6.
+- **R-MT-11** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Global readers (Tree View, Properties rail, new-view parenting) follow the focused tab**, through the root and
+  project values the tab writes when it gains focus. Q7.
+- **R-MT-12** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The simulator panel stays in every tab, unchanged**; a lane limiting controls to the focused tab opens only if the
+  smoke shows a conflict. Q8.
+- **R-MT-13** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The possible layout-switch regression after `242a82bcd` is probed now, independently of multi-tab** (lane L0b). Q9.
+- **R-MT-14** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **R-LAY-19's freeze on new `state.viewpoint` readers in editor-v2 is held by a check script after lane L5**, with an
+  allow-list of the readers left. Q10.
+- **R-MT-15** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **One D-layer undo stack per user, across tabs** (R-UNDO-1); a Cmd+Z may revert a layout write made in another tab.
+  No per-tab undo. Q11.
+- **R-MT-16** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The mount-only restore of the saved viewpoint (`EditorSwitch.tsx:93`) runs only for the dock's active tab**;
+  focus-driven activation arrives with lane L2. Q12.
+- **R-MT-17** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **With several instances mounted on one model, the first mounted instance owns the populate and hands it over on
+  unmount**; the others render only. Sync registries and problem producers clear when the last instance of the model
+  unmounts. Q13.
 
 ## Superate
 
