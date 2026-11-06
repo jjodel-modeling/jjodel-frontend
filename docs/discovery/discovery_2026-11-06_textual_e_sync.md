@@ -208,3 +208,48 @@ re-render it.
 
 Never `DockManager.open2` from a cursor move (the generator tab's `selectOnModelCanvas` does, line 158): it would bring
 the canvas forward over the Text tab when they share a panel.
+
+## 5. Canvas to text
+
+### 5.1 Where a canvas selection can be read (read)
+
+- **`JjodelEvents.CANVAS_SELECTION_CHANGED`** (`registry.ts:100-103`, R-JJD-3): EditorV2 publishes React Flow's
+  selected **nodes** at most once per animation frame and only when the ordered list changes (`EditorV2.tsx:1608-1630`),
+  with `{ modelId, nodeIds, elementIds }` (`editor-v2/utils/canvasSelection.ts:12-16`), `elementIds` the model elements
+  behind the nodes, in selection order; an empty list on unmount (lines 1631-1638). It is read only: publishing writes
+  nothing. One consumer today besides the publisher (`components/Jodie/JjelLiveResult.tsx`, by grep). This is the
+  pattern of CLAUDE.md §8.7 (a CustomEvent and a local listener), and it carries exactly what the tab needs.
+- **`_lastSelected.modelElement`** in the store (`useJjomSelection.ts:112-116`), written by a node click, an edge click
+  (the element the edge stands for, R-ESEL-2), the tree view, the classic editor and a pane click (which points it at
+  the model itself, line 160). Broader, but not a canvas signal only, and the tab's own optional write (E2) would echo
+  through it.
+- **Edges**: `CANVAS_SELECTION_CHANGED` lists nodes only (`selectedNodes`, `EditorV2.tsx:1605`); a click on a reference
+  edge or an object drawn as an edge (`irobj_*`) is not published there, only through `_lastSelected`.
+
+Recommendation: the event, nodes only in E (decision E6). The Text tab subscribes in a `useEffect` with
+`window.addEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, ...)`, filtered on `detail.modelId === modelId`.
+
+### 5.2 From an object to its span (read)
+
+`carriedSpans()` again: the span whose `id` is the element id. It exists for every printed object, nameless ones
+included (R-TXT-45 prints them with a `: <Class>` head); an object the print leaves out (`TextPrintReport.unprinted`,
+`printer.ts:55-79`) has none. While an edit is pending the carried spans still map the objects the model had at the last
+agreement (decorations follow the edits), so a canvas selection highlights the right text even in a stale tab.
+
+### 5.3 Reveal and highlight in Monaco (read, design)
+
+- `TEXTUAL_REVEAL_COMMAND` (`textualMonaco.ts:224-233`) calls `setPosition`, `revealLineInCenterIfOutsideViewport` and
+  **`focus()`**. Focus would take the keyboard from the canvas (the next Delete would go to the text), and
+  `setPosition` moves the caret. So the canvas path does not reuse the command; it reuses its two calls that are safe:
+  a reveal, and nothing that moves the caret or the focus.
+- **Highlight**: a decorations collection of its own (`editor.createDecorationsCollection`), separate from
+  `decorationsRef` and `refDecorationsRef`, so the identity logic, the cut-and-paste tracking (`TextualTab.tsx:1361-1377`)
+  and `carriedSpans` never see it. One decoration per selected element with a span: `className` for the whole span
+  (a background), `isWholeLine: false`, plus an `overviewRuler` mark so a selection outside the viewport shows in the
+  scroll bar. The class lives in `ui/TextualTab.scss`; its colour comes from an existing token (CLAUDE.md rules 27, 28).
+- **Reveal**: `editor.revealRangeInCenterIfOutsideViewport` on the span of the last element in selection order (the
+  one the user just clicked); it moves the scroll only, so no cursor event fires.
+- **Keep across reprints**: the selected ids are kept in a ref and the highlight is set again after every `reprint`,
+  every application (`apply`, lines 1286-1293) and every T10 splice, which replace the text or the identity spans.
+- **Clear**: an empty `elementIds` (pane click, unmount) clears it. A caret move by the user does not clear it (the
+  canvas selection is still what it is), unless it sends a new `SELECT_NODE`, whose echo replaces it (§6.1).
