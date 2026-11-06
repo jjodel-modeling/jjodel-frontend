@@ -247,3 +247,60 @@ Text to generated line (the reverse, E's canvas-to-code counterpart): the genera
 (`TextualTab.tsx:181`), and the origins' `elementId` is the idlookup id of the element read (`text.ts:40-44`). Both come
 from the same `buildEvalContext` globals. F's first lane measures it on one model: a generated span's `elementId` found
 among the tab's carried span ids.
+
+## 6. T8
+
+### 6.1 What it is (read, with sources)
+
+`docs/discovery/discovery_2026-11-01_textual_viewpoint.md:812`, plan table A.7: «| T8 | T6 | re-import of an exported file:
+ids in the text, the cascade with the confirmation dialog |». Its rules: R-TXT-17 (`decisions.md:7003-7006`) «On save,
+Jjodel can also write the model's text file next to it (with ids, R-TXT-18), for git, review and LLM edits; an edited file
+comes back by re-import»; R-TXT-18 (`:7007-7012`) «Outside (re-import), by a cascade: id in the text if present; class and
+name in the same container; class and name in the model (moves); attribute similarity [...] Uncertain matches are always
+confirmed by the user before applying. Ids in the text are an option of the style, on by default in the exported file; a
+repeated id makes a new object, with a warning.»; R-TXT-21 (7) (`:7033`) «The cascade's thresholds start at 0.6 with a
+margin of 0.2, calibrated in step T8». The dialog it asks for: report `:767-769` «one dialog, counts first [...] then one
+row per uncertain match, old → new with its score, each with a checkbox, then the creates and deletes, the cross-model
+deletes in red». Also named in `sessione_2026-11-01_default-textual-notation.md:106` and placed after F by R-TXT-34. A
+second, unrelated «T8» in `decisions.md:5703` is a harness ticket of 2026-10-01, not this step.
+
+### 6.2 What exists (read)
+
+- The cascade runs inside the editor: `textMatch.ts:5-20`, evidence «1. The previous print's spans (R-TXT-22) [...] 2. Class
+  and name in the same container [...] 3. Class and name elsewhere in the model, a single candidate: a move. Uncertain
+  [...] 4. Attribute and reference similarity [...] at least 0.6 and 0.2 ahead of the second». Thresholds at `:53-54`
+  `RENAME_THRESHOLD = 0.6`, `RENAME_MARGIN = 0.2`. Moves landed with T7 (`ec570ca11`, merge of `textual-t7`;
+  `command grep -c "'move'"` counts 10 in `textDiff.ts`).
+- The confirmation: `ui/TextConfirmPanel.tsx:2-5` «the uncertain matches [...] and the deletions of objects another model
+  references, flagged. One row per object [...] one confirm action for all of them. Nothing is applied until then.» No
+  counts, no per-row checkbox, no list of creates.
+- **Ids in the text: none.** `command grep -c -E 'printIds|showIds|withIds|ids\?:'` on `style.ts` and `printer.ts` counts
+  0 and 0; the only id syntax is the outer reference `@"id"` (R-TXT-32, explorer `printer.ts:309,324,535`; the role test
+  `t.v !== '@'` at `printer.ts:167` is the positive control that the `@` form exists). My own control `grep -c '@"'` on
+  `printer.ts` counted 0, so the quoted form is built from parts and that control had no signal; the explorer's lines
+  are the evidence.
+- **File export and import of the text: none in `codegen/`.** `command grep -r -l -E
+  'FileReader|createObjectURL|showSaveFilePicker|showOpenFilePicker|type="file"' frontend/src/codegen` lists
+  `codegen/ui/GeneratorImportDialog.tsx` (generators) and `codegen/runner/runner.worker.ts`, nothing under `textual/`; the
+  same pattern over `frontend/src` finds `joiner/index.ts` and `InstanceManagerTab.tsx` (positive control).
+
+### 6.3 What T8 still needs (design)
+
+1. **Ids in the text** as a style option (R-TXT-18), on in the exported file. Two shapes: a token of the grammar, or a
+   structured comment (`// @id 3f2a...` at the end of an object's head line). Recommended the comment (decision F9): the
+   grammar, the LL(1) check and the EBNF stay untouched, a file without ids reads the same, and comments already survive
+   and are owned by objects (R-TXT-20, D5's comments by owner). The reader is a pass over `commentsOf` (`parser.ts`,
+   used by D1).
+2. **Evidence 0, id in the text**, before span and name in `matchObjects`, with the repeated-id warning. Pure, in
+   `textMatch.ts`; the re-import has no carried spans (`previous: []`), so the cascade starts at ids, then names.
+3. **Export** (download a `.txt` of the print with ids) and **Import** (open a file, run the cascade against the current
+   model, show the dialog), in the Text tab's toolbar. The import goes through the same `planTextEdit` and
+   `applyTextEdit` (`textApply.ts:74`) as an edit, so one undo step and the R-TXT-21 (8) refusal of recovered objects
+   hold with no new write path.
+4. **The dialog of the report** (`:767-769`): counts, a checkbox per uncertain row with its score, creates and deletes,
+   cross-model deletes in red. `TextConfirmPanel` grows or a modal of its own is added (decision F10); unticking a row
+   turns that match into a create plus a delete.
+5. **Calibration** of 0.6 and 0.2 on the 16 Briefs and the fixture: export, a scripted set of edits (renames, moves,
+   attribute changes), re-import without ids, count right and wrong matches per threshold. A test bench, not UI.
+
+T8 writes the model through the existing apply path only. Every file above is in `codegen/textual/`.
