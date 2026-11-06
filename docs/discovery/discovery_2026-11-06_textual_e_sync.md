@@ -253,3 +253,60 @@ agreement (decorations follow the edits), so a canvas selection highlights the r
   every application (`apply`, lines 1286-1293) and every T10 splice, which replace the text or the identity spans.
 - **Clear**: an empty `elementIds` (pane click, unmount) clears it. A caret move by the user does not clear it (the
   canvas selection is still what it is), unless it sends a new `SELECT_NODE`, whose echo replaces it (§6.1).
+
+## 6. Loops and timing
+
+### 6.1 Ping-pong (design, from the reads of §4 and §5)
+
+The round trip text → canvas → text ends after one turn, for three independent reasons:
+
+1. **The canvas path never moves the caret** (§5.3: highlight and scroll only), so it fires no cursor event and the
+   text path never starts from it.
+2. **The text path listens to user moves only**: `source` `mouse` or `keyboard`; `setPosition` and `setSelection` from
+   code (an outline click, the reveal command, a reprint's `restoreViewState`) are `api` or `restoreState`. If decision
+   E1 ever lets the canvas move the caret, this filter is what cuts the loop.
+3. **Same id, nothing**: the text path keeps the last id it sent; `CANVAS_SELECTION_CHANGED` is not re-published for an
+   unchanged list (`EditorV2.tsx:1621`, `sameIdList`).
+
+The one echo that does happen: a caret move sends `SELECT_NODE(X)`, React Flow selects X, the publisher sends `[X]`, the
+tab highlights X's span, where the caret already is. Harmless; the highlight then marks the object the caret is in, which
+is what a reader expects. An outline click moves the caret by `setPosition` (an `api` source): whether it should select
+on the canvas too is decision E7.
+
+### 6.2 The pause-apply cycle
+
+- A selection is never a model write, so it never touches `applyingRef`, the pause or the agreement. Neither path reads
+  or changes `syncRef`.
+- **A canvas selection during an unapplied edit**: the carried spans of the objects the model had still map (§5.2); a
+  span the user deleted in the pending text has collapsed (`carriedSpans` drops a decoration with no range), so nothing
+  is highlighted for it.
+- **A caret move during an unapplied edit**: the innermost carried span may be an object the user is retyping; the
+  canvas selects the model's object, which is right. A new object typed and not yet applied has no carried span; the
+  caret then sits in its container's span, which is selected instead (acceptable; E4).
+- **Typing**: the cursor moves with every character. Those moves must not select (§4.3); the lane measures the `source`
+  and `reason` of a typed character and filters on them, else ignores a cursor event in the same task as a content
+  change.
+- **During `applying`** and during the path rewrite (`rewritingRef`) the text path waits: identity spans are replaced at
+  the end of `apply` (lines 1289-1293); a selection read in between can map to a stale span.
+
+### 6.3 Objects without a span
+
+- **Created on the canvas since the last print**: with the agreed text, the print changes and the tab reprints (with T10,
+  splices), so the object gets a span at once. With a pending edit the tab is stale and keeps the text (`keep`, lines
+  1426-1430): the new object has no span until the text is applied or reprinted. The canvas selection then highlights
+  nothing (decision E8: silent).
+- **Nameless objects** are printed with spans (R-TXT-45), so they select both ways like any other.
+- **Unprinted objects** (`unprinted`, R-TXT-21 (9) territory) have no span; the canvas selection highlights nothing.
+- **Objects the canvas draws as an edge** (`irobj_*`) or not at all: `pickOnCanvas` finds no node; `SELECT_NODE` takes
+  node ids only, so nothing is selected (E6).
+
+### 6.4 The canvas must be on screen
+
+The Text tab opens in the `models` group (`openTextualTab.tsx:84-89`, `DockManager.open('models', tab)`), the canvas's
+group, so by default it is a sibling tab in the same panel and the canvas is not on screen while the text is. No
+`cached` option is set in `components/abstract/` (measured: `command grep -rln cached components/abstract/` prints
+nothing; positive control through the same command: `DockManager.tsx` counts 11 lines for `open2|static open`). The
+reading of rc-dock is that an inactive tab's content is then unmounted, so EditorV2's `SELECT_NODE` listener is gone and
+the text path does nothing; **not measured** here, the first visual lane measures it. Synced selection is therefore
+useful with the two side by side: by a drag of the tab today, or by opening the Text tab beside the canvas, as the
+generator tab does (`dockBeside`, `codegen/ui/canvasSelection.ts:76-88`): decision E9.
