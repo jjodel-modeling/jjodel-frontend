@@ -310,3 +310,30 @@ Opened by a sentinel option of the picker that returns before `activateViewpoint
 | Jjodie ghost | model id, ref-counted listener | compatible | — |
 | Minimap | per instance | compatible | — |
 | Textual tab | separate tab | not concerned | — |
+
+## 5. Persistence [read]
+
+What the saved project records about the active viewpoint, on HEAD `8168b608f`:
+
+- **Both values are saved.** `common/U.tsx:429-444` `compressedState` serializes the whole root, `const state = {...store.getState()};` … `JSON.stringify(state, proxyToIdReplacer)`: the root `viewpoint` (`redux/store.tsx:160`, `viewpoint: Pointer<DViewPoint> = '';`, the field declaration — the handoff's «restores root `state.viewpoint` at `:160`» was the declaration, not a restore) travels in the snapshot, and so does `project.activeViewpoint` on the `DProject` record (`:439`).
+- **On load**, `api/persistance/projects.ts:515` `pointers.activeViewpoint = raw.activeViewpoint;` rebuilds the project pointer; the root value comes back with the snapshot, which is what `EditorSwitch.tsx:83-84` calls «the snapshot-restored, project-global viewpoint». Then each mounting `EditorSwitch` may override it from `localStorage` `jjodel.editorPrefs.<modelid>` (W4, `:85-94`).
+- **The 2.228 migration** (`redux/VersionFixer.tsx:1275-1305`, `['2.227 -> 2.228']`) rewrites a system viewpoint in `DProject.activeViewpoint` to `null` and leaves a user viewpoint as it is (R-IRN-20); it does not touch the root. Unchanged by this front.
+- **Not saved**: rc-dock tabs (§2.4), so nothing records «tab T had viewpoint V».
+
+**What it becomes under R-MT-1.** The project value is the default for the next opening of a tab, written by the focused tab (Q2); the root `state.viewpoint` keeps meaning «the focused tab's viewpoint» for the global readers (Tree View, rail, new-view parenting, §1.5). The stored shape does not change, so **no migration is proposed** and Rule 14 is not triggered (no change to `DV.tsx` or `defaultViewTemplate.ts`). The per-model `localStorage` preference stays as the default for the next opening of *that model* (it is more specific than the project value), written only by the instance whose picker changed (L1).
+
+## 6. Probe [not run]
+
+Gate: `uptime` at 00:21 gave a 1-minute load of 11.04, at 00:25 of 4.36: under 16 both times, so the load gate allowed a dev server. **Not run anyway**, for two reasons that the gate does not cover:
+
+1. This prompt forbids background tasks, and a dev server is one: it has to outlive the command that starts it while a browser drives it.
+2. No gesture opens a second tab on one model (§2.1). The probe would have to craft one from the console (`DockManager.open({...TabDataMaker.model(m), id: m.id + '~2'})`), and that tab would still read the one root viewpoint (§1.2): it can show the §3.7 duplicate and the §3.2 / §4.2 unmount wipe, not two viewpoints side by side, which needs L2 first.
+
+What the probe would settle, now owed as the first check of the lane named:
+
+| Question | Where | Lane |
+|---|---|---|
+| D-first M2 reference with two tabs on Families.ecore: one DVoidEdge per `refId` or two | §3.7 | L4, first step |
+| Closing one of two tabs on a model empties the other's `canvasEdgePairs` / `edgeRefIds` and its problem badges | §3.2, §4.2 | L4, L4b |
+| Switching between two exclusive viewpoints with different records leaves nodes at the previous key's positions (after `242a82bcd`) | §3.4 | L0b |
+| W4: mounting model B's tab switches model A's open tab to B's saved viewpoint; a pick in A is saved as B's preference | §1.1 | L1, before and after |
