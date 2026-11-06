@@ -7631,6 +7631,50 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   run state, panel, trace, watches, scenarios, I/O board and exporter. It knows roles, not the DCN metaclasses: a
   STC profile «Dynamic classification» maps Viewpoint, dynamic classifier, Invariant, Operation, Redefinition,
   Monitor and Instance-of onto a metamodel, so another metamodel with viewpoints and invariants can use it. Spec §8.
+- **R-DCN-9** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Base of the lanes.** The lanes that need only the S1 binding layer (L2.1..L2.4, L3.x, L4.1..L4.4 of the plan in
+  `docs/discovery/discovery_2026-11-06_dcn_foundations.md` §6) are cut from `dcn` on the trunk now. L2.5 and every
+  lane on a real object diagram wait for `oi-s2u` and `oi-s3b` on the trunk, after the 3.2.0 tag. Discovery Q1.
+- **R-DCN-10** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **`DynamicClass` is a feature source, not a Classifier in the R-OI binding sense.** It extends `NamedElement` with
+  its own `Property [0..*]` list, is reached by a `featureSources` path, and never enters the creation menu. Its
+  attributes are `Property`, so `Slot.definingFeature`, `featureType` and O5 apply to dormant slots unchanged. Q2.
+- **R-DCN-11** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The DCN nucleus is its own compiler emitting a placeless `CompiledNet` on the shared step.** Classification,
+  completeness, exclusivity, Interleave, Sync and redefinition expansion sit around the step in `dcnStep.ts`;
+  `netCompile.ts` is not touched. Read as compatible with R-DCN-8; lane L4.1 (a nucleus field on `SimRun`) keeps the
+  choice reversible. Q3.
+- **R-DCN-12** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Slot syntax.** Guards, invariants and actions read `self.battery` through σ-backed handles; actions write
+  `self.battery := e` in a DCN action mode. The write goes to σ, never to the model. This is a deliberate exception
+  to the `.[x]` rule of R-SIM-18 for the DCN nucleus, written into `docs/spec/concern_languages.md` in lane L3.1. Q4.
+- **R-DCN-13** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Ranges are two optional integer bounds on `Property`, type `Integer`**, named apart from `lower`/`upper` and
+  checked by the well-formedness lane; no `RangeType` data type, which would break the S2/S3a value kinds. Q5.
+- **R-DCN-14** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Invocation events and contribution selectors have nucleus-owned opaque ids**, per (instance, operation) and per
+  (viewpoint, contribution), fixed in lane L4.2 before the first DCN scenario is saved; `scenarioCodec.ts` unchanged. Q6.
+- **R-DCN-15** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Operation arguments are R-SIM-88 inputs asked at the press**; no event instance per argument tuple. Q7.
+- **R-DCN-16** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **A blank invariant and a second instance of an `isSingleton` class are well-formedness errors**; the creation
+  menu is not filtered. Q8.
+- **R-DCN-17** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Viewpoints are inherited**: `featureSources` apply at every level of the generalization closure. Q9.
+- **R-DCN-18** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The exporter is TypeScript over the `bvToSmv` expression printer**, sharing the compiled guards with the W5
+  enumeration; not a codegen generator. Q10.
+- **R-DCN-19** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The drone fixture lives in `frontend/scripts/probe/dcn-drone-fixture.ts`** beside the UML fixture; the importable
+  example comes only after lane L4.5, so the metamodel does not freeze before the nucleus runs. Q11.
+- **R-DCN-20** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Amendment of R-OI-13 (R-DCN-3).** A slot whose `definingFeature` is reached through a `featureSources` path is in
+  the feature closure, so it is never orphan; a missing one is a `missing` warning like any other. The code is this
+  front's lane L2.1 in `model/ontological/` on the trunk; the R-OI consumers inherit it unchanged. The instance-of
+  front acknowledges this row. Q12.
+- **R-DCN-21** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Lane order follows the plan of the discovery §6, not the slice numbers**: the languages concern (L3.1) and the
+  parse of `self.in` (L3.2) come before W1..W4 (L2.4). Spec §10 keeps its numbering. Q13.
 
 ## Superate
 
