@@ -14,7 +14,7 @@ import type { TextMetamodel, TextObject } from '../metamodel';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans, DEDENT_MARK, INDENT_MARK } from '../concreteGrammar';
 import type { ConcreteGrammar, GrammarNode, LiteralSrc } from '../concreteGrammar';
 import { parseText, tokenizeText } from '../parser';
-import { printTextModel } from '../printer';
+import { pathKeyword, printTextModel } from '../printer';
 import { checkStyle } from '../styleCheck';
 import { textualNotation } from '../syntaxRecord';
 import { advancedInEffect, blockTokenFields, byField, draftPreview, fieldKey, fieldsOf, fieldValue, literalDefault, literalField, parseTokens, readDraft, setField, setLiteral, tokensText } from '../syntaxForm';
@@ -779,5 +779,57 @@ describe('(10) B3a: D8 for a prefixed head, an empty open', () => {
         expect(issuesOf(close)).toEqual([{ level: 'error', where: 'class Program', message: 'blockClose is empty: a block needs a token on each side; not applied' }]);
         const feature = withEntries({ cP: { keyword: '', prefix: ['begin'] } }, { fDecls: { keyword: 'declaration', blockOpen: [] } });
         expect(issuesOf(feature)).toEqual([{ level: 'error', where: 'Program.declarations', message: 'blockOpen is empty: a block needs a token on each side; not applied' }]);
+    });
+});
+
+// ---- Lane B3b (P-2026-11-06-0242): the head prefix in the readers and the form (report §3.2, §5.1) -------------------
+
+/** The tokens of a printed or parsed tree that read `text`, as [text, role]. */
+const rolesOf = (text: string, tree: { tokens: readonly { start: number; end: number; role?: string }[] } | undefined) =>
+    (tree?.tokens ?? []).filter(t => t.end > t.start).map(t => [text.slice(t.start, t.end), t.role]);
+
+describe('(11) B3b: the readers find the class keyword by its origin', () => {
+    /** Reading B of report §3.1, as in (10). */
+    const READING_B: SyntaxAnnotations = { ...P5, classes: { ...P5.classes, cP: { keyword: 'program', prefix: ['begin'], blockOpen: [], blockClose: ['end', 'program'] } } };
+
+    it('the printer gives the class keyword the role class and the prefix its own, keyword or punctuation (mutant: printer classKeywords by position)', () => {
+        const g = named(P5);
+        const { text, tree } = printTextModel(g, NAMED_OBJECTS);
+        expect(rolesOf(text, tree).slice(0, 4)).toEqual([['begin', 'keyword'], ['program', 'class'], ['P', 'name'], ['begin', 'punctuation']]);
+        const punct = named(withEntries({ cP: { keyword: 'program', prefix: ['<<'], blockOpen: ['is'], blockClose: ['end', 'program'] } }));
+        const p = printTextModel(punct, NAMED_OBJECTS);
+        expect(rolesOf(p.text, p.tree).slice(0, 2)).toEqual([['<<', 'punctuation'], ['program', 'class']]);
+    });
+
+    it('the parser reads the same roles (mutant: parser classKeywords by position)', () => {
+        const g = named(P5);
+        const text = printTextModel(g, NAMED_OBJECTS).text;
+        expect(rolesOf(text, parseText(text, g).tree).slice(0, 3)).toEqual([['begin', 'keyword'], ['program', 'class'], ['P', 'name']]);
+    });
+
+    it('the repair never infers the class keyword after a prefix, the prefix is not taken for it (step A, decision 2; mutant: the second item repaired as a keyword)', () => {
+        const g = named(READING_B);
+        const r = parseText('begin P end program', g);
+        expect(r.errors.map(e => e.message)).toEqual(['expected "program"; found name "P"']);
+        // Not inferred: the head stops at the missing keyword, so the name is never read.
+        expect(r.objects[0]?.slots.name).toBeUndefined();
+    });
+
+    it('a path\'s first segment is the class keyword, not the prefix; a positional prefixed class starts it with its name (R-TXT-28; mutant: pathKeyword by position)', () => {
+        expect(pathKeyword(named(P5), 'Program')).toBe('program');
+        expect(pathKeyword(named(withEntries({ cP: { keyword: '', prefix: ['<<', 'program'], blockOpen: ['is'], blockClose: ['end', 'program'] } })), 'Program')).toBe('Program');
+    });
+
+    it('an LL(1) finding about a prefix token is not located at the class keyword (mutant: syntaxForm headKeyword by position)', () => {
+        const record: SyntaxAnnotations = { ...P5, roots: ['cP', 'cS'], classes: { ...P5.classes, cS: { keyword: 'begin', layout: 'line' } } };
+        const ll1 = ['error', 'not LL(1): "begin" can start two alternatives'];
+        expect(faultsAt(record, block('class:cS', 'class.keyword'), NMM, NIDS)).toContainEqual(ll1);
+        expect(faultsAt(record, block('class:cP', 'class.keyword'), NMM, NIDS)).not.toContainEqual(ll1);
+    });
+
+    it('gap 6: a block with no open that is left open names its class (mutant: the empty open printed)', () => {
+        const g = named(READING_B);
+        const r = parseText('begin program P\n  declaration is\n  end', g);
+        expect(r.errors.map(e => e.message)).toEqual(['expected "end" "program" to close the body of Program at 2:3; found end of text']);
     });
 });

@@ -706,8 +706,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const contained = new Set<string>();
     let counter = 0;
     const derives = new Map<MutableObject, NamePattern>();
-    /** The first keyword of an object rule's body: its class keyword. */
-    const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' && r.body.items[0]?.t === 'kw' ? [r.body.items[0]] : [])));
+    /** The class keyword of each object rule, found by its origin, so a head prefix before it is never one (B3b, report §3.2). */
+    const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'kw' && x.src?.k === 'class') : [])));
 
     const record = (e: TextParseError): void => { errors.push(e); };
     const owner = (): MutableObject | undefined => open[open.length - 1];
@@ -1097,7 +1097,9 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                     continue;
                 }
                 if (t.k === 'EOF' || (t.first && enclosing.some(f => f.can(t)))) {
-                    record(errorAt(t, `expected ${n.close.map(shownToken).join(' ')} to close the ${n.open.map(shownToken).join(' ')} at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
+                    // A block with no open (B3a's prefixed head, D8) is named by its class.
+                    const opened = n.open.length ? n.open.map(shownToken).join(' ') : `body of ${o.cls}`;
+                    record(errorAt(t, `expected ${n.close.map(shownToken).join(' ')} to close the ${opened} at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
                     unclosed.add(o.id);
                     for (const x of objects.slice(since)) unclosed.add(x.id);
                     return;

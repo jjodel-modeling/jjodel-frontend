@@ -459,10 +459,11 @@ const joinNames = (xs: readonly string[]): string => (xs.length < 2 ? xs.join(''
 
 const objectRuleNamed = (g: ConcreteGrammar, name: string): ObjectRule | undefined => g.rules.find((r): r is ObjectRule => r.t === 'object' && r.name === name);
 
-/** The class keyword of an object rule as printed (styleCheck.ts `headKeyword`). */
+/** The class keyword of an object rule as printed, found by its origin as styleCheck.ts `headKeyword` finds it (B3b). */
 function headKeyword(r: ObjectRule): string {
-    const first = r.body.t === 'seq' ? r.body.items[0] : r.body;
-    return first?.t === 'kw' ? first.text : '';
+    const items = r.body.t === 'seq' ? r.body.items : [r.body];
+    const kw = items.find(x => x.t === 'kw' && x.src?.k === 'class');
+    return kw?.t === 'kw' ? kw.text : '';
 }
 
 function classField(message: string): FieldId | undefined {
