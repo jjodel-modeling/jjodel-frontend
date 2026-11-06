@@ -3,18 +3,21 @@
  * §3.2, §3.3 C1, decisions D2 and D10): under `ParseOptions.cursor` the parser lists what may stand at the first token at
  * or after the cursor, from the nodes it tested there, nullable ones included; without it, the result is unchanged.
  *
- * D2b, C3 (P-2026-11-06-2146; report §3.3 C3, decision D3): the printer writes names and paths through `textNaming`.
+ * D2b, the candidates at a cursor (P-2026-11-06-2146; report §3.3 C2 and C3, decisions D3 and D10): `completionsAt` turns
+ * the expected set into the words to write, each with its kind and the range it replaces.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
+import type { TextCompletion } from '../languageService';
+import { analyzeText, completionsAt } from '../languageService';
 import type { ExpectedItem, TextParseResult } from '../parser';
 import { parseText } from '../parser';
 import { printTextModel, textNaming } from '../printer';
 import { BOOL_CLIKE, BOOL_PRINTS, boolGrammar, boolSheet } from './boolCorpus';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
-import { portGrammar, portObjects, portWith, PORT_CLIKE, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
-import { objectsOf } from './spec';
+import { portGrammar, portObjects, portWith, PORT_CLIKE, PORT_MM, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
+import { metamodelOf, objectsOf } from './spec';
 import type { Spec } from './spec';
 import { mutantsOf, probeTokens, tolerantCases } from './tolerantCorpus';
 
@@ -187,6 +190,131 @@ describe('D2b, C3: the printer writes every reference through the exported write
         }
         expect(compared).toBeGreaterThan(20);
         expect(paths).toBeGreaterThan(5);
+    });
+});
+
+/** The candidates at the `⎸` of `marked`, as `kind label`, sorted, and the candidates themselves. */
+const offeredAt = (g: ConcreteGrammar, mm: Parameters<typeof completionsAt>[3], marked: string): { readonly shown: string[]; readonly all: TextCompletion[]; readonly at: number } => {
+    const at = marked.indexOf(CUT);
+    if (at < 0) throw new Error('no cursor in the text');
+    const all = completionsAt(marked.replace(CUT, ''), at, g, mm);
+    return { shown: all.map(c => `${c.kind} ${c.label}`).sort(), all, at };
+};
+
+describe('D2b: the candidates at the seven cursors of the probe (report §3.2), C-like port', () => {
+    const g = portGrammar();
+    const at = (marked: string): string[] => offeredAt(g, PORT_MM, marked).shown;
+    /** What starts an operand: no candidate for a new Ref's name, its block, a parenthesis, the call word of `&`. */
+    const OPERAND = ['keyword (', 'keyword and', 'keyword {', 'keyword {}'];
+
+    it('1: after a class keyword, the block; no candidate for the new name', () => {
+        expect(at('Module ⎸')).toEqual(['keyword {', 'keyword {}']);
+    });
+
+    it("2: on a new line of a body, its items, `=` and the close", () => {
+        expect(at('Module cpu {\n  input instr : Word(32)\n  ⎸\n}')).toEqual(['keyword =', 'keyword input', 'keyword output', 'keyword }']);
+    });
+
+    it("3: after ':', the classes of the type", () => {
+        expect(at('Module cpu {\n  input instr : ⎸\n}')).toEqual(['keyword Bool', 'keyword Word']);
+    });
+
+    it("4 and 5: after '=' and after an operator, what starts an operand", () => {
+        expect(at('Module cpu {\n  output r : Bool = ⎸\n}')).toEqual(OPERAND);
+        expect(at('Module cpu {\n  output r : Bool = instr & ⎸\n}')).toEqual(OPERAND);
+    });
+
+    it('6: an empty text, the class keyword', () => {
+        expect(at('⎸')).toEqual(['keyword Module']);
+    });
+
+    it("7: after an item keyword, ':' only", () => {
+        expect(at('Module cpu {\n  input ⎸\n}')).toEqual(['keyword :']);
+    });
+
+    it('after a space a candidate replaces nothing; on a word begun it replaces the word', () => {
+        const blank = offeredAt(g, PORT_MM, 'Module cpu {\n  input instr : ⎸\n}');
+        expect(blank.all.every(c => c.start === blank.at && c.end === blank.at)).toBe(true);
+        const begun = offeredAt(g, PORT_MM, 'Module cpu {\n  input instr : Wo⎸\n}');
+        expect(begun.shown).toEqual(['keyword Bool', 'keyword Word']);
+        expect(begun.all.every(c => c.start === begun.at - 2 && c.end === begun.at)).toBe(true);
+        const inside = offeredAt(g, PORT_MM, 'Module cpu {\n  input instr : W⎸o\n}');
+        expect(inside.all.every(c => c.start === inside.at - 1 && c.end === inside.at + 1)).toBe(true);
+    });
+});
+
+describe('D2b and D10: the tokens of step C as keywords', () => {
+    const gb = portGrammar(portWith({ C_Module: { blockOpen: ['is'], blockClose: ['end', 'module'], prefix: ['begin'] } } as never, {}, PORT_CLIKE));
+    const at = (marked: string): string[] => offeredAt(gb, PORT_MM, marked).shown;
+
+    it('the head prefix, then the class keyword after it', () => {
+        expect(at('⎸')).toEqual(['keyword begin']);
+        expect(at('begin ⎸')).toEqual(['keyword Module']);
+    });
+
+    it("the per-block open, and the multi-word close whole", () => {
+        expect(at('begin Module cpu ⎸\n  input : Bool\nend module')).toContain('keyword is');
+        expect(at('begin Module cpu is\n  ⎸\nend module')).toEqual(['keyword end module', 'keyword input', 'keyword output']);
+    });
+
+    it('a half-typed close offers its rest', () => {
+        expect(at('begin Module cpu is\n  input : Bool\nend ⎸')).toEqual(['keyword module']);
+        const begun = offeredAt(gb, PORT_MM, 'begin Module cpu is\n  input : Bool\nend mo⎸');
+        expect(begun.shown).toEqual(['keyword module']);
+        expect(begun.all.map(c => [c.start, c.end])).toEqual([[begun.at - 2, begun.at]]);
+    });
+});
+
+describe('D2b and D3: references and enumeration literals (corpus B)', () => {
+    const g = grammarOf(GARAGE);
+    const mm = metamodelOf(GARAGE);
+    const text = printTextModel(g, objectsOf(GARAGE)).text;
+    /** The text with the value after `head` cut out and the cursor in its place. */
+    const cutAfter = (head: string, value: string): string => {
+        const k = text.indexOf(head + value);
+        if (k < 0) throw new Error(`no ${head}${value} in the text`);
+        return text.slice(0, k + head.length) + CUT + text.slice(k + head.length + value.length);
+    };
+
+    it('the targets of a reference, written as the printer writes them: a duplicate name by path, `@"id"` never', () => {
+        const { shown, all } = offeredAt(g, mm, cutAfter('best ', 'Car[0].wheels[0]'));
+        expect(shown).toEqual([
+            'reference "it\'s \\"odd\\""', 'reference Car[0].wheels[0]', 'reference Car[0].wheels[1]',
+            'reference alpha', 'reference beta', 'reference inner', 'reference v',
+        ]);
+        expect(all.some(c => c.label.startsWith('@'))).toBe(false);
+        expect(all.some(c => c.label === 'w')).toBe(false);
+    });
+
+    it('a reference begun: the same targets, replacing the word', () => {
+        const { shown, all, at } = offeredAt(g, mm, cutAfter('tow ', 'beta').replace(CUT, `al${CUT}`));
+        expect(shown).toEqual(['reference alpha', 'reference beta', 'reference inner']);
+        expect(all.every(c => c.start === at - 2 && c.end === at)).toBe(true);
+    });
+
+    it('a target with no name is offered by its path only', () => {
+        expect(offeredAt(g, mm, cutAfter('eng ', 'Engine[0]')).shown).toEqual(['reference Car[0].engine[0]', 'reference Engine[0]']);
+        const gx = grammarOf(BOX);
+        const bt = printTextModel(gx, objectsOf(BOX)).text;
+        const k = bt.indexOf('tag ') + 'tag '.length;
+        const value = bt.slice(k).split(/\s/)[0];
+        const got = offeredAt(gx, metamodelOf(BOX), bt.slice(0, k) + CUT + bt.slice(k + value.length));
+        expect(got.shown).toEqual([`reference ${value}`]);
+        expect(value).toMatch(/\[\d+\]$/);
+    });
+
+    it('enumeration literals in their cased form, with the hover of the literal', () => {
+        const marked = cutAfter('colors [', 'Red');
+        const { all } = offeredAt(g, mm, marked);
+        const lits = all.filter(c => c.kind === 'literal');
+        expect(lits.map(c => c.label)).toEqual(['Red', 'GREEN', 'blue']);
+        const hover = analyzeText(text, parseText(text, g), g, mm).hoverAt(marked.indexOf(CUT));
+        expect(hover).not.toBeNull();
+        expect(lits[0].doc).toEqual(hover!.contents);
+        const lower = grammarOf(GARAGE, LOWER);
+        const lt = printTextModel(lower, objectsOf(GARAGE)).text;
+        const lk = lt.indexOf('colors [') + 'colors ['.length;
+        expect(completionsAt(lt, lk, lower, mm).filter(c => c.kind === 'literal').map(c => c.label)).toEqual(['red', 'green', 'blue']);
     });
 });
 
