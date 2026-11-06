@@ -296,7 +296,7 @@ on the canvas too is decision E7.
   1426-1430): the new object has no span until the text is applied or reprinted. The canvas selection then highlights
   nothing (decision E8: silent).
 - **Nameless objects** are printed with spans (R-TXT-45), so they select both ways like any other.
-- **Unprinted objects** (`unprinted`, R-TXT-21 (9) territory) have no span; the canvas selection highlights nothing.
+- **Unprinted objects** (`TextPrintReport.unprinted`, `printer.ts:55-79`) have no span; the canvas selection highlights nothing.
 - **Objects the canvas draws as an edge** (`irobj_*`) or not at all: `pickOnCanvas` finds no node; `SELECT_NODE` takes
   node ids only, so nothing is selected (E6).
 
@@ -310,3 +310,64 @@ reading of rc-dock is that an inactive tab's content is then unmounted, so Edito
 the text path does nothing; **not measured** here, the first visual lane measures it. Synced selection is therefore
 useful with the two side by side: by a drag of the tab today, or by opening the Text tab beside the canvas, as the
 generator tab does (`dockBeside`, `codegen/ui/canvasSelection.ts:76-88`): decision E9.
+
+## 7. Critical zone
+
+### 7.1 Every file each piece would touch, against CLAUDE.md §3.1 and §3.2
+
+| Piece | Files changed | §3.1 table | §3.2 trigger | Read or imported, unchanged |
+|---|---|---|---|---|
+| T10 pure splice | `codegen/textual/textReprint.ts` (new), `__tests__/textReprint.test.ts` (new) | no | no | `parser.ts` (`commentsOf`, `parseText`), `printer.ts` types |
+| T10 wiring | `codegen/textual/ui/TextualTab.tsx` (the `reprint` branch, the `TextSync` record gets an optional print-spans field) | no | no | none new |
+| Text to canvas | `codegen/textual/selectionSync.ts` (new, pure: innermost span, last-id guard, event filter), `ui/TextualTab.tsx`, `__tests__/selectionSync.test.ts` (new) | no | no | `codegen/ui/codeOrigins.ts` `pickOnCanvas` (which imports `editor-v2/utils/edgeSelectionTarget`), `codegen/ui/canvasSelection.ts` `modelPane`, `events/registry.ts`; EditorV2's `SELECT_NODE` listener consumed as it is |
+| Optional `_lastSelected` (E2) | same `ui/TextualTab.tsx` | no | no (`SetRootFieldAction` on a transient root key, outside `sync/`; not a creator, not `SetFieldAction`) | `joiner` `SetRootFieldAction` |
+| Canvas to text | `ui/TextualTab.tsx`, `ui/TextualTab.scss` | no | no | `editor-v2/utils/canvasSelection.ts` (the payload type, read only) |
+| Open beside the canvas (E9) | `ui/openTextualTab.tsx` | no | no | `codegen/ui/canvasSelection.ts` `dockBeside`, `shownCanvas` |
+
+**No piece is inside.** No file of the §3.1 table is changed (`useJjomSync.ts`, `useM1ReferenceEdges.ts`,
+`syncState.ts`, `canvasToJjom.ts`, `portDistribution.ts`, `VersionFixer.tsx`, `defaultViewTemplate.ts`, `DV.tsx`,
+`viewpoint/authoring/`, `viewpoint/ir/`, `problems/`), none is imported newly, and no D-layer write path of §3.2 is
+reached: no `DVertex.new`, `DVoidEdge.new2/new3`, no `SetFieldAction`, no `TRANSACTION`. The one store write (E2) is
+the tree view's own pattern (`TreeViewContent.tsx:1216-1220`). Explicitly **not** reused: `useJjomSelection`
+`selectElement`, which imports `sync/syncState` and writes `isSelected` on D-objects inside a `TRANSACTION`
+(§4.2); reusing it would enter the zone.
+
+What would enter it, and is left out of E: selecting edges from the text (`SELECT_NODE` takes nodes only; a new event
+or an edge branch in `EditorV2.tsx:1165-1189` is under `components/editor-v2/`, not in the §3.1 table but a canvas-layer
+change the prompt does not name, Rule 20) and publishing edge selections (`EditorV2.tsx:1605-1630`). Decision E6.
+
+### 7.2 Layer Impact Report, draft for the one store write (E2)
+
+Not required (no §3.2 trigger), drafted because `_lastSelected` is read by other layers and Alfonso may want it on file.
+
+```
+LAYER IMPACT REPORT (draft, E2: the Text tab writes _lastSelected on a caret move)
+
+Layers touched:
+  [x] D-layer (Redux raw data): the root key _lastSelected only
+  [ ] L-layer (computed proxies)
+  [ ] JjOM (model entities)
+  [x] Canvas v2-flow (ReactFlow nodes/edges): React Flow's local `selected`, through SELECT_NODE (no store write)
+  [ ] Canvas classic
+  [ ] Sync layer (useJjomSync hooks)
+  [ ] Persistence (VersionFixer / jsxString)
+
+D-layer:
+  - What changes: _lastSelected = { node: '', view: '', modelElement: <id> }, as the tree view writes it.
+  - What does NOT change: idlookup, isSelected of any graph element, the undo history (reducer.ts:1259-1261, 1352, 1372).
+  - Cross-layer interaction: the Properties panel, Jodie and the palette read _lastSelected.modelElement
+    (EditorV2.tsx:1640-1647); they follow the caret.
+  - Side-effect safety: useJjomSync reads idlookup and graph sub-elements, not _lastSelected; the Text tab's
+    useSelector reads idlookup only (TextualTab.tsx:1017), so no re-render loop.
+Canvas v2-flow:
+  - What changes: the selected node and, when it is outside, the viewport (revealViewport, 300 ms).
+  - What does NOT change: D-objects, vertices, edges, positions.
+  - Cross-layer interaction: React Flow's selection is published back (CANVAS_SELECTION_CHANGED), §6.1.
+  - Side-effect safety: Delete in the canvas acts on React Flow's selection (EditorV2.tsx:2811-2815, 3124-3126), only
+    for a key pressed inside the canvas's container, as after a click.
+
+Smoke-test scenarios potentially affected:
+  - click a node, then the tree view: Properties shows the last one clicked.
+  - open a model, Jodie targets it (useJjomSelection.ts:207-215 unchanged).
+  - a caret move in the text, then Cmd+Z in the canvas: undoes the last model change, not the selection.
+```
