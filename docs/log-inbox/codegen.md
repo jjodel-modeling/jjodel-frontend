@@ -2324,3 +2324,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: T10 is unimplemented (reprint sets the whole value, comments lost); recursive per-object splice proposed. Selection: SELECT_NODE in, CANVAS_SELECTION_CHANGED out, both existing; no §3.1 file, no §3.2 trigger; optional _lastSelected write drafted as an LIR. Not measured: Monaco cursor sources on typing, rc-dock unmount of a hidden canvas (R1, R2). Five lanes E1a..E3, decisions E1..E10 to ratify.
 **Prompt document name**: 2026-11-06 23:37
+
+## 2026-11-07 — merge: textual-e-sync into alfonso-frontend-jjtl (P-2026-11-07-0017)
+**Prompt**: `claude_2026-11-07_0017_prompt_merge_textual-e-sync.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e-sync` at `34035b3a0` into `alfonso-frontend-jjtl`, merge base `8049bf81b`, 10 commits on the branch side.
+**Files touched**: merge `a5cb8aafb`: 3 files from the branch side (`docs/discovery/discovery_2026-11-06_textual_e_sync.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5cb8aafb` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14495 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step E discovery)
+**Notes**: Rollback tag `pre-textual-e-sync` on `9a5a63048` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0017/result.json`.
+**Prompt document name**: 2026-11-07 00:17
