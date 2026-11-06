@@ -35,7 +35,7 @@ import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
-import { isApplicableParse, parseText } from '../parser';
+import { commentsOf, isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
@@ -547,17 +547,63 @@ export interface DeletionGuard {
     readonly total: number;
     /** Every printed object goes (R-TXT-43). */
     readonly all: boolean;
+    /** Step D lane D1 (R-TXT-37, R-TXT-53 D7): the deleted objects a comment of the text covers, `Class name`, in text order. */
+    readonly commented?: readonly string[];
 }
 
-/** The guard of an applicable plan: `GUARD_ROOTS` deleted subtrees or more, or every object; null otherwise. */
-export function deletionGuard(base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan): DeletionGuard | null {
+/** What the pause read, for the guard to tell an object commented out from one deleted (D1). */
+export interface GuardRead {
+    readonly grammar: ConcreteGrammar;
+    readonly text: string;
+    readonly parsed: Pick<TextParseResult, 'tree'>;
+    /** The previous parse's spans, where the edit carried them. */
+    readonly carried: readonly ObjectSpan[];
+}
+
+/**
+ * Step D lane D1 (R-TXT-37, R-TXT-53 D7): the carried spans of the deleted subtrees that lie inside a comment of the
+ * text, in text order. A run of comments separated by whitespace only covers as one, for a block commented line by
+ * line; a span collapsed by a deletion is never covered.
+ */
+export function commentedOut(plan: TextEditPlan, read: GuardRead): ObjectSpan[] {
+    if (!plan.diff || !read.parsed.tree) return [];
+    const runs: [number, number][] = [];
+    for (const c of [...commentsOf(read.parsed.tree, read.grammar)].sort((a, b) => a.start - b.start)) {
+        const last = runs[runs.length - 1];
+        if (last && c.start >= last[1] && !read.text.slice(last[1], c.start).trim()) last[1] = Math.max(last[1], c.end);
+        else runs.push([c.start, c.end]);
+    }
+    const roots = new Set(plan.diff.ops.flatMap(op => op.op === 'delete' ? [op.model] : []));
+    return read.carried
+        .filter(s => roots.has(s.id) && s.end > s.start && runs.some(([from, to]) => from <= s.start && s.end <= to))
+        .sort((a, b) => a.start - b.start);
+}
+
+/** An object as the guard names it, as the confirmation panel does: `Class name`, or `Class (unnamed)`. */
+function guardLabel(g: ConcreteGrammar, o: TextObject | undefined, id: string): string {
+    if (!o) return id;
+    const name = identityOf(g, o);
+    return name === null ? `${o.cls} (unnamed)` : `${o.cls} ${name}`;
+}
+
+/**
+ * The guard of an applicable plan: `GUARD_ROOTS` deleted subtrees or more, or every object, or, given what the pause
+ * read, a deleted object a comment covers (D1); null otherwise.
+ */
+export function deletionGuard(base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan, read?: GuardRead): DeletionGuard | null {
     if (!plan.diff || !plan.lines?.length) return null;
     const gone = deletedObjects(base.mm, base.objects, plan.diff.ops);
     if (!gone.size) return null;
     const roots = plan.diff.ops.filter(op => op.op === 'delete' && gone.has(op.model)).length;
     const all = base.objects.every(o => gone.has(o.id));
+    const byId = new Map(base.objects.map(o => [o.id, o]));
+    const commented = read ? commentedOut(plan, read).map(s => guardLabel(read.grammar, byId.get(s.id), s.id)) : [];
+    if (commented.length) return { deleted: gone.size, total: base.objects.length, all, commented };
     return all || roots >= GUARD_ROOTS ? { deleted: gone.size, total: base.objects.length, all } : null;
 }
+
+/** The objects a guard names, three at most, then how many more. */
+const commentedText = (names: readonly string[]): string => `${names.slice(0, 3).join(', ')}${names.length > 3 ? ` (+${names.length - 3})` : ''}`;
 
 /** A marker of the text: the offsets and the message. */
 export interface TextMark {
@@ -635,7 +681,8 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
         case 'unchanged': return { text: 'No change', error: false };
         case 'cut': return { text: `Cut · paste to move ${s.count === 1 ? 'it' : 'them'}`, error: false };
         case 'guard': return {
-            text: s.all ? `Not applied · deletes every object (${s.total}), confirm below` : `Not applied · deletes ${s.deleted} objects of ${s.total}, confirm below`,
+            text: s.commented?.length ? `Not applied · comments out ${commentedText(s.commented)}, confirm below`
+                : s.all ? `Not applied · deletes every object (${s.total}), confirm below` : `Not applied · deletes ${s.deleted} objects of ${s.total}, confirm below`,
             error: false,
         };
         case 'kept': return { text: 'Not applied · deletions cancelled', error: true };
@@ -1318,10 +1365,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const ev = evidence(r.base);
         const shared = sessionRef.current?.current();
         const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
-        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed, carriedRefs(), reuse);
+        const carried = carriedSpans();
+        const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse);
         setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
-        // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
-        if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
+        const read: GuardRead = { grammar: r.base.grammar, text, parsed, carried };
+        // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones. D1: an object
+        // commented out keeps its span, so the next pause still finds it inside the comment.
+        if (plan.diff) setDecorations([...certainSpans(parsed, plan.diff.match), ...commentedOut(plan, read)]);
         const d = editDecision(text, sync, parsed, plan, staleRef.current);
         // T7 D-5: a cut's objects are not deleted on the pause; their paste, identical, moves them.
         const held = heldByCut(clipRef.current, r.base, plan);
@@ -1333,8 +1383,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setConfirm(d.kind === 'confirm'
             ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
             : null);
-        // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first.
-        const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan) : null;
+        // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first. D1: so
+        // does an object commented out, whatever else the pause carries.
+        const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan, read) : null;
         if (guard) {
             guardTextRef.current = { text, ...(confirmed ? { confirmed } : {}) };
             setStatus({ kind: 'guard', ...guard });
@@ -1650,7 +1701,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                             <section className="textual-tab__confirm" aria-label="Deletions to confirm">
                                 <header className="textual-tab__confirm-head">
                                     <i className="bi bi-exclamation-triangle" aria-hidden="true" />
-                                    <span>{status.all
+                                    <span>{status.commented?.length
+                                        ? `The text comments out ${commentedText(status.commented)}: confirm deletes ${status.deleted === 1 ? 'it' : `${status.deleted} objects`} from the model`
+                                        : status.all
                                         ? `The text deletes every object of the model (${status.total})`
                                         : `The text deletes ${status.deleted} objects of ${status.total}`}</span>
                                     <button type="button" className="textual-tab__create" onClick={onGuardConfirm}
