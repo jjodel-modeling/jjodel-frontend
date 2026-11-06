@@ -2116,3 +2116,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: non applicabile: B1 core only, no UI
 **Notes**: Rollback tag `pre-textual-block-tokens` on `27e38755c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-0030/result.json`.
 **Prompt document name**: 2026-11-06 00:30
+
+## 2026-11-06 — feat(codegen): B2 and L2b, per-block and style tokens editable from the Syntax form and the EBNF mode (P-2026-11-05-2350, P-2026-11-06-0100)
+**Prompt**: `claude_2026-11-05_2350_prompt_textual_block_tokens_b2_l2b.md` items (1)-(7), continued after the soft context ceiling by `claude_2026-11-06_0100_prompt_textual_block_tokens_b2_l2b_cont.md` from the 2350 handoff: B2 form fields and EBNF edit of the per-block tokens, L2b `<base> (custom)` picker and a Reset on every token row.
+**Files touched**: `frontend/src/codegen/textual/syntaxForm.ts`, `ui/SyntaxForm.tsx`, `ui/TextualTab.tsx`, `__tests__/blockTokens.test.ts`, `__tests__/styleTokens.test.ts`; commits `acd8e599b` (1), `73e84d110` (2), `941fc26fb` (3), `f47568f91` (4); this entry and the two Status lines, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f47568f91`: typecheck exit 0; vitest 14381 passed, 2 skipped, 3 red at import (baseline) and `laneRun.test.ts` red in the full run, 145/145 rerun alone; build exit 0; check:codegen-lazy 9/9 in both modes; check:docs red only on Check B, the trunk's `hw-notation.md:1307` entry (no Corregge, Causa), not this lane's.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 10/10 on port 3536, light, scale 1, crops `l2b-1..2`, `b2-1..5` in `~/.jjodel-lanes/P-2026-11-06-0100/`; GO visivo in attesa.
+**Notes**: Benches: (1) 26 mutants, 25 killed, survivor removed; (2) 14, 12 then 14 after a punctuation-acceptance test; (3) 6/6 plus the island guard; (4) 8/8. D9 crop: the side written to the store by a direct call, since the form offers the row on a class with no block only while the record sets one (handoff decision 2). Reset layout inline (SyntaxForm.scss out of scope); `Field` exported for the test.
+**Prompt document name**: 2026-11-06 01:00

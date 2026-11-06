@@ -47,6 +47,7 @@ import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, storedSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
 import { STYLE_CATALOG, isStyleBase } from '../style';
 import type { StyleBase } from '../style';
+import { STYLE_TOKEN_KEYS } from '../annotations';
 import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotations';
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
@@ -944,6 +945,16 @@ export function styleSwitchRecord(decoded: DecodedSyntax, base: StyleBase): Synt
     return styleBaseOf(decoded) === base ? null : withStyleBase(decoded.record, base);
 }
 
+/**
+ * The picker's name for `base` (lane L2b): `<name> (custom)` for the base in effect when the record overrides a
+ * language-wide token, which a switch drops (R-TXT-49 D10); the per-block tokens and the options do not count.
+ */
+export function styleEntryName(decoded: DecodedSyntax, base: StyleBase): string {
+    const style = decoded.record?.style;
+    const custom = styleBaseOf(decoded) === base && !!style && STYLE_TOKEN_KEYS.some(k => style[k] !== undefined);
+    return custom ? `${STYLE_CATALOG[base].name} (custom)` : STYLE_CATALOG[base].name;
+}
+
 /** The picker's entries, in the catalog's order. */
 const STYLE_ENTRIES = (Object.keys(STYLE_CATALOG) as StyleBase[]).map(base => ({ base, name: STYLE_CATALOG[base].name }));
 
@@ -962,7 +973,7 @@ export interface EbnfIsland {
 
 /**
  * The EBNF of a draft's grammar, `draftPreview(...).ebnf` (both print it with `concreteGrammarEbnf`), with an island on
- * every element literal: none on a style token (step 2), a fixed token (D11) or an enumeration literal (D8), for which
+ * every element literal: none on a fixed token (D11) or an enumeration literal (D8), for which
  * `literalField` has no field. Null without a grammar, a draft that does not derive.
  */
 export function ebnfOfDraft(mm: TextMetamodel, ids: ElementIds, grammar: ConcreteGrammar | undefined): { readonly text: string; readonly islands: readonly EbnfIsland[] } | null {
@@ -1557,7 +1568,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         <i className="bi bi-type" aria-hidden="true" />
                         <select className="textual-tab__style-select" aria-label="Notation style" value={styleBaseOf(decoded)}
                                 disabled={!styleFree} onChange={e => onStyle(e.target.value)}>
-                            {STYLE_ENTRIES.map(s => <option key={s.base} value={s.base}>{s.name}</option>)}
+                            {STYLE_ENTRIES.map(s => <option key={s.base} value={s.base}>{styleEntryName(decoded, s.base)}</option>)}
                         </select>
                     </label>
                 )}

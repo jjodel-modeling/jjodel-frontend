@@ -16,7 +16,7 @@ import type { ElementIds, EnumSubset, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { DecodedSyntax } from '../syntaxRecord';
 import {
-    advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
+    advancedInEffect, blockTokenFields, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
     parseSubsets, parseTokens, setField, styleTokenFields, subsetsText, tokensText,
 } from '../syntaxForm';
 import type { ElementKey, FieldRef, FormElement, FormField, FormFault, InterfaceMode } from '../syntaxForm';
@@ -103,7 +103,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
     };
 
     const fieldList = (element: ElementKey): ReactNode => {
-        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : [])];
+        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : blockTokenFields(mm, ids, element, interfaceMode, draft))];
         const hidden = interfaceMode === 'basic' ? advancedInEffect(draft, element) : 0;
         return (
             <>
@@ -152,7 +152,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
                 </section>
             );
         }
-        const classFields = fieldsOf(mm, ids, current.key, interfaceMode);
+        const classFields = [...fieldsOf(mm, ids, current.key, interfaceMode), ...blockTokenFields(mm, ids, current.key, interfaceMode, draft)];
         return (
             <>
                 <section className="syntax-form__group" aria-label={current.name}>
@@ -281,8 +281,15 @@ interface FieldProps {
     readonly onChange: (ref: FieldRef, value: unknown) => void;
 }
 
-/** One field: an 11 px label, its input, and a finding line of fixed height, empty or not, so nothing moves. */
-function Field({ element, field, draft, ids, mm, findings, onChange }: FieldProps) {
+/** A token row's input and Reset, 8 px apart (L2b); inline, the form's stylesheet is not this lane's. */
+const RESET_ROW = { display: 'flex', alignItems: 'center', gap: 8 } as const;
+const RESET_INPUT = { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 } as const;
+
+/**
+ * One field: an 11 px label, its input, and a finding line of fixed height, empty or not, so nothing moves. A token
+ * override (`reset`) has a Reset beside its input that clears it, always rendered and hidden while unset (L2b).
+ */
+export function Field({ element, field, draft, ids, mm, findings, onChange }: FieldProps) {
     const ref: FieldRef = { element, field: field.id };
     const id = `syntax-${fieldKey(ref).replace(/[^A-Za-z0-9_-]/g, '_')}`;
     const value = fieldValue(draft, ref);
@@ -338,7 +345,16 @@ function Field({ element, field, draft, ids, mm, findings, onChange }: FieldProp
     return (
         <div className={'syntax-form__field' + (field.input === 'toggle' ? ' syntax-form__field--toggle' : '')}>
             <label className="syntax-form__label" htmlFor={id}>{field.label}</label>
-            {input}
+            {field.reset ? (
+                <div style={RESET_ROW}>
+                    <div style={RESET_INPUT}>{input}</div>
+                    <button type="button" className="syntax-form__button" aria-label={`Reset ${field.label}`} disabled={value === undefined}
+                            style={value === undefined ? { visibility: 'hidden' } : undefined}
+                            title={field.placeholder ? `Back to ${field.placeholder}` : 'Back to the inherited tokens'} onClick={() => onChange(ref, undefined)}>
+                        <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                    </button>
+                </div>
+            ) : input}
             <div className={'syntax-form__finding' + (first ? ` syntax-form__finding--${first.level}` : '')} title={message || undefined}
                  role={first?.level === 'error' ? 'alert' : undefined}>
                 {message}
