@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-06-2225
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (follows the core lane P-2026-11-06-2150; this lane touches no core file)
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · 9baae8d88
 Request: none (Alfonso: «ok», 2026-11-06 21:45, to the chat's amendments 3 and 4 of option (c))
 Depends: P-2026-11-06-2150
 Corregge: —

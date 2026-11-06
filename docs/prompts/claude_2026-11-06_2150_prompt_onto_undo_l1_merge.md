@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-06-2150
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (core: `redux/reducer/reducer.ts`; Layer Impact Report in the discovery, §6)
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · 197ae1fd1
 Request: none (Alfonso: «ok», 2026-11-06 21:45, to option (c) with the chat's two amendments and the core go-ahead)
 Depends: P-2026-11-06-2105
 Corregge: —
