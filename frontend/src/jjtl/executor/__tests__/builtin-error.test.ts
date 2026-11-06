@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 /**
  * A builtin that fails inside a JjTL expression stops the mapping with an
  * error, on both parser paths (R-FA-11, P-2026-11-03-1135): the message names
- * the builtin and the expression, and the run reports it in `errors`. A name
+ * the builtin, the expression and, as a failing method does under R-FA-12, the
+ * rule and the source element (R-FA-13, P-2026-11-06-2305); the run reports it
+ * in `errors`. A name
  * that resolves to nothing is not a failing builtin: it keeps its warning and
  * the value `null`.
  *
@@ -67,6 +69,8 @@ async function run(body: string, withSource: boolean) {
 
 const FAILED_EVAL = /^Expression evaluation failed/;
 
+const ORIGIN = " (rule 'Core -> M', source element 's')";
+
 describe.each([
     ['legacy parser (no source)', false],
     ['JjEL delegation (source)', true],
@@ -84,7 +88,7 @@ Core c -> M {
         expect(result.success).toBe(false);
         expect(result.errors).toEqual([
             "Failed to map (creation) -> regs: Builtin 'range' failed in expression at line 7, column " +
-            `${'        forall i in '.length + 1}: range() takes integers, got null`,
+            `${'        forall i in '.length + 1}${ORIGIN}: range() takes integers, got null`,
         ]);
         expect(result.warnings.filter(w => FAILED_EVAL.test(w))).toEqual([]);
     });
@@ -101,8 +105,36 @@ Core c -> M {
         expect(result.success).toBe(false);
         expect(result.errors).toEqual([
             "Failed to map (creation) -> nregs: Builtin 'range' failed in expression at line 6, column " +
-            `${column}: range() takes integers, got null`,
+            `${column}${ORIGIN}: range() takes integers, got null`,
         ]);
+        expect(result.warnings.filter(w => FAILED_EVAL.test(w))).toEqual([]);
+    });
+
+    it('in a guard, the run stops with an error naming the rule and creates nothing', async () => {
+        const result = await run(`
+Core c -> M where range(missing) == 2 {
+    nregs := 1
+}`, withSource);
+
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/^Execution failed: Builtin 'range' failed in expression at line 5, column \d+/);
+        expect(result.errors[0]).toContain(`${ORIGIN}: range() takes integers, got null`);
+        expect(result.warnings.filter(w => FAILED_EVAL.test(w))).toEqual([]);
+    });
+
+    it('in a helper body, the binding that calls it stops with an error naming the rule', async () => {
+        const result = await run(`
+helper f(x: Any) -> Int { range(x.missing) }
+
+Core c -> M {
+    nregs := f(c)
+}`, withSource);
+
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/^Failed to map \(creation\) -> nregs: Builtin 'range' failed in expression at line 8, column \d+/);
+        expect(result.errors[0]).toContain(`${ORIGIN}: range() takes integers, got null`);
         expect(result.warnings.filter(w => FAILED_EVAL.test(w))).toEqual([]);
     });
 
