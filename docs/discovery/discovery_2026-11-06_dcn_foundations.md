@@ -220,3 +220,110 @@ from the fixture's declarations (`:68-102`, `:111-120`).
 | `Operation` with `pre`, `body`, `redefines`, `parameters` | `Operation extends NamedElement` (`:72`), `Parameter` exists (`:440`) | additive features, fits |
 | `Monitor`, `CoherenceConstraint`, `TrajectoryPattern` and its two subclasses | none | new metaclasses, fit |
 | Associations, links | R-OI associations, `link` record | links wait for S4 (R-OI-13: «links wait for S4»); a DCN guard reading `self.ref.x` across a link waits with them |
+
+## 3. A second simulation nucleus
+
+### 3.1 What is Petri-specific, what is nucleus-neutral
+
+**Read**, on HEAD. H3 is falsified for the run state, the codecs and the watches, and holds for the compiler, the
+step and part of the panel's text.
+
+| Piece | Where | Verdict |
+|---|---|---|
+| σ | `model/simulation/netTypes.ts:107-117` `SimState { marking; attrs; presentation; derived? }` | neutral except `marking`; `attrs` is «Element id (the model id for a global) → attribute → value» (`:109`) |
+| STC | `netTypes.ts:138-190` `NetStc`, «The STC of the Petri core», `shape: 'control-flow' \| 'petri'` | Petri |
+| Compiled form | `netTypes.ts:252` `CompiledNet` (places, transitions with preset/postset arcs `:199-240`) | Petri |
+| Candidates | `netStep.ts:192-221`: `presetEnabled`, inhibitors, `else`, `unsafe` | Petri |
+| Termination | `netStep.ts:77-95` `terminated`: activity final and final places over the marking | Petri |
+| Step and halts | `netStep.ts:274` `step`; `HaltReason` `netTypes.ts:354-364` | `unsafe` is Petri; `domain`, `double-assignment`, `action-defect`, `undeclared`, `derived`, `read-only` are neutral |
+| Outcome and status | `netTypes.ts:370-377`: `fired \| discard \| quiescence \| halted \| inadmissible`; `NetRunStatus = 'Not started' \| 'Running' \| 'Terminated' \| 'Deadlock' \| 'Halted'` | neutral (the five run states) |
+| Oracles | `netTypes.ts:289-318` `GuardOracle(site, event, state)`, `ActionOracle(site, event, state)` returning `SimAssignment { element; attr; value }` | neutral in shape; `ActionSite` names Petri sites |
+| Run record | `components/editor-v2/sim/simRunState.ts:81-117` `SimRun { net: CompiledNet; config: NetConfiguration; ... trace?; keptConfigs?; snapshot? }` | coupled through `net` |
+| Trace step | `simRunState.ts:62-66` `SimTraceStep { event; selector; kind; ... }` | neutral |
+| Policy: «Choices: Ask \| Random», k | `simRunState.ts:123-126` `SimPolicy { choices; k }` | neutral |
+| Step back, slider | `simRunState.ts:320-335` `configAt` replays with `step(run.net, ...)` (`:331`); `simStepBack` `:406`, `simSetView` `:431` | neutral except the one call at `:331` |
+| Scenarios | `model/simulation/scenarioCodec.ts:5-13`: per step `event`, `selector`, `kind`, `inputs` (element id, attribute name, value), `expect` a JjEL text | neutral, no Petri field |
+| Watches | `model/simulation/watchEvaluator.ts:29-31` `evaluateWatch(watch, snapshot, net: Pick<CompiledNet, 'modelId' \| 'places'>, state: SimState)` | neutral: a nucleus with no places passes an empty set |
+| I/O board and Clock | `simBoardClock.ts`; R-SIM-136 `clockEnables` through `panelInputs(runStatus(run), structuralInputs(...))`, `netStep.ts:368` `structuralInputs(net, state)` | the device side is neutral; the «enabled» test is Petri |
+| Panel text | `simBridge.ts:947` `candidateLabel(net, ...)`, `:973` `markingLine`, `:1095` `markingChips`, `:1485` `lastStepText` | Petri (names a transition, a marking) |
+| Reset | `simBridge.ts:724-754` `startRun`: `netStcFromRoles(bag)` (`:732`), `compileNet(...)` (`:743`) | the single entry: Petri only |
+
+### 3.2 Where a second nucleus registers
+
+**Read.** The profile does not choose the engine, by decision: R-SIM-47 «Motore ed esportatore leggono i ruoli
+risolti, mai il profilo». `ProfileShape` is `'controlFlow' | 'petri'` (`simProfiles.ts:19`) and the role catalog is
+one list (`roleCatalog.ts:24-31`, groups `general | controlFlow | petri | events | data | output`, `:35`). So the
+DCN profile of spec §8 is a new system profile row plus a new role group `dcn` with the roles of spec §8 (Viewpoint,
+dynamic classifier, Invariant, Operation, Redefinition, Monitor, Instance-of), and the nucleus is chosen at
+`startRun` by which role set is bound: `netStcFromRoles(bag)` today returns `null` without the Petri roles
+(`simBridge.ts:733` «The simulation roles are incomplete.»); a `dcnStcFromRoles(bag)` beside it, tried first or
+second by a fixed rule, picks the nucleus. That keeps R-SIM-47 (no engine reads the profile id) and needs a new
+`ProfileShape` value only if the profile editor's closure of roles per shape (`simProfiles.ts:72-95`,
+`OTHER_SHAPE_GROUP`, `closureRoles`) must hide the Petri groups under DCN, which it must for the dialog to make sense.
+
+The coupling to cut is the run record: `SimRun.net: CompiledNet` and the replay call at `simRunState.ts:331`. The
+smallest cut is a nucleus field on the run, `{ initial; step(cfg, selector, oracles); structuralInputs(state);
+terminated(state) }`, set by `startRun`, with the Petri nucleus as the default implementation over `net`; `configAt`,
+`simStepBack`, the clock's enabling test and Play call the field. Every reader of `run.net` that is Petri text
+(`candidateLabel`, `markingLine`, `markingChips`, `lastStepText`, `defectsLine`) needs a DCN twin or a nucleus
+method; there are about a dozen such readers in `simBridge.ts` (window `:908-1184`, by the export list).
+
+**Measured as a reading, not run:** a guarded command is a Petri transition with an empty preset and postset.
+With no places, `presetEnabled` is vacuously true, `terminated` is false (`netStep.ts:85` `if (final === null)
+return false;`), the guard decides, and the actions assign `attrs` with the `domain` and `double-assignment` halts
+of the core. An invocation is the event of R-SIM-16 and a tick is a clock-bound event (R-SIM-122). So the DCN
+compiler could emit a `CompiledNet` with no places and run on the existing `step`, and every piece of the table
+above would work unchanged. R-DCN-8 says the nucleus is «next to the Petri nucleus and not inside it»; whether a
+separate compiler emitting the shared compiled form is «inside» is Q3, not reopened here.
+
+### 3.3 σ as slot values in the snapshot, step back and scenario codecs
+
+**Read.** It fits as it is. A slot value is `attrs.get(instanceId).get(featureKey)`, `marking` is the empty map; the
+kept configurations hold `NetConfiguration` (`simRunState.ts:112` `keptConfigs?: readonly NetConfiguration[]`),
+which is σ plus the event; a scenario step names inputs by (element id, attribute name) (`scenarioCodec.ts:12-13`).
+Two encodings to fix, both strings in the existing types: the event of an invocation `op(o, Op, args)` (a
+`(instance, operation)` pair, while `SimTraceStep.event` is an event instance id) and the selector of a contribution
+(a `(viewpoint, operation or monitor)` pair under Interleave). Neither needs a codec change if the nucleus owns an
+id per pair; both change the scenario text if the ids are composite strings, so they are decided before the first
+scenario is saved (Q6).
+
+Arguments: spec §6 «Parameters are event attributes (`event.a`, R-SIM-144)». R-SIM-144 reads the attributes of an
+event **instance** frozen in M; R-SIM-16 «gli eventi con parametri liberi sono fuori scope». An invocation with
+free arguments is therefore either an event instance per argument tuple (one button each) or an input of R-SIM-88
+asked at the press (`netTypes.ts:96-104` `InputRead`). Q7.
+
+### 3.4 How actions assign today, and what a slot write needs
+
+**Read.** An action assigns σ, never M, and only through the state operator:
+
+- `jjel/types/ast.ts:395-403`: «An action: `<target> := <expression>` ... the target is a state access whose
+  attribute is never `marked` or `tokens`», `target: StateAccessExpr;`, i.e. `expr.[attr]` (`ast.ts:318-327`).
+- `jjel/lexer/lexer.ts:117` refuses `:=` outside action mode: «An action is written
+  '<target>.[attribute] := <expression>'».
+- `model/simulation/actionEvaluator.ts:18-26`: the oracle returns assignments; «The core applies them together and
+  halts on a double assignment, an undeclared target or a value outside its domain (`netStep.ts`)». An assignable
+  target is a declared state attribute: `StateAttributeDecl` (`netTypes.ts:48-61`) whose `metaclass` is «DClass id:
+  every instance that is a kind of it carries the attribute».
+- Reads of model slots go to the frozen M: `model/simulation/guardContext.ts:4-9` «`freezeSnapshot` runs once per
+  run over the model M ... deep-frozen», with `self` a pool handle from `handleById` (`guardContext.ts:58-60`).
+
+Two gaps for DCN, the second not anticipated by the prompt:
+
+1. **Slot writes.** `self.battery := e` does not parse (the target is not a state access). Either DCN writes
+   `self.[battery]` and the nucleus declares one state attribute per slot from the R-OI closure, keyed by the
+   instance and the feature rather than by an M2 metaclass (the declarations have no M1-classifier key today), or
+   the action grammar admits a member target in a DCN mode. The first needs no grammar change; the second reads as
+   the chapter writes it.
+2. **Slot reads on R-OI do not resolve as `self.battery` at all.** On the R-OI level an instance is an
+   `InstanceSpecification` whose linguistic features are `classifier` and `slots`
+   (`scripts/probe/uml-class-object-fixture.ts:98-99`); the value of `battery` is the `value` of the literal held by
+   the `Slot` whose `definingFeature` is the `battery` property. The JjEL pool handle exposes the linguistic
+   features, so `self.battery` is an absent identifier, and the R-OI front has no ontological JjEL accessor (R-OI-11:
+   «a JjEL `closure` operator is its own lane, not part of this front»). Whatever the write form, the DCN nucleus
+   must bind `self` (and every instance reachable by name) to a handle built from σ, one member per slot of the
+   closure, at each evaluation; the frozen pool cannot serve, since σ changes per step and the snapshot refuses
+   caller-bound functions (`guardContext.ts:39-41`). Watches over slots (coherence φ, spec §7) need the same handle
+   in `evaluateOutput`.
+
+Recommendation (Q4): reads `self.battery` through σ-backed handles of the DCN nucleus, writes `self.battery := e`
+in a DCN action mode, decided in the languages concern together with `self.in(V::D)`, in slice 3.
