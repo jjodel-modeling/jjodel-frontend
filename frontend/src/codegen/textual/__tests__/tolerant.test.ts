@@ -464,6 +464,34 @@ describe('(ix) D3a: structured fixes on parse errors (P-2026-11-06-2328; report 
         }
     });
 
+    it('(3) a misspelled keyword or literal where the expected set holds a near one: the fix replaces it', () => {
+        const cases: [string, string, string][] = [
+            ['borrowedBy', 'borowedBy', 'borrowedBy'],
+            ['Library', 'Libary', 'Library'],
+            ['FICTION', 'FICTON', 'FICTION'],
+        ];
+        for (const [from, bad, word] of cases) {
+            const broken = text.replace(from, bad);
+            const e = fixed(broken).errors[0];
+            expect(e.message, bad).toMatch(/^expected /);
+            const start = text.indexOf(from);
+            expect(e.fix, bad).toEqual([{ title: `replace with "${word}"`, start, end: start + bad.length, text: word }]);
+            expect(apply(broken, e.fix![0])).toBe(text);
+        }
+    });
+
+    it('(3) a style word of the Pascal base, misspelled, is replaced by the near one the parse expected', () => {
+        const pascal = tolerantCases('pascal')[0];
+        const print = printTextModel(pascal.g, libraryObjects(2, 2)).text;
+        const close = print.lastIndexOf(pascal.g.style.blockClose[0]);
+        const word = pascal.g.style.blockClose[0];
+        expect(word).toMatch(/^\w{3,}$/);
+        const broken = `${print.slice(0, close)}${word.slice(0, -1)}${print.slice(close + word.length)}`;
+        const fix = fixed(broken, pascal.g).errors.flatMap(e => e.fix ?? []).filter(f => f.text === word);
+        expect(fix.length, broken).toBeGreaterThan(0);
+        expect(apply(broken, fix[0])).toBe(print);
+    });
+
     it('(4) without `fixes`, no error carries a fix', () => {
         const r = parseText(text.replace('Library city {', 'Library city'), LIB.g);
         expect(r.errors.length).toBe(1);

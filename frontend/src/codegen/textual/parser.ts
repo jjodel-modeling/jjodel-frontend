@@ -1421,7 +1421,21 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const isRecovered = (n: Building): boolean => n.state !== 'complete' || !!n.orphan;
     // Two tiers (step A): the syntax errors first; after one, a reference error may follow from it, and is a warning.
     const byStart = (a: TextParseError, b: TextParseError): number => a.start - b.start;
-    const syntax = errors.slice(0, syntaxCount).sort(byStart);
+    // D3a (3), report §4.3: a word where the parse expected a keyword, a style token or a literal near it (the expected set
+    // of D2a at that word, from a second parse under a cursor) is that word misspelled; the fix writes the near one in its
+    // place, nearest first.
+    const misspelt = (e: TextParseError): TextParseError => {
+        if (!options.fixes || e.fix || !e.message.startsWith('expected ')) return e;
+        const t = toks.find(x => x.start === e.start);
+        if (!t || t.k !== 'ID') return e;
+        const at = parseText(text, g, { cursor: t.start, ...(options.keep ? { keep: options.keep } : {}) }).expected ?? [];
+        // One token for one token: the first word of a multi-word open or close; the rest, when missing, is an error of its own.
+        const words = at.flatMap(x => (x.kind === 'lit' ? [x.matcher.slice(3)] : (x.kind === 'kw' || x.kind === 'block') && x.words?.length ? [x.words[0]] : []));
+        const near = [...new Set(words)].filter(w => /^\w/.test(w) && w !== t.v)
+            .map(w => ({ w, d: editDistance(t.v.toLowerCase(), w.toLowerCase()) })).filter(x => x.d <= nearBound(t.v)).sort((a, b) => a.d - b.d);
+        return near.length ? { ...e, fix: near.map(({ w }) => ({ title: `replace with "${w}"`, start: t.start, end: t.end, text: w })) } : e;
+    };
+    const syntax = errors.slice(0, syntaxCount).sort(byStart).map(misspelt);
     const linked = errors.slice(syntaxCount).sort(byStart);
     const cause = syntax[0];
     const tiers = [...syntax, ...(cause ? linked.map(e => ({ ...e, message: `${e.message} (may follow from the error at ${cause.line}:${cause.col})`, secondary: true as const, severity: 'warning' as const })) : linked)];
