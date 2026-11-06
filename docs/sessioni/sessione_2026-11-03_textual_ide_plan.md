@@ -31,3 +31,26 @@ T7 finishes and merges, with the rule on positional paths settled (`docs/discove
 ## Out for now
 
 Debugger, terminal, multi-file editing. The minimap only if Monaco offers it at no cost. References between models stay a later question.
+
+## Status after step C (2026-11-06)
+
+Step C is closed. Alfonso's scope (2026-11-05 15:33): close C, stop before D.
+
+**Delivered, merged into `alfonso-frontend-jjtl`:**
+
+- C (expression notation, annotations form): `4325ec678`.
+- C1 (operators, precedence climbing), `fe6eed263`; C1e (names), `ddbf72645`; nameless objects in the core (R-TXT-45), `c7cd7e479`.
+- C2a/C2c and C2b (the Syntax form), `a0817b92e` and `c3a469c71`; C2d (the `: <Class>` chip), `f1bef5364`.
+- C3b (Indentation layout, line-aware LL(1), picker refusal, R-TXT-50), `45fcd7233`.
+- L1a and L1b (editable EBNF literals, islands, R-TXT-48 step 1), `4b858ee65` and `eddaf1e6d`.
+- L2a and B0 (style token overrides and their form fields, R-TXT-48 step 2), `6f1530d9c`.
+- B1 (per-block tokens in the core, R-TXT-51), `5dfa13429`; B2 and L2b (per-block and style tokens from the form and the EBNF mode, picker `<base> (custom)`, Reset), `79f4d6ed3`.
+- B3a and B3b (the head prefix of a class: core, readers, form, EBNF), `339928e84`.
+
+The R-TXT-51 target text (`begin program`, `declaration is ... end`, `end program`) is set from the Syntax form alone. Decisions R-TXT-44 to R-TXT-52, all ratified by Alfonso.
+
+**Left:**
+
+- C2e, the IR chip: in the critical zone of CLAUDE.md 3.1; needs a Layer Impact Report and Alfonso's go-ahead. Not started.
+- D, E and F as in Order above. D starts with a short discovery on completion and quick fixes over the language service.
+- Small items found in C: the error line of a Syntax form field sits flush against the next label (B3b crops); `parser.ts:523` gives an open-less block the FIRST `word(undefined)`, guarded today by the D8 refusal; R2 of the block-tokens report (an unclosed `is` block takes the `end` of `end program`) is pinned by a test, not changed.

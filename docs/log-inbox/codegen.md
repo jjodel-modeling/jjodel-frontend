@@ -2181,3 +2181,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: B3a core; B3b crops b3b-1..5 in ~/.jjodel-lanes/P-2026-11-06-0242/ checked by the chat
 **Notes**: Rollback tag `pre-textual-block-tokens-P-2026-11-06-0336` on `fa59c8f84` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-0336/result.json`.
 **Prompt document name**: 2026-11-06 03:36
+
+## 2026-11-06 — docs: step C of the textual IDE plan closed
+**Prompt**: Alfonso 2026-11-05 15:33, «chiudi C in /lane auto»: close step C of docs/sessioni/sessione_2026-11-03_textual_ide_plan.md, stop before D.
+**Files touched**: `docs/sessioni/sessione_2026-11-03_textual_ide_plan.md` (section «Status after step C»), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — docs only; every visual lane of C had its crops checked by the chat before its merge.
+**Notes**: Last merge `339928e84` (B3a, B3b). C2e (IR chip, critical zone) not started, waits for Alfonso. Next is D. Chat C-2026-11-03-1037.
+**Prompt document name**: 2026-11-05 15:33
