@@ -21,7 +21,7 @@
  */
 
 import type { NamePattern } from './annotations';
-import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './concreteGrammar';
+import type { ConcreteGrammar, ConcreteRule, ConcreteTerminal, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, DEDENT_MARK, derivedName, INDENT_MARK } from './concreteGrammar';
 import type { OuterRef, TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
@@ -57,6 +57,30 @@ export interface TextParseResult {
     readonly unclosed?: readonly string[];
     /** The lossless tree the lists above are derived from (step A). */
     readonly tree?: TextNode;
+    /** D2a: with `ParseOptions.cursor` only, what may stand at the first token at or after the cursor, in the order tested. */
+    readonly expected?: readonly ExpectedItem[];
+}
+
+/**
+ * One thing that may stand at the cursor (D2a, report §3.3 C1): a token class and the kind of grammar node it comes from.
+ * `kw` and `p`: a keyword or a style token, the head prefix included; `lit`: a literal of the enumeration `rule`; `xref`: a
+ * reference; `tok`: a name or a value of `terminal`; `block`: a block's open, close or empty form, its own tokens included.
+ */
+export interface ExpectedItem {
+    readonly matcher: Matcher;
+    readonly kind: 'kw' | 'p' | 'lit' | 'xref' | 'tok' | 'block';
+    /** `kw`, `p`, `block`: the tokens to write, several for a multi-word open or close, the rest of a close once begun (D10). */
+    readonly words?: readonly string[];
+    readonly side?: 'open' | 'close' | 'empty';
+    /** The feature the value, or the list's token, is of. */
+    readonly feature?: string;
+    readonly rule?: string;
+    /** `lit`: the literal as declared; the matcher has it as the text writes it. */
+    readonly literal?: string;
+    /** `xref`: the reference's type, and the classes whose objects it may name. */
+    readonly type?: string;
+    readonly targets?: readonly string[];
+    readonly terminal?: ConcreteTerminal;
 }
 
 interface NodeBase {
@@ -182,6 +206,8 @@ export interface ParseOptions {
      * when its owner or feature is not the print's. Outside the editor there are none (T8).
      */
     readonly keep?: readonly { readonly start: number; readonly end: number; readonly text: string }[];
+    /** D2a: an offset of the text; the result then lists what may stand at the first token at or after it (`expected`). */
+    readonly cursor?: number;
 }
 
 /** R-TXT-21 (8): only a text read without any error may be applied. */
@@ -616,6 +642,71 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         throw new ParseFailure(errorAt(t, `expected ${either(expected)}; found ${describeToken(t)}`));
     };
 
+    // D2a (report §3.3 C1, decision D2): under a cursor, the nodes tested at the first token at or after it, nullable ones
+    // included, as items. Recording reads the parse and never steers it: without a cursor nothing here runs.
+    const cursorAt = options.cursor === undefined ? undefined : (toks.find(t => t.start >= options.cursor!) ?? toks[toks.length - 1]).start;
+    const expected = new Map<string, ExpectedItem>();
+    /** Set once a node that must stand at the cursor was offered and the token there is none of it: nothing after it may. */
+    let settled = false;
+    const here = (): boolean => cursorAt !== undefined && !settled && peek().start === cursorAt;
+    const offer = (xs: readonly ExpectedItem[]): void => {
+        for (const x of xs) {
+            const k = JSON.stringify(x);
+            if (!expected.has(k)) expected.set(k, x);
+        }
+    };
+    const need = (xs: readonly ExpectedItem[], ok: boolean): void => {
+        offer(xs);
+        if (!ok) settled = true;
+    };
+    const tokenItem = (s: string, feature?: string): ExpectedItem => ({ matcher: word(s), kind: /^\w/.test(s) ? 'kw' : 'p', words: [s], ...(feature === undefined ? {} : { feature }) });
+    const blockItem = (side: 'open' | 'close' | 'empty', words: readonly string[]): ExpectedItem => ({ matcher: word(words[0]), kind: 'block', side, words });
+    const valueItems = (n: GrammarNode, feature: string | undefined): ExpectedItem[] => {
+        const f = feature === undefined ? {} : { feature };
+        switch (n.t) {
+            case 'tok': return [...first(n).set].map(matcher => ({ matcher, kind: 'tok', terminal: n.terminal, ...f }));
+            case 'xref': return [...first(n).set].map(matcher => ({ matcher, kind: 'xref', type: n.type, targets: n.targets, ...f }));
+            case 'lit': return literalsOf(n.rule).map(l => ({ matcher: `ID:${applyCase(l, g.literalCase)}`, kind: 'lit', rule: n.rule, literal: l, ...f }));
+            default: return [];
+        }
+    };
+    /** A block's empty form, where the parser takes it: none of its items is mandatory. */
+    const emptyOk = (n: Extract<GrammarNode, { t: 'block' }>): boolean => n.empty.length > 0 && n.items.every(x => first(x).nullable);
+    /** The items of FIRST of `n`, as `firstSetsOf` builds the set, memoised per node; a rule reached again is taken as empty. */
+    const itemsMemo = new Map<GrammarNode, readonly ExpectedItem[]>();
+    const itemsOf = (n: GrammarNode): readonly ExpectedItem[] => {
+        const known = itemsMemo.get(n);
+        if (known) return known;
+        itemsMemo.set(n, []);
+        let r: readonly ExpectedItem[];
+        switch (n.t) {
+            case 'seq': {
+                const xs: ExpectedItem[] = [];
+                for (const x of n.items) {
+                    xs.push(...itemsOf(x));
+                    if (!first(x).nullable) break;
+                }
+                r = xs;
+                break;
+            }
+            case 'opt': case 'star': r = itemsOf(n.item); break;
+            case 'alt': r = n.alts.flatMap(x => itemsOf(x)); break;
+            case 'kw': case 'p': r = [{ matcher: word(n.text), kind: n.t, words: [n.text] }]; break;
+            case 'tok': case 'xref': case 'lit': r = valueItems(n, undefined); break;
+            case 'rule': { const k = rules.get(n.name); r = k ? itemsOf(k.body) : []; break; }
+            case 'assign': r = n.item.t === 'tok' || n.item.t === 'xref' || n.item.t === 'lit' ? valueItems(n.item, n.feat) : itemsOf(n.item); break;
+            case 'list': r = [tokenItem(n.open, n.feat)]; break;
+            case 'block': r = [blockItem('open', n.open), ...(emptyOk(n) ? [blockItem('empty', n.empty)] : [])]; break;
+            case 'nl': r = []; break;
+            case 'expr': r = [
+                ...n.primaries.flatMap(x => itemsOf(x)), tokenItem(n.open),
+                ...n.operators.flatMap(o => [...(o.fixity === 'prefix' ? [tokenItem(o.symbol)] : []), ...(o.call !== undefined ? [tokenItem(o.call)] : [])]),
+            ]; break;
+        }
+        itemsMemo.set(n, r);
+        return r;
+    };
+
     // The tree (step A): every token read or skipped goes, once and in order, into the node being built.
     const root: Building = { kind: 'text', start: 0, end: 0, children: [] };
     const stack: Building[] = [root];
@@ -727,6 +818,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         if (r?.t === 'choice') {
             const alts = r.body.t === 'alt' ? r.body.alts : r.body.t === 'expr' ? r.body.primaries : [r.body];
             const a = alts.find(can);
+            if (here()) need(itemsOf(r.body), !!a);
             if (!a) fail(describeMatchers(first(r.body).set));
             if (a?.t === 'rule') return objectRule(a.name);
         }
@@ -816,6 +908,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const climb = (e: Expr, min: number): Operand => {
         let left = unary(e, min);
         for (;;) {
+            if (here()) offer(e.operators.filter(o => o.fixity !== 'prefix').map(o => tokenItem(o.symbol)));
             const op = e.operators.find(o => o.fixity !== 'prefix' && hit(peek(), word(o.symbol)));
             if (!op || op.precedence < min) return left;
             const o = operatorObject(op.cls);
@@ -839,11 +932,13 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         }
     };
     const closeOf = (e: Expr): void => {
+        if (here()) need([tokenItem(e.close)], hit(peek(), word(e.close)));
         if (hit(peek(), word(e.close))) take('punctuation');
         else repair(word(e.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
     };
     const unary = (e: Expr, min: number): Operand => {
         const t = peek();
+        if (here()) need(itemsOf(e), canAt(e, t) || isSign(t));
         const pre = isSign(t) ? undefined : e.operators.find(o => o.fixity === 'prefix' && hit(t, word(o.symbol)));
         if (pre) {
             const o = operatorObject(pre.cls);
@@ -863,10 +958,17 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             nodeOf.set(o.id, node);
             return reading(o, node, () => {
                 take('class');
+                if (here()) need([tokenItem(e.open)], hit(peek(), word(e.open)));
                 expect(word(e.open), 'punctuation');
+                if (here()) offer([tokenItem(e.close)]);
                 if (!hit(peek(), word(e.close))) {
                     operandOf(e, o, a, '+=', -Infinity);
-                    while (hit(peek(), word(e.separator))) { take('punctuation'); operandOf(e, o, a, '+=', -Infinity); }
+                    if (here()) offer([tokenItem(e.separator)]);
+                    while (hit(peek(), word(e.separator))) {
+                        take('punctuation');
+                        operandOf(e, o, a, '+=', -Infinity);
+                        if (here()) offer([tokenItem(e.separator)]);
+                    }
                 }
                 closeOf(e);
             });
@@ -918,6 +1020,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
 
     const value = (n: GrammarNode, o: MutableObject, feat: string): unknown => {
         const t = peek();
+        if (here()) need(valueItems(n, feat), canAt(n, t) || ((n.t === 'tok' && (n.terminal === 'INT' || n.terminal === 'FLOAT')) && isSign(t)));
         switch (n.t) {
             case 'tok':
                 // A "-" glued to the number after it is that number's sign, where the tokenizer left it out (C1b).
@@ -1029,6 +1132,13 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const block = (n: Extract<GrammarNode, { t: 'block' }>, o: MutableObject): void => within('block', { closed: false }, b => {
         const items = n.items;
         const nullableAll = items.every(x => first(x).nullable);
+        if (here()) need(itemsOf(n), hit(peek(), word(n.open[0])) || (emptyOk(n) && hit(peek(), word(n.empty[0]))));
+        // D2a: the cursor inside an empty form of the block's own tokens (`is end module`, D10), between its open and its close.
+        const opens = n.open.length;
+        if (cursorAt !== undefined && !settled && nullableAll && opens > 0 && n.empty.length > opens && n.open.every((s, k) => s === n.empty[k])
+            && n.empty.every((s, k) => hit(peek(k), word(s))) && peek(opens).start === cursorAt) {
+            offer([...items.flatMap(x => itemsOf(x)), blockItem('close', n.empty.slice(opens))]);
+        }
         if (n.empty.length && n.empty.every((s, k) => hit(peek(k), word(s)))) {
             if (nullableAll) { for (const _ of n.empty) take('punctuation'); b.closed = true; return; }
             fail(describeMatchers(first({ t: 'seq', items }).set));
@@ -1062,6 +1172,14 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             } else for (const s of n.open) expect(word(s), 'punctuation');
         } else for (const s of n.open) expect(word(s), 'punctuation');
         const isClose = (): boolean => n.close.every((s, k) => hit(peek(k), word(s)));
+        const bodyFrom = p;
+        /** D10: how many words of a multi-word close stand just before the cursor, skipped, not read as anything else. */
+        const begun = (): number => {
+            for (let m = n.close.length - 1; m > 0; m--) {
+                if (p - m >= bodyFrom && n.close.slice(0, m).every((s, k) => hit(toks[p - m + k], word(s)) && toks[p - m + k].role === undefined)) return m;
+            }
+            return 0;
+        };
         const frame: Frame = { can: t => items.some(x => canAt(x, t)), close: n.close, open: n.open };
         const enclosing = frames.slice();
         const since = objects.length;
@@ -1070,6 +1188,17 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             let i = 0;
             let stuck = -1;
             for (;;) {
+                // D2a: what may stand here, before the close and the end-of-text branch decide (F3, F4).
+                if (here()) {
+                    const m = begun();
+                    if (m) need([blockItem('close', n.close.slice(m))], false);
+                    else {
+                        const next: GrammarNode[] = [];
+                        for (const x of items.slice(i)) { next.push(x); if (!first(x).nullable) break; }
+                        const all = next.length === items.length - i && next.every(x => first(x).nullable);
+                        need([...next.flatMap(x => itemsOf(x)), ...(all ? [blockItem('close', n.close)] : [])], isClose() || next.some(x => can(x)));
+                    }
+                }
                 if (isClose()) break;
                 // Every turn reads a token or ends the body; a turn that did neither skips one, so the loop always ends.
                 if (p === stuck) { skipOne(errors[errors.length - 1]?.message ?? ''); continue; }
@@ -1133,6 +1262,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         switch (n.t) {
             case 'seq':
                 n.items.forEach((x, i) => {
+                    if ((x.t === 'kw' || x.t === 'p') && here()) need(itemsOf(x), hit(peek(), word(x.text)));
                     // A class keyword is never inferred (step A, decision 2): its object is predicted by it.
                     if ((x.t === 'kw' || x.t === 'p') && !classKeywords.has(x) && !hit(peek(), word(x.text))) {
                         repair(word(x.text), x.t === 'kw' ? 'keyword' : 'punctuation', t => followsIn(n.items.slice(i + 1), t));
@@ -1140,19 +1270,23 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 });
                 return;
             case 'opt':
+                if (here() && lineOk()) offer(itemsOf(n.item));
                 if (can(n.item) && lineOk()) within('item', { feature: n.feat }, () => run(n.item, o));
                 else if (n.derive && o) derives.set(o, n.derive);
                 return;
             case 'star':
+                if (here() && lineOk()) offer(itemsOf(n.item));
                 while (can(n.item) && lineOk()) {
                     const before = p;
                     if (n.feat !== undefined) within('item', { feature: n.feat }, () => run(n.item, o));
                     else run(n.item, o);
                     if (p === before) return;
+                    if (here() && lineOk()) offer(itemsOf(n.item));
                 }
                 return;
             case 'alt': {
                 const a = n.alts.find(can);
+                if (here()) need(itemsOf(n), !!a);
                 if (!a) fail(describeMatchers(first(n).set));
                 else run(a, o);
                 return;
@@ -1176,12 +1310,16 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             case 'list': {
                 if (!o) throw new Error('a list outside an object');
                 within('list', { feature: n.feat }, () => {
+                    const after = (): void => { if (here()) need([tokenItem(n.separator, n.feat), tokenItem(n.close, n.feat)], hit(peek(), word(n.separator)) || hit(peek(), word(n.close))); };
+                    if (here()) need([tokenItem(n.open, n.feat)], hit(peek(), word(n.open)));
                     if (!hit(peek(), word(n.open))) repair(word(n.open), 'punctuation', t => canAt(n.item, t) || hit(t, word(n.close)));
                     else take('punctuation');
                     if (!Array.isArray(o.slots[n.feat])) o.slots[n.feat] = [];
+                    if (here()) offer([tokenItem(n.close, n.feat)]);
                     if (hit(peek(), word(n.close))) { take('punctuation'); return; }
                     run(n.item, o);
-                    while (hit(peek(), word(n.separator))) { take('punctuation'); run(n.item, o); }
+                    after();
+                    while (hit(peek(), word(n.separator))) { take('punctuation'); run(n.item, o); after(); }
                     // A list left open at the end of its line is closed there.
                     if (!hit(peek(), word(n.close))) repair(word(n.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
                     else take('punctuation');
@@ -1191,7 +1329,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             case 'block':
                 if (!o) throw new Error('a block outside an object');
                 // C3b: an indented body left out is an empty one, and leaves no node, as the printer prints none.
-                if (indent && !hit(peek(), word(n.open[0])) && first(n).nullable) return;
+                if (indent && !hit(peek(), word(n.open[0])) && first(n).nullable) { if (here()) offer(itemsOf(n)); return; }
                 block(n, o);
                 return;
             case 'tok': case 'xref': case 'lit': throw new Error(`a ${n.t} node outside an assignment`);
@@ -1202,7 +1340,9 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const top = model.body.t === 'star' ? model.body.item : model.body;
     const topFrame: Frame = { can: t => canAt(top, t) };
     frames.push(topFrame);
-    while (peek().k !== 'EOF') {
+    for (;;) {
+        if (here()) offer(itemsOf(top));
+        if (peek().k === 'EOF') break;
         const t = peek();
         if (can(top)) { guarded(topFrame, top, undefined); continue; }
         const e = errorAt(t, `expected ${either(describeMatchers(first(top).set))}; found ${describeToken(t)}`);
@@ -1253,6 +1393,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         objects: objectNodes.map(n => byId.get(n.id!)!), errors: tiers, recovered: objectNodes.filter(isRecovered).map(n => n.id!), spans, refs,
         unclosed: objectNodes.filter(n => n.state === 'unclosed').map(n => n.id!),
         tree: root as unknown as TextNode,
+        ...(cursorAt === undefined ? {} : { expected: [...expected.values()] }),
     };
 }
 
