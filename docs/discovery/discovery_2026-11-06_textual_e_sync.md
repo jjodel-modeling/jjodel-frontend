@@ -146,3 +146,65 @@ which the pause would then apply, silently reverting the diagram edit. `setValue
 
 **A style change** (R-TXT-20 names it too) changes the own text of nearly every object, so T10 gives little there; it
 falls under rule 2 everywhere and keeps the comments by owner, which is still more than today.
+
+## 4. Text to canvas
+
+### 4.1 What the Text tab knows at the cursor (read)
+
+- **Identity spans with model ids**: `decorationsRef` (`TextualTab.tsx:1071`) holds one Monaco decoration per printed
+  object, `NeverGrowsWhenTypingAtEdges` (line 1105), mapped to the object's **model id**; `carriedSpans()` (lines
+  1142-1151) reads them back as `{ id, start, end }` at the current offsets, also while an edit is pending. Spans nest
+  (an object before the objects it contains, `printer.ts` `TextPrintResult.spans`).
+- **The outline and `pathAt`** (`languageService.ts:476-480`) give the nodes from the top to the innermost one at an
+  offset, but their `id` is the **parsed** object's id (`OutlineNode.id`, line 458, «the parsed object's id»;
+  `TextSymbol.id`, line 55), not the model's. They are the wrong key for the canvas; the carried spans are the right one.
+- **`referencesAt`** (`languageService.ts:93`) answers «which tokens name the object at this offset», used by find
+  references and the hover links. It is not needed for selection: the object under the caret is the innermost carried
+  span, and a reference token under the caret belongs to its owner's span (selecting the target instead is decision E5).
+- **Cursor events**: `editor.onDidChangeCursorSelection` is already wired (`TextualTab.tsx:1456`) to
+  `handlers.current.cursor` (lines 1405-1409), today only for the held reference rewrite. Monaco 0.52.2's
+  `ICursorSelectionChangedEvent` carries `source: string` and `reason: CursorChangeReason` (`editor.api.d.ts:3060`,
+  `:3064`, measured by grep), which tell a mouse or keyboard move from an API move (`setPosition`, `setSelection`).
+
+### 4.2 How the app selects an object on the canvas today (read)
+
+Two paths, one with a model-adjacent write and one without:
+
+1. **A click on a node** (`useJjomSelection.ts:217-226`) calls `selectElement` (lines 83-124): it marks every graph
+   element in `syncState` (`markCanvasUpdatedBatch`, an anti-bounce for `useJjomSync`), opens `TRANSACTION('EditorV2
+   select')`, calls `deselect`/`select` on the graph's L-elements (`isSelected` on D-objects of the graph), and writes
+   `_lastSelected` with `SetRootFieldAction`. This is sync-adjacent (it imports `sync/syncState`) and writes D-objects.
+   **Not to be reused** from the Text tab.
+2. **The `SELECT_NODE` event** (`JjodelEvents.SELECT_NODE`, `registry.ts:24`), consumed by EditorV2
+   (`EditorV2.tsx:1165-1189`): when `detail.modelId` is the canvas's model, it sets React Flow's local `selected` on the
+   node whose id is `detail.nodeId`, clears the edges' selection, and brings the node into view (`revealViewport`, no
+   move when it is already inside). No store write at all. Three callers already use it: the tree view
+   (`TreeViewContent.tsx:1214-1225`, which also writes `_lastSelected` itself), the generator tab
+   (`codegen/ui/canvasSelection.ts:180`), and the validation results (`ValidationResultsModal.tsx:87`).
+
+The generator tab's mapping from a model element to a canvas node is `pickOnCanvas` (`codegen/ui/codeOrigins.ts:84-91`):
+the node whose id is the element or whose `model` is the element, else the edge that stands for it, read from the ids
+the model's pane draws (`modelPane`, `codegen/ui/canvasSelection.ts:34-39`).
+
+### 4.3 The smallest way (design)
+
+On a cursor move whose `source` is `mouse` or `keyboard` and that is not the cursor shift of a content change (the
+lane measures which `reason` a typed character gives), after a short wait (150 ms, the outline's delay, so a held arrow
+key does not animate the canvas per line):
+
+1. the innermost carried span holding the caret gives a model id (none: nothing happens, the canvas keeps its
+   selection, decision E4);
+2. the same id as the last one sent: nothing;
+3. else `pickOnCanvas(lookup, nodeIdsIn(modelPane(modelId)), edgeIdsIn(...), id)` gives the node; no node (the canvas
+   is not docked, not shown, or draws the element as an edge): nothing;
+4. `window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId, modelId } }))`.
+
+No model write: React Flow's `selected` is component state. The optional extra is the tree view's `_lastSelected`
+write, so the Properties panel follows too (decision E2). It is a store write but not a model write and not an undo
+step: `_lastSelected` alone is a transient top-level key that the reducer skips before any history bookkeeping
+(`reducer.ts:1259-1261`, `isOnlyTransientTopLevelChange`, keys at line 1372) and that `isRelevantChangeCheck` refuses
+(line 1352). The Text tab's own `useSelector` reads `state.idlookup` only (`TextualTab.tsx:1017`), so the write does not
+re-render it.
+
+Never `DockManager.open2` from a cursor move (the generator tab's `selectOnModelCanvas` does, line 158): it would bring
+the canvas forward over the Text tab when they share a panel.
