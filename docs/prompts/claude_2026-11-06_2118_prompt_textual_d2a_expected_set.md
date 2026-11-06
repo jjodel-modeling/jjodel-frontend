@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2118
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · c4a545aa3, e23c3870c · gates green · parser only, no visual check · log entry and Status flip uncommitted (RC-17)
 Lane: full (parser; tests)
 Depends: P-2026-11-06-2040 (step D discovery, §3.3 C1 and §8 row D2a), R-TXT-53 (provisional, D2 and D10)
 Worktree: ~/jjodel-w-textd, branch textual-d-writing-aids

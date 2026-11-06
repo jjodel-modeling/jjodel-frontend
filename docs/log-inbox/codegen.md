@@ -2194,3 +2194,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — docs only; every visual lane of C had its crops checked by the chat before its merge.
 **Notes**: Last merge `339928e84` (B3a, B3b). C2e (IR chip, critical zone) not started, waits for Alfonso. Next is D. Chat C-2026-11-03-1037.
 **Prompt document name**: 2026-11-05 15:33
+
+## 2026-11-06 — feat(codegen): D2a, the expected set at a cursor (P-2026-11-06-2118)
+**Prompt**: Step D lane D2a (report §3.3 C1, §8; D2, D10): optional `ParseOptions.cursor`, `TextParseResult.expected` of `ExpectedItem`s, tests on the probe's cursors, a no-cursor identity test on the corpus.
+**Files touched**: `frontend/src/codegen/textual/parser.ts` (`c4a545aa3`), `frontend/src/codegen/textual/__tests__/completion.test.ts` new (`c4a545aa3`, `e23c3870c`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — parser only, no UI.
+**Notes**: Red first 17/18. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Identity test killed 4/4 mutants (bench in `e23c3870c`). Readings: block tokens are kind `block` (D2b maps them to keywords); a cursor before a token the parse reads gives what was tested up to it; after an output, `input` is out of order and not offered; free layout offers `=` on the next line.
+**Prompt document name**: 2026-11-06 21:18
