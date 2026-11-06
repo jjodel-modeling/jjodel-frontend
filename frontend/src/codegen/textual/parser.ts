@@ -24,8 +24,8 @@ import type { NamePattern } from './annotations';
 import type { ConcreteGrammar, ConcreteRule, ConcreteTerminal, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, DEDENT_MARK, derivedName, INDENT_MARK } from './concreteGrammar';
 import type { OuterRef, TextFeature, TextObject } from './metamodel';
-import type { ObjectSpan } from './printer';
-import { featureKeyword, pathKeyword } from './printer';
+import type { ObjectSpan, TextNaming } from './printer';
+import { featureKeyword, pathKeyword, textNaming } from './printer';
 
 /** An error at `[start, end)` of the text; `line` and `col` are 1-based, of `start`. */
 export interface TextParseError {
@@ -1401,7 +1401,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     resolve(g, objects, new Set([...contained, ...orphans]), errors, recovered, where, r => {
         const tokenText = text.slice(r.at.start, r.endAt);
         return { start: r.at.start, end: r.endAt, text: tokenText, kept: keep.has(`${r.at.start}:${r.endAt}:${tokenText}`) };
-    }, refs);
+    }, refs, options.fixes === true);
 
     // The lists of the result, derived from the tree: the object nodes in text order, their spans, their states.
     const byId = new Map(objects.map(o => [o.id, o]));
@@ -1433,6 +1433,19 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
 }
 
+/** D3a: the edit distance of two words (insertions, deletions, substitutions, one each). */
+function editDistance(a: string, b: string): number {
+    let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        const next = [i];
+        for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        row = next;
+    }
+    return row[b.length];
+}
+/** D3a: how far a near word may be from the one written, case aside: one edit for a word of three letters or fewer, else two. */
+const nearBound = (s: string): number => (s.length <= 3 ? 1 : 2);
+
 /**
  * Test-only (#205): the objects the reference resolution of `parseText` examines, by name and at a path's head, summed
  * over every reference. A load-independent measure of its growth; nothing in the parser reads it.
@@ -1441,7 +1454,7 @@ export const parserNameLookups = { count: 0 };
 
 /** Resolves every reference left as a `PendingRef` in the slots: by name (R-TXT-4), else by path (R-TXT-11); an outer one (R-TXT-32) is kept as its id. */
 function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], contained: ReadonlySet<string>, errors: TextParseError[], recovered: Set<string>, where: (id: string) => string,
-                 tokenOf: (r: PendingRef) => { readonly start: number; readonly end: number; readonly text: string; readonly kept: boolean }, refs: ParsedRef[]): void {
+                 tokenOf: (r: PendingRef) => { readonly start: number; readonly end: number; readonly text: string; readonly kept: boolean }, refs: ParsedRef[], fixes = false): void {
     const byId = new Map(objects.map(o => [o.id, o]));
     const roots = objects.filter(o => !contained.has(o.id));
     const nameOf = (o: MutableObject): unknown => (g.objects[o.cls]?.named ? o.slots.name : undefined);
@@ -1530,6 +1543,23 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         }
         return cur;
     };
+    // D3a (2), report §4.3, decision D3: the objects of the targets named near a name that names none of them, or the
+    // ones an ambiguous name names, each written as the printer writes it (the name when unique, else the path), nearest
+    // first, then in text order. Built only for a name that fails, with fixes asked.
+    let naming: TextNaming | undefined;
+    const nearNames = (r: PendingRef, written: string): readonly TextFix[] | undefined => {
+        const targets = r.node.targets;
+        const near: { readonly d: number; readonly o: MutableObject }[] = [];
+        for (const [nm, list] of byName) {
+            if (typeof nm !== 'string') continue;
+            const d = editDistance(written.toLowerCase(), nm.toLowerCase());
+            if (d <= nearBound(written)) for (const o of list) if (targets.includes(o.cls)) near.push({ d, o });
+        }
+        if (!near.length) return undefined;
+        naming ??= textNaming(g, objects);
+        const texts = [...new Set(near.sort((a, b) => a.d - b.d).map(x => naming!.ref(targets, x.o)))];
+        return texts.map(t => ({ title: `replace with "${t}"`, start: r.at.start, end: r.endAt, text: t }));
+    };
     const pushRef = (r: PendingRef, x: ParsedRef): void => {
         refs.push(x);
         if (r.tree) r.tree.ref = x;
@@ -1550,7 +1580,8 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
             pushRef(r, { ...token, outer: false, to: t.id });
             return t.id;
         }
-        const error: TextParseError = { line: r.at.line, col: r.at.col, start: r.at.start, end: r.endAt, message: message ?? '' };
+        const fix = fixes && r.syntax.name !== undefined ? nearNames(r, r.syntax.name) : undefined;
+        const error: TextParseError = { line: r.at.line, col: r.at.col, start: r.at.start, end: r.endAt, message: message ?? '', ...(fix ? { fix } : {}) };
         pushRef(r, { ...token, outer: false, error });
         // R-TXT-35: a token the user did not retype is the diff's to keep or refuse; out of the slot, it is no error here.
         if (tok.kept) return undefined;

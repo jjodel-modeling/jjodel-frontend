@@ -433,6 +433,37 @@ describe('(ix) D3a: structured fixes on parse errors (P-2026-11-06-2328; report 
         expect(apply(text.slice(0, text.lastIndexOf('\n')), fixed(text.slice(0, text.lastIndexOf('\n'))).errors[0].fix![0])).toBe(text);
     });
 
+    it('(2) an unknown reference: one fix per near name among the targets, nearest first, written as the printer writes it', () => {
+        const broken = text.replace('borrowedBy reader1', 'borrowedBy reder1');
+        const r = fixed(broken);
+        expect(r.errors.map(e => e.message)).toEqual(['no object of type Member is named "reder1"']);
+        const fix = r.errors[0].fix ?? [];
+        expect(fix.map(f => f.text)).toEqual(['reader1', 'reader0']);
+        expect(fix.map(f => f.title)).toEqual(['replace with "reader1"', 'replace with "reader0"']);
+        expect(broken.slice(fix[0].start, fix[0].end)).toBe('reder1');
+        expect(apply(broken, fix[0])).toBe(text);
+        // A name of a class outside the targets is no candidate: "book1" is a Book, and no Member is named near it.
+        const other = fixed(text.replace('borrowedBy reader1', 'borrowedBy book1'));
+        expect(other.errors.map(e => e.message)).toEqual(['no object of type Member is named "book1"']);
+        expect('fix' in other.errors[0]).toBe(false);
+    });
+
+    it('(2) a near name carried by two targets is written as their paths, never `@"id"`; so is an ambiguous name', () => {
+        const twice = text.replace('Member reader0 {}', 'Member reader1 {}');
+        for (const broken of [twice.replace('borrowedBy reader1', 'borrowedBy reder1'), twice]) {
+            const r = fixed(broken);
+            expect(r.errors.length, broken).toBe(1);
+            const fix = r.errors[0].fix ?? [];
+            expect(fix.map(f => f.text)).toEqual(['Library[0].members[0]', 'Library[0].members[1]']);
+            fix.forEach((f, k) => {
+                const again = parseText(apply(broken, f), LIB.g);
+                expect(again.errors).toEqual([]);
+                const ref = again.refs!.find(x => x.feature === 'borrowedBy')!;
+                expect(again.objects.find(o => o.id === ref.to)!, f.text).toBe(again.objects.filter(o => o.cls === 'Member')[k]);
+            });
+        }
+    });
+
     it('(4) without `fixes`, no error carries a fix', () => {
         const r = parseText(text.replace('Library city {', 'Library city'), LIB.g);
         expect(r.errors.length).toBe(1);
