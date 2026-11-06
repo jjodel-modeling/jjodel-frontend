@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2213
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · f5fb02d8b · gates green · app check 8/8 PASS, crops in ~/.jjodel-lanes/P-2026-11-06-2213/, visual GO pending · log entry in docs/log-inbox/codegen.md
 Lane: full (Monaco providers; tests; app check with crops)
 Depends: P-2026-11-06-2146 (D2b, completionsAt, 387e558d7 on this branch), P-2026-11-06-2118 (D2a), R-TXT-53 (provisional)
 Worktree: ~/jjodel-w-textd, branch textual-d-writing-aids

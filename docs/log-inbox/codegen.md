@@ -2220,3 +2220,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — language service only, no UI.
 **Notes**: Red first: C3 1/19, C2 14/33. Print tests unchanged and green after `textNaming`. Bench in `387e558d7`: 7/7 mutants killed. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Range: the ID word the cursor is in or ends, else the cursor; the parse cursor goes to the word's start. Orphans of a broken text get a root path from `textNaming`.
 **Prompt document name**: 2026-11-06 21:46
+
+## 2026-11-06 — feat(codegen): D2c, the completion provider of the Text tab (P-2026-11-06-2213)
+**Prompt**: Step D lane D2c (report §3.3 C4, §8): a `CompletionItemProvider` in `registerTextualMonaco` on `completionsAt` and the session's reading, kinds, ranges, literal docs, style punctuation as triggers; tests in `languageService.test.ts`; app check with crops on the port corpus.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts` (`f5fb02d8b`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 8/8 PASS, 5 crops in `~/.jjodel-lanes/P-2026-11-06-2213/`, GO pending.
+**Notes**: Red first 6/6; bench 7/7 killed (in `f5fb02d8b`). Gates: typecheck 0; vitest 534 passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. `TextualReading` gains optional `mm`. Triggers: the catalog styles' punctuation, filtered per request by the reading's style. After `=` the port offers operand keywords only (operands are new Refs, not references); references shown at `peer`. Focused suggest row overflows the widget's right edge: no app rule names it.
+**Prompt document name**: 2026-11-06 22:13
