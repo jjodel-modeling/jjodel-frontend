@@ -2194,3 +2194,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — docs only; every visual lane of C had its crops checked by the chat before its merge.
 **Notes**: Last merge `339928e84` (B3a, B3b). C2e (IR chip, critical zone) not started, waits for Alfonso. Next is D. Chat C-2026-11-03-1037.
 **Prompt document name**: 2026-11-05 15:33
+
+## 2026-11-06 — fix(editor-v2): C2e, a nameless reference target is labelled `: <Class>` on the IR form (P-2026-11-06-2041)
+**Prompt**: `claude_2026-11-06_2041_prompt_textual_c2e_ir_chip.md`, R-TXT-47 D6, critical zone: Phase 1 report, then on Alfonso's GO (22:28, option A) the label via a shared pure helper, tests red first, gates, app check.
+**Files touched**: `docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md` (ed9054afd); `editor-v2/utils/namelessTargetLabel.ts` (new), `editor-v2/utils/jjomTransformers.ts`, `editor-v2/viewpoint/ir/IRFormField.tsx`, `editor-v2/utils/__tests__/namelessRefTarget.test.ts` (baec942aa); the prompt's Status and this entry (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md
+**Smoke visivo**: passato — probe 7/7 on port 3541, crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/; Alfonso's GO pending (R-TXT-47)
+**Notes**: No stock host shows a reference through IRFormField (manager passes hostReferences, IRForm.tsx:392; configurator: attributes only); the probe mounts the real IRForm directly. Ticket: referenceName (ReferenceWidget.tsx:51-60) labels a nameless target '' and ListWidget.tsx:89 falls back to the raw pointer id; a lane of its own (Alfonso 22:28).
+**Prompt document name**: 2026-11-06 20:41

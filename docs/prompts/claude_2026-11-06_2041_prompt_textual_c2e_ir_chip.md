@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2041
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · ed9054afd (report), baec942aa (code) · app probe 7 checks pass, crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/; verifica visiva passata 2026-11-06 23:01 (Alfonso, GO on the crop)
 Lane: full (critical zone, CLAUDE.md 3.1 `viewpoint/ir/`; Phase 1 read only with a Layer Impact Report, then a hard stop)
 Depends: C2d (f1bef5364, the `: <Class>` label on the default view), R-TXT-46 D4, R-TXT-47
 Worktree: ~/jjodel-w-c2e, branch textual-c2e-ir-chip, from fc79098ad (own node_modules)
