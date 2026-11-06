@@ -2129,3 +2129,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 10/10 on port 3536, light, scale 1, crops `l2b-1..2`, `b2-1..5` in `~/.jjodel-lanes/P-2026-11-06-0100/`; GO visivo in attesa.
 **Notes**: Benches: (1) 26 mutants, 25 killed, survivor removed; (2) 14, 12 then 14 after a punctuation-acceptance test; (3) 6/6 plus the island guard; (4) 8/8. D9 crop: the side written to the store by a direct call, since the form offers the row on a class with no block only while the record sets one (handoff decision 2). Reset layout inline (SyntaxForm.scss out of scope); `Field` exported for the test.
 **Prompt document name**: 2026-11-06 01:00
+
+## 2026-11-06 — merge: textual-block-tokens into alfonso-frontend-jjtl (P-2026-11-06-0124)
+**Prompt**: `claude_2026-11-06_0124_prompt_merge_textual-block-tokens.md`, a direct merge by `lane-run merge --direct`, no session: `textual-block-tokens` at `7993d0580` into `alfonso-frontend-jjtl`, merge base `f6bb939a9`, 7 commits on the branch side.
+**Files touched**: merge `79f4d6ed3`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-05_2350_prompt_textual_block_tokens_b2_l2b.md`, `docs/prompts/claude_2026-11-06_0100_prompt_textual_block_tokens_b2_l2b_cont.md`, `frontend/src/codegen/textual/__tests__/blockTokens.test.ts`, `frontend/src/codegen/textual/__tests__/styleTokens.test.ts`, `frontend/src/codegen/textual/syntaxForm.ts`, `frontend/src/codegen/textual/ui/SyntaxForm.tsx`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `79f4d6ed3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14384 tests in 536 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: B2+L2b crops b2-1..5, l2b-1..2 in ~/.jjodel-lanes/P-2026-11-06-0100/ checked by the chat: R-TXT-51 target from the form alone, picker custom, Reset without shift, EBNF own vs inherited
+**Notes**: Rollback tag `pre-textual-block-tokens-P-2026-11-06-0124` on `f9220d03b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-0124/result.json`.
+**Prompt document name**: 2026-11-06 01:24
