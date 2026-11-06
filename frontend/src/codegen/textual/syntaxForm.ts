@@ -120,13 +120,13 @@ const ENUM: readonly Spec[] = [{ id: 'enum.subsets', label: 'Groups of literals'
  * rows `styleTokenFields` gives (B0, P-2026-11-05-2220); an array parameter takes the `tokens` input, a list token a text.
  */
 const STYLE_TOKENS: readonly Spec[] = [
-    { id: 'language.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens' },
-    { id: 'language.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens' },
-    { id: 'language.assign', label: 'Assignment', tier: 'advanced', input: 'tokens' },
-    { id: 'language.terminator', label: 'Terminator', tier: 'advanced', input: 'tokens' },
-    { id: 'language.list.open', label: 'List open', tier: 'advanced', input: 'text' },
-    { id: 'language.list.separator', label: 'List separator', tier: 'advanced', input: 'text' },
-    { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text' },
+    { id: 'language.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'language.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'language.assign', label: 'Assignment', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'language.terminator', label: 'Terminator', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'language.list.open', label: 'List open', tier: 'advanced', input: 'text', reset: true },
+    { id: 'language.list.separator', label: 'List separator', tier: 'advanced', input: 'text', reset: true },
+    { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text', reset: true },
 ];
 
 const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...CLASS_BLOCK, ...FEATURE, ...FEATURE_BLOCK, ...ENUM].map(s => [s.id, s.label]));

@@ -13,6 +13,13 @@ vi.mock('@monaco-editor/react', () => ({ default: () => null }));
 vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
+// The Syntax form in Advanced (section 8), as syntaxDraft.test.ts mocks it in Basic.
+vi.mock('react-redux', () => ({ useSelector: (f: (s: unknown) => unknown) => f({ advanced: true }), useStore: () => ({}) }));
+
+import { createElement, isValidElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import SyntaxForm, { Field } from '../ui/SyntaxForm';
 import { resolveAnnotations, withStyleOptions } from '../annotations';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
@@ -21,8 +28,8 @@ import type { NotationStyle } from '../style';
 import { checkStyle } from '../styleCheck';
 import { concreteGrammarEbnfSpans } from '../concreteGrammar';
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
-import { advancedInEffect, byField, fieldKey, fieldPhrase, fieldValue, literalDefault, literalField, parseTokens, readDraft, setField, setLiteral, styleTokenFields, tokensText } from '../syntaxForm';
-import type { FieldId } from '../syntaxForm';
+import { advancedInEffect, blockTokenFields, byField, fieldKey, fieldPhrase, fieldsOf, fieldValue, literalDefault, literalField, parseTokens, readDraft, setField, setLiteral, styleTokenFields, tokensText } from '../syntaxForm';
+import type { FieldId, FieldRef, FormField } from '../syntaxForm';
 import { BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolObjects } from './boolCorpus';
 import { decodeSyntax, encodeSyntax, textualNotation, withStyleBase } from '../syntaxRecord';
 import { PORT_CLIKE, PORT_IDS, PORT_MM, PORT_PASCAL, portObjects, portWith } from './portCorpus';
@@ -354,6 +361,52 @@ describe('(7) the picker under token overrides, lane L2b (P-2026-11-05-2350)', (
         expect(style.length).toBeGreaterThan(0);
         expect(style.every(i => i.at.element === 'language')).toBe(true);
         expect(style.some(i => i.text === '.' && i.at.field === 'language.blockClose')).toBe(true);
+    });
+});
+
+describe('(8) the Reset of a token row, lane L2b (P-2026-11-05-2350)', () => {
+    const PER_BLOCK: SyntaxAnnotations = { ...PORT_PASCAL, features: { ...PORT_PASCAL.features, F_Module_inputs: { blockOpen: ['is'] } } };
+    const form = (record: SyntaxAnnotations) => renderToStaticMarkup(createElement(SyntaxForm, {
+        mm: PORT_MM, ids: PORT_IDS, decoded: { record, issues: [] }, storedRaw: encodeSyntax(record), objects: [], pendingEdit: false,
+        onSave: () => true, preview: () => null,
+    }));
+    const resets = (html: string) => [...html.matchAll(/<button[^>]*aria-label="Reset ([^"]+)"[^>]*>/g)].map(m => ({ label: m[1], hidden: /visibility:hidden/.test(m[0]), disabled: /disabled=""/.test(m[0]) }));
+    /** The element of a rendered tree whose props satisfy `p`, depth first. */
+    const find = (n: ReactNode, p: (props: any) => boolean): ReactElement<any> | undefined => {
+        if (Array.isArray(n)) { for (const c of n) { const r = find(c, p); if (r) return r; } return undefined; }
+        if (!isValidElement(n)) return undefined;
+        return p(n.props) ? n : find((n.props as any).children, p);
+    };
+    const field = (f: FormField, element: string, draft: SyntaxAnnotations, onChange: (ref: FieldRef, value: unknown) => void = () => {}) =>
+        Field({ element: element as FieldRef['element'], field: f, draft, ids: PORT_IDS, mm: PORT_MM, findings: [], onChange }) as ReactNode;
+
+    it('every language-wide token row has a Reset, shown only on an override, always in the row (mutants: no Reset on the language rows; shown while unset; not rendered while unset)', () => {
+        expect(styleTokenFields(PORT_PASCAL, 'advanced').every(f => f.reset)).toBe(true);
+        const plain = resets(form(PORT_PASCAL));
+        expect(plain.map(r => r.label)).toEqual(['Block open', 'Block close', 'Assignment', 'Terminator', 'List open', 'List separator', 'List close']);
+        expect(plain.every(r => r.hidden && r.disabled)).toBe(true);
+        const over = resets(form({ ...PORT_PASCAL, style: { base: 'pascal', blockClose: ['end', '.'], list: { close: '>' } } }));
+        expect(over.filter(r => !r.hidden).map(r => r.label)).toEqual(['Block close', 'List close']);
+        expect(over.filter(r => !r.hidden).every(r => !r.disabled)).toBe(true);
+    });
+
+    it('a per-block row has a Reset that clears its side (mutants: the Reset writes the placeholder; it writes nothing)', () => {
+        const [open, close] = blockTokenFields(PORT_MM, PORT_IDS, 'feature:F_Module_inputs', 'advanced', PER_BLOCK);
+        const seen: [FieldRef, unknown][] = [];
+        const button = find(field(open, 'feature:F_Module_inputs', PER_BLOCK, (r, v) => seen.push([r, v])), p => p.className === 'syntax-form__button');
+        expect(button?.props.disabled).toBe(false);
+        button!.props.onClick();
+        expect(seen).toEqual([[{ element: 'feature:F_Module_inputs', field: 'feature.blockOpen' }, undefined]]);
+        expect(setField(PER_BLOCK, seen[0][0], seen[0][1]).features?.F_Module_inputs).toBeUndefined();
+        const unset = find(field(close, 'feature:F_Module_inputs', PER_BLOCK), p => p.className === 'syntax-form__button');
+        expect(unset?.props.disabled).toBe(true);
+        expect(unset?.props.style).toEqual({ visibility: 'hidden' });
+    });
+
+    it('a field without the flag has no Reset (mutant: a Reset on every row)', () => {
+        const name = fieldsOf(PORT_MM, PORT_IDS, 'language', 'advanced').find(f => f.id === 'language.name')!;
+        expect(name.reset).toBeUndefined();
+        expect(find(field(name, 'language', { ...PORT_PASCAL, language: 'Port' }), p => p.className === 'syntax-form__button')).toBeUndefined();
     });
 });
 
