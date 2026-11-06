@@ -34,3 +34,28 @@ Hypotheses under test, with the verdict (evidence in the sections named):
   point of its own.
 - H7. T8 is defined in the docs. **Holds** (§6): `discovery_2026-11-01_textual_viewpoint.md:812`, re-import of an exported
   file; half of its cascade exists in `textMatch.ts`.
+
+## 2. Files read
+
+Windows read in this session (paths under `/Users/alfonso/jjodel-w-textf/`); the explorer passes read more of the same
+files and their claims are re-read where the report uses them.
+
+- `docs/sessioni/sessione_2026-11-03_textual_ide_plan.md` (whole, 56 lines)
+- `docs/decisions.md` 1955-1962 (R-SIM-44), 7000-7040 (R-TXT-17..22), the injected R-TXT-34, RC-51, RC-17
+- `docs/discovery/discovery_2026-11-01_textual_viewpoint.md` 745-844 (the cascade, the plan table A.7, the questions A.9)
+- `docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md` 1-30, 316-385 (format of the lane plan)
+- `docs/discovery/discovery_2026-11-06_textual_e_sync.md`, read from branch `textual-e-sync` (`34035b3a0`), 189-256 and
+  423-472: it is not on this branch
+- `docs/log-inbox/codegen.md` 2289-2301 (D1 entry)
+- `frontend/src/codegen/textual/parser.ts` 216-242 (tokens); `languageService.ts` 190-200, 540-585;
+  `ui/textualMonaco.ts` 175-200; `ui/TextualTab.tsx` 150-194; `metamodel.ts` 9-22; `baseGrammar.ts` 45-50
+- `frontend/src/codegen/ui/templateCompletion.ts` 1-30, 35-70, 339-382; `codeOrigins.ts` 40-52;
+  `frontend/src/codegen/engine/text.ts` 36-44
+- `frontend/src/model/conformance/ConformanceValidator.ts` 15-30, 236-262; `model/validation/validationTypes.ts` 186-191;
+  `model/simulation/netTypes.ts` 56-58, 154-166; `common/Defaults.ts` 38-42, 84-88; `joiner/classes.ts` 1185-1188
+- `frontend/src/jjel/lexer/index.ts`, `jjel/parser/index.ts` (export lines); `jjel/lexer/lexer.ts` 37-42
+- Read by an explorer pass and cited as such, not re-read: `jjel/index.ts`, `jjel/parser/parser.ts` 1040-1143,
+  `jjel/types/ast.ts`, `jjel/autocomplete/`, `codegen/engine/{generate,generateFiles,origin}.ts`,
+  `codegen/ui/{GeneratorPane.tsx,canvasSelection.ts,codeLines.ts,templateLanguage.ts,templateMarkers.ts}`,
+  `events/registry.ts`, `components/editor-v2/EditorV2.tsx` 1167-1188, `textual/textMatch.ts`, `textual/ui/TextConfirmPanel.tsx`,
+  `docs/discovery/discovery_2026-10-31_codegen_origins_through_concat.md`
