@@ -36,7 +36,7 @@ The precedent is `StateAccessExpr` with a caller-bound accessor (§4).
 **H5, falsified.** `boundExploration.ts` reads markings only; W5 is a new pure module over the product of finite
 domains, reusing its shape and cap (§5). There is no `.smv` exporter; `bvToSmv.ts` is its expression printer.
 
-**Plan** (§6): 17 lanes, slice 2 first with the binding amendment on the trunk now; every lane on an object
+**Plan** (§6): 20 lanes, slice 2 first with the binding amendment on the trunk now; every lane on an object
 diagram waits for `oi-s2u`/`oi-s3b` on the trunk after 3.2.0. **Decisions awaiting Alfonso** (§7):
 
 - Q1 base: `Recommended: L2.1 on the trunk now; object-level lanes wait for the R-OI merge after 3.2.0.`
@@ -433,3 +433,45 @@ in a DCN action mode, decided in the languages concern together with `self.in(V:
   cap (`BOUND_EXPLORATION_CAP = 2000`, `:36`), a closed / cap verdict. The evaluation is the invariant's compiled
   guard over a σ built per tuple, i.e. the DCN nucleus's oracle; ranges like the drone's distance and speed make
   the product large, so «not decided» at the cap, as R-DCN-6 does for `Integer`.
+
+## 6. Lane plan
+
+Slices 2 to 6 of spec §10, each lane at five files or fewer (Rule 19). Paths are relative to `frontend/src/` unless
+they start with `frontend/` or `docs/`; a path marked *new* does not exist. Columns: **Vis** a visual verification is
+owed (P8); **CZ** the lane touches a §3.1 file, and **LIR** whether a Layer Impact Report is owed (§3.2 trigger, or
+the R-OI-12 precedent of opening `problems/` lanes with one); **R-OI** whether the lane needs `oi-s2u`/`oi-s3b` on
+the trunk, i.e. after the 3.2.0 tag (R-OI-12). Neither branch is an ancestor of `master` or of `dcn` today
+(**measured**, `git merge-base --is-ancestor`, exit 1 on all four pairs); `master` is an ancestor of `dcn`.
+
+| Lane | Slice | Content | Files | Vis | CZ / LIR | R-OI |
+|---|---|---|---|---|---|---|
+| L2.1 | 2 | R-DCN-3 amendment: binding role `featureSources`, `dormantOwner` on `FeatureClosure` (§1.3, §1.4) | `model/ontological/bindingCodec.ts`, `bindingReader.ts`, `bindingCheck.ts`, `__tests__/bindingReader.test.ts`, `__tests__/bindingCodec.test.ts` | no | no / no | no |
+| L2.2 | 2 | DCN metamodel of the chapter (Fig. 1, Fig. 3) as M2 on the UML fixture, drone M2, `ontoBindings` record with sources, `bindingCheck` run on it | `frontend/scripts/probe/dcn-drone-fixture.ts` *new* (Q11) | no | no / no | no |
+| L2.3 | 2 | Roles group `dcn` (Viewpoint, dynamic classifier, Invariant, Operation, Redefinition, Monitor, Instance-of), system profile «Dynamic classification», `ProfileShape` value, `dcnStcFromRoles` | `model/simulation/roleCatalog.ts`, `simProfiles.ts`, `model/simulation/dcn/dcnRoles.ts` *new*, its test *new*, `components/editor-v2/sim/SimRolesModal.tsx` (only if the shape closure needs it) | yes (roles dialog) | no / no | no |
+| L3.1 | 3 | Languages concern first: `::`, `self.in(V::D)` against «no `oclIsTypeOf`», meaning outside a run, slot reads and writes (§4 items a..d, Q4) | `docs/spec/concern_languages.md` | no | no / no | no |
+| L3.2 | 3 | Parse: token `::`, node `ClassificationTest`, member call `in` with a qualified argument | `jjel/lexer/lexer.ts`, `jjel/types/tokens.ts`, `jjel/types/ast.ts`, `jjel/parser/parser.ts`, one test | no | no / no | no |
+| L2.4 | 2 | W1..W4 over the resolved `dcn` roles, plus the range-bound (Q5), blank-invariant and `isSingleton` checks (Q8); one problem kind | `model/dcn/dcnWellFormedness.ts` *new*, its test *new*, `components/editor-v2/problems/dcnToProblems.ts` *new*, `problems/DcnProblemSync.tsx` *new*, `problems/registry.ts` (one `NodeProblemKind` member, the way `simulation` and `containment` were added, `registry.ts:55`) | yes (node problems) | yes / yes (R-OI-12 precedent) | no |
+| L3.3 | 3 | Evaluate: `classification?` accessor on `EvaluationContext`, dispatch, threaded into `buildGuardContext` | `jjel/evaluator/evaluator.ts`, `jjel/evaluator/context.ts`, `model/simulation/guardContext.ts`, one test | no | no / no | no |
+| L3.4 | 3 | Slot writes `self.battery := e` in a DCN action mode, only if Q4 is taken as recommended | `jjel/lexer/lexer.ts`, `jjel/types/ast.ts`, `jjel/parser/parser.ts`, `model/simulation/actionEvaluator.ts`, one test | no | no / no | no |
+| L4.1 | 4 | Run-state cut: a nucleus field on `SimRun`, the Petri nucleus as its default over `net`; `configAt`, step back, slider, clock enabling and Play call the field; behaviour-preserving | `components/editor-v2/sim/simRunState.ts`, `simBridge.ts` (`startRun`), `simBoardClock.ts`, one test | yes (Petri smoke: turnstile, producer-consumer, step back, slider, Clock) | no / no | no |
+| L4.2 | 4 | DCN compile from resolved roles, M and the closure: per Q3 a placeless `CompiledNet` (one transition per invocation and per contribution), σ seeded from the slots, `range` σ domains from the bounds | `model/simulation/dcn/dcnCompile.ts` *new*, its test *new*, `model/simulation/netTypes.ts` (optional instance key on `StateAttributeDecl`, Rule 11) | no | no / no | no (synthetic view in vitest) |
+| L4.3 | 4 | σ-backed handles for `self` and named instances, the classification accessor bound, watches reading the same handles | `model/simulation/dcn/dcnHandles.ts` *new*, `model/simulation/guardContext.ts`, `model/simulation/boardOutputs.ts` (`evaluateOutput`), one test | no | no / no | no |
+| L4.4 | 4 | Interleave and Sync, redefinition expansion, ticks running monitors, classification after each step, the halts of spec §6 in order (range, completeness, exclusivity), coherence as a watch hit | `model/simulation/dcn/dcnStep.ts` *new*, its test *new*, `model/simulation/netTypes.ts` (`HaltReason` members, Rule 11: ask in the prompt) | no | no / no | no |
+| L2.5 | 2 | Drone object diagram: instances through S2 synthesis, dormant slots created and not orphan, no `instantiation` problem on them (the acceptance of L2.1 on the real surfaces) | `frontend/scripts/probe/dcn-drone-fixture.ts` | no (probe measures) | no / no | yes |
+| L4.5 | 4 | Wiring: `startRun` picks the nucleus by the bound role set (R-SIM-47); DCN twins of `candidateLabel`, `lastStepText`, `markingLine` (a classification line), `defectsLine` | `components/editor-v2/sim/simBridge.ts`, `model/simulation/dcn/dcnPanelText.ts` *new*, one test, `sim/SimulationPanel.tsx` if a row is added | yes (a drone run) | no / no | yes (end to end) |
+| L5.1 | 5 | Canvas during a run: one compartment per viewpoint, active class highlighted, monitor icon, dormant slots greyed (`dormantOwner`) | `components/editor-v2/viewpoint/ir/IRNodeContent.tsx` (S3b rows live there, `oi-s3b`), `sim/SimNodeRunState.tsx`, `sim/simCanvasState.ts`, one SCSS file | yes | yes (`viewpoint/ir/`, §2.5 hot area) / yes | yes |
+| L5.2 | 5 | «Save snapshot as object diagram»: materializes σ as new instances, one undo step (S2u) | `components/editor-v2/hooks/instantiate.ts` (`oi-s2u`), `sim/simBridge.ts`, `sim/SimulationPanel.tsx`, one test | yes | yes / yes (§3.2: a creator in a D-layer write path; Rule 12) | yes (S2u after 3.2.0) |
+| L5.3 | 5 | Coherence watches: φ as a state invariant, ψ as a counter automaton per instance (R-SIM-137) | `model/simulation/watchCodec.ts`, `watchEvaluator.ts`, `components/editor-v2/sim/SimWatchesModal.tsx`, one test | yes | no / no | no for the pure part, yes end to end |
+| L5.4 | 5 | γ batch: N runs under Random, the fraction of admissible traces in the panel | `components/editor-v2/sim/simBridge.ts`, `sim/SimulationPanel.tsx`, one test | yes | no / no | yes (end to end) |
+| L6.1 | 6 | W5 by enumeration over the product of finite domains, cap and «not decided» (§5) | `model/dcn/dcnExhaustive.ts` *new*, its test *new*, `components/editor-v2/problems/dcnToProblems.ts` | yes (node problems) | yes / yes | no |
+| L6.2 | 6 | Exporter of spec §9 over `bvToSmv` leaves (Q10); `Integer` attribute as a problem (R-DCN-6) | `model/simulation/dcn/dcnToSmv.ts` *new*, its test *new*, `model/simulation/bvToSmv.ts` (enumeration literals if missing), the export menu entry (file to discover) | yes (menu) | no / no | no for the pure part |
+
+Order of execution is the table's order, not the slice numbers: L3.1 and L3.2 come before L2.4 because W1's guard
+`self.in(D')` and W2's dependency edge must parse (Q13). L4.1 is independent of DCN and can land at any point; it
+makes Q3 reversible, since both answers plug into the same field. Everything up to L4.4 runs on the trunk with no
+R-OI branch; L2.5, L4.5, L5.1, L5.2, L5.4 and the end-to-end probes of L5.3 and L6.2 wait for the R-OI merge after
+the 3.2.0 tag. Twenty lanes; the file lists are the expected ones, and each lane's discovery confirms them (P3).
+
+Two Rule 11 points are carried in the lanes' prompts, not decided here: the optional instance key on
+`StateAttributeDecl` (L4.2) is an optional property and admitted; new `HaltReason` members (L4.4) and a member
+target on the action node (L3.4) widen exported unions and need the prompt to authorize them.
