@@ -2285,3 +2285,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: C2e crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/, Alfonso GO 23:01
 **Notes**: Rollback tag `pre-textual-c2e-ir-chip` on `7d171b504` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2302/result.json`.
 **Prompt document name**: 2026-11-06 23:02
+
+## 2026-11-06 — feat(codegen): D3a, structured fixes on parse errors (P-2026-11-06-2328)
+**Prompt**: `claude_2026-11-06_2328_prompt_textual_d3a_fixes.md`, row D3a of the D report §8, design §4.3: an optional `fix` on `TextParseError`, pure text edits (D6), under `ParseOptions.fixes`: insert a missing token, near names for an unknown reference, a near keyword for a misspelled one, none otherwise; the corpus identity of CLAUDE.md §5.
+**Files touched**: `frontend/src/codegen/textual/parser.ts` (`dcccb1d16`, `a9ff46da8`, `533eabcbc`), `frontend/src/codegen/textual/__tests__/tolerant.test.ts` (same, and `99cb12a30`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck exit 0; full vitest 14465 passed, 2 skipped, 537 files, red only the 3 baseline import files; build exit 0; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Parser only; `printer.ts` imported (`textNaming`), unchanged. Literals included in (3), and ambiguous names in (2) as their paths. Not covered: a path segment with the class or feature name in place of its keyword (§4.3 row), and path fixes when an orphan precedes a root of the same class. Mutation bench of six mutants, all killed: `99cb12a30` message.
+**Prompt document name**: 2026-11-06 23:28

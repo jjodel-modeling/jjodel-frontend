@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2328
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · dcccb1d16..99cb12a30 · gates green · no visual check (parser only) · log entry in docs/log-inbox/codegen.md
 Lane: full (parser; tests)
 Depends: D2a-D2c merged (77a912e14), trunk 8049bf81b, R-TXT-53 (D6: a quick fix is a text edit only), docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §4.3 and §8 row D3a
 Worktree: ~/jjodel-w-textd, branch textual-d-writing-aids, fast-forwarded to the trunk tip
