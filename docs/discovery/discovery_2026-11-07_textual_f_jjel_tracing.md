@@ -336,3 +336,80 @@ Smoke: export a model, re-import it unchanged -> zero ops; rename one object in 
 ```
 
 If a T8 lane finds it needs a creator or a TRANSACTION outside that path, it stops (rule 12, §3.2).
+
+## 8. Lane plan and decisions
+
+### 8.1 Lanes, in order
+
+Paths under `frontend/src/codegen/textual/` unless stated. None is in the critical zone (§7).
+
+| lane | what | files (≤ 5) | visual | critical zone |
+|---|---|---|---|---|
+| F1a | `TextAttribute.jjel` (optional) set from the primitive's id; pure `jjelIslands(parsed, mm)` with the value-to-raw map per style (§4.3); first, the ids check of §5.3 on one model, in a probe | `metamodel.ts`, `jjelIslands.ts` (new), `__tests__/jjelIslands.test.ts` (new), `ui/TextualTab.tsx` (`:161` only) | no | no |
+| F1b | highlighting: JjEL sub-tokens in `analyzeText` with the existing legend, quotes kept `string` | `languageService.ts`, `jjelIslands.ts`, `__tests__/languageService.test.ts` | yes (colours, three styles) | no |
+| F1c | checking: syntax markers per island (conformance exemptions), warning, own owner, non-blocking, end by re-lexing | `jjelIslands.ts`, `ui/TextualTab.tsx`, `__tests__/jjelIslands.test.ts` | yes (squiggle) | no |
+| F1d | completion inside an island: the template completion with `self` bound to the owner, `stc`/`target` left out; `.` as a trigger if `CATALOG_TRIGGERS` (`ui/textualMonaco.ts:44`) lacks it | `languageService.ts`, `codegen/ui/templateCompletion.ts`, `ui/textualMonaco.ts`, `__tests__/completion.test.ts` | yes (suggest widget) | no |
+| F1e | `self.<f>` name check, warning | `jjelIslands.ts`, `__tests__/jjelIslands.test.ts` | yes (marker) | no |
+| F2 | tracing, after E2b: `JjodelEvents.TEXTUAL_REVEAL`; the generator tab dispatches it on a model span click; the Text tab reveals the feature's line inside the object's carried span and highlights it with E2b's collection | `frontend/src/events/registry.ts`, `codegen/ui/GeneratorPane.tsx`, `ui/TextualTab.tsx`, `selectionSync.ts`, `__tests__/selectionSync.test.ts` | yes (click in the generator tab, crop of both tabs) | no |
+| T8a | ids in the text: style option, the printer's id comment, the reader over comments, evidence 0 in `matchObjects` with the repeated-id warning | `style.ts`, `printer.ts`, `textMatch.ts`, `__tests__/textMatch.test.ts` (new or the existing match tests) | no | no |
+| T8b | Export and Import in the Text tab: download the print with ids; open a file, plan against the model with no carried spans, the existing confirm and apply | `ui/TextualTab.tsx`, `textFile.ts` (new, pure), `__tests__/textFile.test.ts` (new) | yes | no (writes through `applyTextEdit` only, §7.2) |
+| T8c | the re-import dialog: counts, a checkbox per uncertain row with its score, creates and deletes, cross-model deletes in red; an unticked row becomes create plus delete | `ui/TextConfirmPanel.tsx`, `textDiff.ts`, `__tests__/textDiff.test.ts` | yes | no |
+| T8d | calibration of 0.6 and 0.2 on the 16 Briefs and the fixture, a bench of scripted edits re-imported without ids; a threshold changes only by a ratified row | `__tests__/calibration.test.ts` (new), `textMatch.ts` (if a row changes a threshold) | no | no |
+
+Every lane ends with typecheck 0, build, the textual tests green; F1a and T8a with a mutation bench (the map's escape
+cases; the id evidence's order and the repeated id). `ui/TextualTab.tsx` (2100 lines) is touched by F1a, F1c, F2, T8b and
+by E1b, E2a, E2b: lanes serialize on it. One visual lane at a time.
+
+### 8.2 Decisions, one recommendation each
+
+- **F1. Which values are JjEL.** The attributes typed by the primitives `Pointer_EXPRESSION` and `Pointer_ACTION`,
+  keyed on the id as conformance does, carried as an optional `jjel` on `TextAttribute`. Recommended: yes; EString
+  attributes that hold JjEL by convention (R-SIM-44's `simGuard`) are not recognized in F (F11).
+- **F2. How an island is coloured.** Semantic sub-tokens from the JjEL lexer in `analyzeText`, the existing legend, no
+  embedded Monarch language. Recommended: yes.
+- **F3. What a JjEL error is in the Text tab.** A warning marker, source `jjel`, never blocking the apply, with
+  conformance's exemptions (blank, `else`). Recommended: yes, as the model accepts the value (R-SIM-44).
+- **F4. Completion inside an island.** Reuse `templateCompletion.completionsAt` with `self` as a parameter of the
+  owner's class, an option to leave out `stc` and `target`; not `getJjelSuggestions`. Recommended: yes.
+- **F5. A static name check.** Only `self.<feature>` against the owner's class, warning, its own lane F1e, last of F1.
+  Recommended: yes.
+- **F6. Generated line to Text tab.** A direct registry event, not only the canvas chain. Recommended: yes, after E2b.
+- **F7. A click when the Text tab is closed.** Nothing in F; «Open in Text tab» on the span's hover is a later slice.
+  Recommended: yes.
+- **F8. Order.** F1a to F1e, then F2 (after E2b merges), then T8a to T8d, as R-TXT-34 puts T8 last. Recommended: as
+  listed; F1 does not wait for E.
+- **F9. Ids in the text.** A structured comment per object (`// @id <id>`), not a grammar token. Recommended: yes.
+- **F10. The re-import dialog.** Grow `TextConfirmPanel` for both the edit and the re-import, one component. Recommended:
+  yes; a separate modal only if the bar cannot hold counts and checkboxes, which T8c's crops decide.
+- **F11. JjEL in EString attributes.** Out of F; a later syntax annotation (R-TXT-21 (2), on `_state`) can mark a
+  feature as JjEL. Recommended: yes.
+- **F12. Event name.** `TEXTUAL_REVEAL` in `JjodelEvents`, `{ modelId, elementId, featureName? }`. Recommended: yes.
+
+## 9. Risks and open questions
+
+Risks:
+
+- R1. What `String(a.type)` gives for the primitive in the app, and whether `a.type?.id` is readable at
+  `TextualTab.tsx:161`, is not measured (§3.2). F1a measures it first.
+- R2. The JjEL parser stops at the first error and the lexer refuses before parsing (§4.1): one marker per island, and a
+  lexer error hides a later parse error. Acceptable for F; a recovering JjEL parser is out of the front.
+- R3. Sub-token mapping across escapes was designed, not measured (§4.2 last paragraph). F1a's tests cover a token that
+  crosses `\"`, `\\` and Pascal's `''` and `#10`.
+- R4. A rename (D4) does not rewrite `self.<f>` in islands; F1e's check will then flag the stale name, which is the
+  honest signal, but the rename's message should count them (D report R4).
+- R5. Route 1 of §5.3 still fires (the canvas selection publishes, E2b highlights) alongside F2's direct event: two
+  highlights of the same span, same id. F2 dedups by id or lets the event replace the canvas one; the lane decides on
+  the crops.
+- R6. Re-import without carried spans makes name and similarity the only evidence when the file has no ids; homonyms
+  pair by order and are uncertain (`textMatch.ts:9-11`). T8d measures how often.
+- R7. The step E report is on `textual-e-sync`, not merged: F2's design leans on E2a's `selectionSync.ts` and E2b's
+  highlight collection as planned, not as shipped.
+
+Open questions:
+
+1. F1: ratify JjEL as the two primitive types only, with EString-by-convention left for a later annotation (F11)?
+2. F3: warning and non-blocking, or error that blocks the apply?
+3. F6: a direct `TEXTUAL_REVEAL` event, or rely on the canvas chain alone?
+4. F9: ids as a structured comment, or as a token of the grammar?
+5. F10: one confirm panel for edits and re-imports?
+6. F8: F1 before E finishes, F2 after E2b, T8 last?
