@@ -243,3 +243,16 @@ Hypothesis, **not measured** (no dev server, §6): on today's trunk, switching b
 | `redux/VersionFixer.tsx`, `utils/defaultViewTemplate.ts`, `common/DV.tsx` | yes | — | not expected to change (§5) |
 
 The Layer Impact Report is owed by the lanes that touch `useJjomSync.ts`, `syncState.ts` or `canvasToJjom.ts`, not by this one.
+
+### 3.7 Correction to §3.1: creations outside the canvas, with two instances mounted [read, not measured]
+
+Written by the continuation P-2026-11-07-0030 (session `97d37565`), on HEAD `8168b608f`, which changes no source file against `6fcf5d5df`.
+
+§3.1 says a second instance on an already populated model creates nothing. That holds at mount. It does not hold for an element created **after** both instances are mounted by something other than a canvas gesture (Tree View, Properties, JjScript, JjTL, an import): then both instances' populate effects see the same missing vertex or edge, in the same commit.
+
+- `redux/action/action.ts:349`: `setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION`. An action reaches the store one macrotask after it is fired. `EditorV2.tsx:1652-1653` relies on the same fact («The Jjodel action system dispatches via setTimeout (action.ts:349)»), and `useJjomSync.ts:229-230` names it for the creators of a populate run: «The creators of a populate run reach the store through an async TRANSACTION and a setTimeout(0) dispatch (action.ts:210-226, :349)».
+- Each populate run reads the store fresh, `const idlookup = store.getState()?.idlookup;` (`useJjomSync.ts:537`), and creates what is missing with `DVertex.new` (`:804`, `:837`) and `DVoidEdge.new2` (`:922`, `:1012`, `:1120`). Instance A's creators have not landed when instance B's effect runs in the same commit, so B sees the same gap and creates it again.
+- The only re-entry guard is per instance: `creatingGraphRef` (`:514`, `:518`). The M2 `existingEdgeKeys` set is built from the fresh `idlookup` and **this instance's** `rfEdgeCache` (`:645-652`), so it cannot see A's pending edge either.
+- M1 reference edges are not exposed: `markCanvasEdgePair` writes a module-level `Set` synchronously (`useM1ReferenceEdges.ts:177`), and B's guard reads it (`:148`). Inheritance edges use the same pair guard (editor-v2 `CLAUDE.md` §3.4) and are covered by it.
+
+**Consequence**: with two tabs on one model, a D-first addition of a class, an object or an M2 reference can produce **two vertices for one element, or two M2 edges for one reference**. Read, not measured (§6). This is the strongest risk of the front: today it is unreachable only because no gesture opens a second tab on one model (§2.1). It is the first check of the first critical-zone lane (L4, §7): reproduce with Families.ecore and two tabs on the metamodel, add a reference from Properties, count the DVoidEdges with that `refId`. Fix shape: one populate owner per model (a module-level per-model owner, the first mounted instance, handed over on unmount), so that the other instances only render. Precedent for the ref-count half: `preview/scriptPreviewStore.ts:117`, `:125`, `:139`, `let installed = 0;` … `if (installed++ === 0) {` … `if (--installed === 0) {`, a listener installed once whatever the number of `EditorV2` instances.
