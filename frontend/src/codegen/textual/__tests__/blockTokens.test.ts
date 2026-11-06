@@ -17,7 +17,7 @@ import { parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
 import { checkStyle } from '../styleCheck';
 import { textualNotation } from '../syntaxRecord';
-import { advancedInEffect, blockTokenFields, byField, draftPreview, fieldKey, fieldsOf, fieldValue, parseTokens, readDraft, setField, tokensText } from '../syntaxForm';
+import { advancedInEffect, blockTokenFields, byField, draftPreview, fieldKey, fieldsOf, fieldValue, literalDefault, literalField, parseTokens, readDraft, setField, setLiteral, tokensText } from '../syntaxForm';
 import type { FieldId, FieldRef } from '../syntaxForm';
 
 /** The probe's metamodel (report §4.4): a nameless Program holding declarations and statements, both named. */
@@ -508,5 +508,90 @@ describe('(5) B2: the per-block fields of the Syntax form', () => {
     it('Basic announces a per-block side in effect (mutant: the block fields not counted)', () => {
         expect(advancedInEffect(TARGET, 'class:cP') - advancedInEffect(PLAIN, 'class:cP')).toBe(2);
         expect(advancedInEffect(TARGET, 'feature:fDecls') - advancedInEffect(PLAIN, 'feature:fDecls')).toBe(2);
+    });
+});
+
+describe('(6) B2: the per-block tokens edited in the EBNF mode', () => {
+    const cls = (side: 'open' | 'close', index: number): LiteralSrc => ({ k: 'classBlock', cls: 'Program', side, index });
+    const feat = (side: 'open' | 'close', index: number): LiteralSrc => ({ k: 'featureBlock', feature: 'Program.declarations', side, index });
+    const style = (param: 'blockOpen' | 'blockClose', index: number): LiteralSrc => ({ k: 'style', param, index });
+    const edit = (draft: SyntaxAnnotations, src: LiteralSrc, value: string) => setLiteral(MM, IDS, draft, src, value);
+    const edited = (draft: SyntaxAnnotations, src: LiteralSrc, value: string): SyntaxAnnotations => {
+        const r = edit(draft, src, value);
+        if (!r.ok) throw new Error(r.reason);
+        return r.draft;
+    };
+    const literalsOf = (d: SyntaxAnnotations) => ruleLiterals(grammar(d), 'Program');
+
+    it('an own token maps to its element\'s side (mutant: the per-block kinds read only)', () => {
+        expect(literalField(MM, IDS, cls('open', 1))).toEqual({ element: 'class:cP', field: 'class.blockOpen' });
+        expect(literalField(MM, IDS, cls('close', 0))).toEqual({ element: 'class:cP', field: 'class.blockClose' });
+        expect(literalField(MM, IDS, feat('open', 0))).toEqual({ element: 'feature:fDecls', field: 'feature.blockOpen' });
+        expect(literalField(MM, IDS, feat('close', 0))).toEqual({ element: 'feature:fDecls', field: 'feature.blockClose' });
+        expect(literalField(MM, IDS, { k: 'classBlock', cls: 'Nowhere', side: 'open', index: 0 })).toBeUndefined();
+    });
+
+    it('editing an own token changes that element\'s block only, its other tokens kept (R-TXT-51 (4); mutants: the style array rewritten; the whole side replaced)', () => {
+        const d = edited(TARGET, feat('open', 0), 'as');
+        expect(d.features?.fDecls).toEqual({ keyword: 'declaration', blockOpen: ['as'], blockClose: ['end'] });
+        expect(d.style).toEqual(TARGET.style);
+        expect(d.classes).toEqual(TARGET.classes);
+        const p = edited(TARGET, cls('close', 1), 'prog');
+        expect(p.classes?.cP).toEqual({ keyword: '', blockOpen: ['begin', 'program'], blockClose: ['end', 'prog'] });
+        const lits = literalsOf(p);
+        expect(lits.slice(-2)).toEqual([['end', cls('close', 0)], ['prog', cls('close', 1)]]);
+        // The statements' block inherits and is unchanged.
+        expect(lits.filter(([, s]) => s?.k === 'style').map(([t]) => t)).toEqual(['begin', 'end', ';']);
+    });
+
+    it('D10: editing an inherited side stays language-wide and changes every block that inherits it (mutant: the edit written to the element)', () => {
+        const openOnly = withEntries({ cP: { keyword: '', blockOpen: ['begin', 'program'] } });
+        const d = edited(openOnly, style('blockClose', 0), 'stop');
+        expect(d.style).toEqual({ base: 'pascal', blockClose: ['stop', ';'] });
+        expect(d.classes?.cP).toEqual({ keyword: '', blockOpen: ['begin', 'program'] });
+        const lits = literalsOf(d);
+        expect(lits.filter(([, s]) => s?.k === 'style' && s.param === 'blockClose' && s.index === 0).map(([t]) => t)).toEqual(['stop', 'stop']);
+        // The declarations' own close is not the style's.
+        expect(lits.find(([, s]) => s?.k === 'featureBlock' && s.side === 'close')).toEqual(['end', feat('close', 0)]);
+    });
+
+    it('a token equal to the inherited side leaves the side cleared, its origin the style\'s again (R-TXT-49 D5; mutant: an inherited copy stored)', () => {
+        const once = withEntries({}, { fDecls: { keyword: 'declaration', blockOpen: ['is'] } });
+        const d = edited(once, feat('open', 0), 'begin');
+        expect(d.features?.fDecls).toEqual({ keyword: 'declaration' });
+    });
+
+    it('refuses an empty token, a quote, a blank, a malformed token, an index the side does not hold (mutants: the shape not checked; the index not checked)', () => {
+        const refusal = (src: LiteralSrc, value: string): string => { const r = edit(TARGET, src, value); return r.ok ? 'accepted' : r.reason; };
+        expect(refusal(feat('open', 0), '')).toBe('a block token of a containment cannot be empty: clearing it removes it from the notation');
+        expect(refusal(cls('open', 0), '')).toBe('a block token of a class cannot be empty: clearing it removes it from the notation');
+        expect(refusal(feat('open', 0), 'a"')).toBe('a block token of a containment cannot hold a quote');
+        expect(refusal(feat('open', 0), 'a b')).toBe('a block token of a containment cannot hold a blank');
+        expect(refusal(feat('open', 0), 'a+')).toBe('a block token of a containment: "a+" is neither a word nor a run of punctuation');
+        expect(refusal(feat('open', 3), 'x')).toBe('a block token of a containment: the token is not in the block');
+        expect(refusal({ k: 'classBlock', cls: 'Declaration', side: 'open', index: 0 }, 'x')).toBe('a block token of a class: the token is not in the block');
+    });
+
+    it('accepts a run of punctuation as an own token, as a style token is (mutant: the identifier check applied to the per-block kinds)', () => {
+        expect(edited(TARGET, feat('open', 0), '{').features?.fDecls?.blockOpen).toEqual(['{']);
+        expect(edited(TARGET, cls('close', 1), '.').classes?.cP?.blockClose).toEqual(['end', '.']);
+    });
+
+    it('the printed default of an own token is the inherited one at its index, none past it (mutant: the default looked up by the cleared origin)', () => {
+        expect(literalDefault(MM, IDS, TARGET, cls('open', 0))).toBe('begin');
+        expect(literalDefault(MM, IDS, TARGET, cls('open', 1))).toBeUndefined();
+        expect(literalDefault(MM, IDS, TARGET, cls('close', 1))).toBe(';');
+        expect(literalDefault(MM, IDS, { ...TARGET, style: {} }, cls('close', 1))).toBeUndefined();
+        expect(literalDefault(MM, IDS, { ...TARGET, style: {} }, feat('open', 0))).toBe('{');
+    });
+
+    it('under Indentation the marks stay read only (R4; mutant: the marks given an editable origin)', () => {
+        const g = grammar(withEntries({}, {}, { base: 'indent' }));
+        const marks = concreteGrammarEbnfSpans(g).literals.filter(l => l.text === INDENT_MARK || l.text === DEDENT_MARK);
+        expect(marks.length).toBeGreaterThan(0);
+        for (const m of marks) {
+            expect(literalField(MM, IDS, m.src)).toBeUndefined();
+            expect(setLiteral(MM, IDS, TARGET, m.src, 'x')).toEqual({ ok: false, reason: 'a fixed token is read only' });
+        }
     });
 });

@@ -787,6 +787,9 @@ export function literalField(mm: TextMetamodel, ids: ElementIds, src: LiteralSrc
             return id === undefined ? undefined : { element: `enum:${id}`, field: 'enum.subsets' };
         }
         case 'style': return { element: 'language', field: tokenField(src.param) };
+        // B2: an own per-block token edits its element's side; an inherited one has the style origin (R-TXT-52 D10).
+        case 'classBlock': return ofClass(src.cls, src.side === 'open' ? 'class.blockOpen' : 'class.blockClose');
+        case 'featureBlock': return ofFeature(src.feature, src.side === 'open' ? 'feature.blockOpen' : 'feature.blockClose');
         default: return undefined;
     }
 }
@@ -802,6 +805,8 @@ export function literalDefault(mm: TextMetamodel, ids: ElementIds, draft: Syntax
     const ref = literalField(mm, ids, src);
     if (!ref || src.k === 'subset') return undefined;
     const { grammar } = textualNotation(mm, { record: withoutStale(setField(draft, ref, undefined), ids), issues: [] }, ids);
+    // A per-block token cleared is the inherited side's at its index, none past it (report §4.2).
+    if (src.k === 'classBlock' || src.k === 'featureBlock') return grammar.style[src.side === 'open' ? 'blockOpen' : 'blockClose'][src.index];
     return concreteGrammarEbnfSpans(grammar).literals.find(l => sameSrc(l.src, src))?.text;
 }
 
@@ -828,7 +833,7 @@ const EMPTY_IS_DEFAULT: ReadonlySet<LiteralSrc['k']> = new Set(['class', 'featur
 
 /** Why a value is not well formed for an origin's field, or undefined. */
 function malformed(k: LiteralSrc['k'], value: string): string | undefined {
-    if (k === 'style') { const why = styleTokenFault(value); return why ? `"${value}" ${why}` : undefined; }
+    if (k === 'style' || k === 'classBlock' || k === 'featureBlock') { const why = styleTokenFault(value); return why ? `"${value}" ${why}` : undefined; }
     if (k === 'feature') return IDENTIFIER.test(value) || PUNCTUATION_KEYWORD.test(value) ? undefined : `"${value}" is not an identifier or a run of punctuation`;
     if (k === 'operatorSymbol') return IDENTIFIER.test(value) || SYMBOL_RUN.test(value) ? undefined : `"${value}" is neither an identifier nor a run of symbol characters`;
     return IDENTIFIER.test(value) ? undefined : `"${value}" is not an identifier`;
@@ -839,7 +844,8 @@ function malformed(k: LiteralSrc['k'], value: string): string | undefined {
  * default is stored as cleared (D5); an empty one is the default where D4 says so and refused elsewhere; a quote, a
  * blank, or a value the field's resolution would drop is refused; an enumeration literal and a fixed token are read only
  * (D8, D11). A group name renames its own group in the enumeration's list; a style token replaces its element of the
- * parameter's effective array, the whole array stored, cleared when equal to the base's (D9).
+ * parameter's effective array, the whole array stored, cleared when equal to the base's (D9); an own per-block token its
+ * element of the element's side, cleared when equal to the side it inherits (B2).
  */
 export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnnotations, src: LiteralSrc | undefined, value: string): LiteralEdit {
     const at = literalField(mm, ids, src);
@@ -863,6 +869,12 @@ export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnno
         const effective = textualNotation(mm, { record: withoutStale(draft, ids), issues: [] }, ids).grammar.style[src.param as 'assign'];
         if (effective[src.index] === undefined) return { ok: false, reason: `${what}: the token is not in the style` };
         return { ok: true, draft: setField(draft, at, effective.map((t, i) => (i === src.index ? value : t))), at };
+    }
+    if (src.k === 'classBlock' || src.k === 'featureBlock') {
+        // B2: the element's own side with its token replaced; equal to the inherited side, setField clears it.
+        const own = fieldValue(draft, at);
+        if (!Array.isArray(own) || own[src.index] === undefined) return { ok: false, reason: `${what}: the token is not in the block` };
+        return { ok: true, draft: setField(draft, at, own.map((t, i) => (i === src.index ? value : t))), at };
     }
     const cleared = value === literalDefault(mm, ids, draft, src);
     return { ok: true, draft: setField(draft, at, cleared ? undefined : value), at };
