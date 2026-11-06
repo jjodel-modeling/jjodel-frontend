@@ -7302,6 +7302,15 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   refused under free layout; D9 per-block tokens where there is no block are an error and are not applied; D10 the EBNF
   origin is set per side, so a side the block inherits stays language-wide when edited. Lanes B0, B1, B2, then B3a and
   B3b for the head prefix.
+- **R-TXT-53** (2026-11-06, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step D, writing
+  aids: decisions D1 to D6 and D8 to D10 of docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §8, taken under
+  lane auto (Alfonso 2026-11-06 20:34, «decidi tu»).** D1 lane order D2a, D2b, D2c, D3a, D3b, D4, D5, D3c, with lane D1
+  (R-TXT-37) waiting for D7; D2 the expected set is computed by the parser under an optional cursor; D3 a reference
+  candidate is written as the printer writes it, never `@"id"`; D4 rename goes through the text, refused on a new error,
+  a changed target or a nameless object; D5 Format keeps comments, drops redundant parentheses, runs only on an
+  applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
+  D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
+  multi-word close. D7 (ask whenever a deleted root is covered by a comment, wider than R-TXT-37) waits for Alfonso.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
