@@ -712,3 +712,29 @@ describe('(8) B3a: the head prefix in the derivation', () => {
         ]);
     });
 });
+
+describe('(9) B3a: the style check reads the class keyword by its origin', () => {
+    const errors = (g: ConcreteGrammar) => checkStyle(g).filter(f => f.level === 'error').map(f => [f.rule, f.where, f.message]);
+
+    it('P5: a prefix on a named class checks clean (mutant: the head keyword read by position, the prefix taken for it)', () => {
+        expect(errors(named(P5))).toEqual([]);
+    });
+
+    it('P7: the same prefix on two root classes is refused by the LL(1) finding alone, not twice (mutant: distinct-classes reads the prefix)', () => {
+        const record: SyntaxAnnotations = { ...P5, roots: ['cP', 'cS'], classes: { ...P5.classes, cS: { layout: 'line', prefix: ['begin'] } } };
+        expect(errors(named(record))).toEqual([['annotations', 'rule Model', 'not LL(1): "begin" can start two alternatives']]);
+    });
+
+    it('a prefix shared by classes at different positions is no conflict (mutant: the prefix compared across positions)', () => {
+        const record: SyntaxAnnotations = { ...P5, classes: { ...P5.classes, cD: { layout: 'line', prefix: ['begin'] } } };
+        expect(errors(named(record))).toEqual([]);
+    });
+
+    it('two positional classes at one position told apart by their prefixes are no distinct-classes finding (mutant: a prefixed positional class keyed by "")', () => {
+        const record: SyntaxAnnotations = { ...P5, roots: ['cP', 'cS'], classes: { ...P5.classes, cP: { keyword: '', prefix: ['begin'], blockClose: ['end', 'program'] }, cS: { keyword: '', layout: 'line', prefix: ['run'] } } };
+        expect(errors(named(record))).toEqual([]);
+        // Without the prefixes the two still start alike, and the rule still says so.
+        const bare: SyntaxAnnotations = { ...record, classes: { ...record.classes, cP: { keyword: '', blockClose: ['end', 'program'] }, cS: { keyword: '', layout: 'line' } } };
+        expect(errors(named(bare)).filter(([rule]) => rule === 'distinct-classes')).toEqual([['distinct-classes', 'Model', 'the keyword "" starts 2 classes: Program, Statement']]);
+    });
+});
