@@ -2246,3 +2246,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 8/8 PASS, 5 crops in `~/.jjodel-lanes/P-2026-11-06-2213/`, GO pending.
 **Notes**: Red first 6/6; bench 7/7 killed (in `f5fb02d8b`). Gates: typecheck 0; vitest 534 passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. `TextualReading` gains optional `mm`. Triggers: the catalog styles' punctuation, filtered per request by the reading's style. After `=` the port offers operand keywords only (operands are new Refs, not references); references shown at `peer`. Focused suggest row overflows the widget's right edge: no app rule names it.
 **Prompt document name**: 2026-11-06 22:13
+
+## 2026-11-06 — merge: textual-d-writing-aids into alfonso-frontend-jjtl (P-2026-11-06-2243)
+**Prompt**: `claude_2026-11-06_2243_prompt_merge_textual-d-writing-aids.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d-writing-aids` at `845f7612f` into `alfonso-frontend-jjtl`, merge base `71e9e3ab7`, 11 commits on the branch side.
+**Files touched**: merge `77a912e14`: 10 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2118_prompt_textual_d2a_expected_set.md`, `docs/prompts/claude_2026-11-06_2146_prompt_textual_d2b_completions.md`, `docs/prompts/claude_2026-11-06_2213_prompt_textual_d2c_completion_provider.md`, `frontend/src/codegen/textual/__tests__/completion.test.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts`, `frontend/src/codegen/textual/languageService.ts`, `frontend/src/codegen/textual/parser.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `77a912e14` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14454 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D2c crops d2c-1..4 in ~/.jjodel-lanes/P-2026-11-06-2213/ checked by the chat; suggest widget selected-row overflow ticketed
+**Notes**: Rollback tag `pre-textual-d-writing-aids-P-2026-11-06-2243` on `54f38d163` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2243/result.json`.
+**Prompt document name**: 2026-11-06 22:43
