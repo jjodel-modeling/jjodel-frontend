@@ -7310,7 +7310,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   a changed target or a nameless object; D5 Format keeps comments, drops redundant parentheses, runs only on an
   applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
   D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
-  multi-word close. D7 (ask whenever a deleted root is covered by a comment, wider than R-TXT-37) waits for Alfonso.
+  multi-word close. D7 (ask whenever a deleted root is covered by a comment, even with other changes in the same pause; wider than R-TXT-37) ratified by Alfonso 2026-11-06 22:28; C2e option A (a shared helper for the nameless-target label) approved at the same time.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
