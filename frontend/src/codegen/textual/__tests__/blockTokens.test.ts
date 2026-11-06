@@ -414,7 +414,8 @@ describe('(5) B2: the per-block fields of the Syntax form', () => {
 
     it('a concrete class and a containment get Block open and Block close, Advanced only, the tokens input with a Reset, fieldsOf unchanged (mutants: the rows in Basic; a text input over an array; no Reset)', () => {
         for (const [element, prefix] of [['class:cP', 'class'], ['feature:fDecls', 'feature']] as const) {
-            expect(rows(element).map(f => [f.id, f.label, f.input, f.tier, f.reset])).toEqual([
+            // A class's Head prefix row (B3b) is tested in (12).
+            expect(rows(element).filter(f => f.id !== 'class.prefix').map(f => [f.id, f.label, f.input, f.tier, f.reset])).toEqual([
                 [`${prefix}.blockOpen`, 'Block open', 'tokens', 'advanced', true],
                 [`${prefix}.blockClose`, 'Block close', 'tokens', 'advanced', true],
             ]);
@@ -438,7 +439,7 @@ describe('(5) B2: the per-block fields of the Syntax form', () => {
     });
 
     it('Q1: a side left empty shows the inherited tokens as placeholder, the language-wide override included (mutants: no placeholder; the base\'s over the override)', () => {
-        const placeholders = (r: SyntaxAnnotations, element: string) => rows(element, 'advanced', r).map(f => f.placeholder);
+        const placeholders = (r: SyntaxAnnotations, element: string) => rows(element, 'advanced', r).filter(f => f.id !== 'class.prefix').map(f => f.placeholder);
         expect(placeholders(PLAIN, 'class:cP')).toEqual(['begin', 'end ;']);
         expect(placeholders(PLAIN, 'feature:fDecls')).toEqual(['begin', 'end ;']);
         expect(placeholders({ ...PLAIN, style: { base: 'pascal', blockClose: ['stop'] } }, 'feature:fDecls')).toEqual(['begin', 'stop']);
@@ -831,5 +832,92 @@ describe('(11) B3b: the readers find the class keyword by its origin', () => {
         const g = named(READING_B);
         const r = parseText('begin program P\n  declaration is\n  end', g);
         expect(r.errors.map(e => e.message)).toEqual(['expected "end" "program" to close the body of Program at 2:3; found end of text']);
+    });
+});
+
+describe('(12) B3b: the head prefix in the Syntax form and the EBNF mode', () => {
+    const prefixRef = (element = 'class:cP'): FieldRef => ({ element, field: 'class.prefix' });
+    const rows = (element: string, mode: 'basic' | 'advanced' = 'advanced', record: SyntaxAnnotations | null = PLAIN, mm: TextMetamodel = MM, eids: ElementIds = IDS) => blockTokenFields(mm, eids, element, mode, record);
+    const src = (index: number, cls = 'Program'): LiteralSrc => ({ k: 'classPrefix', cls, index });
+
+    it('a concrete class gets a Head prefix row before its block rows, Advanced only, the tokens input with a Reset and no placeholder (mutants: no row; in Basic; a text input)', () => {
+        const fs = rows('class:cP');
+        expect(fs.map(f => f.id)).toEqual(['class.prefix', 'class.blockOpen', 'class.blockClose']);
+        expect(fs[0]).toEqual({ id: 'class.prefix', label: 'Head prefix', tier: 'advanced', input: 'tokens', reset: true });
+        expect(rows('class:cP', 'basic')).toEqual([]);
+        expect(rows('feature:fDecls').map(f => f.id)).not.toContain('class.prefix');
+    });
+
+    it('an abstract class gets it only while the draft sets it, so the refusal has a field (mutant: offered on an abstract class)', () => {
+        const AMM: TextMetamodel = { classes: [{ name: 'Thing', isAbstract: true }, { name: 'Box', supers: ['Thing'] }], enumerations: [] };
+        const AIDS: ElementIds = { classes: { cT: 'Thing', cB: 'Box' }, features: {}, enums: {} };
+        expect(rows('class:cT', 'advanced', null, AMM, AIDS)).toEqual([]);
+        const onAbstract: SyntaxAnnotations = { v: 1, classes: { cT: { prefix: ['x'] } } };
+        expect(rows('class:cT', 'advanced', onAbstract, AMM, AIDS).map(f => f.id)).toEqual(['class.prefix']);
+        expect(faultsAt(onAbstract, prefixRef('class:cT'), AMM, AIDS)).toEqual([['error', 'Thing is abstract: a prefix goes on its concrete classes; not applied']]);
+    });
+
+    it('fieldValue and setField read and write the prefix as a whole array; cleared, the key goes (mutants: the prefix not read; not written)', () => {
+        const d = setField(PLAIN, prefixRef(), parseTokens('begin'));
+        expect(d.classes?.cP).toEqual({ keyword: '', prefix: ['begin'] });
+        expect(tokensText(fieldValue(d, prefixRef()))).toBe('begin');
+        expect(setField(d, prefixRef(), undefined).classes?.cP).toEqual({ keyword: '' });
+        expect(advancedInEffect(d, 'class:cP') - advancedInEffect(PLAIN, 'class:cP')).toBe(1);
+    });
+
+    it('the form reaches `begin program P ... end program` on a named class (mutant: the form\'s value not stored)', () => {
+        const start: SyntaxAnnotations = { ...PLAIN, classes: { ...PLAIN.classes, cP: {} } };
+        let d = setField(start, { element: 'class:cP', field: 'class.keyword' }, 'program');
+        d = setField(d, prefixRef(), ['begin']);
+        d = setField(d, block('class:cP', 'class.blockClose'), ['end', 'program']);
+        const text = draftPreview(NMM, NIDS, d, NAMED_OBJECTS).text.trimEnd().split('\n');
+        expect(text[0]).toBe('begin program P begin');
+        expect(text[text.length - 1]).toBe('end program');
+        expect(readDraft(NMM, NIDS, d).faults).toEqual([]);
+    });
+
+    it('the refusals of B3a land at the prefix field, not at the keyword (mutants: the finding at the element only; at class.keyword)', () => {
+        const at = (prefix: unknown, field: FieldId = 'class.prefix') => faultsAt(withEntries({ cP: { keyword: '', prefix } }), block('class:cP', field));
+        expect(at([';'])).toEqual([['error', 'the prefix token ";" is the terminator of the style pascal; not applied']]);
+        expect(at([';'], 'class.positional')).toEqual([]);
+        expect(at(['a b'])).toEqual([['error', 'the prefix token "a b" holds a blank']]);
+        expect(at('begin')).toEqual([['error', 'prefix is not a list of tokens']]);
+        const taken = withEntries({ cP: { keyword: '', prefix: ['<<'] } }, { fStmts: { keyword: '<<' } });
+        expect(faultsAt(taken, block('feature:fStmts', 'feature.keyword'))).toEqual([['error', 'the keyword "<<" is a prefix token of Program; not applied']]);
+        expect(faultsAt(taken, prefixRef())).toEqual([['error', 'the keyword "<<" is a prefix token of Program; not applied']]);
+    });
+
+    it('a prefix shared by two root classes is refused once, at both prefix fields, with its reason (R-TXT-51 (3); mutants: located at no field; at the keywords)', () => {
+        const record: SyntaxAnnotations = { ...P5, roots: ['cP', 'cS'], classes: { ...P5.classes, cS: { layout: 'line', prefix: ['begin'] } } };
+        const ll1 = [['error', 'not LL(1): "begin" can start two alternatives']];
+        expect(faultsAt(record, prefixRef(), NMM, NIDS)).toEqual(ll1);
+        expect(faultsAt(record, prefixRef('class:cS'), NMM, NIDS)).toEqual(ll1);
+        expect(faultsAt(record, block('class:cP', 'class.keyword'), NMM, NIDS)).toEqual([]);
+        expect(readDraft(NMM, NIDS, record).faults.filter(f => f.level === 'error').map(f => f.message)).toEqual(['not LL(1): "begin" can start two alternatives']);
+        // A prefix that holds the token past its start does not start with it, and is not at fault.
+        const later: SyntaxAnnotations = { ...record, classes: { ...record.classes, cD: { layout: 'line', prefix: ['go', 'begin'] } } };
+        expect(faultsAt(later, prefixRef('class:cD'), NMM, NIDS)).toEqual([]);
+        expect(faultsAt(later, prefixRef(), NMM, NIDS)).toEqual(ll1);
+    });
+
+    it('the EBNF mode edits a prefix token in place through its field; the other tokens kept (mutants: classPrefix read only; the whole prefix replaced)', () => {
+        const record = withEntries({ cP: { keyword: '', prefix: ['<<', 'program'], blockOpen: ['is'], blockClose: ['end', 'program'] } });
+        expect(literalField(MM, IDS, src(1))).toEqual({ element: 'class:cP', field: 'class.prefix' });
+        expect(literalField(MM, IDS, src(0, 'Nowhere'))).toBeUndefined();
+        const r = setLiteral(MM, IDS, record, src(1), 'start');
+        expect(r).toEqual({ ok: true, draft: withEntries({ cP: { keyword: '', prefix: ['<<', 'start'], blockOpen: ['is'], blockClose: ['end', 'program'] } }), at: prefixRef() });
+        const lits = ruleLiterals(grammar(r.ok ? r.draft : record), 'Program');
+        expect(lits.slice(0, 2)).toEqual([['<<', src(0)], ['start', src(1)]]);
+        expect(setLiteral(MM, IDS, record, src(0), '[[')).toMatchObject({ ok: true, draft: { classes: { cP: { prefix: ['[[', 'program'] } } } });
+    });
+
+    it('refuses an empty prefix token, a blank, a malformed token, an index the prefix does not hold; no default (mutants: the shape not checked; the index not checked)', () => {
+        const record = withEntries({ cP: { keyword: '', prefix: ['begin'] } });
+        const refusal = (s: LiteralSrc, value: string): string => { const r = setLiteral(MM, IDS, record, s, value); return r.ok ? 'accepted' : r.reason; };
+        expect(refusal(src(0), '')).toBe('a prefix token of a class cannot be empty: clearing it removes it from the notation');
+        expect(refusal(src(0), 'a b')).toBe('a prefix token of a class cannot hold a blank');
+        expect(refusal(src(0), 'a+')).toBe('a prefix token of a class: "a+" is neither a word nor a run of punctuation');
+        expect(refusal(src(1), 'x')).toBe('a prefix token of a class: the token is not in the prefix');
+        expect(literalDefault(MM, IDS, record, src(0))).toBeUndefined();
     });
 });

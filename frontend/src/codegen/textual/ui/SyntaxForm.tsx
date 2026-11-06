@@ -350,7 +350,7 @@ export function Field({ element, field, draft, ids, mm, findings, onChange }: Fi
                     <div style={RESET_INPUT}>{input}</div>
                     <button type="button" className="syntax-form__button" aria-label={`Reset ${field.label}`} disabled={value === undefined}
                             style={value === undefined ? { visibility: 'hidden' } : undefined}
-                            title={field.placeholder ? `Back to ${field.placeholder}` : 'Back to the inherited tokens'} onClick={() => onChange(ref, undefined)}>
+                            title={field.placeholder ? `Back to ${field.placeholder}` : field.id === 'class.prefix' ? 'Back to no prefix' : 'Back to the inherited tokens'} onClick={() => onChange(ref, undefined)}>
                         <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
                     </button>
                 </div>
