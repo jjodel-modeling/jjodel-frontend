@@ -575,25 +575,30 @@ The runtime store is exposed as `windoww.store` to avoid collision with React De
 
 ## 16. AI Provider System
 
-Unified system for AI providers: OpenAI, Anthropic, DeepSeek, Mistral, Gemini, Groq, Kimi, Ollama, Local.
+One module, `frontend/src/services/ai/` (#196), serves every AI feature. Providers (`PROVIDER_IDS`): Claude, GPT, DeepSeek, Gemini, Mistral, Groq, Ollama, Kimi, Custom. Claude, GPT and Gemini also have a live model catalog (`CATALOG_PROVIDERS`).
 
-**Full details**: `docs/discovery/2026-06-13_ai-provider-subsystem.md`.
+**Public surface**: `services/ai/index.ts`. Import from it, not from the files under it. It exports `registry` (`get`, `all`, `enabled`, `load`), `ProviderConfigStore` (key, endpoint and model per provider), `FeaturePreferenceStore` (provider and model per feature), the catalog cache (`cachedModels`, `refreshIfStale`) and the types (`ProviderId`, `AIFeature`, `ChatRequest`, ...).
+
+**Boundary**: `src/services/ai` imports neither `joiner` nor UI code. Its only app import is `events/registry.ts`. Logos, colours, initials, key placeholders and key URLs live UI-side in `components/common/providerVisuals.ts` (`PROVIDER_VISUALS`, `providerVisual(id)`).
 
 **Usage pattern**:
 ```typescript
-// Per-feature preference hook
-const provider = useAIProviderPreference('documentation');
+// A feature reads its provider and model (helpers in components/common/ProviderModelSelector.tsx)
+const provider = registry.get(preferredProviderId('explain'));
+yield* provider.chatStream({ history, model: preferredModelId('explain') });
 
-// Reusable dropdown (supports non-AI local options)
-<ProviderSelector feature="chat" compact />
+// Provider + model dropdown of a feature
+<ProviderModelSelector feature="documentation" compact onNavigateToSettings={...} />
 
 // Open Settings on Providers section
 settingsModal?.openSettings('providers');
 ```
 
-**Feature IDs**: `'documentation'`, `'chat'`, `'scriptblock'`, `'mappings'`.
+**Feature IDs** (`AI_FEATURES`): `'documentation'`, `'chat'`, `'scriptblock'`, `'mappings'`, `'explain'`.
 
-**Provider resolution order**: feature override → global default → first configured.
+**Provider resolution order** (`preferredProviderId`): feature preference → first enabled provider → first of `PROVIDER_IDS`. The legacy global default is no longer read at runtime: `registry.load()`, called once at module scope of `components/Jodie/Jodie.tsx`, copies it into the features that have none and runs the other load-time model migrations. `preferredModelId` returns the stored model through the legacy and retired-model map, or `undefined`, and the provider then uses its own configured model.
+
+**Full details**: `docs/discovery/discovery_2026-11-02_196_l0_ai_layer.md` (L0 inventory) and the frozen spec `docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md`.
 
 ---
 
@@ -614,7 +619,7 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
 - `npm run typecheck` must exit 0, with no `error TS` line. The baseline is **zero** from 2026-10-12: P-2026-10-12-2000 and P-2026-10-12-2001 cleared the 14 errors it had carried (RC-48, `docs/decisions.md`). An error on your tree is yours, or a regression of the tip that you prove by running the typecheck on the tip; it is never recorded as pre-existing, and no list of known errors is kept here again. Fix it or stop.
-- `npm run test` where the touched area has tests. The suite has known failures: nine files fail at import with `ReferenceError: window is not defined` (through the `monaco-editor` import) and collect no test: `src/jjscript/__tests__/context-binding.test.ts`; `src/jjtl/__tests__/abstract-target.test.ts`, `ai-prompt-sanitization.test.ts`, `circular-refs.test.ts`, `executor-bridge.test.ts`, `executor-llayer.test.ts`, `forall-mapping.test.ts`, `source-alias.test.ts`; `src/utils/__tests__/UDComparator.test.ts`. Do not treat any other red as pre-existing without checking.
+- `npm run test` where the touched area has tests. The suite has known failures: three files fail at import with `ReferenceError: window is not defined` and collect no test: `src/jjscript/__tests__/context-binding.test.ts`; `src/jjtl/__tests__/ai-prompt-sanitization.test.ts`; `src/utils/__tests__/UDComparator.test.ts` (measured 2026-11-03: 3 failed, 504 passed). Do not treat any other red as pre-existing without checking.
 - `npm run check:agents` must pass when you touch any `CLAUDE.md`. It regenerates every `AGENTS.md` into a temp directory and compares it byte for byte with the committed one. When red, run `npm run gen:agents` and include the regenerated files in the same commit — never hand-edit them.
 - `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md`, `docs/claude-code-log.md` or a lane inbox `docs/log-inbox/*.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent entries, in the active log and in the inboxes alike, carry the fields of their type (`Corregge` and `Causa` for a task; `Ticket`, `Priority` and `Found in` for a ticket). If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
 - `npm run check:scripts` must pass when you add or edit any file under `frontend/scripts/`. It rejects a compound assignment, or `x = x <op> ...`, whose right side awaits: `failures += await run()` reads the counter before the await and overwrites the increments made during it, and printed ALL GREEN over failures on 2026-09-24. Fix: `const r = await run(); failures += r;`. It reads the disk, gitignored `_tmp_*` probes included, so its verdict depends on the untracked files of the worktree it runs in, and it runs only when someone runs it.

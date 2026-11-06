@@ -14,6 +14,8 @@ import { LOG_COLUMN_SOURCES } from '../src/collectors/log/collect.mjs';
 import { NOTIFY_COLUMN_SOURCES } from '../src/notify/notifier.mjs';
 import { HOST_COLUMN_SOURCES } from '../src/host/load.mjs';
 import { T0, addTranscript, commit, g, initRepo } from './helpers/git-repo.mjs';
+import { resultEvent, writeLane } from './helpers/layers-fixture.mjs';
+import { startBoard } from '../src/board/server.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const TACK = here('../bin/tack.mjs');
@@ -126,4 +128,43 @@ test('after tack scan of a repository, no commit subject, body, author, email or
   assert.notEqual(bytes.indexOf(Buffer.from(root, 'utf8')), -1);
   assert.notEqual(bytes.indexOf(Buffer.from('P-2026-01-05-1000', 'utf8')), -1);
   for (const out of [r.stdout, r.stderr, shown2.stdout, shown2.stderr]) assert.ok(!out.includes(GIT_MARKER), 'marker printed');
+});
+
+const LANE_MARKER = 'TACKLANEMARKER-4c8a2f19';
+
+test('slice 9: the closing text of a waiting lane reaches /api/lanes and /api/attention, never the store bytes', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'tack-privacy-lanes-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const laneRoot = join(dir, 'lanes');
+  const now = Date.now();
+  writeLane(laneRoot, 'P-2026-01-08-1100', {
+    started: now - 60 * 60e3, exitAt: now - 10 * 60e3,
+    inputs: [{ at: now - 60 * 60e3, text: `# Slice\n\nRequest: Alfonso ${LANE_MARKER}\n\n## COSA\nx\n` }],
+    events: [resultEvent({ ms: 50 * 60e3, usd: 1, text: `[P-2026-01-08-1100 · session s]\nThe build failed on ${LANE_MARKER} today.\nRecommended: retry ${LANE_MARKER}\nOutcome: hard-stop` })],
+  });
+  const store = join(dir, 'store.db');
+  const b = await startBoard({ store, root: join(dir, 'none'), cwd: dir, port: 0, scanOnStart: false, sample: false, user: join(dir, 'settings.json'), laneRoot });
+  let lanes;
+  let attention;
+  try {
+    lanes = await (await fetch(`${b.url}api/lanes`)).text();
+    attention = await (await fetch(`${b.url}api/attention`)).text();
+  } finally {
+    await b.close();
+  }
+  // Positive control: the page does get the text, read from log.jsonl at request time.
+  const card = JSON.parse(lanes).waitingCards[0];
+  assert.equal(card.id, 'P-2026-01-08-1100');
+  assert.equal(card.wait.reason, `The build failed on ${LANE_MARKER} today.`);
+  assert.equal(card.wait.recommended, `retry ${LANE_MARKER}`);
+  assert.ok(attention.includes(LANE_MARKER), 'the attention answer carries it too');
+  const files = [store, store + '-wal', store + '-shm', store + '-journal'].filter(existsSync);
+  assert.ok(files.length >= 1);
+  for (const f of files) {
+    const bytes = readFileSync(f);
+    assert.equal(bytes.indexOf(Buffer.from(LANE_MARKER, 'utf8')), -1, `marker found in ${f}`);
+    assert.equal(bytes.indexOf(Buffer.from(LANE_MARKER, 'utf16le')), -1, `marker (UTF-16) found in ${f}`);
+  }
+  // Positive control on the same bytes: the lane id is kept.
+  assert.notEqual(readFileSync(store).indexOf(Buffer.from('P-2026-01-08-1100', 'utf8')), -1);
 });

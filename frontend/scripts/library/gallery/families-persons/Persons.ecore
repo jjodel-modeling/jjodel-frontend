@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The target metamodel of the classic Families2Persons transformation (ATL zoo).
+  No nsURI, as the classic one: sample-Persons.xmi declares xmlns="Persons" and
+  resolves by EPackage name (XMIService.getMetamodelByNsURI, fallback on the name).
+-->
+<ecore:EPackage xmi:version="2.0"
+                xmlns:xmi="http://www.omg.org/XMI"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+                name="Persons">
+  <eClassifiers xsi:type="ecore:EClass" name="Person" abstract="true">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fullName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Male" eSuperTypes="#//Person"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Female" eSuperTypes="#//Person"/>
+</ecore:EPackage>

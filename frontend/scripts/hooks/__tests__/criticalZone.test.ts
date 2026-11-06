@@ -17,8 +17,23 @@ const SIX = [
 ];
 const ROOTS = ['/Users/alfonso/jjodel-release/', '/Users/alfonso/jjodel/', '/tmp/other-checkout/'];
 
+/**
+ * runScript hands process.env to the child, so inside a lane started with a
+ * go-ahead the hook would inherit JJODEL_CRITICAL_ZONE_GOAHEAD (ticket #393).
+ * Every spawn here starts without it; a case that wants it passes it in `env`.
+ */
+function runZone(payload: unknown, env: Record<string, string> = {}) {
+    const inherited = process.env.JJODEL_CRITICAL_ZONE_GOAHEAD;
+    delete process.env.JJODEL_CRITICAL_ZONE_GOAHEAD;
+    try {
+        return runScript('critical-zone.mjs', payload, env);
+    } finally {
+        if (inherited !== undefined) process.env.JJODEL_CRITICAL_ZONE_GOAHEAD = inherited;
+    }
+}
+
 function zone(tool: 'Edit' | 'Write' | 'NotebookEdit', toolInput: Record<string, unknown>) {
-    return runScript('critical-zone.mjs', file(tool, toolInput));
+    return runZone(file(tool, toolInput));
 }
 const edit = (path: string, extra: Record<string, unknown> = {}) =>
     zone('Edit', { file_path: path, old_string: 'a', new_string: 'b', replace_all: false, ...extra });
@@ -152,7 +167,7 @@ describe('critical-zone: the shape of the answer and the failure mode', () => {
         ['no path', JSON.stringify({ tool_input: { old_string: 'a' } })],
         ['a path that is not a string', JSON.stringify({ tool_input: { file_path: 7 } })],
     ])('kills "an internal problem blocks": %s exits 0 with nothing on stdout', (_name, stdin) => {
-        const r = runScript('critical-zone.mjs', stdin);
+        const r = runZone(stdin);
         expect(r.status).toBe(0);
         expect(r.stdout).toBe('');
     });
@@ -165,7 +180,7 @@ function inMode(mode: unknown, tool: 'Edit' | 'Write', toolInput: Record<string,
     const event: Record<string, unknown> = { ...file(tool, toolInput) };
     if (mode === undefined) delete event.permission_mode;
     else event.permission_mode = mode;
-    return runScript('critical-zone.mjs', event);
+    return runZone(event);
 }
 
 describe('critical-zone: the go-ahead of RC-30 under bypass', () => {
@@ -173,7 +188,7 @@ describe('critical-zone: the go-ahead of RC-30 under bypass', () => {
     const withEnv = (mode: string, env: Record<string, string>) => {
         const event: Record<string, unknown> = { ...file('Edit', { file_path: six, old_string: 'a', new_string: 'b' }) };
         event.permission_mode = mode;
-        return runScript('critical-zone.mjs', event, env);
+        return runZone(event, env);
     };
 
     test('kills "go-ahead ignored": bypass with JJODEL_CRITICAL_ZONE_GOAHEAD set to a Prompt-ID lets the edit through', () => {

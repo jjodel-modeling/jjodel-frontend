@@ -162,6 +162,7 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'archive'} element={<ArchivePage/>}/>
                             <Route path={'notes'} element={<NotesPage/>}/>
                             <Route path={'templates'} element={<TemplatePage/>}/>
+                            <Route path={'templates/:ref'} element={<TemplatePage/>}/>
                             <Route path={'explore'} element={<ExplorePage/>}/>
                             <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
                             <Route path={'community'} element={<CommunityPage/>}/>

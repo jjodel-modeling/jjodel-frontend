@@ -17,17 +17,24 @@
 import type { SimModelView } from './types';
 import type { SimStateReader } from './guardContext';
 import type { GuardOutcome } from './guardEvaluator';
+import type { JjelBitVector } from '../../jjel/evaluator/context';
 
 // ── σ (R-SIM-19, R-SIM-23) ──────────────────────────────────────────────────
 
-/** A state attribute value. An enumeration literal is its name. */
-export type SimValue = boolean | number | string;
+/** A state attribute value. An enumeration literal is its name; a `word` attribute holds a bit-vector (R-BV-7). */
+export type SimValue = boolean | number | string | JjelBitVector;
 
 /** The finite domain of a semantic attribute (spec §3.2). */
 export type Domain =
     | { readonly kind: 'boolean' }
     | { readonly kind: 'range'; readonly min: number; readonly max: number }
-    | { readonly kind: 'enum'; readonly literals: readonly string[] };
+    | { readonly kind: 'enum'; readonly literals: readonly string[] }
+    /**
+     * A bit-vector (R-BV-7): its width is the value of the feature `widthFeature` (a pointer) of each element,
+     * an integer from 1 to 128 read from the frozen M at Reset into `CompiledNet.widths`, so two elements of
+     * one metaclass may have different widths; constant for the run. Never an input (R-BV-8).
+     */
+    | { readonly kind: 'word'; readonly widthFeature: string; readonly signed: boolean };
 
 /**
  * A state attribute, declared in the STC per metaclass (R-SIM-19). `marked`
@@ -63,7 +70,9 @@ export type DeclarationDefectCode =
     // subset checker rejects, that reads `event`, or that sits on a cycle; a derived value that fails at Reset.
     | 'exclusive' | 'parse' | 'subset' | 'event' | 'cycle' | 'derived'
     // R-SIM-88: an input on presentation, or an equation that reads an input.
-    | 'input';
+    | 'input'
+    // R-BV-7: a `word` element whose width feature has no integer value from 1 to 128.
+    | 'width';
 
 /** A defect of the declarations, reported at Reset; never an element of the net. */
 export interface DeclarationDefect {
@@ -266,6 +275,8 @@ export interface CompiledNet {
      * A declaration with an `equation` is derived, never a target (R-SIM-75).
      */
     readonly declared: ReadonlyMap<string, ReadonlyMap<string, StateAttributeDecl>>;
+    /** Element → attribute → the width of its `word` declaration, resolved at Reset (R-BV-7); absent when none. */
+    readonly widths?: ReadonlyMap<string, ReadonlyMap<string, number>>;
     readonly initial: SimState;
     readonly defects: readonly NetDefect[];
     /** The declarations that are wrong (R-SIM-71); each still applies where it can, the first of a name winning. */

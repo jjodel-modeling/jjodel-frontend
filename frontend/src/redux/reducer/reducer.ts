@@ -71,6 +71,7 @@ import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 import {JjodelEvents} from "../../events/registry";
+import { registerSystemViews } from '../../common/defaultViewsRegistry';
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -468,7 +469,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
-                elem.pointedBy.push(PointedBy.new(statefoldername));
+                // The folder entry is added by the derived pointer action above (`PointedBy.add`, in this batch or at
+                // its end); pushing it here too gave every new element two of them (ticket F8, P-2026-10-24-1350).
+                // elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
@@ -551,6 +554,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
         // and that's all, the reducer is really simple as actions are really simple.
     }
+
+    // A pointedBy parked by this batch (a pointer to an element the batch creates later in path order) is resolved
+    // here, so it lands in this batch's delta and not in the next action's (R-JJD-12, P-2026-10-24-1350).
+    if (PendingPointedByPaths.all.length) newState = PendingPointedByPaths.getSolveableActions2(newState, oldState);
 
     // effetti collaterali, aggiornamento di ridondanze
     newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
@@ -1108,17 +1115,76 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     // initialize default views map
     if (typeof Defaults.defaultViewPointsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
-        for (let k in ret.idlookup) {
-            let e = ret.idlookup[k];
-            if (!e || typeof e !== 'object') continue;
-            let v: DViewElement|DViewPoint = e as any;
-            if (v.className.includes('DViewPoint')) Defaults.defaultViewPointsMap[k] = v;
-            if (v.className.includes('DViewElement')) Defaults.defaultViewsMap[k] = v;
-        }
+        // Only Pointer_View* records: on an in-page open the guard is still open and the state holds user views.
+        registerSystemViews(ret.idlookup as any, Defaults.defaultViewPointsMap, Defaults.defaultViewsMap);
     }
 
     return ret;
 
+}
+
+/**
+ * Undo group (R-JJD-6): the deltas a user pushes between `beginUndoGroup` and `endUndoGroup` become one
+ * undo entry, so one undo reverts a whole script Apply. While the group is open every delta of that user is
+ * pushed as its own entry (no merge into an entry below the mark, no drop, no MAX_HISTORY shift); the end
+ * folds the entries since the mark with `composeUndoDeltas`. A nested begin only counts; an end without a
+ * begin, and a group that pushed fewer than two entries, leave the history as it is.
+ * The caller flushes the pending 300 ms COMMIT before calling end, or its deltas land after the group.
+ * The outermost end keeps the group's entry as the tail: while it is on top, a later write the legacy path
+ * would merge into it (a graph create of the sync) composes into it exactly, so one undo still removes every
+ * `idlookup` record (P-2026-11-06-2150, option (c)). A push, an undo, a redo and a begin clear the tail.
+ */
+let undoGroup: { depth: number; user: Pointer<DUser>; mark: number } | null = null;
+let undoGroupTail: GObject | null = null;
+
+export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
+    undoGroupTail = null;
+    if (undoGroup) { undoGroup.depth++; return; }
+    undoGroup = { depth: 1, user, mark: statehistory[user]?.undoable.length ?? 0 };
+}
+
+export function endUndoGroup(): void {
+    if (!undoGroup || --undoGroup.depth > 0) return;
+    const { user, mark } = undoGroup;
+    undoGroup = null;
+    const history = statehistory[user];
+    if (!history) return;
+    const start = Math.min(mark, history.undoable.length);
+    if (history.undoable.length - start === 1) undoGroupTail = history.undoable[start];
+    if (history.undoable.length - start < 2) return;
+    const grouped = history.undoable.splice(start);
+    let merged: GObject = grouped[0];
+    for (let i = 1; i < grouped.length; i++) merged = composeUndoDeltas(merged, grouped[i]);
+    merged.timestamp = grouped[grouped.length - 1].timestamp;
+    for (const d of grouped) U.arrayRemoveAll(statehistory.all.undoable, d);
+    history.undoable.push(merged);
+    statehistory.all.undoable.push(merged);
+    undoGroupTail = merged;
+    while (history.undoable.length > MAX_HISTORY) history.undoable.shift();
+    while (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
+}
+
+/**
+ * One undo delta out of two consecutive ones: `older` restores S0 from S1, `newer` restores S1 from S2, the
+ * result restores S0 from S2. Per key the older value wins, unless both are nested deltas: then they compose.
+ * Not `U.objectMergeInPlace`: it is shallow (the second `idlookup` would be dropped whole) and its `??` takes
+ * a restored `undefined` or `null` for a missing key.
+ */
+function composeUndoDeltas(older: GObject, newer: GObject): GObject {
+    const own = (o: GObject, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+    const isObj = (v: unknown) => v !== null && typeof v === 'object';
+    const ret: GObject = {};
+    for (const k in newer) if (own(newer, k)) ret[k] = newer[k];
+    for (const k in older) {
+        if (!own(older, k)) continue;
+        ret[k] = own(newer, k) && isObj(older[k]) && isObj(newer[k]) ? composeUndoDeltas(older[k], newer[k]) : older[k];
+    }
+    if (Array.isArray(older) || Array.isArray(newer) || older.__jjObjDiffIsArr || newer.__jjObjDiffIsArr) {
+        ret.__jjObjDiffIsArr = true;
+        if ('length' in older) ret.length = older.length;
+        else if ('length' in newer) ret.length = newer.length;
+    }
+    return ret;
 }
 
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
@@ -1155,85 +1221,13 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
     return state;
 }
 
-// ── Undo groups (P-2026-10-21-1016; docs/discovery/discovery_2026-10-21_onto_s2u_undo_group.md, Q2) ──────────────
-// A span of dispatches the caller opens and closes, kept as ONE undo entry whose contents are exact: the entry is
-// `objectDelta(state now, state before the group)`, the entry one dispatch of the whole span would have pushed, so an
-// undo removes from `idlookup` every record the span created. The legacy shallow merge (`U.objectMergeInPlace`, older
-// wins) drops a later write's `idlookup` patch. It lives in the history, not in BEGIN/END: the writes reach the store
-// one by one while the group is open, so a caller can wait for them. With no group open and no group entry on top,
-// `_reducer` takes the legacy path unchanged.
-export const UNDO_GROUP_MAX_MS = 10000;
-let undoGroupSeq = 0;
-// Only the opening sender's writes join; it closes on endUndoGroup, on undo or redo, or UNDO_GROUP_MAX_MS after opening.
-let openUndoGroup: { id: number, sender: Pointer<DUser>, openedAt: number } | null = null;
-// The last entry a group wrote and the state before the group: a legacy merge into that entry (a graph create of the
-// sync after endUndoGroup) stays exact. Cleared by any push, undo, redo and beginUndoGroup.
-let undoGroupTail: { entry: GObject, base: DState } | null = null;
-// The last close of a group and the last clear of the tail, with their cause: read by `undoGroupState` only.
-type UndoGroupEvent = { group: number | null, at: number, by: 'end' | 'begin' | 'undo' | 'cap' | 'push' };
-let undoGroupClosed: UndoGroupEvent | null = null;
-let undoGroupTailCleared: UndoGroupEvent | null = null;
-
-function closeUndoGroup(by: UndoGroupEvent['by']): void {
-    if (openUndoGroup) undoGroupClosed = { group: openUndoGroup.id, at: Date.now(), by };
-    openUndoGroup = null;
-}
-
-function clearUndoGroupTail(by: UndoGroupEvent['by']): void {
-    if (undoGroupTail) undoGroupTailCleared = { group: openUndoGroup?.id ?? null, at: Date.now(), by };
-    undoGroupTail = null;
-}
-
-/** Opens an undo group for the current user, closing any open one; returns its id for `endUndoGroup`. */
-export function beginUndoGroup(): number {
-    closeUndoGroup('begin');
-    clearUndoGroupTail('begin');
-    openUndoGroup = { id: ++undoGroupSeq, sender: DUser.current, openedAt: Date.now() };
-    return openUndoGroup.id;
-}
-
-/** Closes the group `id`; a no-op when it is no longer the open one (undo, redo, the time cap or a newer group closed it). */
-export function endUndoGroup(id: number): void {
-    if (openUndoGroup?.id === id) closeUndoGroup('end');
-}
-
-function dropUndoGroup(): void {
-    closeUndoGroup('undo');
-    clearUndoGroupTail('undo');
-}
-
-/** The undo group state, read-only, for the tests and the acceptance probe (`window.undoGroupState` in dev). */
-export function undoGroupState(): {
-    open: { id: number, openedAt: number } | null, tail: { timestamp: number, onTop: boolean } | null,
-    closed: UndoGroupEvent | null, tailCleared: UndoGroupEvent | null,
-} {
-    const own = statehistory[openUndoGroup?.sender ?? DUser.current]?.undoable;
-    return {
-        open: openUndoGroup ? { id: openUndoGroup.id, openedAt: openUndoGroup.openedAt } : null,
-        tail: undoGroupTail ? { timestamp: undoGroupTail.entry.timestamp, onTop: !!own && own[own.length - 1] === undoGroupTail.entry } : null,
-        closed: undoGroupClosed && { ...undoGroupClosed },
-        tailCleared: undoGroupTailCleared && { ...undoGroupTailCleared },
-    };
-}
-if ((import.meta as any).env?.DEV) windoww.undoGroupState = undoGroupState;
-
-/** Rewrites `entry` in place (both history stacks hold the same object) as the exact delta from `ret` back to `base`. */
-function setExactGroupEntry(entry: GObject, ret: DState, base: DState): void {
-    const { timestamp, timestampdiff } = entry;
-    const exact = Uobj.objectDelta(ret, base, true, false) as GObject;
-    for (const k of Object.keys(entry)) delete entry[k];
-    Object.assign(entry, exact);
-    entry.timestamp = timestamp;
-    entry.timestampdiff = timestampdiff;
-}
-
 const allowFixingNullArr: boolean = false;
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     const mergeTolerance = U.UpdatingTimer*1.5;
 
     switch (action.type) {
-        case UndoAction.type: dropUndoGroup(); return doUndoRedo(oldState, action, 'undo');
-        case RedoAction.type: dropUndoGroup(); return doUndoRedo(oldState, action, 'redo');
+        case UndoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'undo');
+        case RedoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'redo');
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
@@ -1279,20 +1273,9 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
-            if (openUndoGroup && ret.timestamp - openUndoGroup.openedAt > UNDO_GROUP_MAX_MS) closeUndoGroup('cap');
-            if (openUndoGroup && openUndoGroup.sender === action.sender && U.userHasInteracted && statehistory.globalcanundostate) {
-                // A write of the open group: its first pushes an entry of its own (never merged into an unrelated
-                // one, whatever its age or graph keys), the next ones rewrite that entry exactly.
-                const own = statehistory[action.sender].undoable;
-                if (undoGroupTail && own[own.length - 1] === undoGroupTail.entry) {
-                    setExactGroupEntry(undoGroupTail.entry, ret, undoGroupTail.base);
-                    return ret;
-                }
-                own.push(delta);
+            if (undoGroup && undoGroup.user === action.sender) {
+                statehistory[action.sender].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
-                if (own.length > MAX_HISTORY) own.shift();
-                if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
-                undoGroupTail = { entry: delta, base: oldState };
                 return ret;
             }
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
@@ -1311,9 +1294,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 oldState, delta});
 
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
-            if (shouldMerge && allowMerge && undoGroupTail && pastDelta === undoGroupTail.entry) {
-                // A late write merged into a group's entry (:1216 for a graph create) keeps the entry exact.
-                setExactGroupEntry(pastDelta, ret, undoGroupTail.base);
+            if (shouldMerge && allowMerge && undoGroupTail && pastDelta === undoGroupTail) {
+                // A late write into a group's entry: compose in place (both history stacks hold the same object).
+                const composed = composeUndoDeltas(pastDelta, delta);
+                for (const k of Object.keys(pastDelta)) delete pastDelta[k];
+                Object.assign(pastDelta, composed);
             }
             else if (shouldMerge && allowMerge) {
                 // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
@@ -1355,7 +1340,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             else if (isRelevantChange) {
                 let user = (action as Action).sender;
-                clearUndoGroupTail('push');
+                undoGroupTail = null;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
                 if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();

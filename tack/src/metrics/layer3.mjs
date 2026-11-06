@@ -77,8 +77,9 @@ function outcome(sel) {
   for (const e of t) if (e.outcome in log) log[e.outcome]++;
   const out = { log };
   if (lanes.length) {
-    out.lanes = { lanes: lanes.length, done: 0, 'hard-stop': 0, question: 0, blocked: 0, unparsed: 0, none: 0, running: 0 };
-    for (const l of lanes) out.lanes[l.live ? 'running' : l.outcome in out.lanes ? l.outcome : 'none']++;
+    out.lanes = { lanes: lanes.length, done: 0, 'hard-stop': 0, breakpoint: 0, ceiling: 0, question: 0, blocked: 0, unparsed: 0, none: 0, running: 0 };
+    // A final hard-stop counts under the kind the collector gave it (breakpoint, ceiling, else hard-stop).
+    for (const l of lanes) out.lanes[l.live ? 'running' : l.outcome === 'hard-stop' && (l.stop_kind === 'breakpoint' || l.stop_kind === 'ceiling') ? l.stop_kind : l.outcome in out.lanes ? l.outcome : 'none']++;
   }
   return out;
 }

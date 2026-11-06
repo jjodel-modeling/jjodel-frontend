@@ -5,7 +5,7 @@
  * `OriginHost` is the `JjelTextHost` a template's context carries, and its `observe` is the context's
  * `readObserver`. Each hole is evaluated through `evaluateHole`, which collects the member reads of that hole and
  * turns its value into a Text by four rules (discovery §B.4):
- * 1. model: the hole is a member read, or one named builtin with literal arguments applied to a member read. The
+ * 1. model: the hole is a member read or an index read (R-TXT-13), or one named builtin with literal arguments applied to a member read. The
  *    fragment gets the read's owner and feature, and the builtin's name: `identity` for a bare read; the name for
  *    a character-aligned or a lossy whole-value builtin; the name and the arguments for a sub-range one. The name
  *    is recorded without claiming invertibility (U9). The owner is the object the feature was read on, the last
@@ -14,8 +14,15 @@
  * 3. opaque: anything else, with the set of reads the hole performed (its nested holes included);
  * 4. literal: the text between holes carries its template position, recovered from `tokenize`, because the parts
  *    of an interpolated string carry none (S1).
+ * The rules apply per operand too (P-2026-10-31-1341): the host evaluates each operand of `+` and each lambda body
+ * in a read frame of its own (`evaluateConcat`, `evaluatePart`), keeps the lambda body of each item `map` returns
+ * (`mapItems`), and a plain string `+` or `join` made of them records an assembly of its node; a hole, an expression
+ * template's body (`evaluateBody`) or an operand whose value is that string gets its operands' origins, each by the
+ * rules, and a separator opaque. Values are the evaluator's own: only origins change.
  * A hole that throws is an error fragment at the hole's template position with the exception's message, and
- * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10).
+ * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10). The exception is the generation
+ * budget (text.ts, R-GEN-28): each hole is a time checkpoint, and once the budget has tripped the hole rethrows its
+ * stop instead of writing an error fragment; each Text built here is an output checkpoint.
  *
  * Each splice into a hole adds an indentation level with the hole line's leading whitespace (indent.ts).
  * Feature ids come from idlookup through a side table keyed by handle (`WeakMap`): a handle's `id` names its
@@ -26,9 +33,11 @@
 
 import { JjelTokenType, tokenize } from '../../jjel';
 import type { JjelExpression, JjelObject, JjelTextHost, JjelTextPart, JjelValue } from '../../jjel';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { toVerilog } from '../../jjel/evaluator/builtins/bitvectors';
 import { holePrefixes } from './indent';
-import { EMPTY_TEXT, concatTexts, fragment, isText, makeText, renderText } from './text';
-import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, Text, TextFragment, Transformation } from './text';
+import { EMPTY_TEXT, GenerationBudget, concatTexts, fragment, isText, makeText, renderText } from './text';
+import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, TemplatePosition, Text, TextFragment, Transformation } from './text';
 
 type Lookup = Record<string, any>;
 
@@ -66,9 +75,10 @@ interface SourceInfo {
 export class TemplateSources {
     private readonly holes = new WeakMap<object, SourceInfo>();
     private readonly strings = new WeakMap<object, { info: SourceInfo; spans: readonly LiteralSpan[] }>();
+    private readonly nodes = new WeakMap<object, SourceInfo>();
 
-    /** Registers the AST `expr` of `template`, parsed from `source`. */
-    register(template: string, source: string, expr: JjelExpression): void {
+    /** Registers the AST `expr` of `template`, parsed from `source` in `mode` (absent: an expression). */
+    register(template: string, source: string, expr: JjelExpression, mode?: 'text' | 'expression'): void {
         const lineStarts = [0];
         for (let i = 0; i < source.length; i++) if (source[i] === '\n') lineStarts.push(i + 1);
         const info: SourceInfo = { template, lineStarts };
@@ -81,8 +91,9 @@ export class TemplateSources {
                 return;
             }
             const n = node as JjelExpression;
+            this.nodes.set(n, info);
             if (n.type === 'InterpolatedString') {
-                this.strings.set(n, { info, spans: literalSpans(source, n) });
+                this.strings.set(n, { info, spans: literalSpans(source, n, mode === 'text' && n === expr) });
                 for (const part of n.parts) if (part.kind === 'expression') this.holes.set(part.expr, info);
             }
             for (const [key, value] of Object.entries(n)) if (key !== 'location') walk(value);
@@ -97,6 +108,11 @@ export class TemplateSources {
         const start = expr.location?.start;
         if (!info || !start) return null;
         return { template: info.template, offset: start.offset ?? 0, line: start.line, column: start.column };
+    }
+
+    /** The template whose source holds the node `expr`; `''` for a node no template registered. */
+    templateAt(expr: JjelExpression): string {
+        return this.nodes.get(expr)?.template ?? '';
     }
 
     /** The literal fragments of the `index`-th text part of the string `node`, one per output line. */
@@ -127,23 +143,25 @@ function literalOrigin(info: SourceInfo, offset: number): LiteralOrigin {
  * The literal parts of the string literal `node` in `source`, in AST order: its own source lexed again with the
  * `interpolation` option, its text tokens up to the closing quote, the empty ones dropped as the parser drops them.
  * The first token starts at the opening quote, the others right after a hole's `}`; an escape is two source
- * characters for one of the value.
+ * characters for one of the value. The root of a text body (`textBody`, R-GEN-26) is lexed with `textBody`: no
+ * quote, and the only escape is `\${`, three source characters for two of the value.
  */
-function literalSpans(source: string, node: JjelExpression): LiteralSpan[] {
+function literalSpans(source: string, node: JjelExpression, textBody = false): LiteralSpan[] {
     const start = node.location?.start.offset;
     const end = node.location?.end.offset;
     if (start === undefined || end === undefined) return [];
-    const { tokens } = tokenize(source.slice(start, end), { interpolation: true });
+    const { tokens } = tokenize(source.slice(start, end), textBody ? { textBody: true } : { interpolation: true });
     const spans: LiteralSpan[] = [];
     for (let i = 0; i < tokens.length; i++) {
         const tok = tokens[i];
         if (tok.type !== JjelTokenType.STRING_PART && tok.type !== JjelTokenType.STRING) continue;
         if (tok.value !== '') {
             const offsets: number[] = [];
-            let at = start + tok.start + (i === 0 ? 1 : 0);
+            let at = start + tok.start + (i === 0 && !textBody ? 1 : 0);
             for (let k = 0; k < tok.value.length; k++) {
                 offsets.push(at);
-                at += source[at] === '\\' ? 2 : 1;
+                if (!textBody) at += source[at] === '\\' ? 2 : 1;
+                else at += source[at] === '\\' && source[at + 1] === '$' && source[at + 2] === '{' ? 2 : 1;
             }
             spans.push({ value: tok.value, offsets });
         }
@@ -160,11 +178,39 @@ interface Read {
     readonly value: JjelValue;
 }
 
+/** A value evaluated in a read frame of its own: its expression, its reads, and the assembly that built it, if any. */
+interface OperandValue {
+    readonly value: JjelValue;
+    readonly expr: JjelExpression;
+    readonly reads: readonly Read[];
+    readonly assembly: Assembly | null;
+}
+
+/**
+ * A plain string `+` or `join` made of: its pieces in order, an operand (attributed by the rules) or a text (opaque).
+ * Their texts join to `value`, checked when it is recorded.
+ */
+interface Assembly {
+    readonly value: string;
+    readonly pieces: readonly (OperandValue | string)[];
+}
+
 /** The property a member read names: `o.p`, `o?.p`, or the dual form `o.p()`; `null` for anything else. */
 function readName(expr: JjelExpression): string | null {
     if (expr.type === 'MemberAccess' || expr.type === 'NullSafeMemberAccess') return expr.property;
     if ((expr.type === 'MethodCall' || expr.type === 'NullSafeMethodCall') && expr.args.length === 0) return expr.method;
     return null;
+}
+
+/**
+ * An index read with a string key, `o[k]` (R-TXT-13): the evaluator reports it as the member read `o.k` (R-TXT-6). The
+ * key is not known here, so a literal key is checked against the read and a literal number (an array position) is
+ * refused; any other index is taken as read, and `modelOrigin` then compares the read's value with the hole's.
+ */
+function isIndexRead(expr: JjelExpression, read: Read): boolean {
+    if (expr.type !== 'IndexAccess') return false;
+    if (expr.index.type !== 'Literal') return true;
+    return typeof expr.index.value === 'string' && expr.index.value === read.property;
 }
 
 /** A literal argument's value: a literal, or `-` before a number literal; `undefined` for anything else. */
@@ -195,6 +241,8 @@ function plain(value: JjelValue): string {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    // Its Verilog form with its width, `8'hff`, as `stringify` prints it (R-BV-6): a vector's payload is a BigInt.
+    if (isBitVector(value)) return toVerilog(value);
     if (Array.isArray(value)) return value.map(plain).join(', ');
     try {
         return JSON.stringify(value) ?? '';
@@ -203,16 +251,26 @@ function plain(value: JjelValue): string {
     }
 }
 
-const opaque = (text: string, reads: readonly FeatureRead[] = []): Text =>
-    (text === '' ? EMPTY_TEXT : makeText([fragment(text, { kind: 'opaque', reads })]));
+/** The template field of a model or opaque origin: the hole's template, absent when the hole's position is unknown. */
+const templateOf = (template: string): { template?: string } => (template !== '' ? { template } : {});
+
+const opaque = (text: string, reads: readonly FeatureRead[] = [], template = ''): Text =>
+    (text === '' ? EMPTY_TEXT : makeText([fragment(text, { kind: 'opaque', reads, ...templateOf(template) })]));
 
 export class OriginHost implements JjelTextHost {
     /** The reads of the holes being evaluated, innermost last. */
     private readonly frames: Read[][] = [];
     private readonly features = new WeakMap<object, Map<string, string>>();
     private nextLevel = 1;
+    /** The assembly of the last evaluation of each `+` and `join` node, absent when that evaluation made none. */
+    private readonly assemblies = new WeakMap<object, Assembly>();
+    /** The lambda body each item of a `map` result came from, by array. */
+    private readonly itemParts = new WeakMap<object, readonly (OperandValue | null)[]>();
+    /** The lambda body evaluated last, at its nesting depth among lambda bodies. */
+    private lastPart: { part: OperandValue; depth: number } | null = null;
+    private partDepth = 0;
 
-    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources) {}
+    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources, private readonly budget: GenerationBudget = new GenerationBudget()) {}
 
     /** The `readObserver` of the template context: records the read in the hole being evaluated. */
     readonly observe = (target: JjelObject, property: string, value: JjelValue): void => {
@@ -224,6 +282,9 @@ export class OriginHost implements JjelTextHost {
     }
 
     evaluateHole(expr: JjelExpression, evaluate: () => JjelValue): JjelValue {
+        const at: TemplatePosition = this.sources.holePosition(expr) ?? { template: '', offset: -1, line: 0, column: 0 };
+        this.budget.checkpoint(at);
+        this.budget.enter(at);
         const reads: Read[] = [];
         this.frames.push(reads);
         let value: JjelValue = null;
@@ -235,8 +296,10 @@ export class OriginHost implements JjelTextHost {
         } finally {
             this.frames.pop();
             this.frames[this.frames.length - 1]?.push(...reads);
+            this.budget.leave();
         }
-        const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads);
+        this.budget.rethrow();
+        const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads, at.template);
         return text as unknown as JjelValue;
     }
 
@@ -253,15 +316,96 @@ export class OriginHost implements JjelTextHost {
                 for (const f of this.toText(part.value).fragments) fragments.push(fragment(f.text, f.origin, [level, ...f.indent]));
             }
         }
-        return makeText(fragments) as unknown as JjelValue;
+        return this.budget.measure(makeText(fragments)) as unknown as JjelValue;
     }
 
     concat(left: JjelValue, right: JjelValue): JjelValue {
-        return concatTexts([this.toText(left), this.toText(right)]) as unknown as JjelValue;
+        return this.budget.measure(concatTexts([this.toText(left), this.toText(right)])) as unknown as JjelValue;
     }
 
     join(items: JjelValue[], separator: JjelValue): JjelValue {
-        return this.joinTexts(items.map(v => this.toText(v)), this.toText(separator)) as unknown as JjelValue;
+        return this.budget.measure(this.joinTexts(items.map(v => this.toText(v)), this.toText(separator))) as unknown as JjelValue;
+    }
+
+    /**
+     * `left + right`: each operand in a read frame of its own, so rule 1 applies per operand. With a Text, the two
+     * attributed; else the evaluator's value, and an assembly of the node when the operands' texts make it.
+     */
+    evaluateConcat(expr: JjelExpression, left: () => JjelValue, right: () => JjelValue, plainConcat: (l: JjelValue, r: JjelValue) => JjelValue): JjelValue {
+        if (expr.type !== 'Binary') return plainConcat(left(), right());
+        const l = this.operand(expr.left, left);
+        const r = this.operand(expr.right, right);
+        if (isText(l.value) || isText(r.value)) {
+            this.assemblies.delete(expr);
+            return this.budget.measure(concatTexts([this.attributeOperand(l), this.attributeOperand(r)])) as unknown as JjelValue;
+        }
+        const value = plainConcat(l.value, r.value);
+        this.record(expr, value, [l, r], [plain(l.value), plain(r.value)]);
+        return value;
+    }
+
+    /** A lambda body: its value as is, remembered as the last part for `mapItems`. */
+    evaluatePart(expr: JjelExpression, evaluate: () => JjelValue): JjelValue {
+        this.partDepth++;
+        let part: OperandValue;
+        try {
+            part = this.operand(expr, evaluate);
+        } finally {
+            this.partDepth--;
+        }
+        this.lastPart = { part, depth: this.partDepth + 1 };
+        return part.value;
+    }
+
+    /** `items.map(f)`: the items `f` maps them to, each with the lambda body it came from, kept by array. */
+    mapItems(items: JjelValue[], call: (item: JjelValue) => JjelValue): JjelValue[] {
+        const parts: (OperandValue | null)[] = [];
+        const out = items.map(item => {
+            this.lastPart = null;
+            const value = call(item);
+            const last = this.lastPart as { part: OperandValue; depth: number } | null;
+            parts.push(last && last.depth === this.partDepth + 1 && last.part.value === value ? last.part : null);
+            return value;
+        });
+        if (parts.some(p => p !== null)) this.itemParts.set(out, parts);
+        return out;
+    }
+
+    /**
+     * `items.join(separator)`: with a Text, the join of the items attributed by their parts; else `plainJoin()`, and
+     * an assembly of the call node when the items came from a `map` and their texts make the value.
+     */
+    evaluateJoin(expr: JjelExpression | undefined, items: JjelValue[], separator: JjelValue, plainJoin: () => JjelValue): JjelValue {
+        const parts = this.itemParts.get(items);
+        if (isText(separator) || items.some(v => isText(v))) {
+            if (expr) this.assemblies.delete(expr);
+            const texts = items.map((v, i) => (parts?.[i] ? this.attributeOperand(parts[i]!) : this.toText(v)));
+            return this.budget.measure(this.joinTexts(texts, this.toText(separator))) as unknown as JjelValue;
+        }
+        const value = plainJoin();
+        if (!expr) return value;
+        const sep = separator === undefined ? '' : separator;
+        if (!parts || typeof sep !== 'string') {
+            this.assemblies.delete(expr);
+            return value;
+        }
+        const pieces: (OperandValue | string)[] = [];
+        const texts: string[] = [];
+        items.forEach((v, i) => {
+            if (i > 0) {
+                pieces.push(sep);
+                texts.push(sep);
+            }
+            pieces.push(parts[i] ?? plain(v));
+            texts.push(plain(v));
+        });
+        this.record(expr, value, pieces, texts);
+        return value;
+    }
+
+    /** The body of an expression template: in a read frame of its own, its value attributed by the rules. */
+    evaluateBody(expr: JjelExpression, evaluate: () => JjelValue): Text {
+        return this.attributeOperand(this.operand(expr, evaluate));
     }
 
     stringify(text: JjelValue): string {
@@ -291,26 +435,67 @@ export class OriginHost implements JjelTextHost {
         return concatTexts(parts);
     }
 
-    /** The Text of a hole's value, by the rules of §B.4. */
-    private attribute(value: JjelValue, expr: JjelExpression, reads: readonly Read[]): Text {
+    /** `evaluate()` in a read frame of its own, whose reads then go to the enclosing frame; throws what it throws. */
+    private operand(expr: JjelExpression, evaluate: () => JjelValue): OperandValue {
+        const reads: Read[] = [];
+        this.frames.push(reads);
+        let value: JjelValue;
+        try {
+            value = evaluate();
+        } finally {
+            this.frames.pop();
+            this.frames[this.frames.length - 1]?.push(...reads);
+        }
+        return { value, expr, reads, assembly: this.assemblyOf(expr, value) };
+    }
+
+    /** The assembly the last evaluation of `expr` recorded, when it made `value`. */
+    private assemblyOf(expr: JjelExpression, value: JjelValue): Assembly | null {
+        if (typeof value !== 'string') return null;
+        const assembly = this.assemblies.get(expr);
+        return assembly && assembly.value === value ? assembly : null;
+    }
+
+    /** Records the assembly of `expr` when `value` is the string `texts` make; clears it otherwise. */
+    private record(expr: JjelExpression, value: JjelValue, pieces: (OperandValue | string)[], texts: readonly string[]): void {
+        if (typeof value === 'string' && texts.join('') === value) this.assemblies.set(expr, { value, pieces });
+        else this.assemblies.delete(expr);
+    }
+
+    /** An operand's Text, by the rules; its model or opaque origin names the template that holds its expression. */
+    private attributeOperand(operand: OperandValue): Text {
+        return this.attribute(operand.value, operand.expr, operand.reads, this.sources.templateAt(operand.expr), operand.assembly);
+    }
+
+    /** An assembly's Text: each operand by the rules, each text opaque. */
+    private assemble(assembly: Assembly): Text {
+        return concatTexts(assembly.pieces.map(p => (typeof p === 'string' ? opaque(p) : this.attributeOperand(p))));
+    }
+
+    /**
+     * The Text of a hole's value, by the rules of §B.4; its model or opaque origin names the hole's template. A string
+     * an assembly made is its operands, each by the rules (rule 1 per operand).
+     */
+    private attribute(value: JjelValue, expr: JjelExpression, reads: readonly Read[], template: string, assembly: Assembly | null = this.assemblyOf(expr, value)): Text {
         if (isText(value)) return value;
         if (value === null || value === undefined) return EMPTY_TEXT;
         if (Array.isArray(value) && value.some(v => isText(v))) return this.toText(value);
         const text = plain(value);
         if (text === '') return EMPTY_TEXT;
+        if (assembly) return this.assemble(assembly);
         if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            const model = this.modelOrigin(value, expr, reads);
+            const model = this.modelOrigin(value, expr, reads, template);
             if (model) return makeText([fragment(text, model)]);
         }
-        return opaque(text, this.featureReads(reads));
+        return opaque(text, this.featureReads(reads), template);
     }
 
     /** Rule 1: a member read, or a named builtin with literal arguments on one; the owner is the last read's target. */
-    private modelOrigin(value: JjelValue, expr: JjelExpression, reads: readonly Read[]): Origin | null {
+    private modelOrigin(value: JjelValue, expr: JjelExpression, reads: readonly Read[], template: string): Origin | null {
         const last = reads[reads.length - 1];
         if (!last) return null;
         let transformation: Transformation | null = null;
-        if (readName(expr) === last.property && last.value === value) {
+        if ((readName(expr) === last.property || isIndexRead(expr, last)) && last.value === value) {
             transformation = IDENTITY;
         } else {
             const applied = namedBuiltin(expr);
@@ -318,7 +503,7 @@ export class OriginHost implements JjelTextHost {
         }
         if (!transformation) return null;
         const read = this.featureRead(last);
-        return read ? { kind: 'model', ...read, transformation } : null;
+        return read ? { kind: 'model', ...read, transformation, ...templateOf(template) } : null;
     }
 
     /** The reads of a hole on model elements, once each, in order. */

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-2300
 Chat: C-2026-10-18-2254
 Front: notation-library
 Lane: full (more than 3 files: build script, seven packages, catalog, Templates page, route, test, probe)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane notation-library · 4a3c1db49 (correction round 2) · verifica visiva passata 2026-10-19 16:41 (Alfonso, RC-23)
 Request: Alfonso, 2026-10-18 22:54, «scrivi e lancia la lane della galleria secondo R-LIB-9»
 Depends: P-2026-10-18-1800 (gallery S1+S2, closure 04b9d9a48), P-2026-10-18-2150 (S1b, held without GO)
 Corregge: P-2026-10-18-2150 (derived viewpoints rejected at the chat's visual check, superseded by R-LIB-9)

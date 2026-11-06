@@ -39,7 +39,7 @@ function hasMarkdownSyntax(text: string): boolean {
     return patterns.some(pattern => pattern.test(text));
 }
 
-export function MarkdownMessage({ content, isUser = false, onJjScriptExecute, showSourceToggle = true }: MarkdownMessageProps): JSX.Element {
+export function MarkdownMessage({ content, isUser = false, onJjScriptExecute, showSourceToggle = false }: MarkdownMessageProps): JSX.Element {
     const [showSource, setShowSource] = useState(false);
 
     const hasMarkdown = useMemo(() => hasMarkdownSyntax(content), [content]);

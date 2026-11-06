@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
     BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
     layoutLanded, readOntoBindings, seedLanded, synthesisPlan, syncSlotsPlan, viewCentre, type NodeLayoutWrite,
     type SlotSyncPlan, type SynthesisPlan,
+    instantiate, syncSlots, type InstantiateResult,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -359,5 +360,169 @@ describe('the layout of a new node (tickets (a) and (c), P-2026-10-21-1016)', ()
         expect(layoutLanded(get, writes)).toBe(false);
         expect(layoutLanded(get, [{ vertex: 'V2', write: { target: 'scalars', patch: { x: 1 } } }])).toBe(false);
         expect(layoutLanded(get, [])).toBe(true);
+    });
+});
+
+// The write half of `instantiate` over a fake store and a fake undo history (P-2026-11-06-2225). The history keeps the
+// trunk's rules (`reducer.ts` `beginUndoGroup` / `endUndoGroup`): every store write is one entry holding the records it
+// replaced, a nested begin only counts, the outermost end folds the entries since its mark into one, older record kept.
+const h = vi.hoisted(() => {
+    const s: any = { lookup: {}, entries: [], depth: 0, mark: 0, opened: [], closed: [], layoutLands: true, vertexAfterMs: 20, made: 0 };
+    s.write = (id: string, rec: any) => {
+        s.entries.push({ [id]: s.lookup[id] === undefined ? undefined : structuredClone(s.lookup[id]) });
+        s.lookup[id] = rec;
+    };
+    s.undo = () => {
+        const e = s.entries.pop();
+        for (const k of Object.keys(e)) { if (e[k] === undefined) delete s.lookup[k]; else s.lookup[k] = e[k]; }
+    };
+    s.begin = () => {
+        if (s.depth++ > 0) return;
+        s.mark = s.entries.length;
+        s.opened.push({ at: Date.now(), lookup: structuredClone(s.lookup) });
+    };
+    s.end = () => {
+        if (s.depth === 0 || --s.depth > 0) return;
+        s.closed.push(Date.now());
+        const grouped: any[] = s.entries.splice(s.mark);
+        if (grouped.length === 0) return;
+        const merged: Record<string, any> = {};
+        for (const d of grouped) for (const k of Object.keys(d)) if (!(k in merged)) merged[k] = d[k];
+        s.entries.push(merged);
+    };
+    // `addObject`: the object now, its seed 60 ms later; the sync draws a root object's vertex `vertexAfterMs` later.
+    // A contained object is listed 30 ms later in its owner's DValue of the feature named `key`.
+    s.create = (modelId: string, className: string, ownerId: string | null, key: string | null, seed: Record<string, unknown>) => {
+        const id = `${className}_${++s.made}`;
+        s.write(id, { id, className: 'DObject', instanceof: className, father: ownerId ?? modelId, features: [] });
+        if (ownerId && key) setTimeout(() => {
+            const vid = (s.lookup[ownerId]?.features ?? []).find((f: string) => s.lookup[s.lookup[f]?.instanceof]?.name === key);
+            if (vid) s.write(vid, { ...s.lookup[vid], values: [...s.lookup[vid].values, id] });
+        }, 30);
+        setTimeout(() => {
+            for (const [key, value] of Object.entries(seed ?? {})) {
+                if (!s.lookup[`f_${key}`]) s.write(`f_${key}`, { id: `f_${key}`, name: key });
+                const vid = `${id}.${key}`;
+                s.write(vid, { id: vid, className: 'DValue', instanceof: `f_${key}`, values: [value] });
+                s.write(id, { ...s.lookup[id], features: [...s.lookup[id].features, vid] });
+            }
+        }, 60);
+        if (!ownerId) setTimeout(() => s.write(`V_${id}`, { id: `V_${id}`, className: 'DVertex', model: id, x: 0, y: 0 }), s.vertexAfterMs);
+        return { ok: true, id };
+    };
+    // A SetFieldAction lands on the store's next COMMIT, or never.
+    s.setField = (id: string, key: string, value: unknown) => {
+        if (s.layoutLands) setTimeout(() => s.write(id, { ...s.lookup[id], [key]: value }), 30);
+    };
+    return s;
+});
+
+vi.mock('../../../../joiner', () => ({
+    store: { getState: () => ({ idlookup: h.lookup, viewpoint: undefined }) },
+    TRANSACTION: (_name: string, f: () => void) => f(),
+    SetFieldAction: { new: (id: string, key: string, value: unknown) => h.setField(id, key, value) },
+}));
+vi.mock('../createAdapter', () => ({ createInstance: (...a: any[]) => (h.create as any)(...a) }));
+vi.mock('../../viewpoint/ir/irResolveCore', () => ({ computeIRSignature: () => null, getIRIndex: () => null, resolveIRView: () => null }));
+vi.mock('../../viewpoint/ir/irReadCtxLproxy', () => ({ makeReadCtx: () => ({}) }));
+vi.mock('../../viewpoint/layout/vertexLayoutAdapter', () => ({ getLayoutKeyOf: () => '__abstract__' }));
+vi.mock('../../viewpoint/layout/vertexLayout', () => ({ resolveVertexLayoutWrite: (_v: unknown, patch: unknown) => ({ target: 'scalars', patch }) }));
+vi.mock('../../../../redux/reducer/reducer', () => ({ beginUndoGroup: () => h.begin(), endUndoGroup: () => h.end() }));
+
+describe('instantiate: one undo entry per instantiation, one deadline per instantiation (P-2026-11-06-2225)', () => {
+    const bare = { name: 'object', typeReference: 'r_InstanceSpecification_classifier', featureContainer: 'r_Class_ownedAttributes' };
+    const place = () => ({ x: 10, y: 20 });
+    const setup = (o: { layoutLands?: boolean; vertexAfterMs?: number; db?: Record<string, Rec> } = {}) => {
+        Object.assign(h, { lookup: o.db ?? uml().db, entries: [], depth: 0, mark: 0, opened: [], closed: [], made: 0 });
+        Object.assign(h, { layoutLands: o.layoutLands ?? true, vertexAfterMs: o.vertexAfterMs ?? 20 });
+        return structuredClone(h.lookup);
+    };
+    // Loaded once here, so the dynamic imports of `instantiate` resolve from the cache under the fake clock.
+    beforeAll(async () => {
+        await Promise.all([import('../../../../joiner'), import('../createAdapter'), import('../../../../redux/reducer/reducer')]);
+    });
+
+    it('a call made while another holds its undo group runs after it: two entries in order, each undone exactly (Q1)', async () => {
+        // The second click comes once the first instantiation has opened its group and waits for its writes. Not in the
+        // same tick: two calls loading the mocked modules at once get the mock for one of them only (vitest), and the
+        // mutant without the queue then died of a module load, not of these assertions (bench, P-2026-11-06-2225).
+        const before = setup();
+        const first = instantiate('Book', bare as any, place);
+        for (let i = 0; i < 200 && h.depth === 0; i++) await new Promise(resolve => setTimeout(resolve, 5));
+        expect(h.depth).toBe(1);
+        const [a, b] = await Promise.all([first, instantiate('Magazine', bare as any, place)]);
+        expect([a.problems, b.problems]).toEqual([[], []]);
+        expect(h.depth).toBe(0);
+        expect(h.entries).toHaveLength(2);
+        expect(h.opened).toHaveLength(2);
+        expect(Object.keys(h.entries[0])).toContain(a.instance);
+        expect(Object.keys(h.entries[0])).not.toContain(b.instance);
+        expect(Object.keys(h.entries[1])).toContain(b.instance);
+        expect(h.opened[0].lookup).toEqual(before);
+        h.undo();
+        expect(h.lookup).toEqual(h.opened[1].lookup);
+        expect(h.lookup[a.instance!]).toBeDefined();
+        expect(h.lookup[b.instance!]).toBeUndefined();
+        h.undo();
+        expect(h.lookup).toEqual(before);
+    });
+
+    it('a «Sync slots» asked while an instantiation holds its undo group runs after it: two entries, each undone exactly (S1)', async () => {
+        // dune : Book has the slots of its closure but pages, added to Book since. Same pacing as Q1.
+        const u = uml();
+        u.obj('dune', 'InstanceSpecification');
+        u.val('dune', 'r_InstanceSpecification_classifier', ['Book']);
+        for (const f of ['p_Book_isbn', 'p_Book_genre', 'p_Publication_title', 'p_Publication_year']) {
+            u.obj(`dune_${f}`, 'Slot', u.val('dune', 'r_InstanceSpecification_slots', [`dune_${f}`]));
+            u.val(`dune_${f}`, 'r_Slot_definingFeature', [f]);
+        }
+        u.obj('p_Book_pages', 'Property', u.val('Book', 'r_Class_ownedAttributes', ['p_Book_pages']));
+        u.db.p_Book_pages.name = 'pages';
+        u.val('p_Book_pages', 'r_TypedElement_type', ['Integer']);
+        const before = setup({ db: u.db });
+        const first = instantiate('Book', bare as any, place);
+        for (let i = 0; i < 200 && h.depth === 0; i++) await new Promise(resolve => setTimeout(resolve, 5));
+        expect(h.depth).toBe(1);
+        const [a, b] = await Promise.all([first, syncSlots('dune', u.object as any)]);
+        expect([a.problems, b.problems]).toEqual([[], []]);
+        expect(b.slots).toHaveLength(1);
+        const slot = b.slots[0];
+        expect(h.depth).toBe(0);
+        expect(h.entries).toHaveLength(2);
+        expect(h.opened).toHaveLength(2);
+        expect(Object.keys(h.entries[0])).toContain(a.instance);
+        expect(Object.keys(h.entries[0])).not.toContain(slot);
+        expect(Object.keys(h.entries[1])).toContain(slot);
+        expect(Object.keys(h.entries[1])).not.toContain(a.instance);
+        h.undo();
+        expect(h.lookup).toEqual(h.opened[1].lookup);
+        expect(h.lookup[a.instance!]).toBeDefined();
+        expect(h.lookup[slot]).toBeUndefined();
+        h.undo();
+        expect(h.lookup).toEqual(before);
+    });
+
+    it('a layout that never lands closes the group by the shared deadline, records it, leaves no group open (D1)', async () => {
+        // The vertex comes 5 s late and its layout write never lands: one deadline closes the group at 8 s, where a
+        // fresh limit per wait would hold it for 5 s plus 6 s.
+        const before = setup({ layoutLands: false, vertexAfterMs: 5000 });
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+        let done: InstantiateResult | null = null;
+        try {
+            void instantiate('Book', bare as any, place).then(r => { done = r; });
+            for (let i = 0; i < 1000 && !done; i++) await vi.advanceTimersByTimeAsync(50);
+        } finally {
+            vi.useRealTimers();
+        }
+        const r = done as InstantiateResult | null;
+        expect(r?.problems).toEqual(['the node layout did not land within 8000 ms']);
+        expect(r?.ok).toBe(false);
+        expect(h.depth).toBe(0);
+        expect(h.closed).toHaveLength(1);
+        expect(h.closed[0] - h.opened[0].at).toBeGreaterThanOrEqual(8000);
+        expect(h.closed[0] - h.opened[0].at).toBeLessThanOrEqual(8000 + 50);
+        expect(h.entries).toHaveLength(1);
+        h.undo();
+        expect(h.lookup).toEqual(before);
     });
 });

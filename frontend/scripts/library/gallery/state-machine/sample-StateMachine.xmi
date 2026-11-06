@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instance of StateMachine.ecore: the "Heater" machine of the design handoff.
+
+  Broken carries NO `kind`, deliberately. `kind` is [1..1], so the conformance
+  validator raises one violation on it, which is what gives the form a real
+  diagnostic to project onto a field: red border, message in the reserved 16px
+  slot, and "1 error" in the summary. Removing that omission would make the
+  fixture conformant and take the diagnostic path out of reach again.
+
+  Running is the rich instance: a boolean set, a number set, a multivalued
+  attribute with two entries, a JjEL-shaped expression, two outgoing references
+  and two containment children.
+-->
+<StateMachine xmi:version="2.0"
+              xmlns:xmi="http://www.omg.org/XMI"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xmlns="http://jjodel.io/fixtures/statemachine"
+              name="Heater">
+
+  <states xmi:id="s_idle" name="Idle" kind="initial" outgoing="t_start"/>
+
+  <states xmi:id="s_running" name="Running" kind="normal"
+          isHistory="true" timeout="30"
+          entryAction="heater.on()"
+          tags="hot monitored"
+          outgoing="t_stop t_fault">
+    <substates xmi:id="s_warmup" name="Warmup" kind="initial"/>
+    <substates xmi:id="s_steady" name="Steady" kind="normal"/>
+  </states>
+
+  <states xmi:id="s_off" name="Off" kind="final"/>
+
+  <!-- no `kind`: the [1..1] violation this fixture exists to produce -->
+  <states xmi:id="s_broken" name="Broken"/>
+
+  <transitions xmi:id="t_start" name="start" trigger="power"
+               source="s_idle" target="s_running"/>
+  <transitions xmi:id="t_stop" name="stop" trigger="power" guard="temp &gt; 60"
+               source="s_running" target="s_off"/>
+  <transitions xmi:id="t_fault" name="fault"
+               source="s_running" target="s_broken"/>
+
+</StateMachine>

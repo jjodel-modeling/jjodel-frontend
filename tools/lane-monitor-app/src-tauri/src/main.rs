@@ -1,6 +1,6 @@
 //! Lane Monitor: a menu bar app over the lane board's `GET /api/attention`.
 //!
-//! The tray shows the `waiting` count as its title beside a monochrome template icon; a left
+//! The tray shows the waiting and running counts as its title beside a monochrome template icon; a left
 //! click toggles the popover, a borderless always-on-top 400 px webview placed under the icon
 //! and hidden when it loses focus. The poller runs on its own thread every 30 s (and at once
 //! when the popover opens) and pushes each snapshot to the tray and to the popover. A lane
@@ -266,7 +266,14 @@ fn open_monitor_window(app: &AppHandle, lane: Option<&str>) -> Result<(), String
         let _ = w.set_focus();
         return Ok(());
     }
+    let board = url.clone();
+    let board_new = url.clone();
     WebviewWindowBuilder::new(app, MONITOR, WebviewUrl::External(url))
+        .on_navigation(move |target| follow(&board, target))
+        .on_new_window(move |target, _| {
+            follow(&board_new, &target);
+            tauri::webview::NewWindowResponse::Deny
+        })
         .title("Lane board")
         .inner_size(1280.0, 860.0)
         .min_inner_size(800.0, 500.0)
@@ -275,6 +282,19 @@ fn open_monitor_window(app: &AppHandle, lane: Option<&str>) -> Result<(), String
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+/// Routes a navigation of the board window (links.rs `route`): true lets the webview follow
+/// it; a web URL outside the board opens in the default browser, anything else is dropped.
+fn follow(board: &Url, target: &Url) -> bool {
+    match links::route(board, target) {
+        links::Route::Inside => true,
+        links::Route::Browser => {
+            let _ = std::process::Command::new("open").arg(target.as_str()).spawn();
+            false
+        }
+        links::Route::Refuse => false,
+    }
 }
 
 fn hide(app: &AppHandle) {
@@ -415,12 +435,7 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
         }
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
             let _ = tray.set_title(Some(poll::title_for(&snap)));
-            let tip = match (&snap.attention, snap.state) {
-                (Some(a), "ok") => format!("Lanes: {} waiting, {} blocked, {} running", a.waiting, a.blocked, a.running),
-                _ if snap.state == "unreachable" => format!("Lanes: board unreachable ({})", snap.detail),
-                _ => format!("Lanes: {}", snap.detail),
-            };
-            let _ = tray.set_tooltip(Some(tip));
+            let _ = tray.set_tooltip(Some(poll::tooltip_for(&snap)));
         }
         *shared.snapshot.lock().unwrap() = snap.clone();
         let _ = app.emit_to(POPOVER, "attention", &snap);

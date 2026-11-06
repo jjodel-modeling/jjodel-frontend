@@ -66,6 +66,10 @@ import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { isConsumerMode } from '../../components/environment/consumerMode';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
+import RunRefactoringMenu from '../../components/scripts/RunRefactoringMenu';
+import { projectRefactoringsFor, projectTargetCandidates, runScriptOnModel } from '../../components/scripts/scriptFiles';
+import { refactoringChoice, toolsRefactoringEntry } from '../../components/scripts/projectScripts';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -98,9 +102,12 @@ export function createM2(project: LProject, name0?: string) {
 /** `open` (#157, 2026-10-01): false creates the model without opening its editor. The
  *  Configurator's «Create model» needs it: opening the editor hides the LeftBar, which hosts
  *  the Configurator, so the overlay closed under the user (measured by probe). Default true:
- *  every menu path is unchanged. */
-export function createM1(project: LProject, metamodel: LModel, open: boolean = true) {
-    let name = 'model_' + 1;
+ *  every menu path is unchanged.
+ *  `name0` (P-2026-10-19-1618): the name typed in the New model dialog. Kept when unique among
+ *  `metamodel.models`, otherwise the same ending-number rule as the auto name applies to it;
+ *  `DModel.new` then makes it unique among every model and metamodel (` (n)`, nameLookup.ts). */
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string): LModel {
+    let name = (name0 && name0.trim()) || 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
     const dModel: DModel = DModel.new(name, metamodel.id, false, true);
@@ -118,6 +125,8 @@ export function createM1(project: LProject, metamodel: LModel, open: boolean = t
         entityId: dModel.id,
         entityName: name,
     });
+    // The created model (P-2026-11-02-0045): «New model from text» writes its objects into it.
+    return lModel;
 }
 interface NewDocumentButtonProps {
     project: LProject;
@@ -128,6 +137,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [submenuOpen, setSubmenuOpen] = useState(false);
     const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -235,8 +245,8 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ? { ...entry, onCreate: () => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG)) }
                     : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
             case 'refactoring':
-                // TODO: wire when refactoring document type lands
-                return entry;
+                // R-JJD-14: the dialog asks the target level, then creates the entry and opens its tab.
+                return { ...entry, onCreate: () => setRefactoringDialogOpen(true) };
             default:
                 return entry;
         }
@@ -345,6 +355,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ))}
                 </div>
             )}
+            <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
         </div>
     );
 }
@@ -383,6 +394,10 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
         if (!globalProject) return null;
         return <Undoredocomponent key={'undo'} project={globalProject} />
     }
+    // Section label (R-LIB-18): a heading row inside a submenu, not an item; no focus, no click, no submenu.
+    if (i.section) {
+        return <li key={index} className='section-label' role='presentation'>{i.name}</li>;
+    }
     if (i.name === "divisor") {
         return (
             <li key={index} className='divisor'>
@@ -396,7 +411,7 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
         let hasSubItems = (!i.disabled && slength > 0) || isUndo;
 
         return (
-            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined}>
+            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined} title={i.title}>
                 <label className={`highlight ${i.disabled ? 'disabled' : ''}`}>
                     <span>{i.icon || <i className="bi bi-app hidden"/>} {i.jsx || <span>{i.name}</span>}</span>
                     {!i.disabled && slength > 0 ?
@@ -444,7 +459,30 @@ type MenuEntry = {
     shortcutPills?: string[],  // New: array of pills for keyboard shortcut (adaptive to OS)
     subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
+    section?: boolean;  // renders `name` as a non-interactive section label (uppercase via CSS)
+    title?: string;     // native tooltip, e.g. the reason a disabled entry is disabled
 } | null;
+
+/* File › New › Model lists at most this many metamodels; above it, the most recent ones plus More… (handoff §6). */
+const MODEL_MENU_LIMIT = 5;
+
+/* The creation dialogs listen in ProjectEditor, which lives in the project summary tab: bring it forward first,
+   as LeftBar's requestFromProjectEditor does. */
+function dispatchToProjectEditor(eventName: string) {
+    DockManager.activateProjectSummary();
+    window.dispatchEvent(new CustomEvent(eventName));
+}
+
+/* NEW_PROJECT is heard only by AllProjects. Elsewhere File › New › Project… goes to the dashboard (a page reload,
+   R.navigate) and leaves this request behind; the Navbar mounted there consumes it and opens the create dialog.
+   The timestamp keeps a request cancelled at the unsaved-changes prompt from firing on a later visit. */
+const NEW_PROJECT_REQUEST_KEY = 'jjodel_file_new_project';
+function isAllProjectsPage(): boolean { return window.location.hash.startsWith('#/allProjects'); }
+function newProjectFromMenu() {
+    if (isAllProjectsPage()) { window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)); return; }
+    sessionStorage.setItem(NEW_PROJECT_REQUEST_KEY, String(Date.now()));
+    R.navigate('/allProjects');
+}
 
 // Simple menu components (inline, no complex memoization)
 function Submenu({ title, items }: { title?: string; items: (MenuEntry|null|undefined)[] }) {
@@ -588,6 +626,27 @@ function NavbarComponent(props: AllProps) {
         return () => window.removeEventListener('hashchange', onHash);
     }, []);
     const consumer = isConsumerMode();
+
+    // File › New › Project… from outside the dashboard (newProjectFromMenu): open the create dialog once
+    // AllProjects has mounted its NEW_PROJECT listener. The Navbar can mount before AllProjects does (measured:
+    // a dispatch one tick after this mount found no listener), so wait until the page's heading has been in the
+    // DOM for two consecutive polls, which leaves AllProjects' passive effects time to run. The request is removed
+    // only when dispatched, so a Navbar that unmounts first leaves it to the next one (a second open is a no-op).
+    useEffect(() => {
+        const requested = Number(sessionStorage.getItem(NEW_PROJECT_REQUEST_KEY));
+        if (!requested || !isAllProjectsPage()) return;
+        if (Date.now() - requested > 30000) { sessionStorage.removeItem(NEW_PROJECT_REQUEST_KEY); return; }
+        let seen = 0, polls = 0;
+        const t = setInterval(() => {
+            seen = document.querySelector('.dashboard-page-title') ? seen + 1 : 0;
+            if (seen >= 2 && sessionStorage.getItem(NEW_PROJECT_REQUEST_KEY)) {
+                sessionStorage.removeItem(NEW_PROJECT_REQUEST_KEY);
+                window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT));
+            }
+            if (seen >= 2 || ++polls > 75 || !isAllProjectsPage()) clearInterval(t);
+        }, 200);
+        return () => clearInterval(t);
+    }, []);
 
     // Advanced Mode Tutorial state
     const [showAdvancedTutorial, setShowAdvancedTutorial] = useState(false);
@@ -908,9 +967,14 @@ function NavbarComponent(props: AllProps) {
         if (isAdv) enableAdvancedMode(); else disableAdvancedMode();
     };
 
-    // Restore the persisted mode once per mount. Redux `advanced` has no boot-time
-    // initializer (default `false`, store.tsx:215) while the user's last explicit choice
-    // lives in localStorage, so without this a reload silently drops Advanced everywhere.
+    // Restore the persisted mode whenever Redux `advanced` reads false. Redux `advanced` has
+    // no boot-time initializer (default `false`, store.tsx:215) while the user's last explicit
+    // choice lives in localStorage, so without this a reload silently drops Advanced everywhere.
+    // Not once per mount: a page change runs `U.resetState()` (PathChecker.tsx:14), whose
+    // deferred LOAD of `DState.new()` lands after the new page's Navbar has mounted with the
+    // stale `true`, so a mount-only restore misses it (P-2026-10-22-1150). Every explicit
+    // switch to Basic (disableAdvancedMode, BottomBar, ProfileSection) writes 'basic' to
+    // localStorage first, so false here with 'advanced' persisted is always a reset.
     // Owned by the app bar because the mode is global: the Navbar is the only component
     // mounted on every view (dashboard included), whereas the Properties card — where this
     // effect used to live — mounts only inside the project editor. Only the positive
@@ -921,8 +985,7 @@ function NavbarComponent(props: AllProps) {
             SetRootFieldAction.new('advanced', true);
             windoww.advanced = true;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [props.advanced]);
 
     // Mirror the mode on <html> for the shell density tokens (styles/tokens/_shell.scss).
     // documentElement, not an app div: the rail and the context menu portal to body.
@@ -1326,13 +1389,20 @@ function NavbarComponent(props: AllProps) {
 
     let newModel: MenuEntry;
     if (project && metamodels.length > 0) {
+        const mmEntries: MenuEntry[] = metamodels.map((m2, i)=>({
+            name: mmNamesArray[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
+        }));
+        // Above the limit: the most recently created metamodels (the tail of the project's list, in its order) plus More….
+        const overflow = mmEntries.length > MODEL_MENU_LIMIT;
         newModel = {
             id: 'new_model',
             name: 'Model',
             icon: <i className="bi bi-box" />,
-            subItems: metamodels.map((m2, i)=>({
-                name: mmNamesArray[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
-            }))
+            subItems: [
+                {name: 'Conforming to', section: true},
+                ...(overflow ? mmEntries.slice(-MODEL_MENU_LIMIT) : mmEntries),
+                overflow ? {id: 'new_model_more', name: 'More…', function: () => dispatchToProjectEditor(JjodelEvents.OPEN_NEW_MODEL_DIALOG)} : null,
+            ]
         };
     } else {
         newModel = {
@@ -1344,6 +1414,21 @@ function NavbarComponent(props: AllProps) {
     }
 
     const isActiveTabModel = getActiveModelTab()?.isModel === true;
+
+    // Tools › «Run refactoring on <name>…» (R-JJD-17): the artifact of the active tab and the Refactorings
+    // the tab's right-click menu lists for it, run by the same request function.
+    const activeArtifactId = project ? getActiveModelTab()?.id : undefined;
+    const activeArtifact = activeArtifactId ? projectTargetCandidates().find(c => c.id === activeArtifactId) : undefined;
+    const activeRefactorings = activeArtifact ? projectRefactoringsFor(activeArtifact.id) : [];
+    const runRefactoring = toolsRefactoringEntry(activeArtifact, activeRefactorings);
+    const runRefactoringEntry: MenuEntry = {id: 'tools_run_refactoring', name: runRefactoring.label,
+        icon: <i className="bi bi-arrow-repeat" />, disabled: runRefactoring.disabled, title: runRefactoring.title,
+        subItems: runRefactoring.disabled || !activeArtifact ? undefined : activeRefactorings.map(r => {
+            const choice = refactoringChoice(r);
+            return {id: 'tools_run_refactoring_' + r.id, name: choice.label, disabled: choice.disabled, title: choice.title,
+                icon: <i className="bi bi-arrow-repeat" />,
+                function: choice.disabled ? undefined : () => { void runScriptOnModel(r.text, activeArtifact.id); }};
+        })};
     const isDashboard = !project;
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
@@ -1370,16 +1455,26 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'File',
             subItems: [
-                consumer ? null : {name: 'New Project',
-                    function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)),
-                    icon: <i className="bi bi-file-earmark-plus" />,
-                    shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
-                },
-                isDashboard ? null :
+                /* New › (handoff §6, R-LIB-18, cut to 3.2 by R-LIB-20: no built-in notations). Advanced adds
+                   Metamodel, Viewpoint and Transformation; outside a project only Project… and From template… act. */
                 {name: 'New', icon: <i className="bi bi-plus-circle" />,
-                    subItems: [
-                        consumer ? null : {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
-                        newModel
+                    subItems: consumer ? [newModel] : [
+                        {name: 'Project…',
+                            function: newProjectFromMenu,
+                            icon: <i className="bi bi-file-earmark-plus" />,
+                            shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
+                        },
+                        {name: 'divisor'},
+                        !props.advanced ? null : {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, disabled: !project,
+                            function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
+                        newModel,
+                        !props.advanced ? null : {name: 'Viewpoint', icon: <i className="bi bi-eye" />, disabled: !project,
+                            function: () => { if (project) dispatchToProjectEditor(JjodelEvents.CREATE_VIEWPOINT); }},
+                        // The transformation dialog needs a source and a target metamodel, as in the app-bar New document menu.
+                        !props.advanced ? null : {name: 'Transformation', icon: <i className="bi bi-arrow-left-right" />, disabled: !project || metamodels.length === 0,
+                            function: () => { if (project && metamodels.length) dispatchToProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG); }},
+                        {name: 'divisor'},
+                        {name: 'From template…', icon: <i className="bi bi-grid-3x3-gap" />, function: () => R.navigate('/templates')},
                     ]
                 },
                 {name: 'Recent Projects', icon: <i className="bi bi-clock-history" />, subItems: recentProjects},
@@ -1522,6 +1617,8 @@ function NavbarComponent(props: AllProps) {
            in editor with no metamodels shows only empty-state hint */
         (isDashboard || !props.advanced || consumer) ? null : {name: 'Tools',
             subItems: [
+                runRefactoringEntry,
+                {name: 'divisor'},
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
                 ] : []),
@@ -1541,6 +1638,25 @@ function NavbarComponent(props: AllProps) {
                         icon: <i className="bi bi-grid-3x3-gap" />
                     },
                 ])
+            ]
+        },
+
+        /* Endpoints (#186, R-CFG-5) - the stand-alone environment's window, opened on a tab through the
+           event ProjectEditor listens to; hidden on dashboard and in consumer mode, shown in Basic and Advanced */
+        (isDashboard || consumer) ? null : {name: 'Endpoints',
+            subItems: [
+                {name: 'Editable metaclasses',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'metaclasses' } }));
+                    },
+                    icon: <i className="bi bi-grid-1x2" />
+                },
+                {name: 'Roles',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'roles' } }));
+                    },
+                    icon: <i className="bi bi-people" />
+                },
             ]
         },
 
@@ -1608,7 +1724,7 @@ function NavbarComponent(props: AllProps) {
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
 
     // ─── Custom Tab Strip synced with DockManager ───
-    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean}>>([]);
+    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean}>>([]);
 
     // Sync tabs from DockManager on layout changes
     useEffect(() => {
@@ -1623,12 +1739,12 @@ function NavbarComponent(props: AllProps) {
                 const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
                 const state = store.getState();
 
-                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean };
+                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean };
                 const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {
                     const id = tab.id || '';
                     let title = '';
                     let type = 'project';
-                    const closable = tab.closable !== false;
+                    let closable = tab.closable !== false;
 
                     // Determine type and title from tab ID
                     if (id.startsWith('DockComponent_rightbar_')) {
@@ -1668,6 +1784,25 @@ function NavbarComponent(props: AllProps) {
                         // it rather than print a placeholder (the model branch's rule).
                         if (!rawModel) return null;
                         title = `${rawModel.name || 'Unnamed'} Instances`;
+                    } else if (id.startsWith('codegen_tpl_')) {
+                        // A generator tab (codegen, P-2026-10-25-1200), docked here when no canvas
+                        // was. This file is eager and imports no generator module: the tab carries
+                        // its title and its close (openTemplateEditor.ts). rc-dock's own close is
+                        // off on it, its close asks before dropping drafts, so the strip offers it.
+                        // A tab with no title (metamodel or generator gone) is a ghost.
+                        type = 'generator';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
+                        closable = true;
+                    } else if (id.startsWith('txt_')) {
+                        // A Text tab (R-TXT-23, P-2026-11-02-0040 and 0045): a model's text, or the text of a new
+                        // model. Its module is lazy, so the tab carries its title (openTextualTab.tsx); a tab with
+                        // no title (model or metamodel gone) is a ghost, as the generator's.
+                        type = 'textual';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1703,13 +1838,31 @@ function NavbarComponent(props: AllProps) {
                     return { id, title, type, active: id === activeId, closable };
                 }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
+                // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
+                // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
+                // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
+                const walkBeside = (node: any): void => {
+                    if (!node || node === modelsPanel) return;
+                    if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
+                    const shown = node.activeId || node.tabs[0]?.id;
+                    node.tabs.forEach((tab: any) => {
+                        const id = tab.id || '';
+                        if (!id.startsWith('codegen_tpl_')) return;
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return;
+                        tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
+                    });
+                };
+                walkBeside(layout?.dockbox);
+
                 setOpenTabs(prev => {
                     if (prev.length === tabList.length && prev.every((t, i) =>
                         t.id === tabList[i].id &&
                         t.title === tabList[i].title &&
                         t.active === tabList[i].active &&
                         t.type === tabList[i].type &&
-                        t.closable === tabList[i].closable
+                        t.closable === tabList[i].closable &&
+                        t.beside === tabList[i].beside
                     )) {
                         // Same content, same length: keep previous reference to skip Navbar re-render.
                         // syncTabs runs every 1s via setInterval; during pan or any idle period
@@ -1754,14 +1907,23 @@ function NavbarComponent(props: AllProps) {
         }
     }, []);
 
-    const handleTabClick = useCallback((tabId: string) => {
+    const handleTabClick = useCallback((tabId: string, beside?: boolean) => {
         if (!DockManager.dock) return;
         DockManager.dock.updateTab(tabId, null, true);
+        // Beside the canvas the layout stays and focus goes to the tab's content (its first
+        // [tabindex] element), so its keyboard shortcuts apply (P-2026-10-25-1510).
+        if (beside) {
+            const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(tabId)}"]`);
+            (pane?.querySelector('[tabindex]') as HTMLElement | null)?.focus({ preventScroll: true });
+        }
     }, []);
 
     const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        DockManager.closeTab(tabId);
+        // A tab that asks before closing (a generator tab, P-2026-10-25-1200) closes through itself.
+        const docked: any = DockManager.dock?.find(tabId);
+        if (typeof docked?.requestClose === 'function') docked.requestClose();
+        else DockManager.closeTab(tabId);
     }, []);
 
     // Tab type badge letter or icon
@@ -1776,6 +1938,10 @@ function NavbarComponent(props: AllProps) {
             // that opens it from the project rail.
             case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
+            case 'generator': return { letter: '', icon: 'bi-code-slash', className: 'appbar-tab__badge--generator' };
+            // A Text tab (R-TXT-25 (4)): a model's text, so the model colour, as the manager's, with the glyph its
+            // own header shows.
+            case 'textual': return { letter: '', icon: 'bi-file-earmark-text', className: 'appbar-tab__badge--model' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1788,6 +1954,8 @@ function NavbarComponent(props: AllProps) {
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
             case 'manager': return 'Instance manager';
+            case 'generator': return 'Generator';
+            case 'textual': return 'Text';
             default: return '';
         }
     };
@@ -1811,8 +1979,17 @@ function NavbarComponent(props: AllProps) {
         tabsToShow.pop();
         tabsToShow.push(activeTab);
     }
+    // And a generator tab on screen beside the canvas, in place of the last tab not on screen.
+    visibleTabs.filter(t => t.beside && t.active && !tabsToShow.includes(t)).forEach(t => {
+        const off = tabsToShow.map(s => s.active).lastIndexOf(false);
+        if (off >= 0) tabsToShow.splice(off, 1);
+        tabsToShow.push(t);
+    });
 
     const [showOverflow, setShowOverflow] = useState(false);
+    /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
+    const [artifactMenu, setArtifactMenu] = useState<{ modelId: string; x: number; y: number } | null>(null);
+    const closeArtifactMenu = useCallback(() => setArtifactMenu(null), []);
     /** #157 R1 — the topbar «Save» is busy for the duration of one save, nothing more. */
     const [savingProject, setSavingProject] = useState(false);
     const saveFromTopbar = async () => {
@@ -1895,8 +2072,13 @@ function NavbarComponent(props: AllProps) {
                         return (
                             <button
                                 key={tab.id}
-                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
-                                onClick={() => handleTabClick(tab.id)}
+                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}${tab.beside ? ' appbar-tab--beside' : ''}`}
+                                onClick={() => handleTabClick(tab.id, tab.beside)}
+                                onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
+                                    e.preventDefault();
+                                    setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
+                                } : undefined}
+                                data-tab-id={tab.id}
                                 title={(() => {
                                     const typeLabel = getTabTypeLabel(tab.type);
                                     return typeLabel ? `${tab.title} — ${typeLabel}` : tab.title;
@@ -1920,6 +2102,11 @@ function NavbarComponent(props: AllProps) {
                             </button>
                         );
                     })}
+                    {artifactMenu && (
+                        <RunRefactoringMenu key={artifactMenu.modelId + artifactMenu.x + artifactMenu.y}
+                                            modelId={artifactMenu.modelId} x={artifactMenu.x} y={artifactMenu.y}
+                                            onClose={closeArtifactMenu} />
+                    )}
                     {overflowTabs.length > 0 && (
                         <div className="appbar-tabs__overflow">
                             <button
@@ -1945,7 +2132,7 @@ function NavbarComponent(props: AllProps) {
                                             <button
                                                 key={tab.id}
                                                 className="appbar-tabs__overflow-item"
-                                                onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
+                                                onClick={() => { handleTabClick(tab.id, tab.beside); setShowOverflow(false); }}
                                             >
                                                 {(badge.letter || badge.icon) && (
                                                     <span className={`appbar-tab__badge ${badge.className}`}>
@@ -1974,14 +2161,16 @@ function NavbarComponent(props: AllProps) {
                     salvataggio e' del progetto, non di una vista, quindi vale per
                     tutte le tab. Consumatore di `JjodelEvents.PROJECT_SAVED`, non
                     una seconda fonte di verita'; si rende da solo `null` finche' non
-                    c'e' niente da raccontare. */}
-                {project && <LastSavedIndicator />}
+                    c'e' niente da raccontare. #187: not in consumer mode, where the save and its
+                    status sit in the Configurator's element panel. */}
+                {project && !consumer && <LastSavedIndicator />}
                 {/* #157 R1 (field test 2026-09-29, decision of 2026-10-01): a visible «Save»
                     beside the save state, for developer and consumer alike. Fourth caller of
                     `saveProjectWithFeedback`, not a fourth save: menu, Ctrl/Cmd+S and the Data
                     Manager's button go through the same function. Always enabled but while
-                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable. */}
-                {project && (
+                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable.
+                    #187: the developer's only; Ctrl/Cmd+S still saves for the consumer. */}
+                {project && !consumer && (
                     <button
                         type="button"
                         className="appbar-save"
@@ -1992,10 +2181,12 @@ function NavbarComponent(props: AllProps) {
                         <i className="bi bi-floppy" aria-hidden="true" /> Save
                     </button>
                 )}
-                {project && <div className="appbar__sep" />}
+                {project && !consumer && <div className="appbar__sep" />}
                 {/* Basic/Advanced mode switch — the single visible writer for the global
                     interface mode (2026-07-30). Replaces the former read-only level badge:
-                    same state, now actionable in place instead of bouncing to Settings. */}
+                    same state, now actionable in place instead of bouncing to Settings.
+                    #187: not in consumer mode, and neither are the separators it leaves. */}
+                {!consumer && (
                 <div className="appbar-mode-switch" role="group" aria-label="Interface mode">
                     {(['basic', 'advanced'] as const).map((m) => (
                         <button
@@ -2010,11 +2201,12 @@ function NavbarComponent(props: AllProps) {
                         </button>
                     ))}
                 </div>
-                <div className="appbar__sep" />
+                )}
+                {!consumer && <div className="appbar__sep" />}
                 {/* Layout Controls moved to EditorV2 Toolbar */}
                 {/* Tree View Toggle — currently renders nothing (commented out) */}
                 {/* Divider */}
-                {project && <div className="appbar__sep" />}
+                {project && !consumer && <div className="appbar__sep" />}
                 {/* Help menu — inlined */}
                 <div className='nav-hamburger hoverable inline help-menu' tabIndex={0}>
                     <span className={'menu-title'}>

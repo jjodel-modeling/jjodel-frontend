@@ -12,7 +12,7 @@
  * directly when JjOM changes externally.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { Node, Edge } from '@xyflow/react';
 import {
@@ -45,6 +45,7 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
+import { vertexChildrenHash } from '../sync/vertexSnapshot';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
@@ -89,6 +90,10 @@ type SetEdges = React.Dispatch<React.SetStateAction<Edge[]>>;
 
 // Empty array constant to avoid re-creating on every render
 const EMPTY_ARRAY: string[] = [];
+
+// Delay of the re-run after an id was skipped by the anti-bounce check: the window of
+// `syncState.ts` (BOUNCE_WINDOW_MS, 300 ms, not exported) plus a margin.
+const ANTI_BOUNCE_RERUN_MS = 350;
 
 // ---------------------------------------------------------------------------
 // Custom equality for per-element selectors
@@ -220,6 +225,55 @@ function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
 }
 
 // ---------------------------------------------------------------------------
+// Open settle gate (P-2026-11-04-1500)
+// ---------------------------------------------------------------------------
+// The creators of a populate run reach the store through an async TRANSACTION
+// and a setTimeout(0) dispatch (action.ts:210-226, :349), after the init effect
+// of the same commit has pushed what the graph held. `onInitialized` (EditorV2's
+// open-time layout decision) therefore waits until the open has settled.
+// See docs/discovery/lir_2026-11-04_elk_open_race.md.
+
+/** Re-check interval while the open has not settled. */
+const OPEN_SETTLE_POLL_MS = 50;
+/** Past this time from the init push the open-time layout is given up: it would move nodes the user may be looking at. */
+export const OPEN_SETTLE_DEADLINE_MS = 10_000;
+
+export type OpenSettleVerdict = 'wait' | 'settled' | 'touched' | 'deadline';
+
+export interface OpenSettleInput {
+    /** Ids the populate runs of this mount got back from DVertex.new / DVoidEdge.new2. */
+    created: readonly string[];
+    idlookup: Record<string, unknown>;
+    /** The graph's subElements in the store. */
+    listed: readonly string[];
+    /** The subElements the last canvas push processed (init effect or incremental sync). */
+    processed: readonly string[];
+    /** A React Flow patch is queued or its flush is scheduled. */
+    patchQueued: boolean;
+    /** Objects of the model Step 2bis has still to give a vertex (collectPendingVertexObjects):
+     *  the creating populate run can come in a later commit than the init push. */
+    unplacedObjects: number;
+    /** A canvas write-back marked an element of the graph: the user has started working. */
+    touched: boolean;
+    elapsedMs: number;
+    deadlineMs: number;
+}
+
+/**
+ * Settled: every object of the model has a vertex, every created element is in the store,
+ * every one the graph lists has been pushed to the canvas, no patch is queued. `pending` is
+ * the created ids still awaited.
+ */
+export function openSettleVerdict(i: OpenSettleInput): { verdict: OpenSettleVerdict; pending: string[] } {
+    const listed = new Set(i.listed);
+    const processed = new Set(i.processed);
+    const pending = i.created.filter(id => !(id in i.idlookup) || (listed.has(id) && !processed.has(id)));
+    if (i.touched) return { verdict: 'touched', pending };
+    if (i.unplacedObjects === 0 && pending.length === 0 && !i.patchQueued) return { verdict: 'settled', pending };
+    return { verdict: i.elapsedMs >= i.deadlineMs ? 'deadline' : 'wait', pending };
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -248,6 +302,23 @@ export function useJjomSync(
     const pendingEdgePatchRef = useRef<((prev: Edge[]) => Edge[])[]>([]);
     const rafIdRef = useRef<number>(0);
 
+    // ── Open settle gate state, keyed by modelid (see openSettleVerdict) ──
+    const openGateRef = useRef<{
+        modelid?: string; graphId?: string; created: string[];
+        active: boolean; done: boolean; startedAt: number; timer?: ReturnType<typeof setTimeout>;
+    }>({ created: [], active: false, done: false, startedAt: 0 });
+    const openSettleCheckRef = useRef<() => void>(() => {});
+    const onInitializedRef = useRef(onInitialized);
+    onInitializedRef.current = onInitialized;
+    const openGateFor = (id: string) => {
+        const gate = openGateRef.current;
+        if (gate.modelid !== id) {
+            if (gate.timer !== undefined) clearTimeout(gate.timer);
+            openGateRef.current = { modelid: id, created: [], active: false, done: false, startedAt: 0 };
+        }
+        return openGateRef.current;
+    };
+
     const scheduleFlush = useCallback(() => {
         if (rafIdRef.current) return; // already scheduled
         rafIdRef.current = requestAnimationFrame(() => {
@@ -260,6 +331,7 @@ export function useJjomSync(
             if (edgeFns.length > 0) {
                 setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
             }
+            openSettleCheckRef.current();
         });
     }, [setNodes, setEdges]);
 
@@ -272,6 +344,10 @@ export function useJjomSync(
     // ── Previous D-object references for diffing ───────────────────────
     const prevElementsRef = useRef<Map<string, any>>(new Map());
     const prevSubElementsRef = useRef<string[]>(EMPTY_ARRAY);
+
+    // ── Anti-bounce re-run: one tick after the window when a run skipped a changed id ──
+    const [antiBounceTick, setAntiBounceTick] = useState(0);
+    const antiBounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     // ── Initialization flag ────────────────────────────────────────────
     const initializedRef = useRef(false);
@@ -694,6 +770,9 @@ export function useJjomSync(
         // causes x/y coordinates to be lost).
         creatingGraphRef.current = true;
         justCreatedGraphRef.current = true;
+        // The open settle gate waits for what this run creates.
+        const openGate = openGateFor(modelid);
+        const recordCreated = (id: string | undefined) => { if (id && !openGate.done) openGate.created.push(id); };
 
         try {
             // Step 1: Create graph if needed
@@ -725,6 +804,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, entry.id, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(entry.id, dv.id);
+                        recordCreated(dv.id);
                     }
                 }
             }
@@ -757,6 +837,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, objId, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(objId, dv.id);
+                        recordCreated(dv.id);
                         createdSoFar++;
                     }
                 }
@@ -838,11 +919,11 @@ export function useJjomSync(
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
                         const ek = `${srcVertex}→${tgtVertex}`;
                         if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
-                            DVoidEdge.new2(
+                            recordCreated(DVoidEdge.new2(
                                 undefined, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isExtend = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             // Register pair so subsequent auto-populate runs
                             // won't recreate this edge even if DVoidEdge.new2
@@ -928,11 +1009,11 @@ export function useJjomSync(
                         // so it's not consulted here — race-window protection is
                         // provided by the idlookup scan above.
                         if (!existingEdgeKeys.has(ek)) {
-                            DVoidEdge.new2(
+                            recordCreated(DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isReference = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             markCanvasEdgePair(srcVertex, tgtVertex);
                         }
@@ -1036,11 +1117,11 @@ export function useJjomSync(
                             // its own edge.
                             const ek = `${metaId}:${srcVertex}→${tgtVertex}`;
                             if (!existingEdgeKeys.has(ek)) {
-                                DVoidEdge.new2(
+                                recordCreated(DVoidEdge.new2(
                                     metaId, graphId, graphId, undefined,
                                     srcVertex, tgtVertex,
                                     (d: DEdge) => { d.isReference = true; }
-                                );
+                                )?.id);
                                 existingEdgeKeys.add(ek);
                                 markCanvasEdgePair(srcVertex, tgtVertex);
                             }
@@ -1074,78 +1155,65 @@ export function useJjomSync(
                     const modelElem = state.idlookup[modelId] as any;
                     if (modelElem) {
                         result.set(`model:${id}`, modelElem);
-                        // Lightweight hash of children properties (attr names,
-                        // types, bounds, feature values, etc.). Changes when any
-                        // child is updated in Redux. A single number entry per
-                        // vertex — avoids infinite re-render loops.
-                        let ch = 0;
-                        for (const key of ['attributes', 'references', 'operations', 'literals', 'features']) {
-                            const arr = modelElem[key];
-                            if (!Array.isArray(arr)) continue;
-                            for (const childId of arr) {
-                                if (typeof childId !== 'string') continue;
-                                const child = state.idlookup[childId] as any;
-                                if (!child) continue;
-                                const n = child.name ?? '';
-                                for (let i = 0; i < n.length; i++) {
-                                    ch = ((ch << 5) - ch + n.charCodeAt(i)) | 0;
-                                }
-                                // Include type pointer and bounds
-                                const t = (typeof child.type === 'string' ? child.type : child.type?.id ?? '');
-                                for (let i = 0; i < t.length; i++) {
-                                    ch = ((ch << 5) - ch + t.charCodeAt(i)) | 0;
-                                }
-                                ch = (ch * 31 + (child.lowerBound ?? 0)) | 0;
-                                ch = (ch * 31 + (child.upperBound ?? 0)) | 0;
-                                ch = (ch * 31 + (child.abstract ? 1 : 0)) | 0;
-                                ch = (ch * 31 + (child.composition ? 1 : 0)) | 0;
-                                // Include feature values (DValue.values) for M1 instance nodes
-                                const vals = child.values;
-                                if (Array.isArray(vals)) {
-                                    for (const v of vals) {
-                                        const vs = String(v ?? '');
-                                        for (let j = 0; j < vs.length; j++) {
-                                            ch = ((ch << 5) - ch + vs.charCodeAt(j)) | 0;
-                                        }
-                                    }
-                                }
-                                ch = (ch * 31 + 7) | 0; // separator
-                            }
-                        }
-                        // M1 co-evolution: hash enum literals from the metaclass so
-                        // that changes to enumerations trigger a re-sync.
-                        const instOfPtr = modelElem.instanceof;
-                        const metaclassId = typeof instOfPtr === 'string' ? instOfPtr
-                            : (Array.isArray(instOfPtr) ? instOfPtr[0] : null);
-                        if (metaclassId && typeof metaclassId === 'string') {
-                            const mc = state.idlookup[metaclassId] as any;
-                            if (mc?.attributes) {
-                                for (const mAttrId of mc.attributes) {
-                                    if (typeof mAttrId !== 'string') continue;
-                                    const mAttr = state.idlookup[mAttrId] as any;
-                                    const mTypeId = typeof mAttr?.type === 'string' ? mAttr.type : null;
-                                    if (!mTypeId) continue;
-                                    const mType = state.idlookup[mTypeId] as any;
-                                    if (mType?.className === 'DEnumerator' && Array.isArray(mType.literals)) {
-                                        for (const litId of mType.literals) {
-                                            if (typeof litId !== 'string') continue;
-                                            const lit = state.idlookup[litId] as any;
-                                            const ln = lit?.name ?? '';
-                                            for (let k = 0; k < ln.length; k++) {
-                                                ch = ((ch << 5) - ch + ln.charCodeAt(k)) | 0;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        result.set(`ch:${id}`, ch);
+                        // Content hash of everything else the vertex's node renders
+                        // (children, slot features and types, reference target names,
+                        // ghost ancestry). A single number entry per vertex — avoids
+                        // infinite re-render loops. See sync/vertexSnapshot.ts.
+                        result.set(`ch:${id}`, vertexChildrenHash(state.idlookup as any, modelElem));
                     }
                 }
             }
         }
         return result;
     }, mapReferenceEqual);
+
+    // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
+    // Called by the init push, by the flush after its patches, and by its own poll.
+    // The two exits other than a settled open lower justCreatedGraphRef first, so
+    // no open-time layout runs over the user's work or late.
+    openSettleCheckRef.current = () => {
+        const gate = openGateRef.current;
+        if (!gate.active || !gate.graphId) return;
+        const idlookup = (store.getState()?.idlookup ?? {}) as Record<string, any>;
+        const listed: string[] = idlookup[gate.graphId]?.subElements ?? EMPTY_ARRAY;
+        const vertexByObject = new Map<string, string>();
+        for (const id of listed) {
+            const se = idlookup[id];
+            if (se?.className?.includes('Vertex') && se.model) vertexByObject.set(se.model, id);
+        }
+        const unplacedObjects = collectPendingVertexObjects({
+            objects: idlookup[gate.modelid ?? '']?.objects ?? [],
+            idlookup,
+            vertexByObject,
+            isSuppressed: isSingletonSuppressed,
+        }).size;
+        const { verdict, pending } = openSettleVerdict({
+            created: gate.created,
+            idlookup,
+            listed,
+            processed: prevSubElementsRef.current,
+            patchQueued: rafIdRef.current !== 0 || pendingNodePatchRef.current.length > 0 || pendingEdgePatchRef.current.length > 0,
+            unplacedObjects,
+            touched: listed.some(id => isCanvasUpdated(id)),
+            elapsedMs: Date.now() - gate.startedAt,
+            deadlineMs: OPEN_SETTLE_DEADLINE_MS,
+        });
+        gate.created = pending;
+        if (verdict === 'wait') {
+            if (gate.timer === undefined) {
+                gate.timer = setTimeout(() => { gate.timer = undefined; openSettleCheckRef.current(); }, OPEN_SETTLE_POLL_MS);
+            }
+            return;
+        }
+        if (gate.timer !== undefined) clearTimeout(gate.timer);
+        gate.timer = undefined;
+        gate.active = false;
+        gate.done = true;
+        gate.created = [];
+        if (verdict !== 'settled') justCreatedGraphRef.current = false;
+        const cb = onInitializedRef.current;
+        if (cb) requestAnimationFrame(() => cb());
+    };
 
     // ── Initialization: full transform on mount or modelid change ──────
     useEffect(() => {
@@ -1215,10 +1283,14 @@ export function useJjomSync(
 
             initializedRef.current = true;
 
-            // Notify caller (e.g. to fitView) — delay to let RF measure nodes
-            if (onInitialized) {
-                requestAnimationFrame(() => onInitialized());
-            }
+            // Notify caller (e.g. to fitView) once the open has settled — the check
+            // delays by a frame to let RF measure nodes, as before.
+            const gate = openGateFor(modelid);
+            gate.graphId = graphInfo!.graphId;
+            gate.startedAt = Date.now();
+            gate.active = true;
+            gate.done = false;
+            openSettleCheckRef.current();
         } catch (err) {
             console.warn('[useJjomSync] Initialization error:', err);
         }
@@ -1321,21 +1393,25 @@ export function useJjomSync(
 
         // --- Property changes on existing elements ---
         const prevElements = prevElementsRef.current;
+        let antiBounceDeferred = false;
         for (const id of subElementIds) {
             if (!prevIds.has(id)) continue;
-            if (isCanvasUpdated(id)) continue; // anti-bounce (drag positions only)
 
             const dElement = elementSnapshots.get(id);
             const prevD = prevElements.get(id);
             const currModel = elementSnapshots.get(`model:${id}`);
-            // damiano: this is wrong. it is sometimes taking newElement instead. source of isSingleton bug
-            let prevModel = prevElements.get(`model:${id}`);
-            // forcing to update by giving it a different object, until it gets a better fix.
-            prevModel = {} as any;
+            const prevModel = prevElements.get(`model:${id}`);
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
-            
-            if (prevD === dElement && prevModel === currModel && currHash === prevHash) continue;
+            const unchanged = prevD === dElement && prevModel === currModel && currHash === prevHash;
+
+            if (isCanvasUpdated(id)) { // anti-bounce (drag positions only)
+                // Its old entries stay in prevElements (below), so the re-run scheduled after
+                // the window compares it again.
+                if (!unchanged) antiBounceDeferred = true;
+                continue;
+            }
+            if (unchanged) continue;
 
             try {
                 const lProxy: any = LPointerTargetable.fromPointer(id);
@@ -1423,6 +1499,14 @@ export function useJjomSync(
         }
         prevElementsRef.current = nextPrev;
         prevSubElementsRef.current = subElementIds;
+
+        // One re-run after the anti-bounce window for the ids skipped above (no run per render).
+        if (antiBounceDeferred && antiBounceTimerRef.current === undefined) {
+            antiBounceTimerRef.current = setTimeout(() => {
+                antiBounceTimerRef.current = undefined;
+                setAntiBounceTick(t => t + 1);
+            }, ANTI_BOUNCE_RERUN_MS);
+        }
 
         // ── Surgical push to React Flow ──────────────────────────────
         // Instead of replacing ALL nodes (which triggers re-measurement
@@ -1530,12 +1614,16 @@ export function useJjomSync(
             });
             scheduleFlush();
         }
-    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, Date.now()]);
-    // todo: remove Date.now() from dependencies, it forces update to fix singleton issue but it's sub-optimal
+    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, antiBounceTick]);
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {
         return () => {
+            if (antiBounceTimerRef.current !== undefined) clearTimeout(antiBounceTimerRef.current);
+            antiBounceTimerRef.current = undefined;
+            if (openGateRef.current.timer !== undefined) clearTimeout(openGateRef.current.timer);
+            openGateRef.current.timer = undefined;
+            openGateRef.current.active = false;
             clearAllCanvasUpdated();
             clearSyncModes();
             clearDropCreated();

@@ -8,7 +8,7 @@ if (NODE_MAJOR < 24) {
   process.exit(2);
 }
 
-const USAGE = `usage: tack <command>
+const USAGE = `usage: tack <command> | tack --version
 
 commands:
   check [file] [--level user|project|local]
@@ -204,6 +204,7 @@ async function reposCmd(args) {
   if (!flags) return usage();
   const { openStore, storePath } = await import('../src/store/open.mjs');
   const { listRepos } = await import('../src/store/repos.mjs');
+  const { tableLines, toplevelsCell } = await import('../src/cli/table.mjs');
   const db = openStore(storePath(flags.store));
   let out;
   try {
@@ -217,10 +218,10 @@ async function reposCmd(args) {
   }
   const table = [['repo', 'state', 'toplevels', 'remote', 'commits', 'unit trailer', 'unit suffix', 'claude co-authored', 'sessions', 'commit within hour']];
   for (const r of out.repos) {
-    table.push([r.key.slice(0, 12), r.state, r.toplevels.join(','), r.remote_host, String(r.commits), String(r.unit_trailer),
+    table.push([r.key.slice(0, 12), r.state, toplevelsCell(r.toplevels), r.remote_host, String(r.commits), String(r.unit_trailer),
       String(r.unit_suffix), String(r.claude_coauthored), String(r.sessions), String(r.sessions_commit_within_hour)]);
   }
-  printTable(table);
+  for (const line of tableLines(table)) process.stdout.write(line + '\n');
   process.stdout.write(`${out.repos.length} repositories\n`);
   for (const m of out.missing) {
     const n = m.cwds.reduce((a, c) => a + c.sessions, 0);
@@ -355,13 +356,13 @@ async function parityCmd(args) {
     return 2;
   }
   const { openStore, storePath } = await import('../src/store/open.mjs');
-  const { defaultLaneRoot } = await import('../src/collectors/lane-run/collect.mjs');
+  const { traceSource } = await import('../src/collectors/active.mjs');
   const { importsRoot, DEFAULT_TRUNK } = await import('../src/importers/jjodel-log.mjs');
   const { parityJjodel } = await import('../src/parity/jjodel.mjs');
   const db = openStore(storePath(flags.store));
   let r;
   try {
-    r = parityJjodel(db, { root: flags.lanes ?? defaultLaneRoot(), repo: flags.repo ?? process.cwd(), trunk: flags.trunk ?? process.env.JJODEL_TRUNK ?? DEFAULT_TRUNK, days, imports: importsRoot() });
+    r = parityJjodel(db, { root: flags.lanes ?? traceSource.root(), repo: flags.repo ?? process.cwd(), trunk: flags.trunk ?? process.env.JJODEL_TRUNK ?? DEFAULT_TRUNK, days, imports: importsRoot() });
   } finally {
     db.close();
   }
@@ -454,7 +455,9 @@ async function boardCmd(args) {
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (command === 'check') process.exitCode = await check(rest);
+const version = () => JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+if (command === '--version' && rest.length === 0) process.stdout.write(version() + '\n');
+else if (command === 'check') process.exitCode = await check(rest);
 else if (command === 'settings') process.exitCode = await settingsCmd(rest);
 else if (command === 'notify') process.exitCode = await notifyCmd(rest);
 else if (command === 'scan') process.exitCode = await scanCmd(rest);

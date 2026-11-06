@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "lanes": 100,
+    "llmLanes": 75,
+    "reconciledLanes": 73,
+    "baselineTechnicalTotal": 1034170964
+  },
+  "differences": {
+    "P-2026-10-10-0105": {
+      "input": -2702,
+      "cacheRead": -4400955,
+      "cacheCreation": -184234
+    },
+    "P-2026-10-16-1000": {
+      "input": 2,
+      "cacheRead": 397421,
+      "cacheCreation": 1359
+    }
+  },
+  "segments0105": {
+    "0": {
+      "input": -38,
+      "cacheRead": -3436745,
+      "cacheCreation": -182985
+    },
+    "3": {
+      "input": -2664,
+      "cacheRead": -964210,
+      "cacheCreation": -1249
+    }
+  },
+  "interrupted1000": {
+    "line": 1390,
+    "input": 2,
+    "cacheRead": 397421,
+    "cacheCreation": 1359
+  },
+  "validationSourceFingerprint": "c90bc18bc776687174a0fa5a402ba84dc3d2223feae19fff67257f0def72c7bf",
+  "validationSourceFingerprintScope": "Allowlisted bytes observed during implementation validation, 2026-10-23; not an invented historical snapshot."
+}

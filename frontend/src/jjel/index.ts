@@ -34,11 +34,14 @@ export { JjelLexer, tokenize } from './lexer';
 export { JjelParser, parse } from './parser';
 // Templates (R-GEN-10): the one entry point that lexes `"…${…}…"` holes.
 export { parseTemplate } from './parser/parser';
+// Text-mode template bodies (R-GEN-26): the inside of one interpolated string.
+export { parseTemplateText } from './parser/parser';
 
 // Evaluator
 export {
     JjelEvaluator,
     JjelEvaluationError,
+    JjelTimeoutError,
     evaluate,
     EvaluationContext,
     TypeRegistry,

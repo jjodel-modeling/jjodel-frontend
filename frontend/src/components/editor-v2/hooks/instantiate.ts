@@ -461,11 +461,16 @@ export interface InstantiateResult {
 }
 
 const WAIT_STEP_MS = 50;
-const WAIT_LIMIT_MS = 6000;
+/**
+ * The time every wait of one instantiation shares, from the moment its undo group opens (P-2026-11-06-2225): a fresh
+ * limit per wait kept the group open for N times the limit when a write never landed, and every instantiation queued
+ * behind it waited as long. 8 s is the single 6 s ceiling of before plus 2 s for the waits that come after it in a
+ * healthy run (the seed lands 600 ms after the create, each slot one store COMMIT of up to 300 ms).
+ */
+const INSTANTIATE_DEADLINE_MS = 8000;
 
-/** Polls `test` until it gives a value or the limit passes. */
-async function waitFor<T>(test: () => T | undefined | null | false): Promise<T | null> {
-    const until = Date.now() + WAIT_LIMIT_MS;
+/** Polls `test` until it gives a value or the time `until` (`Date.now()`) passes; past it, one test and no wait. */
+async function waitFor<T>(test: () => T | undefined | null | false, until: number): Promise<T | null> {
     for (;;) {
         const r = test();
         if (r) return r;
@@ -504,7 +509,7 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  * write never lands; nothing when no layout has a size or a position to take.
  */
 async function layoutInstanceNode(
-    m: WriteModules, get: DGet, instance: string, slots: number, placeAt?: InstancePlacement, growOnly = false,
+    m: WriteModules, get: DGet, instance: string, slots: number, until: number, placeAt?: InstancePlacement, growOnly = false,
 ): Promise<string | null> {
     const state: any = m.joiner.store.getState();
     const metaclass = get(instance)?.instanceof;
@@ -530,7 +535,7 @@ async function layoutInstanceNode(
     const vertices = await waitFor(() => {
         const vs = verticesOf((m.joiner.store.getState() as any)?.idlookup, instance);
         return vs.length > 0 ? vs : null;
-    });
+    }, until);
     if (!vertices) return 'the node of the instance never appeared';
     // «Sync slots» (S3a, decision D6): the box grows to hold the new rows and never shrinks; a box already as large as
     // the rows ask, under a layout, is left as it is there.
@@ -556,8 +561,8 @@ async function layoutInstanceNode(
             for (const [key, value] of Object.entries(write.patch)) m.joiner.SetFieldAction.new(vid as any, key as any, value, undefined, false);
         }
     });
-    if (!(await waitFor(() => layoutLanded(get, writes)))) return 'the node layout never landed';
-    return null;
+    if (await waitFor(() => layoutLanded(get, writes), until)) return null;
+    return `the node layout did not land within ${INSTANTIATE_DEADLINE_MS} ms`;
 }
 
 /**
@@ -588,8 +593,27 @@ async function writeModules() {
     return { modules, createInstance: adapter.createInstance, history, get };
 }
 
-/** Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment). */
-export async function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+/** The last instantiation or sync asked for: the next one starts once it has settled (see `instantiate`). */
+let lastInstantiation: Promise<unknown> = Promise.resolve();
+
+/** Runs `job` once the instantiation or sync asked for before it has settled, also when that one failed. */
+function queued<T>(job: () => Promise<T>): Promise<T> {
+    const run = lastInstantiation.catch(() => undefined).then(job);
+    lastInstantiation = run;
+    return run;
+}
+
+/**
+ * Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment).
+ * One at a time: a call waits for the one before it to close its undo group, also when it failed, and then opens its
+ * own, so two quick clicks give two undo entries instead of two groups folded into one by nesting (P-2026-11-06-2225).
+ */
+export function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+    return queued(() => instantiateNow(classifierId, record, placeAt));
+}
+
+/** One instantiation of `instantiate`, its undo group open while it writes. */
+async function instantiateNow(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
     const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
     const plan = synthesisPlan(get, record, classifierId);
@@ -598,13 +622,15 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
         return result;
     }
     inFlight++;
-    const group = history.beginUndoGroup();
+    history.beginUndoGroup();
+    const until = Date.now() + INSTANTIATE_DEADLINE_MS;
     try {
-        await synthesize(modules, createInstance, get, plan, record, result, placeAt);
+        await synthesize(modules, createInstance, get, plan, record, result, until, placeAt);
     } finally {
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
-        // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own.
-        history.endUndoGroup(group);
+        // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own. Or once
+        // `until` has passed: then the waits left test once each and the group closes all the same.
+        history.endUndoGroup();
         inFlight--;
     }
     result.ok = result.problems.length === 0;
@@ -614,10 +640,16 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
 /**
  * «Sync slots» (R-OI-3, R-OI-9; S3a): create the missing slots of `instanceId`, each with its default value, appended to
  * its slot list in closure order (decision D7), and grow its node to hold them (D6). Orphans and duplicates are left
- * alone: nothing is deleted. One undo entry, by the same group and the same waits as `instantiate`. Nothing to create
- * is a success that writes nothing.
+ * alone: nothing is deleted. One undo entry, by the same group and the same deadline as `instantiate`, in the same
+ * queue: a sync never shares an entry with an instantiation or another sync, and plans once the one before has
+ * written. Nothing to create is a success that writes nothing.
  */
-export async function syncSlots(instanceId: string, record: OntoBinding): Promise<InstantiateResult> {
+export function syncSlots(instanceId: string, record: OntoBinding): Promise<InstantiateResult> {
+    return queued(() => syncSlotsNow(instanceId, record));
+}
+
+/** One sync of `syncSlots`, its undo group open while it writes. */
+async function syncSlotsNow(instanceId: string, record: OntoBinding): Promise<InstantiateResult> {
     const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: instanceId, slots: [], values: [], problems: [] };
     const plan = syncSlotsPlan(get, record, instanceId);
@@ -630,16 +662,17 @@ export async function syncSlots(instanceId: string, record: OntoBinding): Promis
         return result;
     }
     inFlight++;
-    const group = history.beginUndoGroup();
+    history.beginUndoGroup();
+    const until = Date.now() + INSTANTIATE_DEADLINE_MS;
     try {
         const seeded: Seeded = [];
-        await createSlots(createInstance, get, plan, plan.slots, record, result, seeded);
-        await waitSeeded(get, seeded, result);
+        await createSlots(createInstance, get, plan, plan.slots, record, result, seeded, until);
+        await waitSeeded(get, seeded, result, until);
         const total = (featureValue(get, instanceId, record.slotContainer!)?.values ?? []).filter(isId).length;
-        const laid = await layoutInstanceNode(modules, get, instanceId, total, undefined, true);
+        const laid = await layoutInstanceNode(modules, get, instanceId, total, until, undefined, true);
         if (laid) result.problems.push(laid);
     } finally {
-        history.endUndoGroup(group);
+        history.endUndoGroup();
         inFlight--;
     }
     result.ok = result.problems.length === 0;
@@ -649,9 +682,9 @@ export async function syncSlots(instanceId: string, record: OntoBinding): Promis
 /** Every create with the seed `addObject` writes after it, awaited before the group closes. */
 type Seeded = Array<[string, Readonly<Record<string, string | number | boolean>>]>;
 
-async function waitSeeded(get: DGet, seeded: Seeded, result: InstantiateResult): Promise<void> {
+async function waitSeeded(get: DGet, seeded: Seeded, result: InstantiateResult, until: number): Promise<void> {
     for (const [id, seed] of seeded) {
-        if (!(await waitFor(() => seedLanded(get, id, seed)))) result.problems.push(`${id}: its seed never landed`);
+        if (!(await waitFor(() => seedLanded(get, id, seed), until))) result.problems.push(`${id}: its seed never landed`);
     }
 }
 
@@ -666,7 +699,7 @@ const holder = (get: DGet, ownerId: string, featureId: string | undefined) => ()
 async function createSlots(
     createInstance: typeof import('./createAdapter').createInstance, get: DGet,
     plan: { modelId: string; instance: string; slotKey: string; slotMetaclass: string; valueKey: string | null },
-    planned: readonly PlannedSlot[], record: OntoBinding, result: InstantiateResult, seeded: Seeded,
+    planned: readonly PlannedSlot[], record: OntoBinding, result: InstantiateResult, seeded: Seeded, until: number,
 ): Promise<void> {
     const instance = plan.instance;
     for (const slotPlan of planned) {
@@ -679,10 +712,10 @@ async function createSlots(
         result.slots.push(slotId);
         seeded.push([slotId, slotPlan.seed]);
         // In the owner's list before the next one, so the list keeps the closure order.
-        const listed = await waitFor(() => (featureValue(get, instance, record.slotContainer!)?.values ?? []).includes(slotId));
+        const listed = await waitFor(() => (featureValue(get, instance, record.slotContainer!)?.values ?? []).includes(slotId), until);
         if (!listed) result.problems.push(`slot ${slotId}: not listed in ${plan.slotKey}`);
         if (!slotPlan.value || plan.valueKey === null) continue;
-        if (!(await waitFor(holder(get, slotId, record.valueHolder)))) {
+        if (!(await waitFor(holder(get, slotId, record.valueHolder), until))) {
             result.problems.push(`slot ${slotId}: ${plan.valueKey} never appeared`);
             continue;
         }
@@ -698,12 +731,12 @@ async function createSlots(
 /** The creates, the wait for their seeding and the node layout of `instantiate`, inside its undo group. */
 async function synthesize(
     m: WriteModules, createInstance: typeof import('./createAdapter').createInstance, get: DGet, plan: SynthesisPlan,
-    record: OntoBinding, result: InstantiateResult, placeAt?: InstancePlacement,
+    record: OntoBinding, result: InstantiateResult, until: number, placeAt?: InstancePlacement,
 ): Promise<void> {
     const seeded: Seeded = [];
     const settle = async (slots: number) => {
-        await waitSeeded(get, seeded, result);
-        const laid = await layoutInstanceNode(m, get, result.instance!, slots, placeAt);
+        await waitSeeded(get, seeded, result, until);
+        const laid = await layoutInstanceNode(m, get, result.instance!, slots, until, placeAt);
         if (laid) result.problems.push(laid);
     };
 
@@ -720,13 +753,13 @@ async function synthesize(
         return;
     }
 
-    const slotsValue = await waitFor(holder(get, instance, record.slotContainer));
+    const slotsValue = await waitFor(holder(get, instance, record.slotContainer), until);
     if (!slotsValue) {
         result.problems.push(`${plan.slotKey}: the slot of the instance never appeared`);
         return;
     }
 
     const target = { modelId: plan.modelId, instance, slotKey: plan.slotKey, slotMetaclass: plan.slotMetaclass!, valueKey: plan.valueKey };
-    await createSlots(createInstance, get, target, plan.slots, record, result, seeded);
+    await createSlots(createInstance, get, target, plan.slots, record, result, seeded, until);
     await settle(result.slots.length);
 }

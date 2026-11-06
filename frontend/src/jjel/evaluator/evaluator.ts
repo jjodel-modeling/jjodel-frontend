@@ -84,16 +84,134 @@ export class JjelEvaluationError extends Error {
 }
 
 /**
- * Run a step that may raise a bit-vector defect and rethrow it as a
- * JjelEvaluationError with the same message; any other error passes through.
+ * The mark on an error thrown by a method call that failed (R-FA-12): the
+ * receiver, not null and not a model element, has no method of that name, or a
+ * method of the JjEL library threw. The error is the one JjEL throws without the
+ * mark, same object, class and message; the mark, a symbol-keyed property, holds
+ * the method name. JjTL reads it and stops the mapping.
  */
-function withBitVectorDefects<T>(step: () => T): T {
+const METHOD_FAILURE = Symbol('jjelMethodFailure');
+
+/** Mark `e` as the failure of `method` and return it, to be thrown unchanged. */
+function asMethodFailure<E>(e: E, method: string): E {
+    if (e !== null && typeof e === 'object' && !(METHOD_FAILURE in e)) {
+        try {
+            (e as any)[METHOD_FAILURE] = method;
+        } catch {
+            // A frozen error is thrown unmarked.
+        }
+    }
+    return e;
+}
+
+/** The method whose failure `error` reports (R-FA-12), or undefined. */
+export function methodFailureOf(error: unknown): string | undefined {
+    return error !== null && typeof error === 'object' ? (error as any)[METHOD_FAILURE] : undefined;
+}
+
+/**
+ * Run a method of the JjEL library: what it throws is marked as the failure of
+ * `method` (R-FA-12) and thrown unchanged. Used for the methods that call no
+ * JjEL function, so that whatever they throw is theirs.
+ */
+function libraryMethod<T>(method: string, step: () => T): T {
     try {
         return step();
     } catch (e) {
-        if (e instanceof BitVectorDefect) throw new JjelEvaluationError(e.message);
+        if (e instanceof JjelTimeoutError) throw e;
+        throw asMethodFailure(e, method);
+    }
+}
+
+/**
+ * The evaluation ran past `EvaluationContext.deadline` (R-JJD-3). Not a
+ * `JjelEvaluationError`: the expression is not wrong, it was stopped, and a
+ * caller tells the two apart with `instanceof`.
+ */
+export class JjelTimeoutError extends Error {
+    constructor(public readonly deadline: number) {
+        super('JjEL evaluation stopped: deadline exceeded');
+        this.name = 'JjelTimeoutError';
+    }
+}
+
+/**
+ * Run a step that may raise a bit-vector defect and rethrow it as a
+ * JjelEvaluationError with the same message; any other error passes through.
+ * With `method`, the step is that library method and the defect is marked as
+ * its failure (R-FA-12).
+ */
+function withBitVectorDefects<T>(step: () => T, method?: string): T {
+    try {
+        return step();
+    } catch (e) {
+        if (e instanceof BitVectorDefect) {
+            const error = new JjelEvaluationError(e.message);
+            throw method === undefined ? error : asMethodFailure(error, method);
+        }
         throw e;
     }
+}
+
+/** The longest list `range` builds: a typo such as `range(1e9)` is an error, not a hung tab. */
+const RANGE_MAX_LENGTH = 1_000_000;
+
+/**
+ * `range(n)` is `[0, ..., n-1]`, `range(a, b)` is `[a, ..., b-1]`; empty when the
+ * end is not above the start. Integers only: anything else, and a wrong arity,
+ * is an error naming the function, never a truncation or a conversion.
+ */
+function makeRange(args: JjelValue[]): number[] {
+    if (args.length < 1 || args.length > 2) {
+        throw new JjelEvaluationError(`range() takes 1 or 2 integer arguments, got ${args.length}`);
+    }
+    for (const arg of args) {
+        if (typeof arg !== 'number' || !Number.isInteger(arg)) {
+            const got = arg === null ? 'null' : isBitVector(arg) ? 'a bit-vector' : Array.isArray(arg) ? 'a list' : typeof arg === 'number' ? `the non-integer ${arg}` : `a ${typeof arg}`;
+            throw new JjelEvaluationError(`range() takes integers, got ${got}`);
+        }
+    }
+    const start = args.length === 1 ? 0 : args[0] as number;
+    const end = args.length === 1 ? args[0] as number : args[1] as number;
+    if (end - start > RANGE_MAX_LENGTH) {
+        throw new JjelEvaluationError(`range() would build ${end - start} elements, above the limit of ${RANGE_MAX_LENGTH}`);
+    }
+    const out: number[] = [];
+    for (let i = start; i < end; i++) out.push(i);
+    return out;
+}
+
+/**
+ * Register the global `range` on `ctx`. The evaluator calls it on its own
+ * context; the JjTL executor evaluates in a context of its own and calls it there.
+ */
+export function registerRangeBuiltin(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('range', createFunction(['a', 'b'], makeRange));
+}
+
+/**
+ * Member guard (R-GEN-29): `__proto__`, and a name inherited from
+ * `Object.prototype` that the receiver does not own (`constructor`,
+ * `toString`, `__defineGetter__`...), read as a missing member. Own attributes
+ * with those names stay readable. `hasOwnProperty.call` rather than
+ * `Object.hasOwn`, which the default Vite target does not ship.
+ */
+function isBlockedMember(obj: object, name: string): boolean {
+    if (name === '__proto__') return true;
+    return name in Object.prototype && !Object.prototype.hasOwnProperty.call(obj, name);
+}
+
+/**
+ * Register the two bit-vector constructors (R-BV-5), the only bit-vector
+ * globals, on `ctx`. The evaluator calls it on its own context; the simulator
+ * calls it on its base context, which takes no other global builtin, so that
+ * no model attribute is shadowed there (R-BV-8).
+ */
+export function registerBitVectorConstructors(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('bits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('bits', args))));
+    ctx.registerBuiltin('sbits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('sbits', args))));
 }
 
 // ============================================
@@ -150,11 +268,11 @@ export class JjelEvaluator {
             return args;
         }));
 
+        // Like `bits`, a global: it shadows a context variable named `range`.
+        registerRangeBuiltin(this.context);
+
         // Bit-vector constructors (R-BV-5): the only bit-vector globals.
-        this.context.registerBuiltin('bits', createFunction(['w', 'v'], (args) =>
-            withBitVectorDefects(() => makeBitVector('bits', args))));
-        this.context.registerBuiltin('sbits', createFunction(['w', 'v'], (args) =>
-            withBitVectorDefects(() => makeBitVector('sbits', args))));
+        registerBitVectorConstructors(this.context);
     }
 
     /**
@@ -189,6 +307,9 @@ export class JjelEvaluator {
      */
     evaluate(expr: JjelExpression, ctx?: EvaluationContext): JjelValue {
         const evalCtx = ctx || this.context;
+        if (evalCtx.deadline !== undefined && Date.now() > evalCtx.deadline) {
+            throw new JjelTimeoutError(evalCtx.deadline);
+        }
 
         switch (expr.type) {
             case 'Literal':
@@ -314,6 +435,16 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateBinary(expr: BinaryExpr, ctx: EvaluationContext): JjelValue {
+        // `+` under a host that attributes its operands: the same order, the same value (R-GEN-10).
+        if (expr.operator === '+' && ctx.textHost?.evaluateConcat) {
+            return ctx.textHost.evaluateConcat(
+                expr,
+                () => this.evaluate(expr.left, ctx),
+                () => this.evaluate(expr.right, ctx),
+                (left, right) => this.applyBinaryOperator('+', left, right),
+            );
+        }
+
         const left = this.evaluate(expr.left, ctx);
         const right = this.evaluate(expr.right, ctx);
 
@@ -582,11 +713,15 @@ export class JjelEvaluator {
                 }
             }
 
-            // Check if property exists before accessing
-            if (property in obj) {
-                const value = obj[property] ?? null;
-                ctx.readObserver?.(obj, property, value);
-                return value;
+            // Check if property exists before accessing. A blocked name, or a
+            // value that is a native function, reads as missing (R-GEN-29).
+            if (!isBlockedMember(obj, property) && property in obj) {
+                const raw = obj[property];
+                if (typeof raw !== 'function') {
+                    const value = raw ?? null;
+                    ctx.readObserver?.(obj, property, value);
+                    return value;
+                }
             }
 
             // Property doesn't exist on the host. When the caller has opted
@@ -751,7 +886,7 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     private evaluateNullSafeMethodCall(expr: NullSafeMethodCallExpr, ctx: EvaluationContext): JjelValue {
@@ -762,7 +897,7 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     /**
@@ -787,7 +922,7 @@ export class JjelEvaluator {
         );
     }
 
-    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext, expr?: JjelExpression): JjelValue {
         // Pedagogical error mirror of getProperty: catches the paren form
         // `obj.className()` on instances. Same redirection to `instanceOf.name`.
         if (
@@ -806,16 +941,23 @@ export class JjelEvaluator {
         if (Array.isArray(obj)) {
             // `join` from a context with a Text host (R-GEN-10); without one, the usual dispatch below.
             if (method === 'join' && ctx.textHost) {
+                const host = ctx.textHost;
+                if (host.evaluateJoin) return host.evaluateJoin(expr, obj, args[0], () => joinWithTextHost(obj, args[0], host));
                 return joinWithTextHost(obj, args[0], ctx.textHost);
             }
             const collectionMethod = getCollectionMethod(method);
             if (collectionMethod) {
                 // Check if first arg is a lambda (function)
                 const firstArg = args[0];
-                if (isJjelFunction(firstArg)) {
-                    return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)));
+                // `map` under a host that keeps each item's origin: the items `map` computes (R-GEN-10).
+                if (method === 'map' && isJjelFunction(firstArg) && ctx.textHost?.mapItems) {
+                    const host = ctx.textHost;
+                    return withBitVectorDefects(() => host.mapItems!(obj, item => firstArg.call([item], ctx)));
                 }
-                return withBitVectorDefects(() => collectionMethod(obj, ...args));
+                if (isJjelFunction(firstArg)) {
+                    return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)), method);
+                }
+                return withBitVectorDefects(() => collectionMethod(obj, ...args), method);
             }
         }
 
@@ -823,7 +965,7 @@ export class JjelEvaluator {
         if (isBitVector(obj)) {
             const bitVectorMethod = getBitVectorMethod(method);
             if (bitVectorMethod) {
-                return withBitVectorDefects(() => bitVectorMethod(obj, args));
+                return libraryMethod(method, () => withBitVectorDefects(() => bitVectorMethod(obj, args)));
             }
             if (args.length === 0 && (method === 'width' || method === 'signed')) {
                 return obj[method];
@@ -834,13 +976,13 @@ export class JjelEvaluator {
         if (typeof obj === 'string') {
             const stringMethod = getStringMethod(method);
             if (stringMethod) {
-                return stringMethod(obj, ...args);
+                return libraryMethod(method, () => stringMethod(obj, ...args));
             }
 
             // Date methods (strings can be ISO date strings)
             const dateMethod = getDateMethod(method);
             if (dateMethod) {
-                return dateMethod(obj, ...args);
+                return libraryMethod(method, () => dateMethod(obj, ...args));
             }
         }
 
@@ -848,14 +990,16 @@ export class JjelEvaluator {
         if (typeof obj === 'number') {
             const numberMethod = getNumberMethod(method);
             if (numberMethod) {
-                return numberMethod(obj, ...args);
+                return libraryMethod(method, () => numberMethod(obj, ...args));
             }
         }
 
         // Object methods
         if (isJjelObject(obj)) {
-            const methodValue = obj[method];
-            if (isJjelFunction(methodValue)) {
+            // Blocked names and native functions read as missing (R-GEN-29).
+            const read = isBlockedMember(obj, method) ? undefined : obj[method];
+            const methodValue = typeof read === 'function' ? undefined : read;
+            if (methodValue !== undefined && isJjelFunction(methodValue)) {
                 return methodValue.call(args, ctx);
             }
             // Dual form for zero-arg builtins (spec 2.11): if the property
@@ -880,7 +1024,9 @@ export class JjelEvaluator {
             errorMsg += `. Available: ${availableMethods.slice(0, 8).join(', ')}${availableMethods.length > 8 ? '...' : ''}`;
         }
 
-        throw new JjelEvaluationError(errorMsg);
+        // A model element without the feature is a missing feature, not a failed method (R-FA-12).
+        const error = new JjelEvaluationError(errorMsg);
+        throw isJjelObject(obj) ? error : asMethodFailure(error, method);
     }
 
     /**
@@ -961,7 +1107,9 @@ export class JjelEvaluator {
                 lambdaCtx.set(expr.params[i], args[i] ?? null);
             }
 
-            // Evaluate body
+            // Evaluate body, through a host that records it as a part (R-GEN-10)
+            const host = lambdaCtx.textHost;
+            if (host?.evaluatePart) return host.evaluatePart(expr.body, () => this.evaluate(expr.body, lambdaCtx));
             return this.evaluate(expr.body, lambdaCtx);
         });
     }
@@ -981,7 +1129,13 @@ export class JjelEvaluator {
     private evaluateObjectLiteral(expr: ObjectLiteralExpr, ctx: EvaluationContext): JjelValue {
         const result: Record<string, JjelValue> = {};
         for (const entry of expr.entries) {
-            result[entry.key] = this.evaluate(entry.value, ctx);
+            // An own data property: a `__proto__` key is a key, not the prototype (R-GEN-29).
+            Object.defineProperty(result, entry.key, {
+                value: this.evaluate(entry.value, ctx),
+                writable: true,
+                enumerable: true,
+                configurable: true,
+            });
         }
         return result;
     }
@@ -1061,7 +1215,15 @@ export class JjelEvaluator {
             return obj[Math.trunc(index)] ?? null;
         }
         if (isJjelObject(obj) && (typeof index === 'string' || typeof index === 'number')) {
-            return (obj as any)[String(index)] ?? null;
+            // Blocked names and native functions read as missing (R-GEN-29).
+            const key = String(index);
+            if (isBlockedMember(obj, key)) return null;
+            const value = (obj as any)[key];
+            if (typeof value === 'function') return null;
+            // A string key is observed as the member read `o.f` is, same guard
+            // and arguments, so reflective text keeps its origin (R-TXT-6).
+            if (typeof index === 'string' && key in obj) ctx.readObserver?.(obj, key, value ?? null);
+            return value ?? null;
         }
         return null;
     }

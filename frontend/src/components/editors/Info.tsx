@@ -381,7 +381,9 @@ function MetamodelContents(props: { data: LModel; onInternalNavigate?: (sel: { n
     };
 
     const handleAddPackage = () => {
-        DPackage.new('NewPackage', '', '', parentId, true);
+        // `Constructors.DPackage` reads `fatherType.cname` whenever there is a father: the father
+        // here is the metamodel, so the package goes into its `packages`.
+        DPackage.new('NewPackage', '', '', parentId, true, DModel);
     };
 
     return (

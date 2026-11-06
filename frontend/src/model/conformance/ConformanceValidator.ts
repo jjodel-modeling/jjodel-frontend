@@ -70,9 +70,11 @@ export function validateConformance(
             // Severity is 'warning', not 'error': this is Jjodel well-formedness, not a
             // violation against the metamodel, and it must not turn an otherwise conformant
             // model into 'errors'.
+            // A nameless object (name '', its identity slot written empty) is a legal state
+            // (R-TXT-45, R-TXT-46 D3): no missing_name. undefined/null still report it.
             try {
                 const nameVerdict = checkNameShape(objName);
-                if (nameVerdict !== 'ok') {
+                if (nameVerdict !== 'ok' && objName !== '') {
                     violations.push({
                         objectId: objId,
                         objectName: objName,

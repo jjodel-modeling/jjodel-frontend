@@ -200,7 +200,7 @@ test('board: /settings carries the theme attributes, /api/settings writes the us
   assert.equal((await r.json()).keys.find((k) => k.key === 'notifications.events.gate_red').source, 'default');
   const s = await (await fetch(b.url + 'api/settings?repo=abcdef01')).json();
   assert.equal(s.keys.find((k) => k.key === 'load.threshold').value, 12);
-  assert.equal(s.catalogue.length, 15);
+  assert.equal(s.catalogue.length, 17);
   const load = await (await fetch(b.url + 'api/load?repo=abcdef01')).json();
   assert.deepEqual([load.samples.length, load.threshold, load.cores, load.normalised], [3, 12, 8, false]);
   r = await post('/api/notify-test', { channel: 'desktop' });

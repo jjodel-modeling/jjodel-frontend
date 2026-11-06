@@ -251,8 +251,9 @@ function refusalReason(
  *
  * `undefined`/`null` is «no name asked for», not a name, and never collides — that is
  * the case a create hits when it lets `DObject.new3` compute the auto-name. The EMPTY
- * STRING is left to compare like any other value, because that is what
- * `validateNameUniqueness` has always done and the rename must not change verdict.
+ * STRING never collides either: an object whose identity slot is written `''` is nameless
+ * (R-TXT-45, R-TXT-46 D2), and two nameless siblings are not homonyms, as
+ * `jjform/create.ts` already says for the form path.
  */
 export function checkNameUniqueness(args: {
     father: LModelElement | undefined | null;
@@ -261,7 +262,7 @@ export function checkNameUniqueness(args: {
     excludeId?: string;
 } & NamespaceOptions): UniquenessVerdict {
     const name = args?.name;
-    if (name === undefined || name === null) return { ok: true };
+    if (name === undefined || name === null || name === '') return { ok: true };
     const collidingWith = getNamespaceOf(
         args.father, args.excludeId, {includePending: args.includePending}
     ).filter(o => o.name === name);
@@ -293,19 +294,44 @@ export function validateNameUniqueness(
  * Full-model scan. For each LObject whose name collides with at least one
  * sibling in its namespace, the map contains the list of colliding siblings.
  *
- * Complexity O(N × M) worst-case (N = total objects, M = namespace size);
- * acceptable for models up to ~1000 objects. Indexing by namespace key is
- * future work.
+ * The namespace depends on the father alone, so each father's namespace is
+ * resolved and grouped by name once (P-2026-10-21-0030): O(N + Σ namespace sizes)
+ * instead of one namespace and one `filter` per object (29,996 name reads per
+ * rename commit on a 407-object model). `Map` keys compare names like `===`
+ * (strings, `undefined`), so a group is exactly what the per-object `filter` kept,
+ * in the same order; the object itself is then dropped by id, as `excludeId` did.
  */
 export function detectDuplicateNames(model: LModel, opts: NamespaceOptions = {}): Map<string, LObject[]> {
     const result = new Map<string, LObject[]>();
     const all = (model.allSubObjects ?? []) as LObject[];
     // COMMITTED state by default: see `NamespaceOptions.includePending`.
     const includePending = opts.includePending === true;
+    const groupsByFather = new Map<string, Map<unknown, LObject[]>>();
     for (const obj of all) {
         if (!obj) continue;
-        const siblings = getSiblingNamespace(obj, {includePending});
-        const colliding = siblings.filter(s => s.name === obj.name);
+        // A nameless object ('') is never a duplicate (R-TXT-46 D2), and it can never appear
+        // in a named object's group, since groups compare names with `===`.
+        const objName = obj.name; // read once: the scan's name-read budget (P-2026-10-21-0030)
+        if (objName === '') continue;
+        const father = obj.father as LModelElement | undefined;
+        const fatherId = idOf(father);
+        let colliding: LObject[];
+        if (!fatherId) {
+            // No father id to share a namespace under: the per-object rule, unchanged.
+            colliding = getSiblingNamespace(obj, {includePending}).filter(s => s.name === objName);
+        } else {
+            let groups = groupsByFather.get(fatherId);
+            if (!groups) {
+                groups = new Map<unknown, LObject[]>();
+                for (const s of getNamespaceOf(father, undefined, {includePending})) {
+                    const group = groups.get(s.name);
+                    if (group) group.push(s);
+                    else groups.set(s.name, [s]);
+                }
+                groupsByFather.set(fatherId, groups);
+            }
+            colliding = (groups.get(objName) ?? []).filter(s => s.id !== obj.id);
+        }
         if (colliding.length > 0) {
             result.set(obj.id, colliding);
         }

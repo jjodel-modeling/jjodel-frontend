@@ -103,6 +103,16 @@ describe('errors', () => {
         expect(codes('(forall t in xs such that t.ok).isEmpty')).toEqual([]);
     });
 
+    it('several variables (R-FA, P-2026-11-02-1330): E-FORALL on the whole guard, the record of the variables is no E-VALUE', () => {
+        expect(codes('forall s, t in xs : s.ok')).toEqual(['E-FORALL']);
+        expect(codes('forall s in xs, t in s.items such that t.ok')).toEqual(['E-FORALL']);
+        expect(codes('(forall s, t in xs such that s != t).isEmpty')).toEqual([]);
+        expect(codes('exists s, t in xs | s != t and s.ok')).toEqual([]);
+        expect(codes('exists s, self in xs | true')).toEqual(['E-SHADOW']);
+        // A literal that is not the record of the bound variables stays E-VALUE.
+        expect(codes('(forall s in xs : {a: s}).isEmpty')).toEqual(['E-VALUE']);
+    });
+
     it('E-VALUE: a lambda outside a method argument, an object literal anywhere', () => {
         expect(codes('x => true')).toEqual(['E-VALUE']);
         expect(codes('{a: 1} == self')).toEqual(['E-VALUE']);

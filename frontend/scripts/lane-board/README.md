@@ -447,10 +447,17 @@ an absolute script path; launchd does not expand `~`):
 </array>
 <key>RunAtLoad</key><true/>
 <key>KeepAlive</key><true/>
+<key>ProcessType</key><string>Interactive</string>
 <key>StandardOutPath</key><string>/Users/alfonso/.jjodel-lanes/board/board.log</string>
 <key>StandardErrorPath</key><string>/Users/alfonso/.jjodel-lanes/board/board.log</string>
 </dict></plist>
 ```
+
+`ProcessType` must be `Interactive`. Without it launchd spawns the agent as a daemon, its I/O is
+throttled, and every `lane-run status --all` child sits in disk wait past the 15 s kill: the board
+then shows no lanes and `/api` reports `lane-run status timed out after 15 s` (measured 2026-10-22,
+P-2026-10-22-1225: the same run takes 0.3 s from a shell). After editing the plist, `bootout` and
+`bootstrap` it; `kickstart` does not reread the file.
 
 ```bash
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.jjodel.lane-board.plist  # load and start

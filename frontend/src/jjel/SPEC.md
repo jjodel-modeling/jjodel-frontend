@@ -131,13 +131,16 @@ The `is` operator checks type membership including supertypes:
 ```
 expression     = forallExpr | existsExpr | withExpr | ifThenElse
 
-forallExpr     = 'forall' IDENT 'in' expression
+forallExpr     = 'forall' bindings
                    ('such' 'that' expression)?
                    (':' expression)?
                    ('do' expression)?
 
-existsExpr     = 'exists' IDENT 'in' expression
+existsExpr     = 'exists' bindings
                    (':' | 'such' 'that') expression
+
+bindings       = names 'in' expression (',' names 'in' expression)*   -- §5.1.1
+names          = IDENT (',' IDENT)*
 
 withExpr       = 'with' expression 'do' expression
 
@@ -250,6 +253,45 @@ forall a in attributes: a.name + " " + a.type.toUpper()
 forall a in attributes do createColumn(a)
 ```
 
+#### 5.1.1 Several variables
+
+A binding list binds several variables at once; the result ranges over their combinations, the first variable outermost.
+
+| Form | Means |
+|------|-------|
+| `forall x, y in S ...` | `x` and `y` both range over `S` (every ordered pair, `(a, a)` included) |
+| `forall x in A, y in B ...` | `x` ranges over `A`, `y` over `B` |
+| `forall x in A, y, z in B ...` | the two spellings mix |
+| `forall p in S, k in p.children ...` | a later collection may read an earlier variable |
+
+Rules of the list:
+- A name bound twice in one list is a parse error (`forall x, x in S`, `forall x in S, x in T`).
+- The collection of `x, y in S` is shared by the names of its list, so it may not read any of them but the last (`forall x, y in x.children` is a parse error: rename the variable). A lambda or a nested `forall` / `exists` that rebinds the name hides it.
+- After a collection, `,` continues the list only if `IDENT (',' IDENT)* 'in'` follows; otherwise it stays the separator of the enclosing call or array (`f(forall x in S : x, y)` has two arguments).
+- The filter and the projection see every variable. Without a projection the result is the list of records `{x: x, y: y, ...}`, read as `p.x`, `p.y`.
+- An empty collection anywhere gives `[]`; a collection that is not an array (null, an object, a string) gives `[]`, as with one variable.
+
+The parser desugars the list; there is no AST node of its own:
+
+| Source | Desugared |
+|--------|-----------|
+| `forall x in A, <rest>` | `(forall x in A : forall <rest>).flatten()` |
+| `forall x, y in S such that P : E` | `(forall x in S : forall y in S such that P : E).flatten()` |
+| `forall x, y in S such that P` | `(forall x in S : forall y in S such that P : {x: x, y: y}).flatten()` |
+
+`flatten()` and not `A.flatMap(x => ...)`: `flatMap` throws on a collection that is not an array, where `forall` gives `[]`. `flatten()` removes one level only, so a projection that is itself an array stays one element (`forall x in [1, 2], y in [3] : [x, y]` is `[[1, 3], [2, 3]]`).
+
+```
+-- ordered pairs of distinct classes with the same name
+forall x, y in classes such that x != y and x.name == y.name : x.name
+
+-- every class with each of its attributes
+forall c in classes, a in c.attributes : c.name + "." + a.name
+
+-- records, without a projection
+forall p in (forall x, y in S such that x.p < y.p) : p.x.name + p.y.name
+```
+
 ### 5.2 `exists` — Existential Check
 
 `exists` checks whether at least one element in a collection satisfies a condition. It always returns a **boolean**.
@@ -266,10 +308,18 @@ Note: `|` is an alias for `such that`. The `:` separator is **NOT** accepted for
 **Semantics:**
 `exists x in S such that P` is equivalent to `(forall x in S such that P).isNotEmpty`
 
+With several variables (§5.1.1) the list nests, and the equivalence holds unchanged: `exists x in A, <rest> such that P` is `exists x in A such that (exists <rest> such that P)`, and `exists x, y in S such that P` is `(forall x, y in S such that P).isNotEmpty`.
+
 **Examples:**
 ```
 exists a in attributes such that a.type == "String"
 exists a in attributes | a.isPublic and not a.isDerived
+
+-- two distinct classes with the same name
+exists x, y in classes such that x != y and x.name == y.name
+
+-- some class has an attribute named "id"
+exists c in classes, a in c.attributes | a.name == "id"
 ```
 
 ### 5.3 `implies` — Logical Implication
@@ -515,6 +565,8 @@ With `forall` replacing `filter` and `map`, the remaining collection methods are
 
 Note: `filter` and `map` are **removed** — replaced by `forall` construct.
 
+**Global function:** `range(n)` is the list `[0, 1, ..., n-1]` and `range(a, b)` is `[a, ..., b-1]`; both are empty when the end is not above the start (`range(0)`, `range(-2)`, `range(5, 2)`, `range(2, 2)`). It iterates numbers where `forall` iterates model elements: `forall i in range(nregs) -> Register { name := "x" + i }`. Integers only: a fraction, a string, `null`, a boolean, a list or a bit-vector is an error naming `range()`, as is a wrong number of arguments or a result above 1,000,000 elements; nothing is truncated or converted. Being a builtin, `range` shadows a context variable of the same bare name, like `bits`: read a model feature called `range` as `self.range`. Available wherever `JjelEvaluator` registers its globals (expressions, code generator templates) and in JjTL; not in the simulator's guard context, which takes the bit-vector constructors only (R-BV-8).
+
 ### 7.4 Date Methods (34 + 5 constructors)
 
 Dates are represented as ISO 8601 strings.
@@ -557,6 +609,8 @@ A bit-vector is a fixed-width, two-state value: a width `w` from 1 to 1024, a si
 Zero-argument methods also read without parentheses (`x.asSigned.toNumber`). `and`, `or` and `not` are keywords, and a keyword is a valid member name after `.` and `?.`, so `x.and(y)`, `x.or(y)` and `x.not()` parse as method calls; as operators the keywords stay boolean (`not x` is a defect). `x[i]`, `with x do` and `.[x]` on a vector are not defined.
 
 **Collections.** `distinct`, `distinctBy`, `groupBy`, `contains`, `indexOf` compare width, signedness and bits; `sortBy`, `min`, `max` order vectors under the pair rule; `join` and string interpolation print the Verilog form; `sum` and `avg` refuse vectors.
+
+**Oracle** (R-BV-10). The operator semantics is checked against Verilator, not against itself. `npm run oracle:bv` (from `frontend/`, Verilator on the `PATH`) runs `scripts/oracle/bv-cases.mjs`, which writes the inputs of `src/jjel/__tests__/fixtures/bv-cases.json` (every operator and method above except the casts and conversions, widths 1 to 128, both signednesses, edge and seeded random operands, shift amounts `0, 1, w-1, w, w+1`), then `scripts/oracle/bv-verilator.mjs`, which emits one SystemVerilog module per operator family with two-state operands sized and signed explicitly, builds and runs it with `verilator --binary` under `.vite-cache/bv-oracle/`, and writes each `expected` back into the table; the Verilog form of each operator is recorded in the table's `oracle.mapping` (`x.ashr(n)` on an unsigned `x` is `$signed(x) >>> n`), and a row Verilog cannot express identically is listed in `oracle.inexpressible`, never dropped. `bitvectorOracle.test.ts` evaluates every row through JjEL against the committed values and runs in the normal suite without Verilator.
 
 ---
 
@@ -698,6 +752,7 @@ class.closure(c => c.subclasses)     -- replaces allSubclasses
 - `\$` writes a literal `$`, so `"\${x}"` is the text `${x}`. Single-quoted strings never interpolate.
 - Without a Text host the value is a string: `null` renders as `''`, a collection as its items joined by `", "`, numbers and booleans with `String`.
 - Two optional fields of the evaluation context serve the code generator (`frontend/src/codegen/`) and nothing else, both inherited by child scopes: `textHost`, a `JjelTextHost` that builds Text values from interpolations and takes over `+`, `join` and the rendering of a hole when a Text is involved; and `readObserver`, called with target, property and value on every member read that finds its property, `o.p` and `o.p()`.
+- Under a text host, a member read that is an operand of `+`, or an item of `map(...).join(...)`, carries its model origin as it does alone in a hole, also when no operand is a Text (P-2026-10-31-1341): the value stays a plain string, and the origins land where it is written, a hole or the body of an expression template. In `"${"logic " + r.name + ";"}"` the read `r.name` is attributed to `r`, and so is each `r.name` of `rs.map(r => r.name).join(", ")`; the literals and the separator stay opaque. Values are unchanged, and without a text host `+` and `join` are plain string operations. The host sees these through four optional members of `JjelTextHost`: `evaluateConcat`, `evaluatePart`, `mapItems` and `evaluateJoin`.
 
 ### 9.5 `forall` Nesting
 

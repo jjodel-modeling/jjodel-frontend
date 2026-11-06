@@ -1,0 +1,15 @@
+# Textual syntax, step B2 closure: hover box, folding margin, gates, in-app check (continues P-2026-11-04-0125 after the context ceiling)
+
+Prompt-ID: P-2026-11-04-0146
+Chat: C-2026-11-03-1037
+Front: codegen
+Status: eseguito 2026-11-04 · lane full · 8cfd25833 e64b95c02 · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0146); GO di Alfonso 2026-11-04 02:49 («Go»)
+Lane: full (Text tab UI; continuation under RC-51)
+Depends: P-2026-11-04-0125 (hard-stop at the ceiling; items 1 to 4 at e482a33d7, handoff in its lane folder)
+Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)
+Request: none (RC-51 continuation, no new words from Alfonso)
+
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit on top of e482a33d7 and the tree is clean, otherwise stop with Outcome: blocked. Do not touch any CLAUDE.md 3.2 file, docs/decisions.md or the core; no new dependency; no global style change. Every reply opens with [P-2026-11-04-0146 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. No subagents, no background tasks except the foreground probe server. Never cat a gate or probe log: summary lines only, through node scripts/run-quiet.mjs LABEL -- CMD. One probe run per tool call; a probe result is valid only if its mtime follows the run. A fix gets a test red first where a test can reach it, and its own commit. Near the ceiling, commit and write a handoff.
+
+## COSA
+Read ~/.jjodel-lanes/P-2026-11-04-0125/handoff.md and items (5) and (6) of docs/prompts/claude_2026-11-04_0125_prompt_textual_b2_outline.md. (1) Item (5): the hover box fits its content up to a sane max width, code spans use the editor font and the tab's own class; read the log of the CSS comparison the handoff mentions before choosing. (2) Item (6): reduce our own decorations width with folding on so the text starts at most 8 px later than without folding, without hiding markers; if that is not possible, report the figures and leave it. (3) Gates, one tool call each, from frontend/: npx tsc --noEmit; full npx vitest run (3 files red at import are the baseline); npm run build; npm run check:docs; npm run check:codegen-lazy in both modes. (4) In the app, on a free port, keystrokes on demoESM and on the library example: outline open and collapsed, filter typed, caret moving the selection, a click on a node moving the caret, breadcrumb segments, a broken root with `Unknown container`, both hover links clicked and measured, the hover box no longer clipped, folding margin before and after. Say which steps are keystrokes and which setup is a direct write. (5) Crops of every visible change, light theme, device scale 1, Quick tip closed, in ~/.jjodel-lanes/P-2026-11-04-0146/; they go to Alfonso. (6) Log entry (Notes under 500 characters) and the Status flips of 0125 and this prompt, left uncommitted (RC-17). Stop the probe server. No push, no merge. Public repo: name no partner company. Final message: what was verified and how, Decisions taken (unattended), Decisions awaiting Alfonso, then the Outcome.

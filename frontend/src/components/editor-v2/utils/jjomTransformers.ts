@@ -362,21 +362,31 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 try {
                     const raw: unknown[] = (fv.__raw?.values ?? fv.values ?? []) as unknown[];
                     const resolved = new Map<string, string>();
+                    // A nameless target is labelled `: <Class>`, as its own header
+                    // reads (R-TXT-47 D5). The label is display only: `name` stays
+                    // '' and the memory of names never sees it.
+                    const labels = new Map<string, string>();
                     try {
                         for (const rv of (fv.values ?? []) as any[]) {
-                            if (rv && typeof rv !== 'string' && rv.id && rv.name) resolved.set(rv.id, rv.name);
+                            // Presence, not a truthy name: a nameless target ('' , R-TXT-46 D4)
+                            // resolves and is not broken.
+                            if (rv && typeof rv !== 'string' && rv.id) {
+                                resolved.set(rv.id, rv.name ?? '');
+                                if (!rv.name) labels.set(rv.id, `: ${rv.instanceof?.name || 'Object'}`);
+                            }
                         }
                     } catch { /* proxy access can throw */ }
 
                     const names: string[] = [];
-                    const targets: Array<{ id: string; name: string; broken?: boolean }> = [];
+                    const targets: Array<{ id: string; name: string; label?: string; broken?: boolean }> = [];
                     for (const v of raw) {
                         const id = typeof v === 'string' ? v : ((v as any)?.id ?? '');
                         if (!id) continue;
                         const name = resolved.get(id) ?? (typeof v !== 'string' ? (v as any)?.name : undefined);
-                        if (name) {
-                            names.push(name);
-                            targets.push({ id, name });
+                        if (resolved.has(id) || name) {
+                            const label = labels.get(id);
+                            names.push(label ?? name);
+                            targets.push(label ? { id, name, label } : { id, name });
                             // Every resolving pass feeds the memory, so the name is
                             // already known by the time the object is deleted.
                             rememberRefTargetName(id, name);
