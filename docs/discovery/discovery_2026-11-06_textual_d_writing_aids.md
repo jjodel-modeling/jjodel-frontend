@@ -199,15 +199,119 @@ session; Monaco passes the markers at the range in `context.markers`.
 
 ## 5. Safe rename
 
-(pending)
+### 5.1 What a rename must rewrite (read)
+
+- **In the text**: the object's name token and every reference token that names it by name. `referencesAt(offset,
+  true)` already returns exactly that list, the declaration first (`languageService.ts:421-426`), from the inverse index
+  built over resolved references (`languageService.ts:215-222`). Paths (R-TXT-25 (5, 6), R-TXT-28) are made of class and
+  feature keywords and indices, never names (`parser.ts:7-10`), so they need no rewrite; `@"id"` names an object outside
+  the text by id (`parser.ts:11-12`) and needs none either.
+- **In the model**: only the name slot. Model references are ids, so other models and the canvas follow by
+  themselves; the textual apply writes the name through the JjScript plan as for any typed rename. The core's identity
+  slot rules (model/CLAUDE.md §3.12, R-TXT-45, R-TXT-46) are already exercised by that path since C1e.
+
+### 5.2 Text route or model route
+
+- **Text route (recommended).** Monaco's `RenameProvider.provideRenameEdits` returns the edits of 5.1; the editor
+  applies them as one undo stop; the pause reads the text and the diff applies the name change. Identity is kept by the
+  carried span of the object, which a change inside it does not move (decorations `NeverGrowsWhenTypingAtEdges`,
+  `TextualTab.tsx:1105`), so the match is a span match, not the uncertain `rename` evidence (`textMatch.ts:29`,
+  `RENAME_THRESHOLD = 0.6` `:53`) that would send it to the panel. The rewritten reference tokens are retyped, so
+  R-TXT-35's keep does not apply to them and they resolve by the new name. Reading only: not measured end to end.
+- **Model route.** A model write then a reprint: loses the user's comments and layout on reprint (§6.1), and a pending
+  edit blocks the reprint (`onModelPrint` returns `keep`, `TextualTab.tsx:300-303`). Not recommended.
+
+### 5.3 Conflicts and refusals
+
+- A new name that another object of overlapping targets carries makes the references ambiguous
+  (`parser.ts:1293-1295`), or a reference to the other object resolve to this one. The generic check: build the edited
+  text, parse it with the same keep tokens, and refuse when it has an error the original did not, or when some
+  reference resolves to a different target than before (compare `refs[].to` token by token, shifted). No metamodel code.
+- A name that is not an identifier, or is a reserved word, prints quoted (`printer.ts:290-293` «`const name = (s:
+  string): string => (IDENTIFIER.test(s) && !words.has(s) ? s : quote(s));`»): the rename writes the same form, which
+  needs `name`/`quote` exported (same extraction as C3).
+- **Nameless objects (R-TXT-45).** `resolveRenameLocation` on an object with no name has no token to replace; adding a
+  name means inserting at the optional head-name place, which only the grammar knows. Refuse with «this object has no
+  name: type one in the text» in D; insertion is a later slice (D-decision D4).
+- **A broken text.** Rename only on an applicable parse (`isApplicableParse`, `parser.ts:188`): recovered objects are
+  never applied (R-TXT-21 (8)), and their references may be wrong.
+- **Names used outside the text.** JjEL strings and validation rules that name objects by name are not rewritten
+  (embedded JjEL is step F). Risk, §9.
 
 ## 6. Formatting
 
-(pending)
+### 6.1 The printer as formatter (read)
+
+- `printTextModel(g, objects)` (`printer.ts:206`) prints objects, not a tree: a grep of `printer.ts` and `textDiff.ts`
+  for `comment` counts 0 in each (measured, `command grep -c`; positive control through the same command: 10 lines in
+  `parser.ts`, e.g. `commentsOf` at `parser.ts:134`). So a reprint **drops every comment**.
+- Parentheses: a `ParenNode` «has no trace in the model» (`parser.ts:112-115`), so a reprint **drops redundant
+  parentheses**.
+- R-TXT-20 («model-to-text updates ... rewrite only the spans of the objects that changed») is **not implemented** in
+  the tab: `reprint` sets the whole value (`TextualTab.tsx:1200-1201` «`syncRef.current = { text: r.view.text, model:
+  r.view.text }; if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);`»). A grep of `TextualTab.tsx` for
+  `comment` (case-insensitive) counts 0 (measured, `command grep -ci`); positive control through the same command: `reprint`
+  counts 14 in the same file. Comments survive today only because the typed text stays the agreement after an apply (`TextualTab.tsx:1276`).
+- The comments are attributed: `commentsOf` (`parser.ts:134-161`) gives each comment its owner node and `trailing` flag,
+  and the print's lossless tree carries model ids (`printer.ts:69-76`). That is the material of a comment-keeping print.
+
+### 6.2 What a formatter in D can be
+
+- Full format = print the parsed objects of an applicable text, then put each comment back by its owner: leading
+  comments before the owner's first token, trailing ones at the end of the owner's line. Parse ids `t1..` are the
+  printed ids when the parsed objects are printed, so owners map one to one.
+- Range format = the full print, then splice only the top-level objects whose spans meet the range (spans are in the
+  print result, `printer.ts:43-50`). Printing a subset alone is wrong: reference text depends on name uniqueness over
+  the whole text (`printer.ts:295-309`).
+- A format is an editor edit, never a model write: the model is unchanged unless the text's meaning is (a formatter
+  that changes meaning is a bug the pause would then apply, so the lane tests print-parse equality of the objects).
+- Monaco: `registerDocumentFormattingEditProvider` and `registerDocumentRangeFormattingEditProvider` in
+  `textualMonaco.ts`; one minimal edit (common prefix and suffix trimmed) keeps the caret and the decorations of the
+  untouched objects.
+- Parentheses: keep them (D-decision D5) by passing the paren set to the printer as hints, or drop them; dropping is the
+  smaller lane and is reversible by the editor's undo.
 
 ## 7. R-TXT-37, commenting an object out
 
-(pending)
+### 7.1 Where the pause applies (read)
+
+`readEdit` (`TextualTab.tsx:1303-1344`) parses, plans, and decides; the only deletion guard is C3b's:
+`TextualTab.tsx:1337` «`const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan) : null;`», and
+`deletionGuard` asks only from three deleted subtrees or when every object goes (`TextualTab.tsx:542` «`export const
+GUARD_ROOTS = 3;`», `:559` «`return all || roots >= GUARD_ROOTS ? { ... } : null;`»). Its doc already cites R-TXT-37
+(`TextualTab.tsx:538`), but nothing tests a comment.
+
+### 7.2 Probe (measured, HEAD 95c2ec038, `probe_comment.ts`)
+
+Typing `// ` before `input : Bool` in the PORT print, spans shifted as the editor carries them:
+
+```
+errors 0 recovered 0
+ops [{"op":"delete","model":"p2"}]
+refusals [] lines 1
+deletionGuard null
+comments [[40,55,"// input : Bool"]]
+deleted p2 carried span {"id":"p2","start":49,"end":55} covered by a comment true
+```
+
+The guard is a copy of `deletionGuard` (the tab module does not bundle outside Vite: its `.scss` imports), same
+`GUARD_ROOTS = 3`. So **today one commented object is applied as a deletion on the pause**: R-TXT-37's defect stands. The
+detection works on the data the tab has: the deleted root's carried span lies inside a comment of the new parse.
+
+### 7.3 Detection and confirmation shape
+
+- Detection, pure and bench-testable: for each deleted root of the plan (the ops whose model is a top of
+  `deletedObjects`, as `deletionGuard` counts), its carried span is covered by a comment of `commentsOf(parsed.tree)`
+  (whitespace between comments allowed, for a run of `//` lines). Nothing names a metamodel.
+- Scope: R-TXT-37 says «when the only change ... is the disappearance of whole objects covered by a comment». A text
+  that comments one object out and edits another would still apply the deletion. Recommendation D7: ask whenever any
+  deleted root is covered by a comment, whatever else changed.
+- Shape: the C3b guard's own path (`status: 'guard'`, the bar's Confirm and Cancel, `onGuardConfirm` and
+  `onGuardCancel`, `TextualTab.tsx:1346-1358`), with a field `commented` and a bar text such as `Not applied · comments
+  out 1 object, confirm below`. Confirm applies the text it asked about (`readEdit(asked.confirmed, true)`), Cancel keeps
+  both. Removing the comment returns the text to the agreement and clears the guard (`TextualTab.tsx:1311-1316`).
+- Typing `/` alone is an `unexpected character "/"` error under C-like (measured, `probe_slash.ts`: 1 error; the message
+  comes from `parser.ts:365`), so the guard first fires at `//`, the case P-2026-11-03-2152 measured.
 
 ## 8. Lane plan and decisions
 
