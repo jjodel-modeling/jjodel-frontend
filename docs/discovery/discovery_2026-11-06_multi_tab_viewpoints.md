@@ -6,8 +6,38 @@
 - **Tree**: `~/jjodel-w-multitab`, branch `multi-tab`, HEAD `6fcf5d5df` (the prompt's commit), clean at start
 - **Executor model**: claude-opus-5-5
 - **Phase**: 1, read only. No source file changed; probes only in `~/.jjodel-lanes/P-2026-11-06-2350/`.
+- **Continuation**: P-2026-11-07-0030 (`docs/prompts/claude_2026-11-07_0030_prompt_multi_tab_viewpoints_discovery_cont.md`), session `97d37565-330b-4d6e-942c-dd1c3c98c1ff`, HEAD `8168b608f` (no source change against `6fcf5d5df`), after the RC-51 context ceiling of the first session. It wrote §0 «Answer in brief», §3.7 and §4 to §12.
 
 This report is a set of hypotheses with evidence, not a definitive reference. Whoever uses it downstream rereads the real files.
+
+## 0. Answer in brief
+
+**Answer.** The hypothesis holds for the active viewpoint and for the sync registries, and is falsified for the data: the layout store (`layoutByViewpoint`), the pure layout resolver and the IR index already take a viewpoint per call, and the DGraph is one per model. Multi-tab needs no new persisted shape and no migration (§5); it needs the tab's viewpoint threaded through three doors of the canvas (transformer, write-back, content size, §3.3) and the IR hooks (§1.4), and four lifecycle fixes for state that one instance clears for all (§3.2, §4.2).
+
+**Found broken today, without multi-tab**:
+- `EditorSwitch.tsx:93` and `:108`: mounting one model's tab switches every other open tab's syntax, and a pick in one tab is saved as every other model's preference (§1.1). Lane L1.
+- Closing any model tab wipes `canvasEdgePairs` and `edgeRefIds` (§3.2) and the problem badges (§4.2) of every other open tab. Lanes L4, L4b.
+- Possibly: after `242a82bcd`, a switch between two viewpoints does not re-run the incremental sync, so nodes may stay at the previous key's positions (§3.4, not measured). Lane L0b.
+
+**Strongest risk of the front** (§3.7): with two tabs on one model, an addition from outside the canvas can create two vertices or two M2 edges (async dispatch, `action.ts:349`; per-instance guard). Not reachable until a second tab exists; L4 must land before L6.
+
+**Recommendation.** Open L1 and L0b now, on the trunk, each standing alone. Then L2 (plumbing), L3 (critical zone, LIR), L5 (IR), L4 (critical zone, LIR), L4b, L6 (the second tab), L7 (selection highlight). Probe not run (§6).
+
+**Decisions awaiting Alfonso** (§9, §11): Q1 to Q13 and the lane order; Q5, Q8 and Q11 are not covered by R-MT.
+
+- Q1 Recommended: per-tab viewpoint in the tab's React state, exposed by `EditorContext`; no Redux slice.
+- Q2 Recommended: the picker writes the tab's state plus `activateViewpoint` (the picking tab is the focused one).
+- Q3 Recommended: a deleted or deactivated viewpoint falls back to abstract syntax (`null`).
+- Q4 Recommended: no per-tab work for the classic editor (shut down since Fase 5a).
+- Q5 Recommended: context menu «Open in new tab ▸ <viewpoint>» on the model row; no drag gesture.
+- Q6 Recommended: shared stored viewport, last writer wins, as default for the next opening.
+- Q7 Recommended: global readers follow the focused tab, which writes the root on focus.
+- Q8 Recommended: simulator panel in every tab, unchanged; L8 only if the smoke shows a conflict.
+- Q9 Recommended: open the §3.4 probe now as L0b.
+- Q10 Recommended: a check script for new `state.viewpoint` readers after L5 (L9).
+- Q11 Recommended: one D-layer undo stack per user, accepted across tabs.
+- Q12 Recommended: in L1 the mount-only restore runs only for the dock's active tab.
+- Q13 Recommended: the first mounted instance owns the populate, handed over on unmount.
 
 Every claim is tagged **[read]** (a file read in this phase, on HEAD `6fcf5d5df`) or **[measured]** (a run in this phase). Searches use `command grep` (BSD grep, which honours `--include`; CLAUDE.md §5), run from `frontend/src`, excluding `__tests__`.
 
@@ -416,7 +446,7 @@ Under `/Users/alfonso/jjodel-w-multitab/frontend/src/` (both sessions):
 
 - `utils/lastViewpoint.ts`, `common/U.tsx`, `common/DV.tsx` (not opened: cited by Rule 14 only), `redux/store.tsx`, `redux/VersionFixer.tsx`, `redux/action/action.ts`, `redux/selectors/selectors.ts`, `api/persistance/projects.ts`, `joiner/classes.ts`
 - `components/abstract/tabs/EditorSwitch.tsx`, `components/abstract/tabs/TabDataMaker.tsx`, `components/abstract/tabs/ModelTab.tsx`, `components/abstract/tabs/MetamodelTab.tsx`, `components/abstract/DockManager.tsx`, `components/abstract/Dock.tsx`, `components/dock/MyRcDock.tsx`, `pages/components/Navbar.tsx`, `codegen/ui/canvasSelection.ts`, `codegen/textual/ui/openTextualTab.tsx`
-- `components/editor-v2/EditorV2.tsx`, `components/editor-v2/Toolbar.tsx`, `components/editor-v2/ActiveEditorContext.tsx`, `components/editor-v2/contexts/EditorContext.tsx`, `components/editor-v2/utils/viewportInset.ts`
+- `components/editor-v2/EditorV2.tsx`, `components/editor-v2/Toolbar.tsx`, `components/editor-v2/ActiveEditorContext.tsx`, `components/editor-v2/contexts/EditorContext.tsx`, `components/editor-v2/viewportInset.ts`
 - `components/editor-v2/hooks/useJjomSync.ts`, `components/editor-v2/hooks/useM1ReferenceEdges.ts`, `components/editor-v2/hooks/useJjomSelection.ts`, `components/editor-v2/hooks/useHistory.ts`, `components/editor-v2/sync/syncState.ts`, `components/editor-v2/sync/canvasToJjom.ts`, `components/editor-v2/sync/vertexSnapshot.ts`, `components/editor-v2/utils/jjomTransformers.ts`, `components/editor-v2/utils/portDistribution.ts`, `components/editor-v2/utils/handlePosition.ts`, `components/editor-v2/nodes/nodeSizing.ts`
 - `components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `components/editor-v2/viewpoint/ir/irResolveCore.ts`, `components/editor-v2/viewpoint/ir/irResolve.ts`, `components/editor-v2/viewpoint/ir/useIRContainment.ts`, `components/editor-v2/viewpoint/ir/IRForm.tsx`, `components/editor-v2/viewpoint/ir/useContentSize.ts`, `components/editor-v2/viewpoint/ir/useIRFormView.ts`, `components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `view/viewPoint/metaclassPalette.ts`, `view/viewElement/view.tsx`, `components/viewParenting/ViewParentingFields.tsx`, `components/TreeViewSidebar/treeViewScope.ts`
 - `components/editor-v2/problems/registry.ts`, `components/editor-v2/problems/ConformanceProblemSync.tsx`, `components/editor-v2/problems/UniquenessProblemSync.tsx`, `components/editor-v2/problems/SimCheckProblemSync.tsx`, `components/editor-v2/problems/ValidationFreshnessSync.tsx`, `model/validation/validationContext.ts`, `components/validation/ValidationRulesModal.tsx`
