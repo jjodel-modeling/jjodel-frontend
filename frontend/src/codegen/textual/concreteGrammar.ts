@@ -59,6 +59,8 @@ export type LiteralSrc =
     /** R-TXT-51 (D10): a token of a block's own side, a class's or a containment's, by side and index. */
     | { readonly k: 'classBlock'; readonly cls: string; readonly side: 'open' | 'close'; readonly index: number }
     | { readonly k: 'featureBlock'; readonly feature: string; readonly side: 'open' | 'close'; readonly index: number }
+    /** R-TXT-51 (3), lane B3a: a token of a class's head prefix, before its keyword, by index. */
+    | { readonly k: 'classPrefix'; readonly cls: string; readonly index: number }
     | { readonly k: 'fixed' };
 
 /**
@@ -297,9 +299,11 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
     // R-TXT-25 (7): a folding that lands a class keyword on a style word (`End` on `end`) falls back as well.
     // R-TXT-51 (report §5.2 R3): the per-block words of the record too, which a free layout prints.
     const ownWords = style.layout === 'indent' ? [] : [...Object.values(A?.classes ?? {}), ...Object.values(A?.features ?? {})].flatMap(a => [...(a.blockOpen ?? []), ...(a.blockClose ?? [])]);
+    // B3a: and the words of the head prefixes, which every layout prints.
+    const prefixWords = Object.values(A?.classes ?? {}).flatMap(a => a.prefix ?? []);
     const styleWords = new Set([
         ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
-        style.list.open, style.list.separator, style.list.close, ...ownWords,
+        style.list.open, style.list.separator, style.list.close, ...ownWords, ...prefixWords,
     ].filter(w => /^\w/.test(w)));
     const ontoWords = unannotated.map(r => r.cls).filter(c => !styleWords.has(c) && styleWords.has(applyCase(c, classCase)));
     if (ontoWords.length) {
@@ -499,12 +503,29 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
     take('a token of a reference', ['.', '[', ']', '@']);
     take('a token of an expression or a call', ['(', ')']);
     take('an operator symbol', [...operators.values()].map(o => o.symbol));
+    // B3a (R-TXT-51 (3)): the head prefix of each class, before its keyword. A token inside an item (D5), or of a
+    // reference, an expression or an operator, refuses the whole prefix; a block token does not (`begin program`). Its
+    // words are reserved as the per-block words are (D2), its punctuation taken by the class.
+    const prefixes = new Map<string, readonly string[]>();
+    const prefixTaken = new Map<string, string>();
+    const prefixFault = (t: string): string | undefined => insideItem.get(t) ?? (/^\w/.test(t) || taken.get(t) === 'a block token' ? undefined : taken.get(t));
+    for (const [cls, a] of Object.entries(A?.classes ?? {})) {
+        if (!a.prefix?.length) continue;
+        const where = `class ${cls}`;
+        if (!shapes.has(cls)) { refuse(where, `${cls} is abstract: a prefix goes on its concrete classes; not applied`); continue; }
+        if (operators.has(cls)) { refuse(where, `${cls} is an operator, printed by its symbol in an expression: the prefix is not applied`); continue; }
+        const bad = a.prefix.find(t => prefixFault(t) !== undefined);
+        if (bad !== undefined) { refuse(where, `the prefix token "${bad}" is ${prefixFault(bad)} of the style ${style.id}; not applied`); continue; }
+        prefixes.set(cls, a.prefix);
+        for (const t of a.prefix) if (/^\w/.test(t)) blockWords.add(t); else if (!prefixTaken.has(t)) prefixTaken.set(t, cls);
+    }
     /** The keyword a feature prints, a punctuation one refused when it is a token of the style or an operator. */
     const keywordOf = (f: TextFeature): string => {
         const k = featAnn(f).keyword ?? f.name;
-        if (k === '' || /^\w/.test(k) || (!taken.has(k) && !ownTaken.has(k))) return k;
+        if (k === '' || /^\w/.test(k) || (!taken.has(k) && !ownTaken.has(k) && !prefixTaken.has(k))) return k;
         if (taken.has(k)) refuse(featureKey(f), `the keyword "${k}" is ${taken.get(k)} of the style ${style.id}; not applied`);
-        else refuse(featureKey(f), `the keyword "${k}" is a block token of ${(ownTaken.get(k) ?? '').replace(/^class /, '')}; not applied`);
+        else if (ownTaken.has(k)) refuse(featureKey(f), `the keyword "${k}" is a block token of ${(ownTaken.get(k) ?? '').replace(/^class /, '')}; not applied`);
+        else refuse(featureKey(f), `the keyword "${k}" is a prefix token of ${prefixTaken.get(k)}; not applied`);
         return f.name;
     };
     const single = (v: BaseValue, f: TextFeature): GrammarNode => {
@@ -660,10 +681,15 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         const sh = shapes.get(r.cls) ?? { keyword: applyCase(r.cls, classCase), line: false, call: false, optionalHead: false, nameRequired: false };
         const nameAssign: GrammarNode = { t: 'assign', feat: 'name', op: '=', item: { t: 'tok', terminal: 'NAME' } };
         const derive = sh.derive ? { derive: sh.derive } : {};
-        const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text: sh.keyword, src: { k: 'class', cls: r.cls } }];
+        // B3a: the head prefix, before the class keyword and the name of a positional class.
+        const prefix = (prefixes.get(r.cls) ?? []).map((text, index): GrammarNode => {
+            const src: LiteralSrc = { k: 'classPrefix', cls: r.cls, index };
+            return /^\w/.test(text) ? { t: 'kw', text, src } : { t: 'p', text, src };
+        });
+        const head: GrammarNode[] = sh.keyword === '' ? [...prefix] : [...prefix, { t: 'kw', text: sh.keyword, src: { k: 'class', cls: r.cls } }];
         // C1d: a positional one-line object with nothing but an optional name prints its empty block when the name is unset.
         if (r.named && sh.optionalHead && sh.line && sh.keyword === '' && !r.features.length && !sh.derive) {
-            return { t: 'seq', items: [{ t: 'alt', alts: [nameAssign, block([])] }] };
+            return { t: 'seq', items: [...prefix, { t: 'alt', alts: [nameAssign, block([])] }] };
         }
         if (r.named && sh.nameKeyword === undefined) head.push(sh.nameRequired ? nameAssign : { t: 'opt', feat: 'name', ...derive, item: nameAssign });
         if (sh.call) {

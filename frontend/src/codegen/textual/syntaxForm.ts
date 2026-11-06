@@ -826,6 +826,7 @@ const LITERAL_NAME: Readonly<Record<LiteralSrc['k'], string>> = {
     feature: 'a feature keyword', itemKeyword: 'a per-item keyword', subset: 'a group name',
     literal: 'an enumeration literal', style: 'a style token', fixed: 'a fixed token',
     classBlock: 'a block token of a class', featureBlock: 'a block token of a containment',
+    classPrefix: 'a prefix token of a class',
 };
 
 /** D4: the origins whose empty value is their default; for the others clearing would remove a structure. */

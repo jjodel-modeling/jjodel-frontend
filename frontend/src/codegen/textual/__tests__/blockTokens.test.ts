@@ -638,3 +638,77 @@ describe('(7) B3a: the resolution of the head prefix', () => {
         }
     });
 });
+
+describe('(8) B3a: the head prefix in the derivation', () => {
+    const prefixSrc = (index: number, cls = 'Program'): LiteralSrc => ({ k: 'classPrefix', cls, index });
+
+    it('P5: the prefix goes before the class keyword with its own origin, prints and reads back (mutant: the prefix not built)', () => {
+        const g = named(P5);
+        expect(namedIssues(P5)).toEqual([]);
+        expect(concreteGrammarEbnf(g).split('\n')[1]).toMatch(/^Program +::= "begin" "program" \[name=NAME\] "begin" \["declaration" "is"/);
+        expect(ruleLiterals(g, 'Program').slice(0, 3)).toEqual([['begin', prefixSrc(0)], ['program', { k: 'class', cls: 'Program' }], ['begin', { k: 'style', param: 'blockOpen', index: 0 }]]);
+        const text = roundTrip(g, NAMED_OBJECTS);
+        expect(text.split('\n')[0]).toBe('begin program P begin');
+    });
+
+    it('before the name opt of a positional class, a punctuation prefix read by the tokenizer (mutant: the prefix after the head)', () => {
+        const record = withEntries({ cP: { keyword: '', prefix: ['<<', 'program'], blockOpen: ['is'], blockClose: ['end', 'program'] } });
+        const g = named(record);
+        expect(namedIssues(record)).toEqual([]);
+        expect(ruleLiterals(g, 'Program').slice(0, 3).map(([t, s]) => [t, s])).toEqual([['<<', prefixSrc(0)], ['program', prefixSrc(1)], ['is', { k: 'classBlock', cls: 'Program', side: 'open', index: 0 }]]);
+        expect(roundTrip(g, NAMED_OBJECTS).split('\n')[0]).toBe('<< program P is');
+    });
+
+    it('D2: the prefix words are reserved, a name equal to one printed quoted (mutant: the prefix words not reserved)', () => {
+        const record = withEntries({ cP: { keyword: 'program', prefix: ['start'] } });
+        const g = named(record);
+        expect(g.style.reservedNames).toContain('start');
+        const text = roundTrip(g, [NAMED_OBJECTS[0], { ...NAMED_OBJECTS[1], slots: { name: 'start' } }, NAMED_OBJECTS[2], NAMED_OBJECTS[3]]);
+        expect(text).toContain("Declaration 'start'");
+    });
+
+    it('R3: a class keyword the case would fold onto a prefix word falls back to declared (mutant: the prefix words not in the case fallback)', () => {
+        const mm: TextMetamodel = { ...MM, classes: [...MM.classes, { name: 'Start' }] };
+        const ids: ElementIds = { ...IDS, classes: { ...IDS.classes, cX: 'Start' } };
+        const g = grammar({ ...withEntries({ cP: { keyword: '', prefix: ['start'] } }), style: { base: 'pascal', classCase: 'lower' } }, mm, ids);
+        expect(g.classCase).toBe('declared');
+    });
+
+    it('its punctuation is taken: a feature keyword equal to it is refused (mutant: the prefix punctuation not taken)', () => {
+        const record = withEntries({ cP: { keyword: '', prefix: ['<<'] } }, { fStmts: { keyword: '<<' } });
+        expect(issuesOf(record)).toEqual([{ level: 'error', where: 'Program.statements', message: 'the keyword "<<" is a prefix token of Program; not applied' }]);
+    });
+
+    it('a token inside an item or of a reference refuses the prefix, a block token does not; an empty prefix is none (mutant: the prefix tokens not checked)', () => {
+        const at = (prefix: string[]) => issuesOf(withEntries({ cP: { keyword: '', prefix } }));
+        expect(at([';'])).toEqual([{ level: 'error', where: 'class Program', message: 'the prefix token ";" is the terminator of the style pascal; not applied' }]);
+        expect(at(['begin', '.'])).toEqual([{ level: 'error', where: 'class Program', message: 'the prefix token "." is a token of a reference of the style pascal; not applied' }]);
+        expect(at(['end'])).toEqual([]);
+        expect(issuesOf(withEntries({ cP: { keyword: '', prefix: ['{'] } }, {}, {}))).toEqual([]);
+        const g = grammar(withEntries({ cP: { keyword: '', prefix: [';'] } }));
+        expect(ruleLiterals(g, 'Program').some(([, s]) => s?.k === 'classPrefix')).toBe(false);
+        expect(ruleLiterals(grammar(withEntries({ cP: { keyword: '', prefix: [] } })), 'Program')).toEqual(ruleLiterals(grammar(withEntries({ cP: { keyword: '' } })), 'Program'));
+    });
+
+    it('a prefix on an abstract class or an operator class is refused (mutant: applied there)', () => {
+        const emm: TextMetamodel = {
+            classes: [
+                { name: 'Holder', references: [{ name: 'e', type: 'Expr', containment: true }] },
+                { name: 'Expr', isAbstract: true },
+                { name: 'Plus', supers: ['Expr'], references: [{ name: 'left', type: 'Expr', containment: true }, { name: 'right', type: 'Expr', containment: true }] },
+                { name: 'Num', supers: ['Expr'], attributes: [{ name: 'value', type: 'EInt' }] },
+            ],
+            enumerations: [],
+        };
+        const eids: ElementIds = {
+            classes: { cH: 'Holder', cE: 'Expr', cPl: 'Plus', cN: 'Num' },
+            features: { fE: { owner: 'Holder', name: 'e' }, fL: { owner: 'Plus', name: 'left' }, fR: { owner: 'Plus', name: 'right' }, fV: { owner: 'Num', name: 'value' } },
+            enums: {},
+        };
+        const record: SyntaxAnnotations = { v: 1, classes: { cE: { prefix: ['x'] }, cPl: { prefix: ['add'], operator: { symbol: '+', precedence: 1 } } } };
+        expect(issuesOf(record, emm, eids)).toEqual([
+            { level: 'error', where: 'class Expr', message: 'Expr is abstract: a prefix goes on its concrete classes; not applied' },
+            { level: 'error', where: 'class Plus', message: 'Plus is an operator, printed by its symbol in an expression: the prefix is not applied' },
+        ]);
+    });
+});
