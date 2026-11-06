@@ -59,3 +59,41 @@ files and their claims are re-read where the report uses them.
   `codegen/ui/{GeneratorPane.tsx,canvasSelection.ts,codeLines.ts,templateLanguage.ts,templateMarkers.ts}`,
   `events/registry.ts`, `components/editor-v2/EditorV2.tsx` 1167-1188, `textual/textMatch.ts`, `textual/ui/TextConfirmPanel.tsx`,
   `docs/discovery/discovery_2026-10-31_codegen_origins_through_concat.md`
+
+## 3. Where JjEL appears in a textual model
+
+### 3.1 What the Text tab prints (read)
+
+The Text tab prints an **M1 model** against its metamodel: `TextualTab.tsx:179` `for (const h of list(globals.instances))`
+builds the objects, and `:156-161` builds the `TextMetamodel` from `globals.classes`, each attribute as
+`{ name: nameOf(a), type: String(a.type ?? ''), ... }` (`:161`). `TextAttribute.type` is documented as «A primitive type
+name (`EInt`, `EString`, ...) or the name of an enumeration» (`metamodel.ts:12`), and the base grammar maps every type it
+does not know to a string: `baseGrammar.ts:45-49` `if (type === 'EBoolean') return 'BOOL'; return 'STRING';`. So a JjEL
+value prints today as a plain quoted string, exactly like an `EString` (measured in §4.2).
+
+M2 elements that hold JjEL are **not** printed by the Text tab: a validation rule's `body` (`validationTypes.ts:188-190`
+«Il corpo, sorgente JjEL») and a view's `oclCondition` (`classes.ts:1187`, not traced to JjEL by this discovery) are
+metamodel or viewpoint data, outside `globals.instances`. Step F concerns M1 attribute values only, unless a later step
+gives the metamodel a textual notation of its own.
+
+### 3.2 Which M1 values are JjEL (read)
+
+- **Typed values, the core's mark.** R-SIM-44 (`decisions.md:1955-1957`): «Due DClass primitive con migrazione [...] Nomi
+  `Expression` e `Action`, id `Pointer_EXPRESSION` e `Pointer_ACTION`.» (`Defaults.ts:86-87`). The one consumer that
+  checks them keys on the id, not on the name: `ConformanceValidator.ts:237-241` «Keyed on the primitive's id, not on its
+  name: a user enum, datatype or class called Action or Expression is not JjEL.» It parses an Expression with
+  `parseExpressionStrict` and an Action with `parseAction` (`:250-256`), exempts blank and the literal `else`
+  (`:248`), and reports `` `: ${errors[0].line}:${errors[0].column} ${errors[0].message}` `` (`:259`); a malformed value
+  is saved and reported as `type_mismatch` at `warning` (R-SIM-44 `:1960`).
+- **Untyped values, by convention.** R-SIM-44 `:1961-1962`: «`simGuard` continua ad accettare attributi di tipo EString
+  accanto a quelli di tipo `Expression`». The simulation's records name JjEL fields too (`netTypes.ts:57` «A derived
+  attribute's JjEL equation», `:155` `guard?`, `:165` `guards?`), but those are records the simulator builds, read by an
+  explorer pass, not features the Text tab prints. An EString that holds JjEL has no mark the Text tab can read.
+
+**What the Text tab misses** (read): the textual layer never sees the primitive's id. `command grep -r -l -E
+'Pointer_EXPRESSION|Pointer_ACTION|isJjel' frontend/src/codegen/textual` returned 0 files; the same command on
+`frontend/src/model/conformance` returned 2 (positive control). And `String(a.type)` gives a name, so a user class named
+`Expression` and the primitive would print the same. The fix is an optional property on `TextAttribute` (Rule 11 allows
+it), say `jjel?: 'expression' | 'action'`, set at `TextualTab.tsx:161` from `a.type?.id`, the one place that reads the
+L-layer (decision F1). What `String(a.type)` yields for the primitive in the app was not measured here: the probe sets the
+type name by hand.
