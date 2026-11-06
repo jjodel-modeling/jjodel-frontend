@@ -7635,6 +7635,26 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   STC profile «Dynamic classification» maps Viewpoint, dynamic classifier, Invariant, Operation, Redefinition,
   Monitor and Instance-of onto a metamodel, so another metamodel with viewpoints and invariants can use it. Spec §8.
 
+## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
+
+Evidence: the project chat C-2026-11-06-2333 of 2026-11-06 (23:38 «Le tre risposte vanno bene» on the three
+recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). Discovery owed: P-2026-11-06-2350.
+
+- **R-MT-1** (2026-11-06, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **State splits in three levels: model, pair (model, viewpoint), tab.** The model (M2 or M1) is one and shared: every
+  write shows in every tab. The layout belongs to the pair (model, viewpoint), as R-LAY already keys it. The active
+  viewpoint, pan, zoom and the session size derived from content belong to the tab. The project's active viewpoint
+  becomes only the default for the next opening; it is no longer the source of truth of an open editor.
+- **R-MT-2** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Selection is shared across tabs by model element.** Selecting an element in one tab highlights it in every tab that
+  shows it, whatever the viewpoint.
+- **R-MT-3** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **A simulator run belongs to the model; tabs observe it.** The configuration σ is state of the model's run (R-SIM),
+  not of an editor; every tab on that model shows the same run.
+- **R-MT-4** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Two tabs on the same model and the same viewpoint are allowed and share the layout.** No special case: a drag in
+  one moves the node in the other.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
