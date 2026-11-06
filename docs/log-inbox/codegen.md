@@ -2298,3 +2298,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
 **Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
 **Prompt document name**: 2026-11-06 23:01
+
+## 2026-11-06 — merge: textual-d1-comment-guard into alfonso-frontend-jjtl (P-2026-11-06-2326)
+**Prompt**: `claude_2026-11-06_2326_prompt_merge_textual-d1-comment-guard.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d1-comment-guard` at `275eec130` into `alfonso-frontend-jjtl`, merge base `7d171b504`, 3 commits on the branch side.
+**Files touched**: merge `59b532f43`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `59b532f43` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14472 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D1 crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d1-comment-guard` on `8049bf81b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2326/result.json`.
+**Prompt document name**: 2026-11-06 23:26
