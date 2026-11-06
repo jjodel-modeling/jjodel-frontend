@@ -7,14 +7,16 @@
 import { describe, it, expect } from 'vitest';
 import { commentsOf, parseText, parserNameLookups, tokenizeText } from '../parser';
 import type { ObjectNode, SyntaxElement, SyntaxNode, SyntaxToken, TextNode } from '../parser';
-import { grammarOf } from './corpus';
+import { BOX, CASES as CASES_SPEC, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
 import { printTextModel, printerNameLookups } from '../printer';
-import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
+import { libraryObjects, mutantsOf, probeTokens, tolerantCases } from './tolerantCorpus';
 import { nearleyGrammarOf, parseCount } from './oracle';
 import { planTextEdit } from '../textDiff';
 import { displayMatch } from '../textMatch';
 import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet } from './boolCorpus';
+import { portGrammar, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
+import type { ConcreteGrammar } from '../concreteGrammar';
 
 const CASES = tolerantCases();
 
@@ -497,4 +499,69 @@ describe('(ix) D3a: structured fixes on parse errors (P-2026-11-06-2328; report 
         expect(r.errors.length).toBe(1);
         expect('fix' in r.errors[0]).toBe(false);
     });
+
+    it('(4) an error with no fixable shape carries none, fixes asked: a far word, a far name, a stray character, a repeat', () => {
+        const fixture = grammarOf(FIXTURE);
+        const cases: [string, ConcreteGrammar, string][] = [
+            [`${text}\njunk\n`, LIB.g, 'expected "Library", "Book" or "Member"; found name "junk"'],
+            [text.replace('borrowedBy reader1', 'borrowedBy zzz'), LIB.g, 'no object of type Member is named "zzz"'],
+            ['Part a { § }', fixture, 'unexpected character "§"'],
+            ['Part a {\n  size 1\n  size 2\n}\n', fixture, '"size" is given twice'],
+        ];
+        for (const [broken, g, message] of cases) {
+            const r = fixed(broken, g);
+            expect(r.errors.map(e => e.message), broken).toContain(message);
+            expect(r.errors.filter(e => e.message === message).every(e => !('fix' in e)), broken).toBe(true);
+        }
+    });
+});
+
+/** Every key `fix` dropped, at any depth: the result of a parse as it is without fixes asked. */
+const withoutFixes = (v: unknown): unknown => (Array.isArray(v) ? v.map(withoutFixes)
+    : v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'fix').map(([k, x]) => [k, withoutFixes(x)])) : v);
+const fixCount = (v: unknown): number => (Array.isArray(v) ? v.reduce((n: number, x) => n + fixCount(x), 0)
+    : v !== null && typeof v === 'object' ? Object.entries(v).reduce((n, [k, x]) => n + (k === 'fix' ? 1 : 0) + fixCount(x), 0) : 0);
+
+describe('(x) D3a, CLAUDE.md §5: fixes change nothing but the fixes', () => {
+    /** The textual corpus: every spec print in two styles, the port and the boolean sheets, the seven probe cases in three bases; each text with its truncations and deletions. */
+    const corpus = (): { readonly label: string; readonly g: ConcreteGrammar; readonly text: string }[] => {
+        const out: { label: string; g: ConcreteGrammar; text: string }[] = [];
+        const add = (label: string, g: ConcreteGrammar, t: string): void => {
+            out.push({ label, g, text: t });
+            for (const k of probeTokens(t, g.style)) {
+                out.push({ label: `${label}, trunc at ${k.end}`, g, text: t.slice(0, k.end) });
+                out.push({ label: `${label}, delete at ${k.start}`, g, text: t.slice(0, k.start) + t.slice(k.end) });
+            }
+        };
+        const specs = [['diamond', DIAMOND], ['non-diamond', NON_DIAMOND], ['garage', GARAGE], ['box', BOX], ['cases', CASES_SPEC], ['inner', INNER], ['fixture', FIXTURE]] as const;
+        for (const [name, spec] of specs) {
+            for (const [sn, style] of [['c-like', undefined], ['lower', LOWER]] as const) {
+                const g = grammarOf(spec, style);
+                add(`${name}, ${sn}`, g, printTextModel(g, objectsOf(spec)).text);
+            }
+        }
+        add('port, c-like', portGrammar(), PORT_TEXT_CLIKE);
+        add('port, pascal', portGrammar(PORT_PASCAL), PORT_TEXT_PASCAL);
+        const gbool = boolGrammar(BOOL_CLIKE);
+        BOOL_PRINTS.forEach(([read], k) => add(`bool ${k}`, gbool, boolSheet(read)));
+        for (const base of ['clike', 'pascal', 'indent'] as const) {
+            for (const c of tolerantCases(base)) add(`${c.name}, ${base}`, c.g, printTextModel(c.g, c.objects).text);
+        }
+        return out;
+    };
+
+    it('on the whole textual corpus, a parse with fixes asked equals the parse without, but for the fixes; and only it has any', () => {
+        let compared = 0;
+        let offered = 0;
+        for (const { label, g, text } of corpus()) {
+            const base = parseText(text, g);
+            expect(fixCount(base), label).toBe(0);
+            const withFixes = parseText(text, g, { fixes: true });
+            expect(withoutFixes(withFixes), label).toEqual(withoutFixes(base));
+            offered += withFixes.errors.filter(e => e.fix).length;
+            compared++;
+        }
+        expect(compared).toBeGreaterThan(1000);
+        expect(offered, 'no fix offered on the corpus: the comparison is vacuous').toBeGreaterThan(100);
+    }, 120_000);
 });
