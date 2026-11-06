@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2305
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · 860597f15 (code), 8ef186680 (SPEC), 77732b93d (report) · app probe: a failed run writes no model, no ticket
 Lane: full (unattended; measure first, then the smallest fix for item 1 only)
 Depends: P-2026-11-05-2225
 Worktree: ~/jjodel-w-jjtlbuiltin, branch jjtl-builtin-errors
