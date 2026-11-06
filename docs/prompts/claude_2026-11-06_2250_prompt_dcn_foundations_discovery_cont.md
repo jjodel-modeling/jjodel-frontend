@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2250
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · discovery, no code · report docs/discovery/discovery_2026-11-06_dcn_foundations.md (§0, §6, §7, c80715205..7d3a33cbc) · hard stop, Q1-Q13 to ratify
 Lane: full (discovery, read only, continuation)
 Corregge: 2026-11-06 22:40 (stopped at the soft context ceiling after §5, RC-51)
 Worktree: ~/jjodel-dcn, branch dcn, at this prompt's commit on top of 6ebd9d064
