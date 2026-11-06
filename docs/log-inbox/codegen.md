@@ -2168,3 +2168,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: Benches: (1) 5/5 killed; (2) 15/15 killed. App check port 3542, probe and crops b3b-1..5 in ~/.jjodel-lanes/P-2026-11-06-0242/: Head prefix row in Advanced, preview `begin program cpu { ... end program`, EBNF island begin edited to start then discarded, a prefix shared by the roots Module and Bool refused once at both fields ("also at the head prefix of"), Save blocked. Decisions 1-5 in the commit bodies and the 0242 handoff.
 **Prompt document name**: 2026-11-06 03:10
+
+## 2026-11-06 — merge: textual-block-tokens into alfonso-frontend-jjtl (P-2026-11-06-0336)
+**Prompt**: `claude_2026-11-06_0336_prompt_merge_textual-block-tokens.md`, a direct merge by `lane-run merge --direct`, no session: `textual-block-tokens` at `60b8a78e4` into `alfonso-frontend-jjtl`, merge base `7993d0580`, 12 commits on the branch side.
+**Files touched**: merge `339928e84`: 13 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_0147_prompt_textual_block_tokens_b3a.md`, `docs/prompts/claude_2026-11-06_0215_prompt_textual_block_tokens_b3a_cont.md`, `docs/prompts/claude_2026-11-06_0242_prompt_textual_block_tokens_b3b.md`, `docs/prompts/claude_2026-11-06_0310_prompt_textual_block_tokens_b3b_cont.md`, `frontend/src/codegen/textual/__tests__/blockTokens.test.ts`, `frontend/src/codegen/textual/annotations.ts`, `frontend/src/codegen/textual/concreteGrammar.ts`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `339928e84` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14415 tests in 536 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: B3a core; B3b crops b3b-1..5 in ~/.jjodel-lanes/P-2026-11-06-0242/ checked by the chat
+**Notes**: Rollback tag `pre-textual-block-tokens-P-2026-11-06-0336` on `fa59c8f84` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-0336/result.json`.
+**Prompt document name**: 2026-11-06 03:36
