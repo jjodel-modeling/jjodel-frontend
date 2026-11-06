@@ -2,13 +2,15 @@
  * D2a, the expected set at a cursor (P-2026-11-06-2118; docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md
  * §3.2, §3.3 C1, decisions D2 and D10): under `ParseOptions.cursor` the parser lists what may stand at the first token at
  * or after the cursor, from the nodes it tested there, nullable ones included; without it, the result is unchanged.
+ *
+ * D2b, C3 (P-2026-11-06-2146; report §3.3 C3, decision D3): the printer writes names and paths through `textNaming`.
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ConcreteGrammar } from '../concreteGrammar';
+import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
 import type { ExpectedItem, TextParseResult } from '../parser';
 import { parseText } from '../parser';
-import { printTextModel } from '../printer';
+import { printTextModel, textNaming } from '../printer';
 import { BOOL_CLIKE, BOOL_PRINTS, boolGrammar, boolSheet } from './boolCorpus';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { portGrammar, portObjects, portWith, PORT_CLIKE, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
@@ -143,6 +145,48 @@ describe('D2a: references and enumeration literals (corpus B, report F6)', () =>
         const lt = printTextModel(lower, objectsOf(GARAGE)).text;
         const rl = parseText(lt, lower, { cursor: lt.indexOf('colors [') + 'colors ['.length });
         expect((rl.expected ?? []).filter(e => e.kind === 'lit').map(l => l.matcher)).toEqual(['ID:red', 'ID:green', 'ID:blue']);
+    });
+});
+
+/** The targets of the reference `feat` of class `cls`, read off its object rule. */
+const targetsOf = (g: ConcreteGrammar, cls: string, feat: string): readonly string[] | undefined => {
+    const walk = (n: GrammarNode, f: string | undefined): readonly string[] | undefined => {
+        switch (n.t) {
+            case 'xref': return f === feat ? n.targets : undefined;
+            case 'seq': case 'block': for (const x of n.items) { const r = walk(x, f); if (r) return r; } return undefined;
+            case 'alt': for (const x of n.alts) { const r = walk(x, f); if (r) return r; } return undefined;
+            case 'assign': case 'list': return walk(n.item, n.feat);
+            case 'opt': case 'star': return walk(n.item, f);
+            default: return undefined;
+        }
+    };
+    const body = g.objects[cls]?.body;
+    return body ? walk(body, undefined) : undefined;
+};
+
+describe('D2b, C3: the printer writes every reference through the exported writer', () => {
+    it('on corpus B, every reference token of a print is what `textNaming` writes for its target', () => {
+        const specs: [string, Spec][] = [['diamond', DIAMOND], ['non-diamond', NON_DIAMOND], ['garage', GARAGE], ['box', BOX], ['cases', CASES], ['inner', INNER]];
+        let compared = 0;
+        let paths = 0;
+        for (const [label, spec] of specs) {
+            for (const style of [undefined, LOWER]) {
+                const g = grammarOf(spec, style);
+                const objects = objectsOf(spec);
+                const byId = new Map(objects.map(o => [o.id, o]));
+                const naming = textNaming(g, objects);
+                for (const r of printTextModel(g, objects).refs ?? []) {
+                    const t = byId.get(r.target);
+                    if (!t) continue;
+                    const owner = byId.get(r.owner)!;
+                    expect(naming.ref(targetsOf(g, owner.cls, r.feature)!, t), `${label}, ${r.owner}.${r.feature}`).toBe(r.text);
+                    if (r.text.includes('[')) { expect(naming.path(t)).toBe(r.text); paths++; }
+                    compared++;
+                }
+            }
+        }
+        expect(compared).toBeGreaterThan(20);
+        expect(paths).toBeGreaterThan(5);
     });
 });
 
