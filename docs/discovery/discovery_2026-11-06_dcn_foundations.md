@@ -148,3 +148,75 @@ Out of R-OI scope but owed to DCN: `isCreation` (spec §3 line 55, «supplies de
 R-OI counterpart. Synthesis takes a slot's value from the feature's `defaultValue`
 (`instantiate.ts:244-251` `plannedValue`); a creation class overriding the defaults of the static class needs a
 synthesis rule of its own, in `instantiate.ts`, which is S2 code.
+
+## 2. The DCN metamodel as a Jjodel metamodel
+
+### 2.1 `Expression` and `Action` as attribute types
+
+**Read.** H2 holds for `Expression` and `Action`:
+
+- They are core primitives: `frontend/src/common/U.tsx:3338-3342` «Jjodel's own (R-SIM-17, R-SIM-44) ...
+  `Expression = 'Expression', Action = 'Action',`», with the pointers `Pointer_EXPRESSION` / `Pointer_ACTION`
+  (`model/conformance/ConformanceValidator.ts:20-21`).
+- A persisted metamodel already types attributes with them: `frontend/src/codegen/examples/turnstile/turnstile.json:109`
+  `"type": "Pointer_EXPRESSION",`.
+- Validation is syntactic, in conformance, keyed on the pointer id: `ConformanceValidator.ts:240-260`
+  (`parseExpressionStrict(text)` for an Expression, `parseAction(text)` for an Action; «Blank is absent, like ''
+  above (an absent guard is `true`)»; a failure is a `type_mismatch` warning, `:265-271`).
+- Ecore: written as `EString` with a `jjodel`/`type` annotation and restored on import (`api/data.ts:266-269`,
+  `:697-704`).
+- The contextual check (boolean result, roots, admitted targets) is the STC's, not the type's (R-SIM-17). Today it
+  is `simBridge.startRun`'s compile defects, published by `problems/simCheckToProblems.ts` (header `:1-36`). DCN
+  needs its own contextual producer for W1..W4; it cannot reuse `startRun`, which compiles a Petri net.
+
+Consequences for spec §3: `DynamicClass.invariant`, `Operation.pre`, `CoherenceConstraint.pointwise`,
+`BoundedPersistence.condition` and `BoundedResponse.trigger/response` are `Expression` attributes; `Operation.body`
+and `Monitor.body` are `Action [0..*]`, the same shape as the arc actions of R-SIM-17. A blank invariant reads as
+absent, hence `true` (the class is always active): W-level check to decide (Q8).
+
+### 2.2 `Range[lo..hi]`
+
+**Read.** No `Range` data type exists in the metamodel layer. A range exists only as a σ domain of the simulator's
+state attributes (`model/simulation/netTypes.ts:28-31`
+`| { readonly kind: 'range'; readonly min: number; readonly max: number }`, decoded in
+`stateAttributesCodec.ts:61-70`), i.e. for `.[x]` declarations, not for M2 attributes or M1 slots.
+
+Two ways to model it, measured against the R-OI code:
+
+1. **A `RangeType` metaclass under `DataType`, with two `EInt` bounds**, an M1 type that many attributes share. It
+   does not fit S2/S3a as they are: the value kind of a slot is chosen by the **name** of the feature's type,
+   `oi-s3b:.../hooks/instantiate.ts:230-233`
+   ``const primitive = kinds.find(k => k.when === `primitive:${typeName}`);``, then falls to the `instance` kind
+   (`:240`). A range type named `Battery` would get an `InstanceValue` default, and the O5 check
+   (`instantiationToProblems.ts:72-76`) would report every `LiteralInteger` in such a slot as a wrong value type.
+   Making it fit means a value-kind selector by the type's metaclass, a codec and S2/S3a change on the R-OI
+   branches.
+2. **Two optional integer bounds on the attribute (`Property`), the type staying `Integer`**. Fits every R-OI
+   surface unchanged: the type is the fixture's `Integer` primitive, value kind `primitive:Integer`, O5 passes;
+   the nucleus reads the bounds to halt out of range (spec §6) and the exporter maps `min..max` (spec §9). The
+   names must not collide with the multiplicity `lower`/`upper` of `MultiplicityElement`
+   (`scripts/probe/uml-class-object-fixture.ts:114`).
+
+Recommendation (Q5): option 2, with a W-check that a bound pair is complete and ordered and that only `Integer`
+attributes carry it. An `Integer` attribute without bounds is the unbounded case of R-DCN-6.
+
+### 2.3 Spec §3 on the UML fixture
+
+**Read**, not built: the fixture is built in the browser (`uml-class-object-fixture.ts:133`, `ev(page, ...)`), the
+worktree has no `node_modules`, and a throwaway metamodel would measure nothing the table below does not read
+from the fixture's declarations (`:68-102`, `:111-120`).
+
+| Spec §3 | On the fixture | Fit |
+|---|---|---|
+| `StaticClass extends Classifier` with attributes, operations | `Class` already owns `ownedAttributes`, `ownedOperations` (`:87-88`) | `StaticClass extends Class`, adds `viewpoints`, `isSingleton`; the `object` record's `featureContainer` (`Class.ownedAttributes`) accepts it by conformance (`bindingReader.ts:73-78`) |
+| `isAbstract` | `Classifier.isAbstract` (`:113`), already the `abstractFlag` | fits |
+| `isSingleton` | nothing | no R-OI rule refuses a second instance: a W-check or a creation-menu filter (Q8) |
+| `Viewpoint`, `isOverlapping`, `isComplete`, `classes` | `NamedElement` exists | new metaclass, fits |
+| `DynamicClass` | see Q2 | `extends NamedElement` needs its own features reference and the §1.3 path of three hops; `extends Class` reuses `ownedAttributes` but enters the creation menu |
+| `Attribute` | `Property` (`:72`), required by `Slot.definingFeature : Property` (`:100`) | dynamic-class attributes must be `Property` |
+| `Attribute.defaultValue : Expression[0..1]` | `Property.defaultValue : EString [0..1]` (`:116`), typed at synthesis by `typedDefault` (`instantiate.ts:174-186`) | keep `EString`: retyping changes the S2 path for no gain (a literal default parses either way) |
+| `Attribute.type` Boolean, Enumeration, Integer, String | `PrimitiveType`, `Enumeration` (`:69`) | fits |
+| `Range[lo..hi]` | none | §2.2 |
+| `Operation` with `pre`, `body`, `redefines`, `parameters` | `Operation extends NamedElement` (`:72`), `Parameter` exists (`:440`) | additive features, fits |
+| `Monitor`, `CoherenceConstraint`, `TrajectoryPattern` and its two subclasses | none | new metaclasses, fit |
+| Associations, links | R-OI associations, `link` record | links wait for S4 (R-OI-13: «links wait for S4»); a DCN guard reading `self.ref.x` across a link waits with them |
