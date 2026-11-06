@@ -165,3 +165,81 @@ Two candidates, measured against what exists:
 
 - **React state of the tab, exposed by `EditorContext`** (plus a prop on `EditorV2`). Matches R-LAY-19's «ogni `EditorV2` riceve il suo `viewpointId` e lo espone per context», the per-instance `ReactFlowProvider`, and the fact that tabs are not persisted (§2.4), so a Redux slice keyed by tab id would hold ids that die at every reload. Non-hook modules (`jjomTransformers.ts`, `canvasToJjom.ts`, the adapter) take the key as a parameter; hooks read the context. Selectors that need it close over it (`useSelector(s => getLayoutKeyFor(s, vpId))`).
 - **Redux root keyed by tab id**: gives global readers (Tree View, rail, new-view parenting) a way to ask «the focused tab's viewpoint», but they can already get it from the project value if the focused tab keeps writing it (Q2), and it adds persisted state for something R-MT-1 calls tab state. Not recommended (Q1).
+
+## 3. Sync and critical zone (read only)
+
+### 3.1 One DGraph per model, populate idempotent against the store [read]
+
+- `hooks/useJjomSync.ts:359-372`: the graph is found by `dGraphs.find(g => g?.model === modelid && (g as any).graphStyle === 'v2-flow')`. One graph per model, whatever the viewpoint. The per-viewpoint part is the dictionary `layoutByViewpoint` on each `DVertex` (R-LAY-14) and the edge layout fields; vertices and edges are not per viewpoint.
+- The populate effect (`:517-1140`) is declared «IDEMPOTENT: it checks existing graph elements and only creates what's missing» (`:529`), reads the store fresh (`const idlookup = store.getState()?.idlookup;`, `:537`), and returns early when nothing is missing (`:761-765`). A second instance mounted on a model the first has already populated finds nothing missing and **creates nothing**.
+- Its guard against re-entry is per instance: `const creatingGraphRef = useRef(false);` (`:514`), `if (!modelid || creatingGraphRef.current) return;` (`:518`), lowered by `setTimeout(() => { creatingGraphRef.current = false; }, 150);` (`:1138`). Two instances that both see `!hasGraph` in the same commit would each run `DGraph.new(0, modelid)` (`:780`). Reachable only if two tabs of one never-opened model mount in the same commit; no gesture does that (tabs open one at a time and are not restored at reload, §2.4). Declared, not measured.
+- M2 reference edges (Step 3) use the composite key and `existingEdgeKeys`, built from the fresh `idlookup` plus **this instance's** `rfEdgeCache` (`:648`). M1 reference edges (`useM1ReferenceEdges.ts:148`) use `existingKeys.has(ek) || hasCanvasEdgePair(ek)`, and `hasCanvasEdgePair` reads the module-level set, so a pair minted by instance A (`markCanvasEdgePair`, `:177`) is seen by instance B: for M1 the global set is what keeps two instances from minting the same edge twice. For M2 there is no such cross-instance mark (Rule 13 forbids the pair guard there). Whether instance B's Step 3, running in the same commit as A's after a D-first reference creation, can see A's `DVoidEdge.new2` in the fresh `idlookup` depends on that creator committing synchronously outside an outer TRANSACTION. **Not measured**: it is the first check of the first critical-zone lane (§7, L4), with Families.ecore and two tabs on the metamodel.
+
+### 3.2 Module-level registries in `sync/syncState.ts` [read]
+
+| Registry | Lines | Keyed by | Two instances |
+|---|---|---|---|
+| `syncModes` | `:14` | node id | shared; harmless (drag strategy per node) |
+| `dropCreatedIds` | `:37` | node id | consumed once (`consumeDropCreated`, `useJjomSync.ts:1327`): the dropping instance consumes it, the other instance treats the vertex as a normal addition, which is what it should do |
+| `edgeRefIds` | `:59` | edge id → DReference id | shared, same values for every instance (the edge is one); fine while alive |
+| `canvasUpdatedIds` (anti-bounce) | `:81` | element id, 300 ms window | shared: a drag in A marks the id, B's incremental sync skips it and schedules one re-run after the window (`useJjomSync.ts:1408-1412`, `:1503-1509`, `ANTI_BOUNCE_RERUN_MS`). R-MT-4 «a drag in one moves the node in the other» holds, with a lag of about 350 ms in B. Acceptable; it is what a mirrored drag costs |
+| `canvasEdgePairs` | `:129` | `src→tgt` pair, **no viewpoint, no model** | shared, and correct to share: edges are one per model, not per viewpoint |
+| `suppressedSingletonIds` | `:159` | vertex id | shared; written by `EditorV2.tsx:926`, `:1001`, `:1028`, cleared by `:1036` |
+
+**Unmount clears every instance's registry.** `useJjomSync.ts:1620-1637`:
+
+```
+clearAllCanvasUpdated();
+clearSyncModes();
+clearDropCreated();
+clearEdgeRefIds();
+clearCanvasEdgePairs();
+```
+
+Closing tab B wipes `edgeRefIds` and `canvasEdgePairs` for tab A, and for every other model's tab, because nothing is keyed by model. This is already true today across tabs of different models (both mounted, §2.3); multi-tab makes it the common case. The consequence of a wiped `canvasEdgePairs` is the race window of CLAUDE.md §3.4 reopening for A until A's next sync; of a wiped `edgeRefIds`, `getEdgeRefId` returning `undefined` for A's edges until something reloads them. Fix shape: reference-count the registries (clear when the last instance unmounts) or key them by model id. Critical zone (`syncState.ts`, `useJjomSync.ts`).
+
+### 3.3 Where the sync reads the layout key [read, counted]
+
+Count per file of `-E "viewpoint|LayoutKey|layoutByViewpoint|irSig|computeIRSignature"` (positive control: `sync/canvasToJjom.ts` 11):
+
+| File | Count | Reads the key? |
+|---|---|---|
+| `hooks/useJjomSync.ts` | 0 | not directly; through `jjomVertexToRFNode` → `jjomTransformers.ts:59` |
+| `hooks/useM1ReferenceEdges.ts` | 0 | no |
+| `sync/vertexSnapshot.ts` | 0 | no (content hash, `vertexChildrenHash`, `:163`) |
+| `sync/canvasToJjom.ts` | 11 | yes, `getActiveLayoutKey()` at `:89`, `:105`, `:134`, `:150`, `:164` |
+| `utils/jjomTransformers.ts` | 7 | yes, `effectiveLayoutOf` `:58-60`: `return readVertexLayout((raw ?? {}) as VertexLayoutSource, getActiveLayoutKey());` |
+| `utils/portDistribution.ts` | 0 | no (works on RF geometry of its instance; `overflowWarnedNodes`, `:288`, is warn-once only) |
+| `utils/handlePosition.ts` | 0 | no |
+| `viewpoint/ir/useContentSize.ts` | 7 | yes, `getLayoutKeyOf(s)` at `:157`, `:306` |
+| `nodes/nodeSizing.ts` | 3 | no: the three hits are an import of `ShapeForm`, `shapeRegistry`, and a comment (`:6`, `:7`, `:35`) |
+
+So the key enters the canvas through three doors: the transformer (read), the write-back (write), and the content-size hook (read). Each must take the tab's key. `portDistribution.ts` and `handlePosition.ts` need no change: they see only the RF nodes of their own instance.
+
+### 3.4 A switch of layout key without a vertex change does not re-run the incremental sync [read]
+
+The incremental effect's deps are `[isJjomMode, elementSnapshots, subElementIds, scheduleFlush, antiBounceTick]` (`useJjomSync.ts:1617`), and each vertex is skipped when `const unchanged = prevD === dElement && prevModel === currModel && currHash === prevHash;` (`:1406`, `:1414`). None of these moves when only the layout key moves. R-LAY-18 (2026-08-24) recorded that positions followed a layout change thanks to `Date.now()` in the deps and `prevModel = {}`, and that «chi li rimuove deve sostituirli con una ripropagazione progettata». `242a82bcd` (2026-10-21, P-2026-10-21-0335) removed both («prevModel is the real previous entry (the `= {}` override is gone); Date.now() out of the effect deps»), and its discovery left the question open: `docs/discovery/discovery_2026-10-21_jjomsync_incremental.md:221-223`, «Whether a run of the sync without `Date.now()` misses the first render after a viewpoint switch that changes `graphInfo` but not `elementSnapshots`: the vp row refreshed (2038 reads = no run)».
+
+Hypothesis, **not measured** (no dev server, §6): on today's trunk, switching between two exclusive viewpoints with different records may leave nodes at the previous key's positions until a vertex changes. Whether or not it is live today, multi-tab needs the layout key as an explicit input of the incremental sync (a dep, and a re-transform of every vertex when it changes), because a per-tab key changes nothing in the store. This belongs to the first critical-zone lane (L3), and the probe of today's behaviour is a ticket candidate of its own (Q9).
+
+### 3.5 Session sizes [read]
+
+`useContentSize.ts:120-128`: the content-driven size «is written in session only, on the same channel the size propagation uses (top-level width/height with `measured` reset). Nothing reaches the D-layer». It writes through `useReactFlow()` (`:153`), i.e. into the instance's own RF store: **already per tab**, as R-MT-1 wants. One shared piece: `const cascadeWrites = new Map<string, number>();` (`:99`), a per-vertex cap of `MAX_WRITES_PER_CASCADE = 3` (`:98`) counted at module level. Two tabs that show the same vertex with different contents and re-measure in the same synchronous cascade spend one budget: a legitimate settle needs two writes (`:96`), two tabs need four, and the second tab yields with a console warning. Key it by (instance, vertex) in the lane that threads the key through this hook.
+
+### 3.6 Critical-zone files a Phase 2 touches (CLAUDE.md §3.1, §3.2)
+
+| File | §3.1 | §3.2 trigger (LIR owed) | Why |
+|---|---|---|---|
+| `components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts` | in `viewpoint/` subtree (authoring/ir siblings) | no (not in the six) | `getLayoutKeyFor(state, vpId)` beside `getLayoutKeyOf` |
+| `components/editor-v2/utils/jjomTransformers.ts` | not listed | no | key as parameter of `effectiveLayoutOf` and its callers |
+| `components/editor-v2/sync/canvasToJjom.ts` | yes | **yes** | key as parameter of the five layout writes |
+| `components/editor-v2/hooks/useJjomSync.ts` | yes | **yes** | key into the transformer call, key as dep of the incremental sync (§3.4), registry lifecycle (§3.2) |
+| `components/editor-v2/sync/syncState.ts` | yes | **yes** | reference-counted or model-keyed clearing |
+| `components/editor-v2/viewpoint/ir/useContentSize.ts` | in `viewpoint/ir/` | no | tab key, `cascadeWrites` per instance |
+| `components/editor-v2/viewpoint/ir/irResolve.ts`, `useIRContainment.ts`, `IRForm.tsx` | `viewpoint/ir/` | no | explicit viewpoint into `computeIRSignature` / `getIRIndex` |
+| `components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx` | `viewpoint/authoring/` | no | tab key |
+| `components/editor-v2/hooks/useM1ReferenceEdges.ts` | yes | yes if touched | **not** expected to change: no key read, the shared pair set is correct |
+| `utils/portDistribution.ts`, `utils/handlePosition.ts` | yes / cross-ref | — | not expected to change |
+| `redux/VersionFixer.tsx`, `utils/defaultViewTemplate.ts`, `common/DV.tsx` | yes | — | not expected to change (§5) |
+
+The Layer Impact Report is owed by the lanes that touch `useJjomSync.ts`, `syncState.ts` or `canvasToJjom.ts`, not by this one.
