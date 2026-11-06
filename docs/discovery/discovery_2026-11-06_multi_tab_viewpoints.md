@@ -113,3 +113,55 @@ Already explicit (the precedent): `InstanceManagerTab.tsx:1674-1676`, `InstanceD
 | Jjodie preview | see §4.5 | — | — |
 | Tree View sidebar | `treeViewScope.ts:104` | global | focused tab's viewpoint |
 | New-view parenting | P2, P3, P5 | global | focused tab's viewpoint (= project value, Q2) |
+
+## 2. Tabs and editor instances
+
+### 2.1 How a model tab is created and identified [read]
+
+- `components/abstract/tabs/TabDataMaker.tsx:29-36`: `static model(model)` returns `{ id: model.id, ..., group: 'models', closable: true, content: <ModelTab modelid={model.id} .../> }`; `metamodel` at `:19-25` likewise with `id: model.id`. The tab id **is** the model id. Every other kind is prefixed so that it does not collide with it (`:44-47`: «The id is PREFIXED, unlike `metamodel()` and `model()` which use the bare `model.id`. It has to be: `DockManager.open` activates any tab whose id already exists»).
+- `components/abstract/DockManager.tsx:100-106`: «Guard: if a tab with this ID already exists, just activate it» — `DockManager.dock.find(tab.id)` then `updateTab(tab.id, null, true)`. Opening the same model again **raises** the existing tab. `openBeside` (`:204-248`) says the same in its doc: «Never a second instance of the tab».
+- The same model cannot be opened twice today. No gesture reaches a second instance.
+
+### 2.2 What breaks if a second tab on the same model is forced (a tab id other than `model.id`)
+
+Every site that equates tab id and model id (search `-E "dock\.find\(|updateTab\("`, 20 lines, plus the `ACTIVE_TAB` listeners):
+
+| Site | Assumption | Effect on a second tab `T2` |
+|---|---|---|
+| `abstract/Dock.tsx:375-390` | `idlookup[activeId]` resolves the model and fires `EDITOR_TYPE_CHANGE { modelId: activeId }` | activating `T2` fires nothing: the rail, status bar and `body[data-editor-type]` stay on the previous tab |
+| `abstract/Dock.tsx:360` | only `dockbox.children[0]` is read | a tab in a split panel (`openBeside`) never drives the panels — true today, not new |
+| `abstract/DockManager.tsx:67-75` | `closeTabsForEntity` closes `entityId`, `doc_`, manager | deleting the model leaves `T2` open (it self-closes via `ModelTab.tsx:30`, `useEffect(() => { if (!model) DockManager.closeTabsForEntity(...) })`, which again closes only the bare id) |
+| `abstract/DockManager.tsx:222-229` | `openBeside` finds `modelId` | targets the first tab only; acceptable |
+| `pages/components/Navbar.tsx:718-724` | `getActiveModelTab()` then `localStorage ... jjodel.showSingletons.${tab.id}` | the singleton toggle reads a key no one writes |
+| `codegen/ui/canvasSelection.ts:46`, `:98`, `:132-136` | `dock.find(id)` for the canvas beside a generator | finds the first tab only; acceptable |
+
+So a second tab needs (a) its own id with a recoverable model id (`<modelId>` for the first, `<modelId>~<n>` or similar after it, decoded in one helper), and (b) `Dock.tsx:378` and `Navbar.tsx:723` to decode it. That is one lane, outside the critical zone.
+
+### 2.3 Are inactive tabs mounted? [read]
+
+Yes. `DockManager.tsx:122-125`: «rc-dock lays inactive panes out off-screen inside a clipped container», and nothing sets `cached` or unmounts (`groups` at `Dock.tsx:284-289` is `{floatable, maximizable, tabLocked}` only). Two model tabs are therefore two live `EditorSwitch` + `EditorV2` trees **today**, which is what makes the W4 interference of §1.1 real now and not only with multi-tab.
+
+### 2.4 rc-dock tabs are not persisted [read]
+
+`PinnableDock.load` / `save` (`components/dock/MyRcDock.tsx:677`, `:729`) have no caller outside that file (`command grep -rln -E "PinnableDock\.(load|save)" .` returns only `MyRcDock.tsx`, which is the positive control: the pattern matches its own definitions). `Dock.tsx:34`, `:42` persist only the layout *mode* (`jjodel_layout_mode`). A reload reopens no model tab: there is no tab state to migrate, and «which viewpoint did this tab have» survives a reload only through what the tab writes elsewhere (`localStorage` prefs, `project.activeViewpoint`).
+
+### 2.5 What one EditorV2 instance owns [read]
+
+| Thing | Where | Per instance? |
+|---|---|---|
+| React Flow store (nodes, edges, viewport) | `EditorV2.tsx:5285` `<ReactFlowProvider>` around `EditorV2Inner` | yes |
+| `fitViewOptions` | `viewportInset.ts:76-79` `useFitViewOptions()`, a `useMemo` over the canvas inset | yes (value derived from a global inset) |
+| Stored viewport | `EditorV2.tsx:174-194`, key `jjodel.viewport.<modelid>.<layoutKey>`, read once at `:587`, written at `:3896`, `:3902` | key per (model, layout key): two tabs on one model and one viewpoint share it, last writer wins (R-MT-1 says pan/zoom belong to the tab, so this is the default for the next opening, as for the project viewpoint) |
+| `EditorContext` | `contexts/EditorContext.tsx:35`, provided at `EditorV2.tsx:5119`, value at `:4894`; already carries `modelId` (`:31-33`) | yes: the natural home of the tab's viewpoint (an optional field, Rule 11) |
+| `ActiveEditorProvider` | `editor-v2/ActiveEditorContext.tsx:25-60`, one per `EditorSwitch` (`EditorSwitch.tsx:113`, `:131`) | yes, but it tracks `'flow' \| 'classic'` zoom controllers inside one tab, not focus between tabs. R-LAY-19's «tela a fuoco (`ActiveEditorProvider`)» does not exist at that level: focus between tabs is rc-dock's `activeId` (`Dock.tsx:361`) |
+| Sync refs (`rfNodeCache`, `rfEdgeCache`, `prevElementsRef`, open gate) | `hooks/useJjomSync.ts:300-320`, `:514-515` | yes |
+| Sync registries | `sync/syncState.ts` | **no**, module level (§3.2) |
+| Editor prefs (`viewpointId`, `editorMode`) | `EditorSwitch.tsx:22-37`, key `jjodel.editorPrefs.<modelid>` | per model, written by every mounted instance (§1.1) |
+| Highlight, singletons, notation, scheme, grid, minimap toggles | `EditorV2.tsx:734-1121` localStorage | per model or global; shared by two tabs of one model, which R-MT does not contradict |
+
+### 2.6 Where the per-tab viewpoint lives
+
+Two candidates, measured against what exists:
+
+- **React state of the tab, exposed by `EditorContext`** (plus a prop on `EditorV2`). Matches R-LAY-19's «ogni `EditorV2` riceve il suo `viewpointId` e lo espone per context», the per-instance `ReactFlowProvider`, and the fact that tabs are not persisted (§2.4), so a Redux slice keyed by tab id would hold ids that die at every reload. Non-hook modules (`jjomTransformers.ts`, `canvasToJjom.ts`, the adapter) take the key as a parameter; hooks read the context. Selectors that need it close over it (`useSelector(s => getLayoutKeyFor(s, vpId))`).
+- **Redux root keyed by tab id**: gives global readers (Tree View, rail, new-view parenting) a way to ask «the focused tab's viewpoint», but they can already get it from the project value if the focused tab keeps writing it (Q2), and it adds persisted state for something R-MT-1 calls tab state. Not recommended (Q1).
