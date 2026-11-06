@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-0100
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · 73e84d110, 941fc26fb, f47568f91 · app probe 10/10 pass; verifica visiva in attesa del GO (crops l2b-1..2, b2-1..5 in ~/.jjodel-lanes/P-2026-11-06-0100/)
 Lane: full (continuation; item (2) uncommitted in syntaxForm.ts and __tests__/blockTokens.test.ts)
 Depends: P-2026-11-05-2350 (handoff ~/.jjodel-lanes/P-2026-11-05-2350/handoff.md; item (1) committed acd8e599b)
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens (the same tree)

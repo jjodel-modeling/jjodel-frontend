@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-2350
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · acd8e599b, then continued by P-2026-11-06-0100 (soft context ceiling) · 73e84d110, 941fc26fb, f47568f91 · app probe 10/10 pass; verifica visiva in attesa del GO (crops in ~/.jjodel-lanes/P-2026-11-06-0100/)
 Lane: full (the Syntax form's pure module and component, the Text tab's picker; tests)
 Depends: P-2026-11-05-2212 (B1, per-block tokens in the core, merged into the trunk), P-2026-11-05-2220 (B0, the `tokens` input kind), R-TXT-49, R-TXT-51, R-TXT-52
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens
