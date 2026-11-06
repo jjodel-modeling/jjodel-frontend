@@ -97,3 +97,91 @@ gives the metamodel a textual notation of its own.
 it), say `jjel?: 'expression' | 'action'`, set at `TextualTab.tsx:161` from `a.type?.id`, the one place that reads the
 L-layer (decision F1). What `String(a.type)` yields for the primitive in the app was not measured here: the probe sets the
 type name by hand.
+
+## 4. Highlighting and checking inside the Text tab
+
+### 4.1 What the JjEL modules give (read)
+
+- **Lexer.** `jjel/lexer/index.ts:5` `export { JjelLexer, tokenize } from './lexer';`. A token is `{type, value, line,
+  column, start, end}` with character offsets (explorer, `types/tokens.ts:132-139`; measured in §4.2: `["IDENTIFIER",
+  "self",0,4]`). Options `actionMode`, `textBody`, `interpolation` (`lexer.ts:37-42`).
+- **Parser.** `jjel/parser/index.ts:5` `export { JjelParser, parse, parseExpression, parseExpressionStrict, parseAction }`,
+  not re-exported by the `jjel/index.ts` barrel (explorer). `parser.ts:1119` `export function parseExpression(source:
+  string): JjelParserResult`, `:1143` `parseExpressionStrict`, `:1214` `parseAction`. A lexer error returns before the
+  parse (`:1123-1131`, `if (lexerErrors.length > 0) { return { expression: null, errors: lexerErrors.map(... line: e.line,
+  column: e.column ...`). Errors carry `message`, `line`, `column`, **no offset and no end**; one error, no recovery
+  (explorer: `error()` throws at `:1040`, caught in `parse()`). AST nodes carry `location?: ASTLocation` with
+  `start: { line: number; column: number; offset?: number }` (`types/ast.ts:11-17`).
+- **Checking.** No static checker resolves names against a metaclass (explorer, searched `jjel/`, `model/validation/`,
+  `model/conformance/`, `viewpoint/ir/`; not re-run here, so a claim of absence on the explorer's word). What exists:
+  syntax (`ConformanceValidator.ts:241-261`), run-time `undefined-identifier` (explorer, `evaluator.ts:418-423`), the
+  simulator's scope checks (`model/simulation/stcChecks.ts`, explorer) and the IR's path subset (`viewpoint/ir/pathExpr.ts`,
+  a critical-zone directory, read only).
+- **Completion.** Two candidates. `jjel/autocomplete` `getJjelSuggestions(input, cursorPosition?, options?)` is regex based
+  and pulls the Jodie console's globals (explorer): not a fit. `codegen/ui/templateCompletion.ts:339`
+  `completionsAt(ctx, body, offset, mode)` is pure («nothing here imports the joiner, so the bench imports this module»,
+  `:24-25`) and offers, after `.`, «the features of a class, inherited ones included, when the receiver is a parameter of
+  the edited template whose class is known» (`:15-16`) from a `TemplateCompletionContext { classes, templates, params,
+  paramClasses }` (`:50-58`). A model value binds `self` to its owner (`netTypes.ts:57` «`self` its owner»), so a context
+  `params: ['self']`, `paramClasses: self -> owner class` reuses it. It also always offers `stc` and `target`
+  (`:357-358`, `:372-373`), which a model value does not have: the reuse needs an option to leave them out (decision F4).
+- **Monaco.** No language id for JjEL alone: `command grep -r -n -m 4 -E "languages\.register\(" frontend/src` found six
+  registrations (JjScript, the two template languages, the textual and EBNF languages, JjTL) and none for JjEL. The
+  template languages hold a Monarch expression state (explorer, `templateLanguage.ts:32`, `sharedStates`) and a marker
+  helper from line and column (`templateMarkers.ts:30-46`, explorer).
+
+### 4.2 Probe: JjEL values through the notation (measured, HEAD 6b38a1318, `probe_jjel.ts`)
+
+A two-class metamodel (`Net` contains `Transition`, whose attributes are `name: EString`, `guard: Expression`,
+`effect: Action`), three objects, printed and re-parsed in the three styles. Values: a guard with a JjEL string literal
+holding a backslash (`self.count > 0 and self.label = "go\now"`), an action with a newline and doubled single quotes,
+and a broken guard (`self.count >`).
+
+| style | printed guard / effect (verbatim from `probe_jjel.out`) | parse errors | value round trip | one raw index per value char |
+|---|---|---|---|---|
+| c-like | `guard "self.count > 0 and self.label = \"go\\now\""`, `effect "count := count + 1\nlabel := 'it''s'"` | 0 | 3/3 | 3/3 |
+| pascal | `guard := 'self.count > 0 and self.label = "go\now"';`, `effect := 'count := count + 1'#10'label := ''it''''s''';` | 0 | 3/3 | 3/3 |
+| indent | as c-like, without braces | 0 | 3/3 | 3/3 |
+
+What the probe shows:
+1. The `STR` token keeps both `raw` and the unescaped `v` (`parser.ts:224-227`) and its document offsets `start`, `end`
+   (`:230-231`); a JjEL value is the `v` of the `STR` token inside the `ItemNode` of its feature. The parser needs no new
+   field for F: the token already exposes the span and the raw content.
+2. Value offsets map back to raw offsets by re-reading `raw` with the style's escape rule (the probe's `valueToRaw`, 30
+   lines); every value had exactly one raw index per character, escapes and Pascal's `#10` join included.
+3. A JjEL error position converts to a document offset: `Unexpected '='. Did you mean '==' or '=>'?` at 1:31 is value
+   offset 30, raw 31, document 87 in c-like and 102 in Pascal; `Expected expression` at 1:13 on `self.count >` is document
+   206 (c-like). Line and column of a multi-line value (the action) go through the value's own lines first.
+4. Every `STR` token sat on one document line, the newline printed as `\n` or `#10`: a string ends at a newline
+   (explorer, `parser.ts:384-385`, `unterminated string`). Monaco semantic tokens cannot span lines, so sub-tokens of a
+   JjEL island never need splitting across lines.
+5. Side result: `=` is not JjEL equality (the lexer refuses it); the probe's guard was malformed on purpose only in part.
+
+Not measured: Monaco itself (no editor ran), and a sub-token whose raw slice crosses an escape (the probe's check of that
+was too weak to count; the mapping by `map[start]` and `map[end - 1]` plus that character's raw width is the design).
+
+### 4.3 What F needs (design)
+
+- **Islands.** A pure `jjelIslands(parsed, mm)` in the textual layer: for each `STR` token under an `ItemNode` whose
+  feature is an attribute with `jjel` set (F1), `{ owner, feature, mode, start, end, value, map }`. One module, no Monaco,
+  no joiner, so the bench imports it (CLAUDE.md §5, the `nameLookup.ts` example).
+- **Highlighting.** `analyzeText` today emits one `string` token per `STR` (`languageService.ts:197`). For an island it
+  emits the JjEL lexer's tokens instead, mapped to raw offsets, with roles from the existing legend (`keyword`, `name`,
+  `number`, `string`, `feature` for `self.<f>`) so no new legend entry and no theme change are needed; the quote
+  characters keep the `string` role. Decision F2: semantic sub-tokens, not an embedded Monarch language (Monaco's
+  embedded languages switch on Monarch states, and this language is coloured by semantic tokens, not Monarch).
+- **Checking.** Per island, `parseExpressionStrict` or `parseAction` with the conformance exemptions (blank, `else` for an
+  Expression), the error's line and column converted through the value's lines and `map`. Markers of their own owner,
+  severity **warning**, source `jjel`, never blocking the apply (decision F3): the model accepts a malformed value and
+  conformance already reports it (R-SIM-44), so a stricter Text tab would refuse what the canvas accepts. The marker's
+  end is the end of the offending token, found by re-lexing at the error's offset, since the parser gives no end.
+- **Names.** A light static check, after F3 lands: `self.<f>` where `<f>` is not a feature of the owner's class, from
+  the same class model as completion. Warning, and only for `self` (anything else needs types JjEL does not have
+  statically). Decision F5.
+- **Completion.** In `completionsAt` (`languageService.ts:549`), before the parser's expected set: a cursor inside an island
+  delegates to the template completion with `self` bound to the owner's class, `stc` and `target` left out (F4). The
+  class model comes from the `TextMetamodel` (no lookup needed), so the textual layer stays free of the joiner. Today a
+  cursor inside a string reaches the parser's expected set at a point inside a value token, which offers nothing
+  useful (`:550` takes only `ID` tokens as words); not measured.
+- **Rename (D4 risk R4).** A rename of a feature or an object does not rewrite JjEL text. F can count the islands that
+  name the renamed feature after `self.` and say so in the rename's message; rewriting them is out of F.
