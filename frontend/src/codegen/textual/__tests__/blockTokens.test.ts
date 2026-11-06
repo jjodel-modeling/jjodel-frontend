@@ -89,9 +89,9 @@ describe('(1) the resolution of the per-block tokens', () => {
     });
 
     it('D6: an unknown key of a class or a feature entry is a notice, the known keys applied (mutant: unknown keys dropped silently)', () => {
-        const r = resolved(withEntries({ cP: { keyword: '', prefix: ['begin'] } }, { fDecls: { keyword: 'declaration', blockopen: ['is'] } }));
+        const r = resolved(withEntries({ cP: { keyword: '', before: ['begin'] } }, { fDecls: { keyword: 'declaration', blockopen: ['is'] } }));
         expect(r.issues).toEqual([
-            { level: 'notice', where: 'class Program', message: 'unknown key "prefix": not applied' },
+            { level: 'notice', where: 'class Program', message: 'unknown key "before": not applied' },
             { level: 'notice', where: 'Program.declarations', message: 'unknown key "blockopen": not applied' },
         ]);
         expect(r.classes.Program).toEqual({ keyword: '' });
@@ -592,6 +592,49 @@ describe('(6) B2: the per-block tokens edited in the EBNF mode', () => {
         for (const m of marks) {
             expect(literalField(MM, IDS, m.src)).toBeUndefined();
             expect(setLiteral(MM, IDS, TARGET, m.src, 'x')).toEqual({ ok: false, reason: 'a fixed token is read only' });
+        }
+    });
+});
+
+// ---- Lane B3a (P-2026-11-06-0147): the head prefix of a class (report §3, R-TXT-51 (3), R-TXT-52 D1) ----------------
+
+/** The probe's metamodel with a mandatory name on Program: `begin program P ... end program` (report §3.1, reading B). */
+const NMM: TextMetamodel = {
+    ...MM,
+    classes: [{ ...MM.classes[0], attributes: [{ name: 'name', type: 'EString', lower: 1 }] }, ...MM.classes.slice(1)],
+};
+const NIDS: ElementIds = { ...IDS, features: { ...IDS.features, fPN: { owner: 'Program', name: 'name', lower: 1 } } };
+/** P5: the prefix `begin` before the class keyword `program` of a named Program; the block keeps the style's open. */
+const P5: SyntaxAnnotations = {
+    ...TARGET,
+    classes: { ...TARGET.classes, cP: { keyword: 'program', prefix: ['begin'], blockClose: ['end', 'program'] } },
+};
+const named = (record: SyntaxAnnotations) => grammar(record, NMM, NIDS);
+const namedIssues = (record: SyntaxAnnotations) => issuesOf(record, NMM, NIDS);
+const NAMED_OBJECTS: TextObject[] = [{ ...OBJECTS[0], slots: { ...OBJECTS[0].slots, name: 'P' } }, ...OBJECTS.slice(1)];
+
+describe('(7) B3a: the resolution of the head prefix', () => {
+    it('keeps a well-formed prefix on a class, words and punctuation, with no issue (mutant: the prefix not read)', () => {
+        const r = resolveAnnotations(P5, NIDS, NMM);
+        expect(r.issues).toEqual([]);
+        expect(r.classes.Program).toEqual({ keyword: 'program', prefix: ['begin'], blockClose: ['end', 'program'] });
+        expect(resolved(withEntries({ cP: { keyword: '', prefix: ['<<', 'program'] } })).classes.Program.prefix).toEqual(['<<', 'program']);
+        expect(resolved(withEntries({ cP: { keyword: '', prefix: [] } })).issues).toEqual([]);
+    });
+
+    it('drops a prefix that is not a list of well-formed tokens, with an error at the class; the other keys stay (mutant: styleTokenFault not applied to the prefix)', () => {
+        const cases: [unknown, RegExp][] = [
+            ['begin', /^prefix is not a list of tokens$/],
+            [['begin', 'a b'], /^the prefix token "a b" holds a blank$/],
+            [[''], /^the prefix token "" is empty$/],
+            [['"'], /quote/],
+            [[3], /^the prefix token 3 is not a string$/],
+        ];
+        for (const [prefix, reason] of cases) {
+            const r = resolved(withEntries({ cP: { keyword: '', prefix } }));
+            expect(r.issues.map(i => [i.level, i.where]), JSON.stringify(prefix)).toEqual([['error', 'class Program']]);
+            expect(r.issues[0].message).toMatch(reason);
+            expect(r.classes.Program).toEqual({ keyword: '' });
         }
     });
 });
