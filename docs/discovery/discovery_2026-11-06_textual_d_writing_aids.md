@@ -141,7 +141,61 @@ One structured answer per cursor, computed by the parser, not by reparsing messa
 
 ## 4. Diagnostics and quick fixes
 
-(pending)
+### 4.1 Where markers come from today (read)
+
+- **Text mode, one owner.** `ui/TextualTab.tsx:1168-1183` `setMarkers` writes `EDIT_MARKER_OWNER` from «`[...(parsed?.errors
+  ?? []), ...marks]`», severity Warning for a `secondary` reference error, else Error. Its callers: `readEdit`
+  (`TextualTab.tsx:1322` «`setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved
+  ?? [])] : []);`»), and the clears in `reprint` and on a text equal to the agreement (`:1206`, `:1313`).
+  So the sources are three: the parse's syntax and reference errors, the misplaced `@"id"` of R-TXT-32 (`outerMarks`,
+  `TextualTab.tsx:575-596`), and the diff's unresolved kept tokens of R-TXT-35.
+- **Not markers: the refusals.** `plan.refusals` (`textDiff.ts:367` codes «`'parse' | 'uncertain' | 'referenced' |
+  'unprinted' | 'outer' | 'unsupported' | 'unwritable'`») go to the bar only, `editStatusText` (`TextualTab.tsx:634`).
+  `unwritable` is a JjScript value the run cannot write (`textDiff.ts:635`); it has no position today.
+- **Not markers: the style check.** `checkStyle` findings show as `NotationIssues` under the bar
+  (`TextualTab.tsx:599-617`) and as EBNF-mode markers (`TextualTab.tsx:1816`); they are about the notation, not a line
+  of the model text. The new-model mode has its own owner (`TextualTab.tsx:1940`).
+- **Conformance and validation are not read by the textual layer.** `command grep -rlE
+  "ConformanceValidator|problems/|validateModel|nameUniqueness" src/codegen/` returned nothing; the positive control,
+  `command grep -rlE "parseText" src/codegen/` through the same tool, listed five files (exit 0).
+
+### 4.2 What is reachable (read)
+
+- `useConformance(modelId)` (`model/conformance/useConformance.ts:18`) is a hook, debounced 500 ms (`:8`), returning
+  `ConformanceResult` with `violations` (`ConformanceTypes.ts:69-74`); a violation has «`objectId: string;`»,
+  `violationType`, `severity`, `message` and «`metamodelElementName?: string;`» (`ConformanceTypes.ts:38-65`), the
+  feature name for the per-feature checks and a class name for `orphan_object` and `abstract_instantiation`
+  (`problems/registry.ts:69-80`). The Text tab is a component with a `modelId`: one hook call reaches it, with no
+  dependence on a canvas being open. Today the canvas reads the same hook through `ConformanceProblemSync`
+  (`components/editor-v2/EditorV2.tsx:5122`), mounted only with a canvas.
+- User validation rules publish into the problems registry (`problems/validationToProblems.ts:91`
+  `publishValidationProblems`), «**non e' reattivo**: scrive solo quando l'utente lancia il comando» (`registry.ts:35-36`),
+  keyed by `nodeId` with `ownerModelId` (`registry.ts:88-128`); `subscribe` (`registry.ts:267`) and
+  `getNodeProblemsSnapshot` (`:272`) are the read side.
+- Mapping to lines: the tab carries one span per model object (`carriedSpans()`, decorations tracked through edits,
+  `TextualTab.tsx:1105`, `:1122`), so an `objectId` maps to its object span; a feature name maps to the item node of that
+  feature inside the object node (`ItemNode.feature`, `parser.ts:88-91`), else to the object's name token. That the
+  violation's `objectId` is the id the spans carry (the D-layer object id) is a reading, not measured: the lane checks it.
+- Both live in `components/editor-v2/problems/` and `model/conformance/`, critical-zone directories by CLAUDE.md §3.1.
+  Reading them from the Text tab touches no file there; a lane that only imports them stays outside the zone.
+
+### 4.3 Which diagnostics have a fixable shape
+
+| source | example message (verbatim from the code) | fix | data today |
+|---|---|---|---|
+| parse, `repair` | `expected ":"; found "}"` (`parser.ts:669`) | insert the token at the error node | the matcher is in scope at `parser.ts:667`, not kept: needs an optional `fix` on `TextParseError` |
+| parse, missing close | `expected "}" to close the "{" at 1:12` (`parser.ts:1102`) | insert the close at the end of the object's last line | `n.close` in scope, not kept |
+| reference by name | `no object of type ${r.node.type} is named "${s.name}"` (`parser.ts:1297`) | replace with a near name of the same targets (edit distance) | candidates from the parse (`byName`, `parser.ts:1272`), targets on the node |
+| reference ambiguous | `"${s.name}" is ambiguous: ... write a path` (`parser.ts:1295`) | replace with each candidate's path | the printer's path, once exported (C3) |
+| path keyword | `a path starts with a class keyword: ${renamed} is written "..."` (`parser.ts:1327`), same for a feature (`:1344`) | replace the segment with the printed keyword | the message holds it; a structured field is cleaner |
+| conformance `missing_required_attr`, `multiplicity_below_min` | (ConformanceValidator) | insert `keyword value` in the object's block, from the grammar | object span + grammar item of that feature |
+| conformance `invalid_enum_literal` | (ConformanceValidator) | replace with a literal of the enumeration | the enum in the metamodel; the text already refuses an unknown literal at parse |
+| `outer` misplaced | `outerMarks` (`TextualTab.tsx:591`) | none: only keep, delete, replace (R-TXT-32) | — |
+| validation rules | user text | none generic | — |
+
+Every fix is a text edit the user applies, never a model write: the edit then goes the usual pause-apply way, so
+R-TXT-21 (8) holds by construction. A `CodeActionProvider` in `textualMonaco.ts` reads the markers' data through the
+session; Monaco passes the markers at the range in `context.markers`.
 
 ## 5. Safe rename
 
