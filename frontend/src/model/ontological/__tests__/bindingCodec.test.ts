@@ -97,4 +97,56 @@ describe('bindingCodec', () => {
         const value: OntoBindings = { v: 1, bindings: [{ name: 'x', typeReference: 't', generalization: { direct: 'Class.extends' } }] };
         expect(decoded(encodeOntoBindings(value))).toEqual(value);
     });
+
+    it('round-trips feature sources (DCN), with the unknown keys of an entry', () => {
+        const sources = [
+            { path: ['StaticClass.viewpoints', 'Viewpoint.classes', 'DynamicClass.attributes'] },
+            { path: ['Class.ownedAttributes'], note: 'one hop' },
+        ];
+        const value: OntoBindings = { v: 1, bindings: [{ ...objectRecord, featureSources: sources }] };
+        const text = encodeOntoBindings(value);
+        const back = decoded(text);
+        expect(back.bindings[0].featureSources).toEqual(sources);
+        expect(back).toEqual(value);
+        expect(encodeOntoBindings(back)).toBe(text);
+    });
+
+    it('a record without feature sources decodes without the key and encodes as before', () => {
+        const text = JSON.stringify({ v: 1, bindings: [objectRecord] });
+        const back = decoded(text);
+        expect('featureSources' in back.bindings[0]).toBe(false);
+        expect(encodeOntoBindings(back)).toBe(text);
+    });
+
+    it('refuses malformed feature sources, one defect each', () => {
+        const bad: [unknown, string][] = [
+            ['StaticClass.viewpoints', 'bindings[0].featureSources: not a list'],
+            [['StaticClass.viewpoints'], 'bindings[0].featureSources[0]: not a record'],
+            [[{ path: [] }], 'bindings[0].featureSources[0].path'],
+            [[{ path: ['a', ''] }], 'bindings[0].featureSources[0].path'],
+            [[{ path: 'a' }], 'bindings[0].featureSources[0].path'],
+            [[{}], 'bindings[0].featureSources[0].path'],
+            [[{ path: ['a'] }, { path: ['a', 3] }], 'bindings[0].featureSources[1].path'],
+        ];
+        for (const [featureSources, message] of bad) {
+            const r = decodeOntoBindings({ v: 1, bindings: [{ name: 'a', typeReference: 't', featureSources }] });
+            expect(r.ok).toBe(false);
+            if (!r.ok) {
+                expect(r.errors).toHaveLength(1);
+                expect(r.errors[0]).toContain(message);
+            }
+        }
+    });
+
+    it('decoding a parsed record copies its feature sources: the bag value is not shared', () => {
+        const input = { name: 'a', typeReference: 't', featureSources: [{ path: ['r1', 'r2'] }] };
+        const back = decoded({ v: 1, bindings: [input] }).bindings[0];
+        expect(back.featureSources).toEqual(input.featureSources);
+        expect(back.featureSources).not.toBe(input.featureSources);
+        expect(back.featureSources![0].path).not.toBe(input.featureSources[0].path);
+    });
+
+    it('an empty list of feature sources is read as such', () => {
+        expect(decoded({ v: 1, bindings: [{ name: 'a', typeReference: 't', featureSources: [] }] }).bindings[0].featureSources).toEqual([]);
+    });
 });
