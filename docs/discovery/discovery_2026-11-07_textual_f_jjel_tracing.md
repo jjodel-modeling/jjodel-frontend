@@ -185,3 +185,65 @@ was too weak to count; the mapping by `map[start]` and `map[end - 1]` plus that 
   useful (`:550` takes only `ID` tokens as words); not measured.
 - **Rename (D4 risk R4).** A rename of a feature or an object does not rewrite JjEL text. F can count the islands that
   name the renamed feature after `self.` and say so in the rename's message; rewriting them is out of F.
+
+## 5. Tracing from a generated line to the model line
+
+### 5.1 What the codegen pipeline keeps (read)
+
+Origins per fragment ship today. `engine/text.ts:46-51`: `export type Origin = LiteralOrigin | ModelOrigin | OpaqueOrigin
+| ErrorOrigin;` with `ModelOrigin extends FeatureRead { readonly kind: 'model'; readonly transformation: Transformation;
+readonly template?: string }` and `FeatureRead { elementId; feature; featureName }` (`:40-44`, «One feature read: the
+element that owns it, the feature's id from idlookup [...], its name»). Rendering keeps a map, `text.ts:72` «One output
+range: line 1-based, `start` and `end` 0-based columns, `end` excluded», `TextMapEntry { line, start, end, fragment,
+origin }`, returned as `GenerateResult.map` (explorer, `generate.ts:52-58`). Origins survive `+` and `join` through host
+hooks, by `discovery_2026-10-31_codegen_origins_through_concat.md` §3 (explorer). R-GEN-41 (explorer, `decisions.md:6200`):
+«Provenance is navigable both ways in the generator tab, in every mode».
+
+So **H5 is falsified**: a trace per output range exists, with the owning element **and the feature** of each model
+fragment. No new recording is needed for F.
+
+### 5.2 What the generator tab does with it (read)
+
+- Code to canvas: `GeneratorPane.tsx:278-285` `const onSpanClick = (e, entry) => { if (e.altKey) { ... goToTemplate(entry.fragment);
+  return; } if (entry.origin.kind === 'model') selectOnCanvas(entry.origin.elementId); };`. `selectOnCanvas` goes through
+  `codegen/ui/canvasSelection.ts:154` `selectOnModelCanvas`, which opens the model's tab with `DockManager.open2`, waits for
+  the nodes, resolves with `pickOnCanvas` and dispatches `JjodelEvents.SELECT_NODE` (`registry.ts:24`
+  `SELECT_NODE: 'jjodel:selectNode'`), listened to by `EditorV2.tsx:1167-1188` only (explorer).
+- Canvas to code: `GeneratorPane.tsx:288-300`, a `CANVAS_ELEMENT_SELECTED` listener sets `linked`, and `:302-306` reveals
+  `.code-span--linked`.
+- `codeOrigins.ts:48` `elementAt(map, line, column): ModelOrigin | null`, «the model fragment under the column, else the
+  nearest model fragment on the line; `null` when the line holds none» (`:44-46`): the line-level lookup F needs, pure.
+- Opaque fragments carry `reads[]` and do nothing on click (`:284` acts on `kind === 'model'` only).
+
+### 5.3 From the generated line to the Text tab (design, with the gap read)
+
+The Text tab has no window-level wiring today: `command grep -c -E 'JjodelEvents|addEventListener\(' TextualTab.tsx`
+counts 4, all DOM listeners of its own widgets (`:1509` the editor's `cut`, `:1813-1830` an input); the same command on
+`GeneratorPane.tsx` counts 3 (positive control). Step E's plan adds a `CANVAS_SELECTION_CHANGED` listener with a highlight
+and a reveal that move neither caret nor focus (E report §5.1, §5.3, lane E2b, on branch `textual-e-sync`).
+
+Two routes:
+1. **Through the canvas, free after E2b.** A click selects on the canvas (today), the canvas publishes
+   `CANVAS_SELECTION_CHANGED`, E2b highlights the span. It needs the canvas mounted and the element drawn as a node
+   (E report decision E6: nodes only), and `selectOnModelCanvas` brings the canvas forward with `DockManager.open2`
+   (E report §4.3), so a Text tab in the same panel goes behind it.
+2. **Direct.** A registry event, say `JjodelEvents.TEXTUAL_REVEAL` `{ modelId, elementId, featureName? }` (CLAUDE.md
+   §8.6, §8.7: a CustomEvent and a local listener; rule 25 forbids a bare string), dispatched by `onSpanClick` next to
+   `selectOnCanvas`, and listened to by the Text tab of that model, which reveals and highlights with E2b's collection.
+   With `featureName`, the tab reveals the **line of the feature**, not just the object: the carried span of
+   `elementId` (`carriedSpans()`, E report §5.2) bounds the search, and inside it the `ItemNode` whose `feature` is the
+   name (`parser.ts:112-115` `readonly feature: string;`) gives the line. That is «the model line» of the plan, at the
+   granularity the origin already has. An object with no carried span (unprinted, stale tab) is silent, as E8.
+
+Recommended: route 2 (decision F6), after E2b, reusing its highlight. Whether a click also opens a closed Text tab:
+recommended **no** in F (F7), the generator tab already offers canvas and template; the reveal works when the tab is
+open, and a later lane can add «Open in Text tab» to the span's hover.
+
+Text to generated line (the reverse, E's canvas-to-code counterpart): the generator tab already follows
+`CANVAS_ELEMENT_SELECTED`; after E2a the Text tab's caret selects on the canvas, which publishes that event
+(`useJjomSelection.ts:72`, explorer), so the code side links with no change. To be checked in the app, not assumed.
+
+**Ids** (read, not measured end to end): the Text tab's objects take `idOf(h)` of `globals.instances`
+(`TextualTab.tsx:181`), and the origins' `elementId` is the idlookup id of the element read (`text.ts:40-44`). Both come
+from the same `buildEvalContext` globals. F's first lane measures it on one model: a generated span's `elementId` found
+among the tab's carried span ids.
