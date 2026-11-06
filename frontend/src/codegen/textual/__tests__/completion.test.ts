@@ -9,9 +9,12 @@ import type { ConcreteGrammar } from '../concreteGrammar';
 import type { ExpectedItem, TextParseResult } from '../parser';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
-import { GARAGE, grammarOf, LOWER } from './corpus';
-import { portGrammar, portWith, PORT_CLIKE } from './portCorpus';
+import { BOOL_CLIKE, BOOL_PRINTS, boolGrammar, boolSheet } from './boolCorpus';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
+import { portGrammar, portObjects, portWith, PORT_CLIKE, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
 import { objectsOf } from './spec';
+import type { Spec } from './spec';
+import { mutantsOf, probeTokens, tolerantCases } from './tolerantCorpus';
 
 const CUT = '⎸';
 
@@ -141,4 +144,50 @@ describe('D2a: references and enumeration literals (corpus B, report F6)', () =>
         const rl = parseText(lt, lower, { cursor: lt.indexOf('colors [') + 'colors ['.length });
         expect((rl.expected ?? []).filter(e => e.kind === 'lit').map(l => l.matcher)).toEqual(['ID:red', 'ID:green', 'ID:blue']);
     });
+});
+
+/** Every text of the corpus, with the grammar it is read by and the cursors to try: prints, then broken texts. */
+function corpus(): { readonly label: string; readonly g: ConcreteGrammar; readonly text: string; readonly cursors: readonly number[] }[] {
+    const out: { label: string; g: ConcreteGrammar; text: string; cursors: number[] }[] = [];
+    const everyToken = (g: ConcreteGrammar, text: string): number[] => [0, ...probeTokens(text, g.style).flatMap(t => [t.start, t.end]), text.length];
+    const add = (label: string, g: ConcreteGrammar, text: string): void => { out.push({ label, g, text, cursors: everyToken(g, text) }); };
+    const specs: [string, Spec][] = [['diamond', DIAMOND], ['non-diamond', NON_DIAMOND], ['garage', GARAGE], ['box', BOX], ['cases', CASES], ['inner', INNER]];
+    for (const [name, spec] of specs) {
+        for (const [sn, style] of [['c-like', undefined], ['lower', LOWER]] as const) {
+            const g = grammarOf(spec, style);
+            add(`${name}, ${sn}`, g, printTextModel(g, objectsOf(spec)).text);
+        }
+    }
+    add('port, c-like', portGrammar(), PORT_TEXT_CLIKE);
+    add('port, pascal', portGrammar(PORT_PASCAL), PORT_TEXT_PASCAL);
+    const gb = portGrammar(portWith({ C_Module: { blockOpen: ['is'], blockClose: ['end', 'module'], prefix: ['begin'] } } as never, {}, PORT_CLIKE));
+    add('port, block tokens', gb, printTextModel(gb, portObjects()).text);
+    const gbool = boolGrammar(BOOL_CLIKE);
+    BOOL_PRINTS.forEach(([read], k) => add(`bool ${k}`, gbool, boolSheet(read)));
+    for (const base of ['clike', 'pascal', 'indent'] as const) {
+        for (const c of tolerantCases(base)) {
+            const { text, mutants } = mutantsOf(c);
+            add(`${c.name}, ${base}`, c.g, text);
+            // A broken text, with the cursor at its fault and at its end.
+            for (const m of mutants) out.push({ label: `${c.name}, ${base}, ${m.kind} at ${m.at}`, g: c.g, text: m.text, cursors: [m.at, m.text.length] });
+        }
+    }
+    return out;
+}
+
+describe('D2a, CLAUDE.md §5: the cursor changes nothing but the expected set', () => {
+    it('on the whole textual corpus, a parse with a cursor equals the parse without one, but for `expected`', () => {
+        let compared = 0;
+        for (const { label, g, text, cursors } of corpus()) {
+            const base = parseText(text, g);
+            expect('expected' in base, label).toBe(false);
+            for (const cursor of new Set(cursors)) {
+                const { expected, ...rest } = parseText(text, g, { cursor });
+                expect(rest, `${label}, cursor ${cursor}`).toEqual(base);
+                expect(Array.isArray(expected), `${label}, cursor ${cursor}`).toBe(true);
+                compared++;
+            }
+        }
+        expect(compared).toBeGreaterThan(1000);
+    }, 120_000);
 });
