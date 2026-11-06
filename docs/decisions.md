@@ -7407,9 +7407,12 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   R-FA-11 extends to JjEL methods. A method the value's type does not have (`"4".log2()`) and a library method that
   throws stop the mapping with an error on every path, never a warning with `null`. Out of it, unchanged: a name that
   resolves to nothing, a property read on null or on a missing feature; a method called on null and a call on a model
-  element without that feature count as the latter (provisional, unattended, P-2026-11-05-1530). JjEL outside JjTL
+  element without that feature count as the latter (decided unattended by P-2026-11-05-1530, ratified by Alfonso 2026-11-06 23:02). JjEL outside JjTL
   throws the same error as before. Extends R-FA-11, which stays unchanged. Evidence: `method-failure.test.ts` and the
   node runs of `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md`.
+- **R-FA-13** (2026-11-06, ratified by Alfonso 2026-11-06 23:02, evidence: read, verified: none, reversible: trunk):
+  a builtin that fails inside a JjTL expression (R-FA-11) names the rule and the source element in its error, as a
+  failing method does under R-FA-12. Extends R-FA-11, which stays unchanged otherwise.
 - **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
   `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
   are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
