@@ -3,17 +3,25 @@
  * the Text tab, one query at a time on the non-hardware corpus of step A, a broken text among them.
  */
 
-import { describe, it, expect } from 'vitest';
-import { analyzeText, SEMANTIC_MODIFIERS, SEMANTIC_ROLES, UNKNOWN_CONTAINER } from '../languageService';
+import { describe, it, expect, vi } from 'vitest';
+import type * as Monaco from 'monaco-editor';
+import type { ConcreteGrammar } from '../concreteGrammar';
+import { analyzeText, completionsAt, SEMANTIC_MODIFIERS, SEMANTIC_ROLES, UNKNOWN_CONTAINER } from '../languageService';
 import type { SemanticToken, TextAnalysis, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE } from '../style';
+import { CLIKE_STYLE, STYLE_CATALOG } from '../style';
+import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
 import { GARAGE, grammarOf } from './corpus';
+import { portGrammar, PORT_MM } from './portCorpus';
 import { metamodelOf, objectsOf } from './spec';
 import { libraryObjects, tolerantCases } from './tolerantCorpus';
 import type { TolerantCase } from './tolerantCorpus';
+
+// The Monaco adapter's theme imports `joiner` (textualMonaco.ts header): the bench gives it empty rules.
+vi.mock('../../../jjscript/editor/jjscriptLanguage', () => ({ jjscriptThemeRules: () => [] }));
+vi.mock('../../../jjtl/editor/jjtlTheme', () => ({ jjtlTheme: { rules: [] } }));
 
 const CASES = tolerantCases();
 const [LIB, LIB_ANNOTATED, LIB_LINES, TS_PLAIN] = CASES;
@@ -322,4 +330,123 @@ describe('measured', () => {
         // A guard against a blow-up, not a budget: the figures are the result (#205: no time ratio).
         expect(analysis, `6,000 objects: parse ${parse.toFixed(1)} ms, analysis ${analysis.toFixed(1)} ms`).toBeLessThan(1000);
     }, 60_000);
+});
+
+describe('D2c: the completion provider of the Text tab (report §3.3 C4)', () => {
+    const KIND = { Keyword: 17, EnumMember: 16, Reference: 21 };
+    const providers = new Map<string, any>();
+    const fakeMonaco = {
+        Emitter: class { event = () => ({ dispose: () => {} }); fire(): void {} },
+        Range: class { constructor(readonly startLineNumber: number, readonly startColumn: number, readonly endLineNumber: number, readonly endColumn: number) {} },
+        languages: new Proxy({ CompletionItemKind: KIND, CompletionTriggerKind: { Invoke: 0, TriggerCharacter: 1 }, SymbolKind: {}, FoldingRangeKind: {} } as Record<string, unknown>, {
+            get: (t, k: string) => k in t ? t[k] : (id: string, p: unknown) => { if (/^register.*Provider$/.test(k) && id === TEXTUAL_LANGUAGE_ID) providers.set(k, p); },
+        }),
+        editor: { registerCommand: () => {}, defineTheme: () => {}, getEditors: () => [] },
+    };
+    registerTextualMonaco(fakeMonaco as unknown as typeof Monaco);
+    const provider = providers.get('registerCompletionItemProvider');
+
+    /** A model over `text`: offsets and 1-based positions as Monaco's. */
+    const modelOf = (text: string): Monaco.editor.ITextModel => {
+        const starts = [0, ...[...text].flatMap((ch, i) => (ch === '\n' ? [i + 1] : []))];
+        return {
+            uri: { toString: () => `inmemory://${text.length}` },
+            getVersionId: () => 1,
+            getValue: () => text,
+            getOffsetAt: (p: Monaco.IPosition) => starts[p.lineNumber - 1] + p.column - 1,
+            getPositionAt: (o: number) => {
+                let l = 0;
+                while (l + 1 < starts.length && starts[l + 1] <= o) l++;
+                return { lineNumber: l + 1, column: o - starts[l] + 1 };
+            },
+        } as unknown as Monaco.editor.ITextModel;
+    };
+    const INVOKE = { triggerKind: 0 };
+    /** The provider's suggestions at the `⎸` of `marked`, on a model with a session over `g` and `mm`, and the model. */
+    const suggestAt = (g: ConcreteGrammar | null, mm: TextMetamodel, marked: string, context: object = INVOKE) => {
+        const at = marked.indexOf('⎸');
+        const text = marked.replace('⎸', '');
+        const model = modelOf(text);
+        const session = g === undefined ? null : openTextualSession(model, { base: () => (g ? { grammar: g, mm } : null), keep: () => undefined });
+        const out = provider.provideCompletionItems(model, model.getPositionAt(at), context);
+        session?.dispose();
+        return { suggestions: out.suggestions as Monaco.languages.CompletionItem[], model, text, at };
+    };
+    /** What the provider must give for `completionsAt`: kind, label, range, in the parser's order. */
+    const expected = (g: ConcreteGrammar, mm: TextMetamodel, model: Monaco.editor.ITextModel, text: string, at: number) =>
+        completionsAt(text, at, g, mm).map(c => {
+            const a = model.getPositionAt(c.start);
+            const b = model.getPositionAt(c.end);
+            return {
+                label: c.label,
+                kind: { keyword: KIND.Keyword, literal: KIND.EnumMember, reference: KIND.Reference }[c.kind],
+                range: [a.lineNumber, a.column, b.lineNumber, b.column],
+                doc: c.doc ? c.doc.join('\n\n') : undefined,
+            };
+        });
+    const shownOf = (s: readonly Monaco.languages.CompletionItem[]) => s.map(x => {
+        const r = x.range as Monaco.IRange;
+        return {
+            label: x.label, kind: x.kind, range: [r.startLineNumber, r.startColumn, r.endLineNumber, r.endColumn],
+            doc: (x.documentation as Monaco.IMarkdownString | undefined)?.value,
+        };
+    });
+
+    it('is registered with the style punctuation as trigger characters, no letter among them', () => {
+        expect(provider).toBeDefined();
+        const triggers: string[] = provider.triggerCharacters;
+        expect(triggers.length).toBeGreaterThan(0);
+        expect(triggers.every(t => t.length === 1 && !/\w|\s/.test(t))).toBe(true);
+        for (const s of Object.values(STYLE_CATALOG)) for (const p of [...s.blockOpen, s.list.open, s.list.separator]) if (!/^\w/.test(p)) expect(triggers).toContain(p.slice(-1));
+    });
+
+    it('inside a block: the keywords of completionsAt, in its order, on the cursor', () => {
+        const g = portGrammar();
+        const { suggestions, model, text, at } = suggestAt(g, PORT_MM, 'Module cpu {\n  input instr : Word(32)\n  ⎸\n}');
+        expect(suggestions.map(s => s.label).sort()).toEqual(['=', 'input', 'output', '}']);
+        expect(suggestions.every(s => s.kind === KIND.Keyword)).toBe(true);
+        expect(shownOf(suggestions)).toEqual(expected(g, PORT_MM, model, text, at));
+        // Monaco sorts by `sortText`: the parser's order stays.
+        const sorts = suggestions.map(s => s.sortText ?? '');
+        expect(sorts.every((t, i) => t !== '' && (i === 0 || sorts[i - 1] < t))).toBe(true);
+    });
+
+    it("after ':' on a word begun: the types, replacing the word", () => {
+        const g = portGrammar();
+        const { suggestions, model, text, at } = suggestAt(g, PORT_MM, 'Module cpu {\n  input instr : Wo⎸\n}');
+        expect(suggestions.map(s => s.label).sort()).toEqual(['Bool', 'Word']);
+        expect(shownOf(suggestions).every(s => s.range[1] === 17 && s.range[3] === 19)).toBe(true);
+        expect(shownOf(suggestions)).toEqual(expected(g, PORT_MM, model, text, at));
+    });
+
+    it('references and literals: their kinds, the literal with its hover as documentation', () => {
+        const g = grammarOf(GARAGE);
+        const mm = metamodelOf(GARAGE);
+        const printed = printTextModel(g, objectsOf(GARAGE)).text;
+        const cut = (head: string, value: string): string => {
+            const k = printed.indexOf(head + value);
+            return printed.slice(0, k + head.length) + '⎸' + printed.slice(k + head.length + value.length);
+        };
+        const refs = suggestAt(g, mm, cut('best ', 'Car[0].wheels[0]'));
+        expect(refs.suggestions.length).toBeGreaterThan(0);
+        expect(refs.suggestions.every(s => s.kind === KIND.Reference)).toBe(true);
+        expect(shownOf(refs.suggestions)).toEqual(expected(g, mm, refs.model, refs.text, refs.at));
+        const lits = suggestAt(g, mm, cut('colors [', 'Red'));
+        const lit = shownOf(lits.suggestions).filter(s => s.kind === KIND.EnumMember);
+        expect(lit.map(s => s.label)).toEqual(['Red', 'GREEN', 'blue']);
+        expect(lit[0].doc).toBeTruthy();
+        expect(shownOf(lits.suggestions)).toEqual(expected(g, mm, lits.model, lits.text, lits.at));
+    });
+
+    it('nothing without a session, or with a session that has no reading', () => {
+        expect(suggestAt(undefined as never, PORT_MM, 'Module cpu {\n  ⎸\n}').suggestions).toEqual([]);
+        expect(suggestAt(null, PORT_MM, 'Module cpu {\n  ⎸\n}').suggestions).toEqual([]);
+    });
+
+    it("a trigger character that is not the reading's style punctuation offers nothing", () => {
+        const g = portGrammar();
+        const marked = 'Module cpu {\n  input instr : Word(32)\n  ⎸\n}';
+        expect(suggestAt(g, PORT_MM, marked, { triggerKind: 1, triggerCharacter: ';' }).suggestions).toEqual([]);
+        expect(suggestAt(g, PORT_MM, marked, { triggerKind: 1, triggerCharacter: '{' }).suggestions.length).toBeGreaterThan(0);
+    });
 });
