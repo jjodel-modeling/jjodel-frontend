@@ -2116,3 +2116,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 10/10 on port 3536, light, scale 1, crops `l2b-1..2`, `b2-1..5` in `~/.jjodel-lanes/P-2026-11-06-0100/`; GO visivo in attesa.
 **Notes**: Benches: (1) 26 mutants, 25 killed, survivor removed; (2) 14, 12 then 14 after a punctuation-acceptance test; (3) 6/6 plus the island guard; (4) 8/8. D9 crop: the side written to the store by a direct call, since the form offers the row on a class with no block only while the record sets one (handoff decision 2). Reset layout inline (SyntaxForm.scss out of scope); `Field` exported for the test.
 **Prompt document name**: 2026-11-06 01:00
+
+## 2026-11-06 — feat(codegen): B3a, the head prefix of a class, core (P-2026-11-06-0147, P-2026-11-06-0215)
+**Prompt**: `claude_2026-11-06_0147_prompt_textual_block_tokens_b3a.md` items (1)-(6), continued after the soft context ceiling by `claude_2026-11-06_0215_prompt_textual_block_tokens_b3a_cont.md` from the 0147 handoff: a `prefix` on a class annotation, the prefix in the derivation, the style check reading the class keyword by origin, D8 reconsidered for a prefixed head.
+**Files touched**: `frontend/src/codegen/textual/annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `syntaxForm.ts` (one line), `__tests__/blockTokens.test.ts`; commits `2caec7308` (1), `571675a7a` (2), `c3e06275c` (3), `961f43a3f` (4); this entry and the two Status lines, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `961f43a3f`: typecheck exit 0; vitest 14399 passed, 2 skipped, 3 red at import (baseline); build exit 0; check:codegen-lazy ALL GREEN (off, on); check:docs red only on Check B, the trunk's `hw-notation.md:1307` entry (no Corregge, Causa), not this lane's.
+**Out-of-scope changes**: yes — `syntaxForm.ts`, the LITERAL_NAME line `classPrefix` the exhaustive Record forced, declared by the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Benches: (1) 4/4; (2) 10/10 after a C-like `{` case; (3) 4/4; (4) 9 mutants, 8 killed, the `prefixed` argument of ownOf equivalent (the D8 loop refuses with the same message). D8 rule in the body of `961f43a3f`: an empty open applies only with an applied prefix, a mandatory head name becomes required, an optional one refuses it. Gap for B3b: parser.ts:523 FIRST of an open-less block, :1100 message, head read by position in printer, parser :705, syntaxForm :382.
+**Prompt document name**: 2026-11-06 02:15

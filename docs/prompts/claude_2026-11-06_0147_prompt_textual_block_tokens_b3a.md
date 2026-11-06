@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-0147
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · 2caec7308, 571675a7a, c3e06275c, then continued by P-2026-11-06-0215 (soft context ceiling) · 961f43a3f · core only, no visual check
 Lane: full (core of the textual layer; tests)
 Depends: P-2026-11-06-0100 (B2 and L2b on this branch), R-TXT-51 (3), R-TXT-52 D1
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens
