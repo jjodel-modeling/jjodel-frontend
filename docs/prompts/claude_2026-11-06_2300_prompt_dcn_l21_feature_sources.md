@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2300
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane dcn · d51def3e7 · bench 24/24 killed · verifica visiva non applicabile (RC-17)
 Lane: full (changes exported interfaces additively; Phase 1 already done by P-2026-11-06-2240/2250, this prompt carries the GO for Phase 2)
 Depends: R-DCN-3, R-DCN-9, R-DCN-10, R-DCN-17, R-DCN-20; discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §1
 Worktree: ~/jjodel-dcn, branch dcn, at this prompt's commit (no node_modules: create the P14 symlink to ~/jjodel/frontend/node_modules, remove it at the end)
