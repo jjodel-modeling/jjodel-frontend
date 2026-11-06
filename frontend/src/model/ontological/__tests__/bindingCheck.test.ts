@@ -144,3 +144,67 @@ describe('bindingCheck', () => {
         expect(v.defects.map(d => d.binding)).toEqual(['object', 'b']);
     });
 });
+
+// DCN (R-DCN-10): viewpoints of a class, dynamic classes of a viewpoint, attributes of a dynamic class.
+const sub = (id: string, ...supers: string[]) => ({ ...cls(id), supers });
+const DCN_SKETCH: MetamodelSketch = {
+    classes: [...SKETCH.classes, cls('Viewpoint'), cls('DynamicClass'), sub('TimedClass', 'DynamicClass'), sub('DynProperty', 'Property'), cls('Event')],
+    references: [
+        ...SKETCH.references,
+        ref('Class.viewpoints', 'Class', 'Viewpoint'),
+        ref('Viewpoint.classes', 'Viewpoint', 'DynamicClass'),
+        ref('Viewpoint.timed', 'Viewpoint', 'TimedClass'),
+        ref('DynamicClass.attributes', 'DynamicClass', 'Property'),
+        ref('DynamicClass.dynProps', 'DynamicClass', 'DynProperty'),
+        ref('DynamicClass.events', 'DynamicClass', 'Event'),
+    ],
+    attributes: [...SKETCH.attributes, attr('Viewpoint.name', 'Viewpoint')],
+};
+const PATH = ['Class.viewpoints', 'Viewpoint.classes', 'DynamicClass.attributes'];
+const withPath = (...paths: string[][]): OntoBinding => ({ ...OBJECT, featureSources: paths.map(path => ({ path })) });
+
+describe('bindingCheck of feature sources (DCN)', () => {
+    it('a path of references, each owned by the type of the one before, ending on a Property, is valid', () => {
+        expect(checkBinding(withPath(PATH), DCN_SKETCH)).toEqual([]);
+        expect(checkBinding(withPath(['Class.ownedAttributes']), DCN_SKETCH)).toEqual([]);
+    });
+
+    it('an inherited hop and a last hop typed by a subclass of the defining feature type are valid', () => {
+        expect(checkBinding(withPath(['Class.viewpoints', 'Viewpoint.timed', 'DynamicClass.attributes']), DCN_SKETCH)).toEqual([]);
+        expect(checkBinding(withPath(['Class.viewpoints', 'Viewpoint.classes', 'DynamicClass.dynProps']), DCN_SKETCH)).toEqual([]);
+    });
+
+    it('a hop outside the metamodel is a defect', () => {
+        const d = checkBinding(withPath(['Class.viewpoints', 'Viewpoint.nope', 'DynamicClass.attributes']), DCN_SKETCH);
+        expect(roles(d)).toEqual(['featureSources']);
+        expect(d[0].message).toContain('not in the metamodel');
+    });
+
+    it('a hop that is an attribute or a class is a defect', () => {
+        expect(roles(checkBinding(withPath(['Class.viewpoints', 'Viewpoint.name']), DCN_SKETCH))).toEqual(['featureSources']);
+        expect(checkBinding(withPath(['Class.viewpoints', 'Viewpoint.name']), DCN_SKETCH)[0].message).toContain('is a attribute');
+        expect(roles(checkBinding(withPath(['Viewpoint', 'DynamicClass.attributes']), DCN_SKETCH))).toEqual(['featureSources']);
+    });
+
+    it('a hop not owned by the type of the hop before is a defect', () => {
+        const d = checkBinding(withPath(['Class.viewpoints', 'DynamicClass.attributes']), DCN_SKETCH);
+        expect(roles(d)).toEqual(['featureSources']);
+        expect(d[0].message).toContain('DynamicClass.attributes');
+        expect(d[0].message).toContain('Viewpoint');
+    });
+
+    it('a last hop whose type does not conform to the type of the defining feature is a defect', () => {
+        const short = checkBinding(withPath(['Class.viewpoints', 'Viewpoint.classes']), DCN_SKETCH);
+        expect(roles(short)).toEqual(['featureSources']);
+        expect(short[0].message).toContain('Property');
+        expect(roles(checkBinding(withPath(['Class.viewpoints', 'Viewpoint.classes', 'DynamicClass.events']), DCN_SKETCH))).toEqual(['featureSources']);
+    });
+
+    it('every path is judged and its index named; the conformance of the last hop needs a defining feature', () => {
+        const d = checkBinding(withPath(PATH, ['Class.viewpoints', 'DynamicClass.attributes'], ['Class.viewpoints', 'Viewpoint.classes']), DCN_SKETCH);
+        expect(d.map(x => x.message.slice(0, 18))).toEqual(['featureSources[1].', 'featureSources[2].']);
+        const { slotContainer, definingFeature, valueHolder, valueKinds, ...noSlots } = withPath(['Class.viewpoints', 'Viewpoint.classes']);
+        void slotContainer; void definingFeature; void valueHolder; void valueKinds;
+        expect(checkBinding(noSlots as OntoBinding, DCN_SKETCH)).toEqual([]);
+    });
+});
