@@ -535,6 +535,33 @@ function distinguishing(text: string, o: ObjectNode): { value: string; feature: 
 }
 
 /**
+ * Ticket #687: `offset` is inside a comment of the tokens' trivia, scanned as `commentsOf` scans it (parser.ts): after its
+ * first character, up to a line comment's end (the line break excluded) or an unclosed block comment's, before a closed
+ * block comment's last character.
+ */
+function insideTrivia(tokens: readonly SyntaxToken[], offset: number, comments: ConcreteGrammar['style']['comments']): boolean {
+    const { line, block } = comments;
+    const scan = (trivia: string, at: number): boolean => {
+        let j = 0;
+        while (j < trivia.length) {
+            let e = -1;
+            let open = true;
+            if (line && trivia.startsWith(line, j)) { e = trivia.indexOf('\n', j); if (e < 0) e = trivia.length; }
+            else if (block && trivia.startsWith(block[0], j)) {
+                const close = trivia.indexOf(block[1], j + block[0].length);
+                open = close < 0;
+                e = open ? trivia.length : close + block[1].length;
+            }
+            if (e < 0) { j++; continue; }
+            if (at + j < offset && (offset < at + e || (open && offset === at + e))) return true;
+            j = e;
+        }
+        return false;
+    };
+    return tokens.some(t => (!!t.leading && scan(t.leading, t.start - t.leading.length)) || (!!t.trailing && scan(t.trailing, t.end)));
+}
+
+/**
  * The outline of `text` as `parsed` read it: the objects in text order, nested as the text nests them. An `item` that
  * holds a keyword token itself and contains objects is a group node labelled with that keyword, so a grouped containment
  * gives two levels and an inline one, printing no keyword, none (R-TXT-39 (1)). Unnamed objects are labelled by rule C4'.
@@ -548,7 +575,10 @@ function distinguishing(text: string, o: ObjectNode): { value: string; feature: 
  * parser tested them, without repeats.
  */
 export function completionsAt(text: string, offset: number, grammar: ConcreteGrammar, mm: TextMetamodel): TextCompletion[] {
-    const word = tokenizeText(text, grammar).tokens.find(t => t.k === 'ID' && t.start < offset && offset <= t.end);
+    const tokens = tokenizeText(text, grammar).tokens;
+    // Ticket #687: nothing is offered inside a comment or a string, so Enter at a comment's end breaks the line.
+    if (insideTrivia(tokens, offset, grammar.style.comments) || tokens.some(t => t.k === 'STR' && t.start < offset && offset < t.end)) return [];
+    const word = tokens.find(t => t.k === 'ID' && t.start < offset && offset <= t.end);
     const range: TextRange = word ? { start: word.start, end: word.end } : { start: offset, end: offset };
     const parsed = parseText(text, grammar, { cursor: range.start });
     const enums = new Map<string, TextEnumeration>(mm.enumerations.map(e => [e.name, e]));
