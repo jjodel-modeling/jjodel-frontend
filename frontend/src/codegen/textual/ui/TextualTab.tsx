@@ -44,7 +44,7 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { reprintChanged } from '../textReprint';
-import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
 import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
 import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
@@ -1225,7 +1225,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void; canvas: (elementIds: readonly string[]) => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {}, canvas: () => {} });
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void; canvas: (elementIds: readonly string[]) => void; reveal: (elementId: string, featureName?: string) => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {}, canvas: () => {}, reveal: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
     // E2a (R-TXT-54): a caret the user moved selects its object on the canvas after a short wait; the last id it selected.
@@ -1235,6 +1235,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     // E2b (R-TXT-54 E1): the elements selected on the canvas, highlighted on their spans by a collection of their own.
     const canvasIdsRef = useRef<readonly string[]>([]);
     const canvasHighlightRef = useRef<ReturnType<MonacoEditor['createDecorationsCollection']> | null>(null);
+    // F2 (R-TXT-55 F6, F12): the origin of the generated span last clicked, its feature's line highlighted in the same collection.
+    const revealRef = useRef<{ readonly id: string; readonly feature?: string } | null>(null);
 
     const setDecorations = (spans: readonly ObjectSpan[]): void => {
         const editor = editorRef.current;
@@ -1260,6 +1262,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
      * E2b (R-TXT-54 E1, E8; discovery §5.3): the canvas's selection highlighted on the carried spans, set again each time
      * the spans are (a reprint, an application, a splice). `reveal` scrolls to the span of the element just clicked, the
      * last in selection order: a scroll only, so the caret and the focus stay the user's and no cursor event fires (§6.1).
+     *
+     * F2 (R-TXT-55 F6; risk R5): the origin of a generated span clicked is highlighted on its feature's line, last, and
+     * replaces the whole span of the same element that the canvas's echo of that click selects: one highlight per id.
      */
     const paintCanvasSelection = (reveal: boolean): void => {
         const editor = editorRef.current;
@@ -1267,7 +1272,12 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const m = editor?.getModel();
         const highlight = canvasHighlightRef.current;
         if (!editor || !monaco || !m || !highlight) return;
-        const ranges = selectedSpans(carriedSpans(), canvasIdsRef.current).map(s => {
+        const spans = carriedSpans();
+        const revealed = revealRef.current;
+        const shown: { readonly start: number; readonly end: number }[] = selectedSpans(spans, canvasIdsRef.current).filter(s => s.id !== revealed?.id);
+        const line = revealed ? revealedRangeNow(spans, revealed.id, revealed.feature) : null;
+        if (line) shown.push(line);
+        const ranges = shown.map(s => {
             const from = m.getPositionAt(s.start);
             const to = m.getPositionAt(s.end);
             return new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column);
@@ -1281,6 +1291,15 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             },
         })));
         if (reveal && ranges.length) editor.revealRangeInCenterIfOutsideViewport(ranges[ranges.length - 1], monaco.editor.ScrollType.Smooth);
+    };
+
+    /** F2: `revealedRange` on the editor's text, with the session's parse when it is of that text. */
+    const revealedRangeNow = (spans: readonly ObjectSpan[], id: string, feature: string | undefined): { readonly start: number; readonly end: number } | null => {
+        const m = editorRef.current?.getModel();
+        if (!m) return null;
+        const text = m.getValue();
+        const reading = sessionRef.current?.current();
+        return revealedRange(spans, id, feature, text, reading && reading.text === text ? reading.parsed.tree : undefined);
     };
 
     /**
@@ -1705,6 +1724,14 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         canvas: elementIds => {
             canvasIdsRef.current = elementIds;
             canvasSelectedRef.current = lastSelectedOf(elementIds);
+            // F2 (R5): the canvas's echo of a generated span's click keeps its line; any other selection ends it.
+            if (revealRef.current && !elementIds.includes(revealRef.current.id)) revealRef.current = null;
+            paintCanvasSelection(true);
+        },
+        // F2 (F6, F12): a generated span's origin, revealed on its feature's line; an object with no carried span is silent (E8).
+        reveal: (elementId, featureName) => {
+            if (!revealedRangeNow(carriedSpans(), elementId, featureName)) return;
+            revealRef.current = { id: elementId, ...(featureName ? { feature: featureName } : {}) };
             paintCanvasSelection(true);
         },
     };
@@ -1716,6 +1743,18 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         };
         window.addEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
         return () => window.removeEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
+    }, [modelId]);
+
+    // F2 (R-TXT-55 F6, F7): a model span clicked in a generator tab; only while this tab is open, only for its model.
+    useEffect(() => {
+        const onReveal = (e: Event): void => {
+            const detail = (e as CustomEvent<{ modelId?: unknown; elementId?: unknown; featureName?: unknown }>).detail;
+            if (detail?.modelId === modelId && typeof detail.elementId === 'string') {
+                handlers.current.reveal(detail.elementId, typeof detail.featureName === 'string' ? detail.featureName : undefined);
+            }
+        };
+        window.addEventListener(JjodelEvents.TEXTUAL_REVEAL, onReveal);
+        return () => window.removeEventListener(JjodelEvents.TEXTUAL_REVEAL, onReveal);
     }, [modelId]);
 
     const onConfirm = (): void => {
