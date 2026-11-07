@@ -2885,3 +2885,18 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: E2b crops 1-click, 2-multi, 3-after-apply, 4-no-loop in ~/.jjodel-lanes/P-2026-11-07-1635/ checked by the chat
 **Notes**: Rollback tag `pre-textual-e2b-highlight` on `63b99779b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1821/result.json`.
 **Prompt document name**: 2026-11-07 18:21
+
+## 2026-11-07 — feat(codegen): F1e, `self.<f>` name check in the islands (P-2026-11-07-1736)
+**Prompt**: `claude_2026-11-07_1736_prompt_textual_f1e_names.md`, row F1e of the step F report, decision F5 (R-TXT-55): in a well-formed island, `self.<f>` / `self?.<f>` naming no feature of the owner's class (inherited included) gives one jjel warning on `<f>`.
+**Files touched**: `79f7dbbc2` textual/__tests__/jjelIslands.test.ts (red); `83d82e12a` textual/jjelIslands.ts, textual/__tests__/jjelIslands.test.ts (all under frontend/src/codegen/); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe ALL PASS on 3736 (DemoESM, typed keys, style picker, hover); markers read from Monaco; crops 1-known, 2-unknown, 3-pascal in ~/.jjodel-lanes/P-2026-11-07-1736/, checked by the session
+**Notes**: The island carries its owner's class and feature names (optional fields), so TextualTab is untouched. `.[x]` state, method calls and `self` after a dot are not checked. Bench 13/13 killed (first-only after a test fix). Gates: typecheck 0, build 0, check:docs 0, codegen-lazy 0, vitest 3 import reds only.
+**Prompt document name**: 2026-11-07 17:36
+
+**Ticket** (F1c wiring, measured in the probe): every reprint, the style switch included, calls `setMarkers(null)` (TextualTab.tsx:1391), so a printed text carries no jjel warning until it is edited: a stale `self.<f>` after a rename (report §9 R4) is not shown on open. Not fixed here (outside marker lines); a lane of its own.
