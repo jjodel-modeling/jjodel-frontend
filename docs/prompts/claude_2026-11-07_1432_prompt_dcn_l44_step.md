@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1432
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · f5b80a816 (completed by P-2026-11-07-1455 after the context stop) · verifica visiva non applicabile (no UI path, the prompt owes none; chat C-2026-11-06-2159, lane auto)
 Lane: full (new nucleus module; additive members of an exported union)
 Depends: R-DCN-2, R-DCN-3, R-DCN-4, R-DCN-11, R-DCN-12, R-DCN-14, R-SIM-17, R-SIM-122; L4.1 (`SimNucleus`), L4.2 (`compileDcn`), L3.4 (slot writes), L4.3 (`dcnHandles`); spec docs/spec/claude_spec_2026-11-06_dcn_metamodel_simulation.md §6
 Worktree: ~/jjodel-w-dcn-l44, branch dcn-l44, from dcn-l43 at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)

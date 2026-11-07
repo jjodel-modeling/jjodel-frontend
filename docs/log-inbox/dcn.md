@@ -167,3 +167,20 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-07 14:10
 
 **Ticket** (for L4.4, not blocking): the Petri guard checker rejects `.in(V::D)` with E-CALL (`subsetChecker.ts`), so `compileGuard` and `compileOutput` refuse every DCN guard or watch that tests a class; the DCN guard compiler must parse without that check (the test's `dcnGuard`) or the checker must gain a DCN mode.
+
+## 2026-11-07 — feat: the DCN step, a SimNucleus over the placeless net
+**Prompt**: DCN L4.4 (P-2026-11-07-1432, stopped at the context ceiling; continued by P-2026-11-07-1455 from its handoff): `dcnNucleus` on the shared step with class-test guards, redefinition expansion, Interleave (SoSyM Definition 3) and Sync, slot marker before lookup, then domain, unclassified, ambiguous halts; subset checker DCN mode for guards and outputs; tests first, bench.
+**Files touched**: f5b80a816 — `dcn/dcnStep.ts` (new), `dcn/__tests__/dcnStep.test.ts` (new), `netTypes.ts`, `subsetChecker.ts`, `guardEvaluator.ts`, `boardOutputs.ts`, `components/editor-v2/sim/simBridge.ts`; docs commit — `docs/log-inbox/dcn.md`, Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 14:32
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deroga: 7 code files, not 6; the seventh is simBridge.ts, two `case` lines in `haltMessage` only (Alfonso, second turn of 1432). netStep.ts, netCompile.ts, simRunState.ts untouched. Bench 16/16 killed. Gates: typecheck 0, sim+JjEL+sim-UI 69 files/2253 green, full run 551/554 files with only the known three red, build 0.
+**Prompt document name**: 2026-11-07 14:55
+
+**Ticket** (for a cleanup lane, not blocking): `generalizationClosure` now has copies in `dcnCompile.ts` and `dcnHandles.ts`; export it once from `bindingReader.ts`.
+
+**Ticket** (stale comment, not blocking): `actionEvaluator.ts` still says a slot write reaching `netStep.ts` "halts `undeclared` (lane L4.4)"; under the DCN nucleus slot writes are applied (dcnStep.ts), and the comment should say so. Not touched here (out of scope).
