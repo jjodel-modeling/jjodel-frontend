@@ -7765,6 +7765,15 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **With several instances mounted on one model, the first mounted instance owns the populate and hands it over on
   unmount**; the others render only. Sync registries and problem producers clear when the last instance of the model
   unmounts. Q13.
+- **R-MT-18** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **A saved empty preference means abstract syntax and is restored as such** (`activateViewpoint(null)`), kept apart
+  from «no preference saved». Lane L2 does it; L1 left it out (scene 3b of P-2026-11-07-0105: `!savedVpId` skips `''`).
+- **R-MT-19** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The layout key becomes an input of the incremental sync of `useJjomSync.ts` before lane L3, as its first step.**
+  The regression of `242a82bcd` (live since 3.1.0, `docs/discovery/discovery_2026-11-07_layout_switch_after_242a82bcd.md`)
+  is fixed by a dependency on `getLayoutKeyOf(state)` and one re-transform of every vertex when it changes; L3's per-tab
+  key enters through the same dependency. Critical zone: the lane waits for Alfonso's go-ahead and starts with a Layer
+  Impact Report.
 
 ## Superate
 

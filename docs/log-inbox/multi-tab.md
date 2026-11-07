@@ -42,3 +42,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: smoke on 3001 and GO in C-2026-11-06-2333; RC-23 done on lane P-2026-11-07-0105
 **Notes**: Union on docs/log-inbox/multi-tab.md: the trunk block was empty, result equals the branch side, only the markers removed. Branch vitest not runnable read-only in /Users/alfonso/jjodel-w-mtl1 (no node_modules); the 10 new tests were counted in the source and confirmed after the merge. The tip moved before this commit: textual-d-writing-aids merged by another chat (5e1179252), my two files untouched.
 **Prompt document name**: 2026-11-07 02:31
+
+## 2026-11-07 — merge: multi-tab-l0b into alfonso-frontend-jjtl (P-2026-11-07-0351)
+**Prompt**: `claude_2026-11-07_0351_prompt_merge_multi-tab-l0b.md`, a direct merge by `lane-run merge --direct`, no session: `multi-tab-l0b` into `alfonso-frontend-jjtl`; closed by hand by the project chat after the worker stopped blocked.
+**Files touched**: merge `38f2f079d`: the L0b report `docs/discovery/discovery_2026-11-07_layout_switch_after_242a82bcd.md` and the Status of `docs/prompts/claude_2026-11-07_0106_prompt_multi_tab_l0b_layout_switch_probe.md`; this commit: this entry, the Status of the merge prompt, R-MT-18..19, the session checkpoint.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `38f2f079d` in the worker all green except vitest, 2 failed in `languageService.test.ts` and `outline.test.ts` (timing budgets under load about 120); rerun alone at load 7: 67/67 green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Rollback tag `pre-multi-tab-l0b` on `275486660`. Docs-only merge; the red files are timing tests outside the merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0351/result.json`.
+**Prompt document name**: 2026-11-07 03:51
