@@ -56,6 +56,70 @@ active log is not touched by this lane.
 **Notes**: Rollback tag `pre-multi-tab-l0b` on `275486660`. Docs-only merge; the red files are timing tests outside the merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0351/result.json`.
 **Prompt document name**: 2026-11-07 03:51
 
+## 2026-11-07 — fix: a viewpoint switch re-transforms every vertex once (R-MT-19)
+**Prompt**: `claude_2026-11-07_0430_prompt_multi_tab_layout_key_fix.md`, lane full, critical zone: the layout key becomes an input of the incremental sync of `useJjomSync.ts`, LIR first, red tests first, fix, gates; visual check in lane P-2026-11-07-0431.
+**Files touched**: `docs/discovery/lir_2026-11-07_layout_key_resync.md` (f17528bb1); `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshotLayoutKey.test.ts` (b1c6dd226); `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts` (03a093081); this entry and the Status of the prompt file, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. No app check in this lane (lane 0431). Gates on 03a093081: typecheck exit 0; vitest 14532 passed, 2 skipped, 3 files red at import (the §17 set); build exit 0, chunk-size warning only; check:docs exit 0.
+**Out-of-scope changes**: yes. Six files, all named by the prompt. The selector-2 body and the `:1406` comparison moved verbatim into `vertexSnapshot.ts`, so the bench executes them: beyond the bare key check.
+**Layer Impact Report**: produced
+**Smoke visivo**: app probes passed (lanes 0431 on 03a093081, 0628 on 8328662df): layout switch 3|3 on all 6 steps × 3 runs, container switch c0 = c2; Alfonso's visual GO still owed (crops in ~/.jjodel-lanes/P-2026-11-07-0555/crops-0628/)
+**Notes**: Red 8/8 on b1c6dd226, green 8/8. Bench: dropping term:layoutKey kills 3, the key on edges 1, the ch: comparison 3. The key sits in each vertex's ch: number, not a per-run flag, so the anti-bounce carry-over keeps the old key (LIR). Not executed by the bench: the hook wiring and the transformer (joiner, no DOM). The prompt's reference lir_2026-10-21_jjomsync_incremental.md does not exist in docs/discovery.
+**Prompt document name**: 2026-11-07 04:30
+
+## 2026-11-07 — perf: a key-only layout switch skips the transformer (R-MT-19)
+**Prompt**: `claude_2026-11-07_0555_prompt_multi_tab_layout_key_cost.md`, lane full, critical zone: cut the cost of the re-transform 0430 added to a viewpoint switch; items 3-5 (probes, gates, closure) continued by P-2026-11-07-0628 after the soft context ceiling.
+**Files touched**: `docs/discovery/lir_2026-11-07_layout_key_resync.md` (e6241d590, closing addendum in the 0628 docs commit); `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshotLayoutKey.test.ts` (e6aa6c026); `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts` (8328662df); this inbox and the Status of prompts 0430, 0431, 0555, 0628 (0628 docs commit).
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-07 04:30
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile in this lane: app probes pass on 8328662df (layout 3|3 on all 6 steps × 3 runs, container c0 = c2); Alfonso's visual GO is owed
+**Notes**: Switch on the 407-object model, head minus parent: +474 ms mean over 3 pairs (0431: +723), above the 300 ms target; noisy pairs. LObject.name reads per switch dropped from 3458 to 407. Sync files +10 ms (was +231). The rest is React Flow (+186) and DynamicHandles (+149) on nodes that really move, out of scope; acceptance is Alfonso's call. Vitest ms-budget reds are from load: green when rerun alone. 9 files across the lanes, all named by the prompts. Figures in the LIR addendum.
+**Prompt document name**: 2026-11-07 05:55
+
+## 2026-11-07 — merge: multi-tab-layout-key into alfonso-frontend-jjtl (P-2026-11-07-0748)
+**Prompt**: `claude_2026-11-07_0748_prompt_merge_multi-tab-layout-key.md`, lane full (merge): `multi-tab-layout-key` at `9353e859e` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `da2af3bf7`: the 9 files of the branch (LIR, this inbox, 4 prompts, `useJjomSync.ts`, `vertexSnapshot.ts`, `vertexSnapshotLayoutKey.test.ts`); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `da2af3bf7`: typecheck and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 541 files, 14586 tests as expected (tip 14567 + 19), 2 failed and 1 hook failed (timing, Chromium close hook), red on the tip too, 72/72 green alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on the 0628 crops of the same code 8328662df (layout switch A-B-A and reload 3/3 at every step, container switch 0 failures; crop_2_B nodes at B positions, light theme)
+**Notes**: Merge tree `6314007db` equal to the merge-tree measure; probes 12/12 once. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtlk` (no node_modules there; writing forbidden): the new file's 19 tests counted at `9353e859e` and confirmed 19/19 on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 07:48
+
+## 2026-11-07 — fix: problem producers clear only on the last unmount of a model
+**Prompt**: `claude_2026-11-07_0833_prompt_multi_tab_l4b_problem_producers.md`, lane L4b: a ref count per (producer, model) in `problems/registry.ts`, so closing one tab no longer erases the badges of another tab on the same model (discovery §4.2).
+**Files touched**: `fd90572de`: `problems/__tests__/producerMounts.test.ts` (new); `65e74534d`: `problems/registry.ts`, `ConformanceProblemSync.tsx`, `SimCheckProblemSync.tsx`, `ValidationFreshnessSync.tsx`; this commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates: typecheck exit 0, build exit 0, check:docs 5/5; vitest 542 files, 14591 passed, 4 files red: the 3 known `window` imports and `irCollapsedRender` (Chromium close hook timeout), 13/13 green alone. The two-tab path is not reachable until L6, so no app check.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (reachable from L6)
+**Notes**: Counted per producer AND model: one editor releases its producers in sequence, a shared count would never reach zero on the first. Uniqueness has no unmount cleanup, unchanged. The three effects now key on [modelid] (Conformance was []), so an in-place model switch clears the old model at its last release. The last conformance instance also clears entries owned by the model it did not write. Mutation bench in `65e74534d`: 4 mutations, all killed.
+**Prompt document name**: 2026-11-07 08:33
+
+## 2026-11-07 — merge: multi-tab-l4b into alfonso-frontend-jjtl (P-2026-11-07-0853)
+**Prompt**: `claude_2026-11-07_0853_prompt_merge_multi-tab-l4b.md`, lane full (merge): `multi-tab-l4b` at `a9d626afe` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `ee9d7dbba`: the 7 files of the branch (this inbox, the L4b prompt, `problems/registry.ts`, `ConformanceProblemSync.tsx`, `SimCheckProblemSync.tsx`, `ValidationFreshnessSync.tsx`, `producerMounts.test.ts`); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates on `ee9d7dbba`: typecheck and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 542 files, 14593 tests as expected (tip 14586 + 7), 0 failed, 4 files red: the 3 known `window` imports and `irCollapsedRender` (Chromium close hook timeout), red on the tip too, green alone. The two-tab path has no app check before L6.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (two tabs on one model are reachable only from L6; chat GO on 7 unit tests and a mutation bench of 4 mutants)
+**Notes**: Merge tree `1447dede4` equal to the merge-tree measure; probe 1/1 once. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtl4b` (no node_modules there; writing forbidden): the 7 new tests taken from the branch entry and confirmed 7/7 on the merge. Trunk tip also had an `elementWaiterScope` timing red, green alone. Status reads "non applicabile", not the template's "passata", per the GO. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 08:53
 ## 2026-11-07 — feat: per-tab viewpoint plumbing, saved abstract syntax restored (multi-tab L2)
 **Prompt**: lane L2 of multi-tab (P-2026-11-07-0440): tab viewpoint state in EditorSwitch, optional viewpointId on EditorContext, viewport key and R3 from it, getLayoutKeyFor beside getLayoutKeyOf, picker writes the tab value (Q2), focus write (Q7), R-MT-18
 **Files touched**: docs/discovery/lir_2026-11-07_tab_viewpoint_plumbing.md (029d1ea4e); vertexLayoutAdapter.test.ts, editorSwitchViewpointPrefs.test.ts (2f1f166b8); vertexLayoutAdapter.ts, EditorContext.tsx, EditorSwitch.tsx, EditorV2.tsx, Toolbar.tsx (a99ea2482)
