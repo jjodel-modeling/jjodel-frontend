@@ -251,3 +251,16 @@ active log is not touched by this lane.
 **Ticket**: On `dcn-drone.jjodel` the invariants of Safe, Moderate and Adverse read `self.ownedSensors`, an association end owned by the association, not a feature of WeatherAssessmentUnit: three W1 errors (measured by the L2.4 probe). For L2.5/L4.5: make association ends reachable from `self`, or change the export.
 **Priority**: medium
 **Found in**: P-2026-11-07-1825
+
+## 2026-11-07 — merge: alfonso-frontend-jjtl into dcn-l24 (P-2026-11-07-1945)
+**Prompt**: `claude_2026-11-07_1945_prompt_dcn_l24_take_trunk.md`, lane full (merge, RC-14): the trunk into `dcn-l24` before the branch merges into it; `registry.ts` resolved by union, both sides of `EditorV2.tsx` kept, gates, merge commit, this entry.
+**Files touched**: merge `ea08a0f8b` (trunk `03bc50239`): the conflict resolution in `frontend/src/components/editor-v2/problems/registry.ts`; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), targeted 72 files 1883/1883, full vitest 15030 passed and 2 skipped, build exit 0, check:docs 4/5 (B below).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (resolution adds no behaviour; the crops of P-2026-11-07-1900 stand)
+**Notes**: One conflict, registry.ts, by union: 'instantiation' then 'dcn', the dcn paragraph renumbered the eighth. EditorV2.tsx and the inboxes merged clean. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after. Full run: the 3 known import reds plus 32 in bashGuard.test.ts, caused by MERGE_HEAD during the merge; 160/160 after the commit. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536, prose in Corregge, Causa), identical to the trunk's.
+**Prompt document name**: 2026-11-07 19:45
