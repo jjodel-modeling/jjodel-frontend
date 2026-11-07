@@ -7712,6 +7712,20 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
 - **R-DCN-21** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
   **Lane order follows the plan of the discovery §6, not the slice numbers**: the languages concern (L3.1) and the
   parse of `self.in` (L3.2) come before W1..W4 (L2.4). Spec §10 keeps its numbering. Q13.
+- **R-DCN-22** (2026-11-07, ratified by Alfonso 2026-11-07 16:46 «procedi in lane auto» on the chat's proposal, evidence: measured, verified: none, reversible: trunk).
+  **An invocation is one step, under every policy: the static operation and every redefinition of an active dynamic
+  class run together, as one parallel assignment read on the previous σ.** Amends R-DCN-4: Interleave orders the
+  contributions of different viewpoints to a tick (monitors) and distinct invocations; it never splits an operation
+  from its own redefinitions. Measured by P-2026-11-07-1455: splitting `land()` of the drone from its redefinition in
+  Flying left `speed 0, distance 5`, in no class of Mode, and halted the run `unclassified` on a correct model.
+- **R-DCN-23** (2026-11-07, ratified by Alfonso 2026-11-07 16:46, proposed by him at 16:14, evidence: read, verified: none, reversible: trunk).
+  **Write ownership (W6): two viewpoints never write the same property, and a static operation writes only properties
+  no viewpoint writes.** Every viewpoint reads every property; only writes are owned. It is the attribute-level form
+  of the frame condition of the SoSyM paper, Definition 3 (a transition of Vi changes only the i-th component). It is
+  a well-formedness error deduced from the write targets of the bodies (operations, redefinitions, monitors), with no
+  ownership declared in the metamodel, checked with W1..W4 in lane L2.4. Under W6 a step can never produce a double
+  assignment across viewpoints, so Sync is always defined and Interleave differs from Sync only through read-write
+  dependencies between viewpoints.
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 

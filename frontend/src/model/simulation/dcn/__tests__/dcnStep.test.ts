@@ -406,18 +406,41 @@ describe('dcnStep: Interleave and Sync of one tick with two viewpoints contribut
         expect(out.kind === 'halted' && out.next.state).toBe(n.initial);
     });
 
-    it('a redefinition expands the invocation: Sync runs both, to Charging; Interleave may run the static one alone, unclassified (W5 gap, spec §5; mutant: the redefinition not re-triggered)', () => {
+    it('a redefinition expands the invocation: Sync runs both, to Charging (mutant: the redefinition not re-triggered)', () => {
+        const f = fixture();
+        const land = idOf(f.compiled, 'dji', 'op_Drone_land');
+        const flying = sigma(f, { dji: { battery: 50, speed: 1, distance: 5 } });
+        const sync = nucleus(f, 'sync');
+        const s = fired(press(sync, flying, land));
+        expect([read(s, 'dji', 'speed'), read(s, 'dji', 'distance')]).toEqual([0, 0]);
+        expect(sync.classify(s).classes.get('dji')!.get('Mode')).toEqual(['Charging']);
+    });
+
+    it('land() under Interleave runs with its redefinition in one step: speed 0, distance 0, Mode Charging (R-DCN-22; mutants: the invocation not grouped, the group fused to its first member, a member selectable alone)', () => {
         const f = fixture();
         const land = idOf(f.compiled, 'dji', 'op_Drone_land');
         const flyingLand = idOf(f.compiled, 'dji', 'op_Flying_land');
         const flying = sigma(f, { dji: { battery: 50, speed: 1, distance: 5 } });
         const n = nucleus(f);
-        expect(n.candidates({ state: flying, event: land }, n.guards).candidates.map(c => c.transition)).toEqual([land, flyingLand]);
-        const sync = nucleus(f, 'sync');
-        const s = fired(press(sync, flying, land));
+        expect(n.candidates({ state: flying, event: land }, n.guards).candidates.map(c => c.transition)).toEqual([land]);
+        const out = press(n, flying, land);
+        const s = fired(out);
         expect([read(s, 'dji', 'speed'), read(s, 'dji', 'distance')]).toEqual([0, 0]);
-        expect(sync.classify(s).classes.get('dji')!.get('Mode')).toEqual(['Charging']);
-        expect(reasonOf(press(n, flying, land, land))).toEqual({ kind: 'unclassified', element: 'dji', viewpoint: 'Mode' });
+        expect(n.classify(s).classes.get('dji')!.get('Mode')).toEqual(['Charging']);
+        expect(out.kind === 'fired' && out.label.candidates).toEqual([land, flyingLand]);
+        expect(n.step({ state: flying, event: land }, flyingLand, n.guards, n.actions).kind).toBe('inadmissible');
+        // in Empty the redefinition of Flying is not active: land() is the static operation alone
+        const empty = fired(press(n, sigma(f, { dji: { battery: 0, distance: 5 } }), land));
+        expect([read(empty, 'dji', 'speed'), read(empty, 'dji', 'distance')]).toEqual([0, 5]);
+    });
+
+    it('a redefinition and its operation writing the same slot halt double-assignment under Interleave too (R-DCN-22, R-SIM-17; mutant: the group fused to its first member)', () => {
+        const f = fixture(m => { m.op_Flying_land.attrs!['Operation.body'] = ['self.speed := 0', 'self.distance := 0']; });
+        const n = nucleus(f);
+        const flying = sigma(f, { dji: { battery: 50, speed: 1, distance: 5 } });
+        const out = press(n, flying, idOf(f.compiled, 'dji', 'op_Drone_land'));
+        expect(reasonOf(out)).toEqual({ kind: 'double-assignment', element: 'dji', attr: 'speed' });
+        expect(out.kind === 'halted' && out.next.state).toBe(flying);
     });
 });
 
