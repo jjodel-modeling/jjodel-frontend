@@ -51,6 +51,14 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
 
+## [3.1.2] - 2026-11-07
+
+The production build of `staging`, on top of 3.1.1. Projects keep format 2.230.
+
+### Fixed
+
+- Switching between two viewpoints that store different layouts moves the nodes to the positions saved for the new viewpoint. Since 3.1.0 the nodes stayed where the previous viewpoint had them until the page was reloaded.
+
 ## [3.1.1] - 2026-11-02
 
 The production build of `staging`, on top of 3.1.0. Projects keep format 2.230.
