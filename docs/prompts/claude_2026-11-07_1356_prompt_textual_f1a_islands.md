@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1356
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · d592aa7c2, 2bd20c384 · gates green (vitest: 3 import reds baseline, laneRun.test.ts load red green alone) · R1 probe in the app, no crops · log entry in docs/log-inbox/codegen.md
 Lane: full (metamodel flag, pure islands module, tests; a probe)
 Depends: D, E1, E2a, #687 (merged), R-TXT-55 (F1-F12)
 Worktree: ~/jjodel-w-textf1a, branch textual-f1a-islands (from trunk 945db7ab8)

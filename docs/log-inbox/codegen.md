@@ -2697,3 +2697,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: #687 crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/ checked by the chat (comment kept, caret on a new line, no suggest widget)
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1330/result.json`.
 **Prompt document name**: 2026-11-07 13:30
+
+## 2026-11-07 — feat(codegen): F1a, JjEL islands and TextAttribute.jjel (P-2026-11-07-1356)
+**Prompt**: `claude_2026-11-07_1356_prompt_textual_f1a_islands.md`, row F1a of the step F report: R1 measured, `TextAttribute.jjel` from the primitive's id, pure `jjelIslands` with the value-to-text map across escapes.
+**Files touched**: `d592aa7c2` metamodel.ts, ui/TextualTab.tsx (:161 and its `../metamodel` import), __tests__/jjelIslands.test.ts; `2bd20c384` jjelIslands.ts (new), __tests__/jjelIslands.test.ts (all under frontend/src/codegen/textual/)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: R1 in the app (DemoESM): `String(a.type)` is `Expression`/`Action`, `a.type.id` undefined, `lookup[a.id].type` the primitive id; ids check 10/10. `jjelIslands` takes the style as a third argument. Benches: 6/6 and 12/14 killed, the two survivors being defensive guards no input reaches. Vitest: the 3 import reds, plus laneRun.test.ts timing out under the full run (145/145 alone).
+**Prompt document name**: 2026-11-07 13:56
