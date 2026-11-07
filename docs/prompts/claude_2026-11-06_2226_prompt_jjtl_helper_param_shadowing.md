@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2226
 Chat: C-2026-11-07-1609
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane fast · db2c1be10 (code), 9410651fd (SPEC) · scoped shadowing, plain JjEL unchanged
 Lane: fast (one executor change, its test and a SPEC note; unattended)
 Depends: none
 Worktree: ~/jjodel-w-jjtlshadow, branch jjtl-helper-param-shadow

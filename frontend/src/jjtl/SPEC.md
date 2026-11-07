@@ -307,6 +307,14 @@ returnType = IDENTIFIER ;
 
 **Semantics:** Helpers are named, reusable JjEL expressions. They are registered as JjEL builtins, making them callable from any expression in the transformation.
 
+**Scoping:** inside a helper's body its parameters shadow a helper, or any builtin, of the same name. Read as a value (`pick`, or passed on as `f(cx, pick)`), the name is the argument. Called (`pick(...)`), it is the argument only when the argument is a function; otherwise the call goes to the helper. The shadowing covers the body and the lambdas in it, not the helpers it calls: each helper sees its own parameters only. Outside helper bodies JjEL resolution is unchanged, builtins first (P-2026-11-06-2226; before it, the parameter read as the helper, silently).
+
+```jjtl
+helper pick(x: Any, which: String) -> String { if which == "a" then "A" else "B" }
+helper echo(cx: Any, pick: String) -> String { pick }               -- the argument
+helper call(cx: Any, pick: String) -> String { pick(cx, pick) }     -- the helper, given the argument
+```
+
 **Example:**
 ```jjtl
 helper formatLabel(name: String, prefix: String) -> String {
