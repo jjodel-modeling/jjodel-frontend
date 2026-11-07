@@ -2363,3 +2363,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — docs only (step F discovery)
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0116/result.json`.
 **Prompt document name**: 2026-11-07 01:16
+
+## 2026-11-07 — discovery: the empty raw name slot of an object created from text (P-2026-11-07-0253)
+**Prompt**: `claude_2026-11-07_0253_prompt_textual_name_slot_discovery.md`: root cause of D3b's finding (P-2026-11-07-0157) that a Module created from the Text tab reads `cpu` everywhere but its raw `name` slot is `[]`, and conformance flags it. Reproduce with controls, trace the write, place the cause, plan the fix.
+**Files touched**: `docs/discovery/discovery_2026-11-07_textual_name_slot.md` (four commits, `dac574b7c`..`55d88a441`); uncommitted: this entry and the prompt's Status (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read only; no source file changed)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (drafted in the report for option B only)
+**Smoke visivo**: non applicabile — read-only discovery; the app was probed by direct calls, not as a visual check
+**Notes**: Cause: `textDiff.ts:549` and `modelLines.ts:141` skip `set h.name` when the handle equals the name, and `create instance of C "h"` (`instance.ts:686-703`) names `data.name` and `initialName`, not the slot. Not core. Measured: the XMI export drops those names too. Plan: four textual files, five pinned tests move. N1..N5 in §8.
+**Prompt document name**: 2026-11-07 02:53

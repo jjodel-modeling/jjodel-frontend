@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0253
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 55d88a441 · read only: report committed, hard stop for N1..N5
 Lane: full (discovery, read only; root cause analysis)
 Depends: P-2026-11-07-0157 (D3b found it: ticket in its log entry and final message)
 Worktree: ~/jjodel-w-textns, branch textual-name-slot, from 04b782a5b (own node_modules)
