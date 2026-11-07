@@ -307,9 +307,24 @@ export class XMIService {
             const metaFeature = feature.instanceof as LAttribute | LReference;
             const featureName = metaFeature?.name || (feature as any).name || 'unknown';
             const rawValues: any[] = (feature.__raw?.values || []) as any[];
-            if (rawValues.length === 0) continue;
 
             const isReference = metaFeature && (metaFeature as any).className === 'DReference';
+            // #656 (R-TXT-58): the identity slot (name : EString, single) is read as get_values
+            // reads it (LModelElement.tsx, the EString case). Never written (raw first value
+            // null/undefined, `[]` included): the owner's initialName, then data.name. Written '':
+            // nameless (R-TXT-45), no attribute.
+            if (!isReference && metaFeature?.name?.toLowerCase() === 'name'
+                && (metaFeature as any).type?.name === 'EString' && (metaFeature as any).upperBound === 1) {
+                if (rawValues[0] === '') continue;
+                if (rawValues[0] === null || rawValues[0] === undefined) {
+                    const ownerRaw = (obj as any).__raw;
+                    const fallback = ownerRaw?.initialName || ownerRaw?.name;
+                    if (fallback) attrs.push(`${featureName}="${this.escapeXml(String(fallback))}"`);
+                    continue;
+                }
+            }
+            if (rawValues.length === 0) continue;
+
             if (!isReference) {
                 // Attribute: primitives or DEnumLiteral pointers → literal name.
                 const rendered = rawValues.map((v) => {

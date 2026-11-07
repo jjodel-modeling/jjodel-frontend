@@ -176,9 +176,18 @@ export function validateConformance(
                 // so a required-but-empty slot looked "present". Same raw-read fallback chain
                 // as the other checks. Presence semantics: at least one raw value that is not
                 // null/undefined/'' — 0 and false ARE values, not absences; the name slot gets
-                // no special fallback.
+                // no special fallback, except when never written (below).
+                // Exception, #656 (R-TXT-58): the identity slot never written (raw first value
+                // null/undefined, `[]` included) reads as get_values reads it (LModelElement.tsx, the
+                // EString case): the owner's initialName, then data.name. A slot written '' stays
+                // nameless (R-TXT-45) and is judged on raw like any other.
+                const isIdentity = attr.name?.toLowerCase() === 'name' && attr.type?.name === 'EString'
+                    && attr.upperBound === 1;
+                const ownerRaw = (obj as any).__raw;
                 const hasValue = feats.some(f => {
                     const rawVals = (f as any).__raw?.values;
+                    if (isIdentity && Array.isArray(rawVals) && (rawVals[0] === null || rawVals[0] === undefined)
+                        && (ownerRaw?.initialName || ownerRaw?.name)) return true;
                     const vals = Array.isArray(rawVals)
                         ? rawVals
                         : (Array.isArray(f.values)
