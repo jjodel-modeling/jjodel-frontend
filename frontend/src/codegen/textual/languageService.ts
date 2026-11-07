@@ -14,15 +14,16 @@
  * (R-TXT-21 (8)). Identity across versions (`displayMatch`) is not computed here: it is quadratic (finding F4), and no
  * query of B1 needs a model id.
  *
- * Completion (D2b, `completionsAt`) is a query of its own: it parses the text again with the cursor (D2a).
+ * Completion (D2b, `completionsAt`) is a query of its own: it parses the text again with the cursor (D2a). So is rename
+ * (D4, `renameLocation`, `renameEdits`): it parses the text, then the text its edits make, and refuses what changes.
  */
 
 import type { ConcreteGrammar } from './concreteGrammar';
 import { applyCase } from './concreteGrammar';
 import type { TextAttribute, TextClass, TextEnumeration, TextFeature, TextMetamodel, TextReference } from './metamodel';
 import { isOuterRef } from './metamodel';
-import type { ItemNode, ListNode, ObjectNode, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
-import { commentsOf, parseText, tokenizeText } from './parser';
+import type { ItemNode, ListNode, ObjectNode, ParsedRef, ParseOptions, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
+import { commentsOf, isApplicableParse, parseText, tokenizeText } from './parser';
 import type { TextNaming } from './printer';
 import { pathKeyword, textNaming } from './printer';
 import { featureTable } from './textMatch';
@@ -684,4 +685,124 @@ export function textOutline(text: string, parsed: TextParseResult, grammar: Conc
         }
     };
     return { nodes, pathAt };
+}
+
+/** D4 (report §5): one edit of a rename, `[start, end)` of the text replaced with `text`. */
+export interface TextRenameEdit extends TextRange {
+    readonly text: string;
+}
+
+/** A rename the service will not do, and why, in words for the rename box. */
+export interface TextRenameRefusal {
+    readonly refused: string;
+}
+
+/** Where a rename starts: the token at the cursor, the name or a reference to it, and the object's name as one types it. */
+export interface TextRenameLocation extends TextRange {
+    readonly name: string;
+}
+
+/** R-TXT-45, decision D4: a name is inserted by typing it; the rename box only replaces one. */
+const RENAME_NAMELESS = 'this object has no name: type one in the text';
+
+interface RenameTarget {
+    readonly parsed: TextParseResult;
+    readonly tokens: ReadonlyMap<number, SyntaxToken>;
+    readonly id: string;
+    readonly name: string;
+    /** The range of the cursor's token. */
+    readonly at: TextRange;
+    /** The object's name token, then the references to it written as its name, in text order. */
+    readonly ranges: readonly TextRange[];
+}
+
+/** The object a rename at `offset` renames, on an applicable parse of `text` only (R-TXT-21 (8)). */
+function renameTarget(text: string, offset: number, grammar: ConcreteGrammar, mm: TextMetamodel, keep: ParseOptions['keep']): RenameTarget | TextRenameRefusal {
+    const parsed = parseText(text, grammar, keep ? { keep } : {});
+    if (!isApplicableParse(parsed)) return { refused: 'the text has errors: fix them before renaming' };
+    if (parsed.refs?.some(r => r.outer && r.start <= offset && offset <= r.end)) {
+        return { refused: 'this reference names an object outside the text (`@"id"`): rename that object where it is printed' };
+    }
+    const tokens = new Map((parsed.tree?.tokens ?? []).map(t => [t.start, t]));
+    const analysis = analyzeText(text, parsed, grammar, mm);
+    const found = analysis.referencesAt(offset, true);
+    const symbols = (ss: readonly TextSymbol[]): TextSymbol[] => ss.flatMap(s => [s, ...symbols(s.children)]);
+    const decl = found[0];
+    const s = decl ? symbols(analysis.symbols).find(x => x.kind === 'object' && x.nameStart === decl.start && x.nameEnd === decl.end) : undefined;
+    if (!decl || !s?.id) return { refused: "nothing to rename here: put the cursor on an object's name or on a reference to it" };
+    const o = parsed.objects.find(x => x.id === s.id);
+    const name = typeof o?.slots.name === 'string' ? o.slots.name : '';
+    if (!s.named || tokens.get(decl.start)?.role !== 'name' || name === '') return { refused: RENAME_NAMELESS };
+    // A reference written as a name is one token, a name or a string; a path (`keyword[k].f[i]`) is several and names no name.
+    const byName = (r: TextRange): boolean => {
+        const t = tokens.get(r.start);
+        return !!t && t.end === r.end && (t.k === 'ID' || t.k === 'STR');
+    };
+    const ranges = [decl, ...found.slice(1).filter(byName)];
+    const at = found.find(r => r.start <= offset && offset <= r.end) ?? decl;
+    return { parsed, tokens, id: s.id, name, at, ranges };
+}
+
+/**
+ * Where the rename box opens at `offset` of `text` (D4, report §5): the token at the cursor, the object's name or a
+ * reference to it, with the name as one types it, a quoted name without its quotes. Refused on a text that is not an
+ * applicable parse, on a nameless object (R-TXT-45), on `@"id"`, and away from any object's name or reference.
+ */
+export function renameLocation(text: string, offset: number, grammar: ConcreteGrammar, mm: TextMetamodel, keep?: ParseOptions['keep']): TextRenameLocation | TextRenameRefusal {
+    const t = renameTarget(text, offset, grammar, mm, keep);
+    return 'refused' in t ? t : { start: t.at.start, end: t.at.end, name: t.name };
+}
+
+/**
+ * The edits that rename the object at `offset` of `text` to `newName` (D4, report §5.2 and §5.3, decision D4 of
+ * R-TXT-53): its name token and every reference token that names it by its name, the declaration first, then in text
+ * order, each written as the printer writes a name (`textNaming`: bare when an identifier and no reserved word, else
+ * quoted). Paths and `@"id"` are never rewritten: they name no name. The edits are checked on the text they make, parsed
+ * with the same carried tokens shifted by the edits (R-TXT-35): refused when that text has an error, or when a reference
+ * names another object than before, token by token. `renameLocation`'s refusals hold here too, and an empty name is
+ * refused. Names inside JjEL strings and validation rules are not rewritten (step F).
+ */
+export function renameEdits(text: string, offset: number, newName: string, grammar: ConcreteGrammar, mm: TextMetamodel, keep?: ParseOptions['keep']): { readonly edits: readonly TextRenameEdit[] } | TextRenameRefusal {
+    if (newName === '') return { refused: 'a name cannot be empty: to remove it, delete it in the text' };
+    const t = renameTarget(text, offset, grammar, mm, keep);
+    if ('refused' in t) return t;
+    const written = textNaming(grammar, t.parsed.objects).name(newName);
+    const edits = t.ranges.map(r => ({ start: r.start, end: r.end, text: written }));
+
+    // §5.3: the edited text, read as the tab would read it after the edits.
+    const sorted = [...edits].sort((a, b) => a.start - b.start);
+    /** Where an offset of `text` lands in the edited text; an edit's own start does not move. */
+    const shift = (p: number): number => {
+        let d = 0;
+        for (const e of sorted) {
+            if (e.end > p) break;
+            d += e.text.length - (e.end - e.start);
+        }
+        return p + d;
+    };
+    let after = text;
+    for (const e of [...sorted].reverse()) after = after.slice(0, e.start) + e.text + after.slice(e.end);
+    const moved = keep?.map(k => ({ start: shift(k.start), end: shift(k.end), text: k.text }));
+    const next = parseText(after, grammar, moved ? { keep: moved } : {});
+    const quoted = JSON.stringify(newName);
+    if (!isApplicableParse(next)) {
+        const e = next.errors[0];
+        return { refused: e ? `renaming to ${quoted} gives the text an error at ${e.line}:${e.col}: ${e.message}` : `renaming to ${quoted} leaves an object of the text unread` };
+    }
+    const startsBefore = new Map(t.parsed.spans.map(s => [s.id, s.start]));
+    const startsAfter = new Map(next.spans.map(s => [s.id, s.start]));
+    /** What a reference names, comparable across the two texts: the start of its target in the edited text. */
+    const target = (to: ParsedRef['to'], starts: ReadonlyMap<string, number>, move: (p: number) => number): string =>
+        to === undefined ? 'nothing' : isOuterRef(to) ? `outer ${to.outer}` : `at ${move(starts.get(to) ?? -1)}`;
+    const refsAfter = new Map((next.refs ?? []).map(r => [r.start, r]));
+    for (const r of t.parsed.refs ?? []) {
+        const n = refsAfter.get(shift(r.start));
+        if (n && target(r.to, startsBefore, shift) === target(n.to, startsAfter, p => p)) continue;
+        const tok = t.tokens.get(r.start);
+        return { refused: `renaming to ${quoted} changes what the reference at ${tok ? `${tok.line}:${tok.col}` : r.start} names` };
+    }
+    if ((next.refs ?? []).length !== (t.parsed.refs ?? []).length) return { refused: `renaming to ${quoted} changes the references of the text` };
+    const renamed = next.objects.find(o => startsAfter.get(o.id) === shift(startsBefore.get(t.id) ?? -1));
+    if (renamed?.slots.name !== newName) return { refused: `${quoted} does not read back as the object's name` };
+    return { edits };
 }
