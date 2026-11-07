@@ -55,13 +55,15 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { isMarked, presentationOf, step } from '../../../model/simulation/netStep';
+import { isMarked, presentationOf } from '../../../model/simulation/netStep';
+import { nucleusOf } from './simNucleus';
 import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState';
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, SimState, SimStateAccess, SimValue, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import type { InputValue } from './simBridge';
+import type { SimNucleus } from './simNucleus';
 
 /** Who chose a step among two or more candidates (R-SIM-100): a click on the list, or a draw. */
 export type SimOrigin = 'user' | 'random';
@@ -80,6 +82,11 @@ export interface SimTraceStep {
 /** One started run of one model. */
 export interface SimRun {
     readonly net: CompiledNet;
+    /**
+     * DCN L4.1: what the run steps with, the replay, the single step, Play and the Clock's enabling test reading
+     * it; `startRun` sets the Petri nucleus of `net`, and a record without it steps with that one (`nucleusOf`).
+     */
+    readonly nucleus?: SimNucleus;
     /** `config.event` is always `null` here: every step consumes its input (spec §4.4). */
     readonly config: NetConfiguration;
     /** Set by a `halted` step, kept until Reset (R-SIM-29). */
@@ -325,10 +332,11 @@ export function configAt(run: SimRun, n: number): NetConfiguration | null {
     const kept = run.keptConfigs ?? [];
     const index = n - (m - kept.length) - 1;
     if (index >= 0) return kept[index];
-    let cfg: NetConfiguration = { state: run.net.initial, event: null };
+    const nucleus = nucleusOf(run);
+    let cfg: NetConfiguration = { state: nucleus.initial, event: null };
     for (const t of trace.slice(0, n)) {
         const given = t.inputs ? withInputs(run, t.inputs) : run;
-        const o = step(run.net, { state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
+        const o = nucleus.step({ state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
         if (o.kind === 'inadmissible' || o.kind !== t.kind) return null;
         cfg = o.next;
     }

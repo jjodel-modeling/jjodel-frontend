@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0701
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane dcn · 8de3f6ae8 · bench 12/12 killed · verifica visiva passata 2026-11-07 (chat, browser parity with base on DemoESM, P-2026-11-07-0750)
 Lane: full (changes an exported interface of the run state; behaviour-preserving refactor of the simulator)
 Depends: R-DCN-8, R-DCN-11, R-SIM-29, R-SIM-122, R-SIM-137..141; discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §3.1, §3.2
 Worktree: ~/jjodel-w-dcn-l41, branch dcn-l41, from dcn at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
