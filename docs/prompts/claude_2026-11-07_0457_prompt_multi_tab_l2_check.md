@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0457
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · app check 3 runs per tree, V1 V2 R-MT-18 3/3, V3 +1 undo per focus, one tab = base · LIR addendum · non fuso: hard-stop, visual check due
 Lane: full (measurement and closure; no source change)
 Depends: P-2026-11-07-0440 (code and gates on branch multi-tab-l2)
 Worktree: ~/jjodel-w-mtl2, branch multi-tab-l2, at this prompt's commit (node_modules by the P14 symlink, removed at the end)

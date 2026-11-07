@@ -96,3 +96,80 @@ Smoke scenarios potentially affected:
 
 Uncertain about propagation: none found that reaches the sync or the D-layer; V3 is the one D-layer effect, and it is
 the existing `activateViewpoint` write fired at a new moment.
+
+## Addendum 2026-11-07 — app check (P-2026-11-07-0457)
+
+Measured in the app, light theme (no `data-theme` attribute is set; D-UI-15), viewport 1600x1000, scale 1. Head:
+`multi-tab-l2` at `cec8db8a6` (code `a99ea2482`), port 3621. Base: `69c191631`, the parent of L2, in a temporary detached
+worktree (`~/jjodel-w-mtl2-base`, removed at the end), port 3622. Three runs per tree, a fresh browser profile each.
+Fixture per run: `scene_3_DemoESM.jjodel` imported; models A = `demoESM`, B = `esmB` (same metamodel, empty); VP1 =
+`DemoESM / Generic` (derived), VP2 = `ProbeW` (`newVP`), both exclusive; root on abstract syntax, no saved preference,
+no saved viewport. Picks, tab focus (a click on the app bar tab) and drags are real gestures; tab open and close go
+through `DockManager`; setup and the seeded preferences and viewports are direct writes. The three runs of each tree
+are identical line for line. Probe, runs and crops: `~/.jjodel-lanes/P-2026-11-07-0457/` (`probe.mjs`,
+`run-<tree>-<n>.json`, `summarize.mjs`, `crop_*.png`).
+
+### V1 — a pick in A, focus B
+
+| Step | Expected (L2) | Head r1/r2/r3 | Match | Base (reference) |
+|---|---|---|---|---|
+| ProbeW picked in B | B ProbeW, root ProbeW, prefB ProbeW; A Abstract | as expected | 3/3 | A also shows ProbeW |
+| focus A | root back to abstract; A Abstract | root null, A Abstract, B ProbeW | 3/3 | root ProbeW, A ProbeW |
+| VP1 picked in A | A VP1, root VP1, prefA VP1, prefB ProbeW | as expected | 3/3 | B also shows VP1 |
+| focus B | B ProbeW, root ProbeW, prefB ProbeW, prefA VP1 | as expected | 3/3 | B VP1, root VP1 (prefs as head) |
+| focus A again | A VP1, root VP1 | as expected | 3/3 | root VP1 |
+
+### V2 — B reopens restoring its saved ProbeW
+
+Seeded for B: preference ProbeW; viewports `__abstract__` (11, 22, 0.61), VP1 (55, -44, 0.83), ProbeW (-133, 77, 1.37).
+Root VP1, A focused.
+
+| Expected (L2) | Head r1/r2/r3 | Match | Base (reference) |
+|---|---|---|---|
+| B on ProbeW, viewport (-133, 77, 1.37) | B ProbeW, root ProbeW, viewport (-133, 77, 1.37) | 3/3 | B ProbeW, viewport (55, -44, 0.83): read under the root's key, one render before the restore |
+
+### V3 — undo entries added by a focus switch
+
+`statehistory.all.undoable.length` (equal to the offline user's stack in every reading).
+
+| Case | Head r1/r2/r3 | Base |
+|---|---|---|
+| A on VP1, B on ProbeW: focus B, then back to A | +1, +1 (2 per round trip); top delta keys `idlookup`, `viewpoint` | +0, +0 |
+| control, both tabs on VP1: focus A, then B | +0, +0 | +0, +0 |
+
+Each focus write is one D-layer undo step, as §5 V3 predicted (R-MT-15: one stack across tabs). Not fixed here.
+
+### R-MT-18 — saved `''` and no saved preference
+
+| Step | Expected | Head r1/r2/r3 | Match | Base (reference) |
+|---|---|---|---|---|
+| B reopens, saved `''` (root VP1 before) | B Abstract syntax, root null | B Abstract, root null, viewport `__abstract__`'s | 3/3 | B on the root (ProbeW): `''` skipped |
+| B reopens, no preference | B on the root, root unchanged, no preference written | B VP1 = root, prefB none | 3/3 | same: B on the root (ProbeW), prefB none |
+
+Where the preference lives: `localStorage` `jjodel.editorPrefs.<modelid>`, JSON `{ viewpointId, editorMode }`, per
+browser, outside the project file (`EditorSwitch.tsx:16-39`). A value written before L1 cannot be told apart from one
+written after: same key, same literal (`viewpointId: viewpointId || ''`, `editorMode: 'flow'`), no version, no
+timestamp. Before L1 (`d9949895c^`, `EditorSwitch.tsx:108`) every mounted model tab wrote it on every root change, so a
+stored `''` may be another tab's pick of abstract syntax, or an undone activation, rather than this model's choice;
+after L1 only the picker of the model's own toolbar writes it (`saveViewpointPreference`, `EditorSwitch.tsx:92`). Until
+L2 a `''` was ignored; from L2 it restores abstract syntax, so a cross-written `''` left by a pre-L1 session now opens
+that model in abstract syntax. A fresh profile cannot measure how many real users carry one.
+
+### One tab — A alone, ProbeW -> VP1 -> ProbeW from the picker
+
+Three nodes dragged down under VP1 and right under ProbeW first. Per node, DOM translate against the app's resolver
+(`readVertexLayout` under the active key), at +4 s and +10 s.
+
+| Step | Head match | Base match | Head DOM = base DOM |
+|---|---|---|---|
+| ProbeW baseline | 9/10 | 9/10 | yes |
+| ProbeW -> VP1 | 4/6 | 4/6 | yes |
+| VP1 -> ProbeW | 9/10 | 9/10 | yes |
+
+52/52 node positions equal between head and base in each run: no regression of one-tab behaviour. The misses are the
+trunk's and the same on both trees: under VP1, `locked` and `off` keep their ProbeW positions (DOM 464,208 and 1104,208,
+VP1 records 48,208 and 896,208), and under ProbeW `unlocked` sits at 464,208 over `locked` with no record (resolver
+seed 470,50). Same kind as the stale positions L0b measured (`~/.jjodel-lanes/P-2026-11-07-0106/handoff.md`); not L2.
+
+Crops (head r3): `crop_v1_focus_B.png`, `crop_v2_B_reopened.png` (zoom 140%), `crop_rmt18_saved_empty.png` (Abstract
+syntax, 60%), `crop_one_tab_end.png` (shows the overlap above). Page errors: 0 in all six runs.
