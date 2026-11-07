@@ -15,6 +15,8 @@ import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '
 import { conformanceMarks, CONFORMANCE_SOURCE, ruleMarks, VALIDATION_SOURCE } from '../conformanceMarks';
 import type { MarkedViolation, RuleProblem } from '../conformanceMarks';
 import { portGrammar, portObjects, PORT_MM, PORT_TEXT_CLIKE } from './portCorpus';
+import { getNodeProblemsSnapshot } from '../../../components/editor-v2/problems/registry';
+import { clearValidationProblems, publishValidationProblems } from '../../../components/editor-v2/problems/validationToProblems';
 import { libraryObjects, tolerantCases } from './tolerantCorpus';
 
 // The Monaco adapter's theme imports `joiner` (textualMonaco.ts header): the bench gives it empty rules.
@@ -255,5 +257,24 @@ describe('(3) user validation-rule problems as marks on the carried spans (D9)',
         const carried = spans.map(s => ({ ...s, start: s.start + '// one\n// two\n'.length, end: s.end + '// one\n// two\n'.length }));
         const all = [p('m'), p('p3', { feature: 'driver' })];
         expect(shown(typed, ruleMarks(all, OWNER, carried, typed, parseText(typed, g).tree))).toEqual(shown(text, ruleMarks(all, OWNER, spans, text, tree)));
+    });
+
+    it('the registry as the tab reads it: a run\'s entries by span id; the next run replaces them; the vertex entry stays off the text', () => {
+        const read = () => ruleMarks(spans.flatMap(s => getNodeProblemsSnapshot(s.id)), OWNER, spans, text, tree);
+        const viol = (instanceId: string) => ({ instanceId, ruleId: 'r1', ruleName: 'positiveWidth', message: `width of ${instanceId} must be positive` });
+        try {
+            expect(read()).toEqual([]);
+            publishValidationProblems(OWNER, [viol('m'), viol('p1')], id => `v-${id}`);
+            expect(getNodeProblemsSnapshot('v-m').length).toBe(1);
+            expect(shown(text, read())).toEqual(['Module cpu {', 'instr : Word(32)']);
+            expect(read()[0]).toMatchObject({ message: 'width of m must be positive', rule: 'positiveWidth', source: VALIDATION_SOURCE });
+            publishValidationProblems(OWNER, [viol('p1')]);
+            expect(shown(text, read())).toEqual(['instr : Word(32)']);
+            publishValidationProblems('model-2', [viol('p3')]);
+            expect(shown(text, read())).toEqual(['instr : Word(32)']);
+        } finally {
+            clearValidationProblems(OWNER);
+            clearValidationProblems('model-2');
+        }
     });
 });

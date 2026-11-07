@@ -36,7 +36,7 @@ import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures, jjelOf } from '../metamodel';
 import { readNewModel } from '../modelLines';
-import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
+import { conformanceMarks, CONFORMANCE_SOURCE, ruleMarks } from '../conformanceMarks';
 import type { MarkedViolation } from '../conformanceMarks';
 import { commentsOf, isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
@@ -46,6 +46,7 @@ import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply
 import { reprintChanged } from '../textReprint';
 import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
 import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
+import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
@@ -1030,6 +1031,9 @@ const EDIT_MARKER_OWNER = 'textual-edit';
 /** D3b: the owner of the conformance markers, apart from the edit's, so a pause's parse never clears them (D8). */
 const CONFORMANCE_MARKER_OWNER = 'textual-conformance';
 
+/** D3c (D9): the owner of the validation-rule markers, apart from the edit's and the conformance's; the apply never reads them. */
+const VALIDATION_MARKER_OWNER = 'textual-validation';
+
 /** F1c (R-TXT-55 F3): the owner of the JjEL errors of the islands, warnings the apply never reads. */
 const JJEL_MARKER_OWNER = 'textual-jjel';
 
@@ -1248,6 +1252,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
         setConformanceMarkers();
+        setRuleMarkers();
         paintCanvasSelection(false);
     };
 
@@ -1301,6 +1306,33 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             };
         }));
     };
+
+    /**
+     * D3c (D9): the problems the last validation run wrote in the registry for this model, as warnings on the carried
+     * spans, set again with the spans and on each change of the registry. The producer is not reactive: none before a run.
+     */
+    const setRuleMarkers = (): void => {
+        const monaco = monacoRef.current;
+        const m = editorRef.current?.getModel();
+        if (!monaco || !m) return;
+        const text = m.getValue();
+        const reading = sessionRef.current?.current();
+        const tree = reading && reading.text === text ? reading.parsed.tree : undefined;
+        const spans = carriedSpans();
+        monaco.editor.setModelMarkers(m, VALIDATION_MARKER_OWNER, ruleMarks(spans.flatMap(s => getNodeProblemsSnapshot(s.id)), modelId, spans, text, tree).map(r => {
+            const from = m.getPositionAt(r.start);
+            const to = m.getPositionAt(r.end);
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: r.source,
+                ...(r.rule ? { code: r.rule } : {}),
+                message: r.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+    };
+    useEffect(() => subscribeProblems(() => setRuleMarkers()), [modelId]);
 
     const onViolations = (vs: readonly MarkedViolation[]): void => {
         violationsRef.current = vs;
