@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0010
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 9e5452556 · verifica visiva non dovuta · log entry in docs/log-inbox/dcn.md
 Lane: full (two checkers, no UI path)
 Depends: R-DCN-12, R-DCN-24; L3.4 (DCN action mode), L2.4 (`dcnWellFormedness.ts`); tickets in docs/log-inbox/dcn.md (P-2026-11-07-1900)
 Worktree: ~/jjodel-w-dcn-conf, branch dcn-conf, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
