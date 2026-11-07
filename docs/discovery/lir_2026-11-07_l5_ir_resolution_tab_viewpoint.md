@@ -87,3 +87,57 @@ One tab, or the standalone route: `viewpointId` is the root's value (L2 initiali
 - Symbol Editor opened from the views editor: instance sizes as today.
 
 Uncertain about propagation: none found; the Sync layer and the D-layer are not reached.
+
+## 7. Addendum: app check (P-2026-11-07-1730)
+
+Tree `~/jjodel-w-mtl5` at `3bb82e75e` (code `f2ddead3d`), dev server 3730 started and stopped by `lane-run probe`,
+one per probe run. Probes copied into `~/.jjodel-lanes/P-2026-11-07-1730/`, originals untouched; JSON, logs and crops
+there. Every probe run 0 page errors. Load (1-min) below 40 before each run (two waits, from 105 and 40.1).
+
+**Gates not reached by 1516.** `npm run build` exit 0, only the chunk-size warning. `npm run check:docs`: below,
+in the log entry of 1516.
+
+**Two tabs on the demo project** (`~/Downloads/jjodel-multitab-demo.jjodel` of P-2026-11-07-1439, imported by drop in
+a fresh profile per run; new probe `demo-tabs.mjs`). Baseline: each (model, viewpoint) alone in one tab. Tab A
+Apartment on «Floor plan», tab B Office on «Control wiring», focus by a click on the app bar tab; both panes read at
++4 s and +10 s. Colours: per metaclass, the sorted set of colours painted inside its nodes (backgrounds, SVG fills and
+strokes, borders, text).
+
+| Pane | Single-tab baseline | Two tabs: focus A / B / A, +4 s and +10 s, r1 / r2 / r3 | Colours and names vs baseline |
+|---|---|---|---|
+| A, Apartment, Floor plan | 18 nodes (17 under Control wiring) | 18 at every read | equal at every read |
+| B, Office, Control wiring | 25 nodes (27 under Floor plan) | 25 at every read | equal at every read |
+
+The root followed the focused tab (Floor plan, Control wiring, Floor plan). Controls with signal: each model's node
+count differs between the two viewpoints, and the device colours differ (Control wiring: Sensor background
+`rgb(220, 252, 231)` border `rgb(22, 163, 74)`, Controller `rgb(219, 234, 254)` / `rgb(29, 78, 216)`; Floor plan: the
+neutral set for both). A first run compared only the first painted background, the node chrome, equal under both
+viewpoints: vacuous, kept as `demo-0-chromesig.json`, not counted. Three runs after the fix: 15/15 checks each.
+
+**The L3 pair.** The 1352 scene (two-tab probe, `SCENES=all`, one run): pane A on V draws
+
+| Step, +4 s and +10 s | 1352 r1 (before L5) | this branch |
+|---|---|---|
+| 1 focus A | 6 | 6 |
+| 2 focus B (root W) | 10 | 6 |
+| 3 focus A again | 6 | 6 |
+| 4 after a drag in B | 10 | 6 |
+
+Pane B on W: 3 at every read on both. Positions: both panes 3/3 at the tab's own key at every read, all A nodes 6/6
+against the resolver under V.
+
+**Symbol Editor.** No node-side opener exists: the only dispatcher of the open event is `ViewData.tsx:111`, the views
+editor, with no tab (§0). The opener contract was exercised by dispatching the event with a «Control wiring» view
+(`Sensor (wiring)`) and `viewpointId` = Control wiring while tab A (root Floor plan) was focused: the modal opens on
+that view, r1..r3. No signal on the size path: no vertex of the demo has an `isResized` record under any key, so the
+instance sizes are the same under either key; the preview reads «no node on canvas», as expected with tab A focused.
+
+**Single tab, no regression.** Layout probe of 0628 (`LS_RUNS=3`; this tree's seed sets the welcome key; crops off):
+3/3 at every step, every run, at +4 s and +10 s; 18/18 table rows yes / yes / yes; exit 0. Container probe, one run:
+5 checks PASS, 0 failures (12 node boxes identical c0 vs c2; 0 hulls, vacuous on this fixture as before). The 0457
+scenes V1, V3, V2, R-MT-18 and ONE (same run as the L3 pair): the 24 summary lines (steps, undo on focus +0/+0, node
+reads 10/10 and 6/6) identical to 1352 r1.
+
+**Crops** (light theme, demo r1): `crop_l5_tabA_apartment_floor_plan.png` (step 3), `crop_l5_tabB_office_control_wiring.png`
+(step 2), `crop_l5_symbol_editor.png`. Not committed. Observation, not L5's scope: in the tab A crop the side panel
+inspector shows the model Office, the last tab opened. Alfonso's visual check is due.

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1730
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · no source change · build exit 0 · demo two tabs 18/18 and 25/25 nodes, own colours, x3 · L3 pair 6/6 (was 6/10) · single tab 3/3 every step x3, container 0 failures, 0457 scenes unchanged · Symbol Editor: no node-side opener, contract by dispatch · LIR §7 · hard-stop: visual check due · non fuso
 Lane: full (gates, measurement and closure of L5; no source change)
 Depends: P-2026-11-07-1516 (LIR a87146a64, tests 7b3cf6d2a, code f2ddead3d), its handoff `~/.jjodel-lanes/P-2026-11-07-1516/handoff.md`, the demo project of P-2026-11-07-1439 (`~/Downloads/jjodel-multitab-demo.jjodel`)
 Worktree: ~/jjodel-w-mtl5, branch multi-tab-l5, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

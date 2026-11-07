@@ -197,3 +197,22 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (crops of Apartment on Floor plan, Office on Control wiring and Apartment switched to Control wiring, checked by the session)
 **Notes**: Second run ALL PASS 24/24: models 19 and 28 objects, two exclusive viewpoints, V1-V4, in-tab switch and back, Office kept its viewpoint, re-import counts and 12 positions (record and DOM). First run: 2 script bugs, fixed in the 1439 copy of `build.mjs`: record collector matched DObject on a `model` field it lacks (12 nulls), export check searched the lz-compressed `state`. Colour is by subclass, not DeviceKind (stated in the md).
 **Prompt document name**: 2026-11-07 14:39
+
+## 2026-11-07 — feat: IR resolution follows the tab's viewpoint (multi-tab L5)
+**Prompt**: `claude_2026-11-07_1516_prompt_multi_tab_l5_ir_resolution.md`, lane full (critical zone): IR hooks, `IRForm`, the metaclass palette and the Symbol Editor opener take the tab's viewpoint id; cut at the AM-8 ceiling and closed by P-2026-11-07-1730 (remaining gates, app check, crops).
+**Files touched**: `a87146a64` the LIR; `7b3cf6d2a` `irTabViewpoint.test.ts`, `metaclassPalette.test.ts`, red; `f2ddead3d` Option A, seven source files: `irResolve.ts`, `useIRContainment.ts`, `IRForm.tsx`, `metaclassPalette.ts`, `SymbolEditorModal.tsx`, `EditorV2.tsx`, `ObjectNode.tsx`, and the React stubs of `irPresentation.test.ts` and `irSimActive.test.ts` (`useContext: () => null`, no assertion changed); 1730: LIR §7, this entry, two Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: app check P-2026-11-07-1730, single-tab layout probe 3/3 every step x3, container probe 0 failures, 0457 V1/V2/V3/R-MT-18 and ONE summary lines identical to 1352 r1
+**Out-of-scope changes**: yes: `EditorV2.tsx`, `ObjectNode.tsx` and the two test mocks beyond the five files of the prompt, Option A ratified by Alfonso (RC-21) before the change
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (demo two tabs 18/18 and 25/25 nodes, own colours, x3; L3 pair 6/6, was 6/10; three light-theme crops, LIR §7; Alfonso's visual check due)
+**Notes**: Gates. 1516 on f2ddead3d: typecheck exit 0, 0 error TS; vitest 558 files, 14873 passed, 2 skipped; red: 3 known window files, tolerant (1274 ms > 1000), irCollapsedRender and irSelectionRing (Chromium hook timeouts), all green alone. 1730: build exit 0 (chunk warning only), check:docs 5/5. Benches: guard removed, only cross-deps red; null mapped to root, 7 of 14 red. No node-side Symbol Editor opener exists: contract checked by dispatch (LIR §7).
+**Prompt document name**: 2026-11-07 15:16
+
+## 2026-11-07 — ticket: publishedChannelSlots is one module-level list for every IR canvas
+**Ticket**: `publishedChannelSlots` (`useIRContainment.ts:61`) is a single module-level list shared by every IR canvas: two IR canvases (two tabs, or already two models before multi-tab) overwrite each other's list. Out of L5; L5 made only the cross-deps epoch and bar-orientation resets per instance.
+**Priority**: medium
+**Found in**: P-2026-11-07-1516
+**Detail**: docs/discovery/lir_2026-11-07_l5_ir_resolution_tab_viewpoint.md
