@@ -7797,6 +7797,14 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
   one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
   The tag and any deploy stay with Alfonso.
+- **R-MT-24** (2026-11-07, ratified by Alfonso 2026-11-07 15:22 «mettilo nelle decisioni», evidence: read, verified: none, reversible: trunk).
+  **The model context menu of R-MT-9 also offers «Open beside ▸ <viewpoint>»**, which opens the second tab on that model,
+  with the chosen viewpoint, in a panel to the right of the current editor. It reuses `DockManager.openBeside`
+  (`abstract/DockManager.tsx:204`, today called only by `ScriptTab.tsx:239`) and its preconditions (horizontal dockbox,
+  nothing maximized, no consumer-mode metamodel). Lands with L6, beside «Open in new tab ▸ <viewpoint>». Open for the L6
+  prompt: `openBeside` addresses the tab by `modelId`, so it must accept the id of a second tab on the same model; what
+  happens when it returns false (fall back to a new tab or disable the item) is the lane's recommendation. Known limit,
+  unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
 
 ## Superate
 
