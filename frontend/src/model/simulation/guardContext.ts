@@ -39,7 +39,7 @@
 import { EvaluationContext, isJjelFunction } from '../../jjel/evaluator';
 import type { JjelValue } from '../../jjel/evaluator';
 import { registerBitVectorConstructors } from '../../jjel/evaluator/evaluator';
-import type { JjelStateAccess } from '../../jjel/evaluator/context';
+import type { JjelClassificationAccess, JjelStateAccess } from '../../jjel/evaluator/context';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import type { SimStateAccess } from './netTypes';
 
@@ -158,6 +158,9 @@ export function freezeSnapshot(
  * so the scopes of `forall` and of lambdas inherit it and the base never has
  * it. Without it `.[a]` throws, as it does outside the simulator.
  *
+ * `classification`, when given, is what `x.in(V::D)` asks (R-DCN-7), set the
+ * same way. Without it `.in(V::D)` throws. No binder supplies one yet.
+ *
  * `null` when the transition, or the current event, has no handle in the
  * snapshot; the guard evaluator reports it as a defect.
  */
@@ -166,6 +169,7 @@ export function buildGuardContext(
     site: { transitionId: string },
     step: { event: string | null },
     state?: JjelStateAccess,
+    classification?: JjelClassificationAccess,
 ): EvaluationContext | null {
     const self = snapshot.handleById.get(site.transitionId);
     if (self === undefined) return null;
@@ -177,6 +181,7 @@ export function buildGuardContext(
     }
     const ctx = snapshot.base.child({ self, event, model: snapshot.model });
     if (state) ctx.stateAccess = state;
+    if (classification) ctx.classification = classification;
     return ctx;
 }
 
