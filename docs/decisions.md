@@ -7322,6 +7322,18 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   beside the canvas, in its own lane, last; E10 T10 keeps each object's typed text when its print is unchanged,
   recursing into children, and falls back to the full reprint when it cannot splice safely. No piece touches the
   critical zone; lanes E1a, E1b, E2a, E2b, E3.
+- **R-TXT-55** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step F,
+  embedded JjEL, tracing and T8: decisions F1 to F12 of docs/discovery/discovery_2026-11-07_textual_f_jjel_tracing.md §8.2,
+  taken under lane auto (Alfonso 2026-11-06 23:31, «Procedi con E e poi F con /lane auto»).** F1 JjEL values are the
+  attributes typed by `Pointer_EXPRESSION` and `Pointer_ACTION`, keyed on the id, an optional `jjel` on `TextAttribute`;
+  F2 islands are coloured by semantic sub-tokens from the JjEL lexer, no embedded Monarch language; F3 a JjEL error is a
+  warning, source `jjel`, never blocking the apply, with conformance's exemptions; F4 completion inside an island reuses
+  the template completion with `self` bound to the owner; F5 a static check of `self.<feature>` only, warning, lane F1e;
+  F6 a generated line reaches the Text tab by a direct registry event, after E2b; F7 a click with the Text tab closed does
+  nothing in F; F8 order F1a to F1e, F2 after E2b, then T8a to T8d; F9 ids travel in the text as a `// @id` comment per
+  object, not a grammar token; F10 one `TextConfirmPanel` for the edit and the re-import; F11 JjEL in EString attributes
+  is out of F; F12 the event is `TEXTUAL_REVEAL` with `{ modelId, elementId, featureName? }`. No piece touches the
+  critical zone; a matching threshold changes only by a ratified row (T8d).
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
