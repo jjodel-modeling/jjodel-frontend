@@ -2452,3 +2452,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; visual GO pending
 **Notes**: Two new tests red on HEAD; five pinned tests gain the `set h.name` line (listed in the commit bodies). Gates: typecheck 0; vitest 3 baseline import reds, 14505 passed, no timing red; build, check:docs, check:codegen-lazy exit 0. Probe 10/10 PASS: raw slots `["cpu"]`, `["result"]`, `["ready"]`, conformance empty, XMI names, no page errors. Causa from the report: a wrong assumption that the handle names the slot; the report names no originating prompt. B1 (console) stays for N1's ticket.
 **Prompt document name**: 2026-11-07 03:44
+
+## 2026-11-07 — merge: textual-name-slot into alfonso-frontend-jjtl (P-2026-11-07-0443)
+**Prompt**: `claude_2026-11-07_0443_prompt_merge_textual-name-slot.md`, a direct merge by `lane-run merge --direct`, no session: `textual-name-slot` at `5b9953e38` into `alfonso-frontend-jjtl`, merge base `04b782a5b`, 10 commits on the branch side.
+**Files touched**: merge `1d4ca6039`: 8 files from the branch side (`docs/discovery/discovery_2026-11-07_textual_name_slot.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0253_prompt_textual_name_slot_discovery.md`, `docs/prompts/claude_2026-11-07_0344_prompt_textual_name_slot_fix.md`, `frontend/src/codegen/textual/__tests__/modelLines.test.ts`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/modelLines.ts`, `frontend/src/codegen/textual/textDiff.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1d4ca6039` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14528 tests in 539 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: name-slot crop text-tab-cpu-no-warning.png in ~/.jjodel-lanes/P-2026-11-07-0344/ checked by the chat
+**Notes**: Rollback tag `pre-textual-name-slot` on `69c191631` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0443/result.json`.
+**Prompt document name**: 2026-11-07 04:43
