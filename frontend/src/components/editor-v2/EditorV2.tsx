@@ -83,6 +83,7 @@ import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
 import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
+import { DcnProblemSync } from './problems/DcnProblemSync';
 import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
@@ -5138,6 +5139,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
+                <DcnProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}

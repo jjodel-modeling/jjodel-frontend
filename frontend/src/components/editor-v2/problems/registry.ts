@@ -51,8 +51,12 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * `'containment'` (R-GV-2, P-2026-10-10-0105 S2) is the sixth: the objects more than one IR container claims and
  * those no container claims beside claimed ones, mapped by `containmentToProblems.ts` from the containment model the
  * presentation pass builds. Same price and same reasoning as the two above; the S2 prompt asks for it by name.
+ *
+ * `'dcn'` (P-2026-11-07-1825, lane L2.4) is the seventh: the DCN well-formedness checks W1..W4, W6, R-DCN-13 and
+ * R-DCN-16 (spec §5) on the class-level elements, mapped by `dcnToProblems.ts` and published by `DcnProblemSync`.
+ * Same price and same reasoning as the three above; the L2.4 prompt authorizes it by name.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'dcn';
 
 export interface NodeProblemAction {
     label: string;
