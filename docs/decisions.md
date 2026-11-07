@@ -6656,6 +6656,14 @@ P-2026-10-20-1835.
   a fixed size, S2, «Sync slots» and materialization grow the box grow-only inside their own group. Replaces option
   (d) of the S3b report (a sizing lane changing «a manual resize wins» in `nodeSizing.ts` and `jjomTransformers.ts`),
   which would change the sizing of every resized node outside this front. Question 2.
+- **R-OI-17** (2026-11-07, decided by the chat `C-2026-10-25-2159` on Alfonso's delegation «decidi tu», 2026-11-07
+  12:32, evidence: measured, verified: probe, reversible: branch).
+  **The right button of the editor-v2 canvas opens menus and does not pan: `panOnDrag={[0, 1]}`.** With the right
+  button in `panOnDrag`, `@xyflow/system` 0.0.76 calls `onPaneContextMenu` only when no pan event ran between press
+  and release, so a two-finger click that moves on a trackpad panned and opened no pane menu (R-OI-10). Pan stays on
+  the left and middle buttons; wheel and pinch are not read through `panOnDrag`'s buttons. Measured (P-2026-11-07-1235):
+  probe S2-1m, a right click moving 3 px, red with `[0, 1, 2]` and green with `[0, 1]`. Rejected: a movement threshold
+  around xyflow's handler (more code, fragile against xyflow updates).
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

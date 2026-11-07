@@ -212,3 +212,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup never presses «Create model», so `model: null` and the `vp-*` setup crashes on a disabled viewpoint trigger.
 
 **Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, so on a fresh browser the 3.1.1 WelcomeModal can swallow its first click.
+
+## 2026-11-07 — fix: the right button opens the pane menu, no pan (P-2026-11-07-1235)
+**Prompt**: on a trackpad a moving two-finger click on the empty canvas panned and opened no pane menu (R-OI-10); set `panOnDrag={[0, 1]}` in `EditorV2.tsx`, add probe check S2-1m with a red/green bench, regression S3a and undo-inline-edit, a throwaway drag measurement, decision row R-OI-17
+**Files touched**: frontend/src/components/editor-v2/EditorV2.tsx (af1230b5d); frontend/scripts/probe/onto-s2-instantiate.ts (5cba3621c); docs/decisions.md (R-OI-17), docs/log-inbox/instance-of.md (this docs commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (one ReactFlow prop; no §3.2 file, no D-layer write path)
+**Smoke visivo**: non eseguito (Playwright gestures only, no real trackpad)
+**Notes**: Typecheck 0, build 0. S2: [0,1] 22/22; [0,1,2] 21/22, S2-1m red alone (viewport x +3, no menu). S3a default 8/8; undo-inline-edit 33/33. Throwaway: left and middle drag pan, right drag pans only with [0,1,2]; wheel no change and ctrl+wheel zoom to k 2 on both. The first fixed-build throwaway started at load 23.6, above the gate; rerun gated (11.4), same result. No probe or test right-drags. Detail: ~/.jjodel-lanes/P-2026-11-07-1235/closing.md
+**Prompt document name**: 2026-11-07 12:35
