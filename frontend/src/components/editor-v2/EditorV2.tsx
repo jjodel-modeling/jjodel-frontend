@@ -607,6 +607,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the first (edge-less) layout. Set below; armed only on the justCreated path. See
     // docs/discovery/2026-07-07-s4b-recalc-bypass.md (H2).
     const armReLayoutRef = useRef<(() => void) | null>(null);
+    // The tab's viewpoint (L2) gives the sync its layout key (L3): passed here, because this component
+    // renders the EditorContext.Provider below this call and the hook cannot read it.
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
@@ -637,7 +639,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 setEdges(eds => applyDistributionRef.current!(eds));
             }
         }, 50);
-    });
+    }, undefined, viewpointId);
     useM1ReferenceEdges(modelid, graphId);
 
     // Debounced autosave of node positions on drag-end (gated by autosaveLayout)

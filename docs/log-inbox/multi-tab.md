@@ -159,3 +159,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO on the P-2026-11-07-0935 app check of the same code: focus write +0 undo entries 3/3, picker keeps its entry; V1, V2, R-MT-18 3/3; one tab unchanged)
 **Notes**: Merge tree `e75e02472` equal to the merge-tree measure; probes 15/15 once, R-FA-15 absent. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtl2` (no node_modules there; writing forbidden): the 21 new tests counted at `dcd7ed29d` (undoGroup `dt` loop counted twice), the four files 76/76 green on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 12:10
+
+## 2026-11-07 — feat: the three canvas doors take the tab's layout key (multi-tab L3)
+**Prompt**: `claude_2026-11-07_1249_prompt_multi_tab_l3_tab_layout_key.md`, lane full (critical zone): the transformer, the five layout writes and the content-size hook take the tab's layout key, `useJjomSync` gets the tab's viewpoint; continued after the AM-8 soft ceiling with Alfonso's RC-21 answers (the `EditorV2.tsx:610` argument, seven test-mock completions).
+**Files touched**: `d9424764a` the LIR; `4678327cc` four new test files, red; `1015af5e1` `jjomTransformers.ts`, `canvasToJjom.ts`, `useJjomSync.ts`, `useContentSize.ts` and seven mocks under `viewpoint/ir/__tests__/`; `0002f1ae4` `EditorV2.tsx` (the `useJjomSync` call only) and `useJjomSyncTabKey.test.ts`; this entry and the Status of the prompt, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: app check P-2026-11-07-1352, single-tab layout probe 3/3 every step x3, container probe 0 failures, 0457 V1/V2/V3/R-MT-18 step lines identical
+**Out-of-scope changes**: yes: `EditorV2.tsx` (one call) and the mocks of `irA1Render`, `irC2Render`, `irEmptyRows`, both ratified by Alfonso (RC-21) before their commit
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (probes and four light-theme crops of P-2026-11-07-1352, LIR §6; Alfonso's visual check due)
+**Notes**: useJjomSync takes the tab viewpoint by parameter: EditorV2Inner calls it above the EditorContext.Provider it renders (LIR §0). Gates on 0002f1ae4: typecheck exit 0, 0 error TS; build exit 0; vitest 554 files, 14791 tests (tip 14764 + 27), 1 failed (tolerant 1029 ms > 1000) and 2 Chromium close hooks timed out (irCollapsedRender, irSelectionRing), 82/82 alone; 3 known window files. At the AM-8 stop a broad pkill -f vitest -U uid may have killed other sessions' vitest runs.
+**Prompt document name**: 2026-11-07 12:49
