@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1838
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 8d7605eef (pure, red first), 8cdb3ea8f · gates green (vitest: 3 import reds baseline) · app check 15/15 ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-07-1838/ · log entry in docs/log-inbox/codegen.md
 Lane: full (pure mapping in conformanceMarks, subscription in the Text tab, tests; app check with crops after a validation run)
 Depends: D3b (conformance markers, merged), E2b (merged), R-TXT-53 (D9)
 Worktree: ~/jjodel-w-textd3c, branch textual-d3c-rules (from trunk f5fc80aaf, own node_modules)
