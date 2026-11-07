@@ -5,17 +5,25 @@
  * never changes meaning (print-parse equality of the objects) and keeps each comment with its owner.
  *
  * Each test name says which mutant kills it; the bench is in the commit body.
+ *
+ * The two Monaco providers of ui/textualMonaco.ts are driven through a fake `monaco`, as languageService.test.ts drives
+ * the others, with the same two theme imports mocked (they reach `joiner`).
  */
 
-import { describe, expect, it } from 'vitest';
+import type * as Monaco from 'monaco-editor';
+import { describe, expect, it, vi } from 'vitest';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { formatText, formatTextRange, minimalEdit } from '../format';
 import { commentsOf, isApplicableParse, parseText } from '../parser';
 import { printTextModel } from '../printer';
-import { PORT_CLIKE, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL, portGrammar } from './portCorpus';
+import { PORT_CLIKE, PORT_MM, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL, portGrammar } from './portCorpus';
 import { GARAGE, grammarOf } from './corpus';
 import { objectsOf } from './spec';
 import { PASCAL_STYLE } from '../style';
+import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
+
+vi.mock('../../../jjscript/editor/jjscriptLanguage', () => ({ jjscriptThemeRules: () => [] }));
+vi.mock('../../../jjtl/editor/jjtlTheme', () => ({ jjtlTheme: { rules: [] } }));
 
 const CLIKE = portGrammar();
 const PASCAL = portGrammar(PORT_PASCAL);
@@ -235,5 +243,73 @@ describe('minimalEdit', () => {
         const e = minimalEdit(TWO, formatTextRange(TWO, CLIKE, at, at)!)!;
         expect(e.start).toBeGreaterThan(TWO.indexOf('Module b'));
         expect(TWO.slice(0, e.start) + e.text + TWO.slice(e.end)).toBe(formatTextRange(TWO, CLIKE, at, at));
+    });
+});
+
+describe('the Monaco providers of Format Document and Format Selection', () => {
+    const providers = new Map<string, any>();
+    const fakeMonaco = {
+        Emitter: class { event = () => ({ dispose: () => {} }); fire(): void {} },
+        Range: class { constructor(readonly startLineNumber: number, readonly startColumn: number, readonly endLineNumber: number, readonly endColumn: number) {} },
+        languages: new Proxy({ CompletionItemKind: {}, CompletionTriggerKind: {}, SymbolKind: {}, FoldingRangeKind: {} } as Record<string, unknown>, {
+            get: (t, k: string) => k in t ? t[k] : (id: string, p: unknown) => { if (/^register.*Provider$/.test(k) && id === TEXTUAL_LANGUAGE_ID) providers.set(k, p); },
+        }),
+        editor: { registerCommand: () => {}, defineTheme: () => {}, getEditors: () => [] },
+    };
+    registerTextualMonaco(fakeMonaco as unknown as typeof Monaco);
+
+    /** A model over `text`, with a session over C-like PORT: offsets and 1-based positions as Monaco's. */
+    const modelOf = (text: string): Monaco.editor.ITextModel => {
+        const starts = [0, ...[...text].flatMap((ch, i) => (ch === '\n' ? [i + 1] : []))];
+        const model = {
+            uri: { toString: () => `inmemory://format/${text.length}` },
+            getVersionId: () => 1,
+            getValue: () => text,
+            getOffsetAt: (p: Monaco.IPosition) => starts[p.lineNumber - 1] + p.column - 1,
+            getPositionAt: (o: number) => {
+                let l = 0;
+                while (l + 1 < starts.length && starts[l + 1] <= o) l++;
+                return { lineNumber: l + 1, column: o - starts[l] + 1 };
+            },
+        } as unknown as Monaco.editor.ITextModel;
+        openTextualSession(model, { base: () => ({ grammar: CLIKE, mm: PORT_MM }), keep: () => undefined });
+        return model;
+    };
+    /** A provider's edits applied to the model's text. */
+    const applied = (model: Monaco.editor.ITextModel, edits: readonly Monaco.languages.TextEdit[]): string => {
+        let text = model.getValue();
+        for (const e of [...edits].reverse()) {
+            const a = model.getOffsetAt({ lineNumber: e.range.startLineNumber, column: e.range.startColumn });
+            const b = model.getOffsetAt({ lineNumber: e.range.endLineNumber, column: e.range.endColumn });
+            text = text.slice(0, a) + e.text + text.slice(b);
+        }
+        return text;
+    };
+
+    it('formats the document with one minimal edit (dies if the provider replaces the whole text)', () => {
+        const model = modelOf(BAD_CLIKE);
+        const edits = providers.get('registerDocumentFormattingEditProvider').provideDocumentFormattingEdits(model, {}, {});
+        expect(edits).toHaveLength(1);
+        expect(applied(model, edits)).toBe(FORMATTED_CLIKE);
+        // The first line, `// the cpu` and `Module cpu {`, is the same in both: the edit starts after it.
+        expect(edits[0].range.startLineNumber).toBeGreaterThan(2);
+    });
+
+    it('formats the selection, only the object it meets (dies if the range provider formats the document)', () => {
+        const model = modelOf(TWO);
+        const at = model.getPositionAt(TWO.indexOf('input y'));
+        const range = new fakeMonaco.Range(at.lineNumber, at.column, at.lineNumber, at.column + 3);
+        const edits = providers.get('registerDocumentRangeFormattingEditProvider').provideDocumentRangeFormattingEdits(model, range, {}, {});
+        expect(edits).toHaveLength(1);
+        expect(applied(model, edits)).toBe(formatTextRange(TWO, CLIKE, TWO.indexOf('input y'), TWO.indexOf('input y') + 3));
+        expect(edits[0].range.startLineNumber).toBe(at.lineNumber);
+    });
+
+    it('gives no edit on a broken text, nor on a formatted one (dies if a null format becomes an edit)', () => {
+        const broken = modelOf('Module cpu {\n      input instr : Word(\n}');
+        expect(providers.get('registerDocumentFormattingEditProvider').provideDocumentFormattingEdits(broken, {}, {})).toEqual([]);
+        const whole = new fakeMonaco.Range(1, 1, 3, 2);
+        expect(providers.get('registerDocumentRangeFormattingEditProvider').provideDocumentRangeFormattingEdits(broken, whole, {}, {})).toEqual([]);
+        expect(providers.get('registerDocumentFormattingEditProvider').provideDocumentFormattingEdits(modelOf(FORMATTED_CLIKE), {}, {})).toEqual([]);
     });
 });
