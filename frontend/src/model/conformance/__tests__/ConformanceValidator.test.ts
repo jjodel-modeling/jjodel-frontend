@@ -699,6 +699,54 @@ describe('CHECK 2 — missing_required_attr (raw presence)', () => {
 });
 
 // ==================================================================
+// CHECK 2 — a never-written identity slot (#656, R-TXT-58)
+// The identity slot (name : EString, single) is read as the core's get_values reads it: raw `[]`
+// (never written) falls back to the owner's initialName, then data.name; raw `[""]` (written
+// empty) stays nameless (R-TXT-45) and is still flagged.
+// ==================================================================
+describe('CHECK 2 — never-written identity slot (#656)', () => {
+    function identity(raw: any[], owner: AnyObj) {
+        const a = attr({ id: 'n', name: 'name', lowerBound: 1, type: { name: 'EString' } });
+        const C = klass({ id: 'C', name: 'Module', allAttributes: [a] });
+        const o = obj({ id: 'o', name: owner.name, instanceof: C, __raw: owner,
+            features: [val('n', { value: owner.initialName || owner.name, __raw: { values: raw } })] });
+        return types(run([o], [C]));
+    }
+
+    it('console create `create instance of C "x"`: slot [], initialName x → clean', () => {
+        expect(identity([], { name: 'x', initialName: 'x' })).not.toContain('missing_required_attr');
+    });
+
+    it('canvas create (auto-name): slot [], initialName Module_0 → clean', () => {
+        expect(identity([], { name: 'Module_0', initialName: 'Module_0' })).not.toContain('missing_required_attr');
+    });
+
+    it('old saved model: slot [], data.name only → clean on load', () => {
+        expect(identity([], { name: 'old1' })).not.toContain('missing_required_attr');
+    });
+
+    it('a slot written [""] stays nameless and is flagged, whatever the owner names', () => {
+        expect(identity([''], { name: 'x', initialName: 'x' })).toContain('missing_required_attr');
+    });
+
+    it('a never-written slot on an owner with no name at all is still flagged', () => {
+        expect(identity([], { name: '', initialName: '' })).toContain('missing_required_attr');
+    });
+
+    it('a written name is unchanged', () => {
+        expect(identity(['h'], { name: 'h', initialName: 'Module_0' })).not.toContain('missing_required_attr');
+    });
+
+    it('a never-written non-identity required EString is still flagged', () => {
+        const a = attr({ id: 'l', name: 'label', lowerBound: 1, type: { name: 'EString' } });
+        const C = klass({ id: 'C', name: 'Module', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'x', instanceof: C, __raw: { name: 'x', initialName: 'x' },
+            features: [val('l', { __raw: { values: [] } })] });
+        expect(types(run([o], [C]))).toContain('missing_required_attr');
+    });
+});
+
+// ==================================================================
 // CHECK 12 — missing_name / invalid_name_format
 // Re-hosted from the `Naming error view` of the seeded `Default Validation`
 // viewpoint, inert since the classic shutdown (Fase 5a).
