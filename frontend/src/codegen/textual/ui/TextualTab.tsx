@@ -35,6 +35,8 @@ import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
+import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
+import type { MarkedViolation } from '../conformanceMarks';
 import { commentsOf, isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
@@ -1003,6 +1005,19 @@ type TextualMonacoModule = typeof import('./textualMonaco');
 /** The owner of the edit's markers in the Monaco model. */
 const EDIT_MARKER_OWNER = 'textual-edit';
 
+/** D3b: the owner of the conformance markers, apart from the edit's, so a pause's parse never clears them (D8). */
+const CONFORMANCE_MARKER_OWNER = 'textual-conformance';
+
+/** The conformance hook, loaded on the tab's mount (model/conformance/useConformance imports `joiner`, which the bench cannot). */
+type ConformanceHook = typeof import('../../../model/conformance/useConformance')['useConformance'];
+
+/** D3b: reads the model's conformance with the loaded hook and hands its violations on; renders nothing. */
+function ConformanceReader({ use, modelId, onRead }: { readonly use: ConformanceHook; readonly modelId: string; readonly onRead: (vs: readonly MarkedViolation[]) => void }) {
+    const result = use(modelId);
+    useEffect(() => onRead(result?.violations ?? []), [result]);
+    return null;
+}
+
 /** The context key that sends Cmd/Ctrl+Z to the app's undo: set while the text holds no pending edit (R-TXT-26). */
 const APP_UNDO_KEY = 'textualNoPendingEdit';
 
@@ -1172,6 +1187,10 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const heldRef = useRef(false);
     const [ui, setUi] = useState<TextualMonacoModule | null>(null);
     useEffect(() => { void import('./textualMonaco').then(m => setUi(m)); }, []);
+    // D3b: the model's conformance violations, marked on the carried spans; loaded like the adapter.
+    const [conformance, setConformance] = useState<{ readonly use: ConformanceHook } | null>(null);
+    useEffect(() => { void import('../../../model/conformance/useConformance').then(m => setConformance({ use: m.useConformance })); }, []);
+    const violationsRef = useRef<readonly MarkedViolation[]>([]);
     // Step B2: the outline's open state, kept per tab, and what the outline and the breadcrumb read once the editor is up.
     const [outlineOpen, setOutlineOpen] = useState(() => outlineOpenOf(tabId));
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
@@ -1196,6 +1215,36 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             };
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
+        setConformanceMarkers();
+    };
+
+    /**
+     * D3b (D8): the violations as warnings on the carried spans, each time the spans or the violations change; between two
+     * pauses Monaco moves them with the text. Their own owner: the apply never reads them.
+     */
+    const setConformanceMarkers = (): void => {
+        const monaco = monacoRef.current;
+        const m = editorRef.current?.getModel();
+        if (!monaco || !m) return;
+        const text = m.getValue();
+        const reading = sessionRef.current?.current();
+        const tree = reading && reading.text === text ? reading.parsed.tree : undefined;
+        monaco.editor.setModelMarkers(m, CONFORMANCE_MARKER_OWNER, conformanceMarks(violationsRef.current, carriedSpans(), text, tree).map(c => {
+            const from = m.getPositionAt(c.start);
+            const to = m.getPositionAt(c.end);
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: CONFORMANCE_SOURCE,
+                message: c.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+    };
+
+    const onViolations = (vs: readonly MarkedViolation[]): void => {
+        violationsRef.current = vs;
+        setConformanceMarkers();
     };
 
     const setRefDecorations = (refs: readonly RefSpan[]): void => {
@@ -1725,6 +1774,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                                             onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
                                 )}
                             </TextNavigator>
+                            {conformance && <ConformanceReader use={conformance.use} modelId={modelId} onRead={onViolations} />}
                         </div>
                         {mode === 'ebnf' && ui && (
                             <div className="textual-tab__layer">

@@ -7334,6 +7334,12 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   object, not a grammar token; F10 one `TextConfirmPanel` for the edit and the re-import; F11 JjEL in EString attributes
   is out of F; F12 the event is `TEXTUAL_REVEAL` with `{ modelId, elementId, featureName? }`. No piece touches the
   critical zone; a matching threshold changes only by a ratified row (T8d).
+- **R-TXT-56** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **The empty
+  name slot of an object created from text: option A of docs/discovery/discovery_2026-11-07_textual_name_slot.md, taken
+  under lane auto.** The textual layer writes the slot explicitly: textDiff.ts and modelLines.ts emit `set <h>.name` after
+  a create even when the handle equals the name; no migration of objects already created (a rename heals them). Option B
+  (the executor's create command, core) and the canvas-created empty slot are a ticket, #656, approved by Alfonso
+  2026-11-07 03:39; a fix there needs the Layer Impact Report drafted in §6.1 and his go-ahead.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7707,7 +7713,7 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
 Evidence: the project chat C-2026-11-06-2333 of 2026-11-06 (23:38 «Le tre risposte vanno bene» on the three
 recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). Discovery owed: P-2026-11-06-2350.
 
-- **R-MT-1** (2026-11-06, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-1** (2026-11-06, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **State splits in three levels: model, pair (model, viewpoint), tab.** The model (M2 or M1) is one and shared: every
   write shows in every tab. The layout belongs to the pair (model, viewpoint), as R-LAY already keys it. The active
   viewpoint, pan, zoom and the session size derived from content belong to the tab. The project's active viewpoint
@@ -7721,44 +7727,53 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
 - **R-MT-4** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
   **Two tabs on the same model and the same viewpoint are allowed and share the layout.** No special case: a drag in
   one moves the node in the other.
-- **R-MT-5** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-5** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The tab's viewpoint is React state of the tab, exposed by an optional `viewpointId` on `EditorContext`.** No Redux
   slice keyed by tab id. Q1 of `docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md`.
-- **R-MT-6** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-6** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The toolbar picker writes the tab's state and `activateViewpoint`**, since the tab whose picker is used is the
   focused one; the project value stays the default for the next opening (R-MT-1). Q2.
-- **R-MT-7** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-7** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **A tab whose viewpoint is deleted or deactivated falls back to abstract syntax**, never to another viewpoint chosen
   for the user. Q3.
-- **R-MT-8** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-8** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The classic editor gets no per-tab viewpoint**; it stays on the project default. Q4.
-- **R-MT-9** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-9** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **A second tab on a model opens from a context-menu item «Open in new tab ▸ <viewpoint>» on the model row** (Tree View,
   model rail); no drag gesture in the first cut. Q5.
-- **R-MT-10** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-10** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **Two tabs on one (model, viewpoint) share the stored viewport, last writer wins**, as the default for the next
   opening; live pan and zoom stay in each tab's React Flow store. Q6.
-- **R-MT-11** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-11** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **Global readers (Tree View, Properties rail, new-view parenting) follow the focused tab**, through the root and
   project values the tab writes when it gains focus. Q7.
-- **R-MT-12** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-12** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The simulator panel stays in every tab, unchanged**; a lane limiting controls to the focused tab opens only if the
   smoke shows a conflict. Q8.
-- **R-MT-13** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-13** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The possible layout-switch regression after `242a82bcd` is probed now, independently of multi-tab** (lane L0b). Q9.
-- **R-MT-14** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-14** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **R-LAY-19's freeze on new `state.viewpoint` readers in editor-v2 is held by a check script after lane L5**, with an
   allow-list of the readers left. Q10.
-- **R-MT-15** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-15** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **One D-layer undo stack per user, across tabs** (R-UNDO-1); a Cmd+Z may revert a layout write made in another tab.
   No per-tab undo. Q11.
-- **R-MT-16** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-16** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **The mount-only restore of the saved viewpoint (`EditorSwitch.tsx:93`) runs only for the dock's active tab**;
   focus-driven activation arrives with lane L2. Q12.
-- **R-MT-17** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-MT-17** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
   **With several instances mounted on one model, the first mounted instance owns the populate and hands it over on
   unmount**; the others render only. Sync registries and problem producers clear when the last instance of the model
   unmounts. Q13.
+- **R-MT-18** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: measured, verified: none, reversible: trunk).
+  **A saved empty preference means abstract syntax and is restored as such** (`activateViewpoint(null)`), kept apart
+  from «no preference saved». Lane L2 does it; L1 left it out (scene 3b of P-2026-11-07-0105: `!savedVpId` skips `''`).
+- **R-MT-19** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: measured, verified: none, reversible: trunk).
+  **The layout key becomes an input of the incremental sync of `useJjomSync.ts` before lane L3, as its first step.**
+  The regression of `242a82bcd` (live since 3.1.0, `docs/discovery/discovery_2026-11-07_layout_switch_after_242a82bcd.md`)
+  is fixed by a dependency on `getLayoutKeyOf(state)` and one re-transform of every vertex when it changes; L3's per-tab
+  key enters through the same dependency. Critical zone: the lane waits for Alfonso's go-ahead and starts with a Layer
+  Impact Report.
 
 ## Superate
 
