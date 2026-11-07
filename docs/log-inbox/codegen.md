@@ -2404,3 +2404,25 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-07 01:57
 
 **Ticket** (P-2026-11-07-0157): a model created from text by `createModelFromText` reads `Module cpu`, D name and L `$name` `cpu`, but its raw `name` slot is `[]`, so useConformance reports «missing required attribute "name"» on a named object. Measured by the probe (`MEAS 3 the Module rows`); the app check used it as its conformance warning. Owner: the textual apply or the identity slot write, not this lane.
+
+## 2026-11-07 — ticket: Objects created on the canvas (and by the create command) leave the name slot empty
+**Ticket**: An object created on the canvas has an empty raw `name` slot: only its automatic display name is set. Conformance reads the slot, so it flags a required name as missing, and the XMI export drops the name. This predates the Text tab.
+
+Found by the name-slot discovery P-2026-11-07-0253 (docs/discovery/discovery_2026-11-07_textual_name_slot.md, control case and §6.1). The same report has option B: the create command in the executor (`instance.ts:686-703`) sets the displayed name and `initialName`, never the slot. A fix there is in the core: it needs the Layer Impact Report drafted in §6.1 and Alfonso's go-ahead before any lane.
+
+Approved as a ticket by Alfonso, 2026-11-07 03:39.
+**Priority**: medium
+**Found in**: P-2026-11-07-0253
+
+## 2026-11-07 — merge: textual-d-writing-aids into alfonso-frontend-jjtl (P-2026-11-07-0250)
+**Prompt**: `claude_2026-11-07_0250_prompt_merge_textual-d-writing-aids.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `5e1179252`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 120 (laneTracking, languageService, outline, elementWaiterScope, irCollapsedRender), all green alone at load 2; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: D3b crops d3b-1..3b in ~/.jjodel-lanes/P-2026-11-07-0157/ checked by the chat
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0250/result.json`.
+**Prompt document name**: 2026-11-07 02:50

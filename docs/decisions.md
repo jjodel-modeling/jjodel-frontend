@@ -7334,6 +7334,12 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   object, not a grammar token; F10 one `TextConfirmPanel` for the edit and the re-import; F11 JjEL in EString attributes
   is out of F; F12 the event is `TEXTUAL_REVEAL` with `{ modelId, elementId, featureName? }`. No piece touches the
   critical zone; a matching threshold changes only by a ratified row (T8d).
+- **R-TXT-56** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **The empty
+  name slot of an object created from text: option A of docs/discovery/discovery_2026-11-07_textual_name_slot.md, taken
+  under lane auto.** The textual layer writes the slot explicitly: textDiff.ts and modelLines.ts emit `set <h>.name` after
+  a create even when the handle equals the name; no migration of objects already created (a rename heals them). Option B
+  (the executor's create command, core) and the canvas-created empty slot are a ticket, #656, approved by Alfonso
+  2026-11-07 03:39; a fix there needs the Layer Impact Report drafted in §6.1 and his go-ahead.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
