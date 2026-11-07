@@ -2781,3 +2781,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: non applicabile
 **Notes**: R1 in the app (DemoESM): `String(a.type)` is `Expression`/`Action`, `a.type.id` undefined, `lookup[a.id].type` the primitive id; ids check 10/10. `jjelIslands` takes the style as a third argument. Benches: 6/6 and 12/14 killed, the two survivors being defensive guards no input reaches. Vitest: the 3 import reds, plus laneRun.test.ts timing out under the full run (145/145 alone).
 **Prompt document name**: 2026-11-07 13:56
+
+## 2026-11-07 — merge: textual-f1a-islands into alfonso-frontend-jjtl (P-2026-11-07-1519)
+**Prompt**: `claude_2026-11-07_1519_prompt_merge_textual-f1a-islands.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `212f038f1`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest red under load average ~90 (elementWaiterScope.test.ts timing bound), green alone (twice); resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile, F1a has no visual change
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1519/result.json`.
+**Prompt document name**: 2026-11-07 15:19
