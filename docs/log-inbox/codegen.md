@@ -2628,3 +2628,18 @@ Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Repor
 To measure first: whether the suggest widget is open inside a comment (completion should not trigger inside `//` comments), and whether Enter accepts a suggestion there. Files likely involved: `codegen/textual/ui/textualMonaco.ts` (CompletionItemProvider, D2c), `codegen/textual/languageService.ts` (`completionsAt`).
 **Priority**: high
 **Found in**: P-2026-11-07-0912
+
+## 2026-11-07 — feat(codegen): D5, Format Document and Format Selection (P-2026-11-07-0747, P-2026-11-07-0841)
+**Prompt**: `claude_2026-11-07_0747_prompt_textual_d5_format.md` (lane D5, R-TXT-53 D5: pure format, Monaco document and range providers), stopped at the soft ceiling; `claude_2026-11-07_0841_prompt_textual_d5_continuation.md` finished it from the handoff: the undo after Format, crops, docs.
+**Files touched**: `frontend/src/codegen/textual/format.ts` (new), `__tests__/format.test.ts` (new) in 65eda512f; `ui/textualMonaco.ts` in afb9d681b; 0841: no code; this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck and build exit 0, check:codegen-lazy ALL GREEN, format.test.ts 20/20; full vitest 3 baseline import reds plus 3 load reds green alone (languageService, irCollapsedRender, irSelectionRing). Gates not rerun in 0841: no code changed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe-d5 ALL PASS on 3747; crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/, 5-undo and 5-undo-before-pause in ~/.jjodel-lanes/P-2026-11-07-0841/, checked by the session; GO pending
+**Notes**: Format is one step on Monaco's stack: Cmd+Z before the pause restores the typed text (diag mode D, 4 Ports). Mutant M8 (parentheses kept inside brackets) survives: declared intent, no output tells it. Under the Indentation style PORT's empty Conj prints as nothing (`instr & & and(ready)`), which does not parse back: a printer gap, not D5; formatText returns null there. Decisions: ~/.jjodel-lanes/P-2026-11-07-0747/handoff.md.
+**Prompt document name**: 2026-11-07 07:47
+
+**Ticket** (P-2026-11-07-0841, medium): after the pause, Cmd+Z following any meaning-free edit (Format, typed spaces, a comment) is the app's undo, not the editor's: `unchangedAgreement` (TextualTab.tsx:1493-1494, E1b) makes the text the agreement, the R-TXT-26 key (:1602-1606) routes Cmd+Z to UndoAction, which undoes the previous store step. Measured: Format, pause "No change", Cmd+Z: 4 Ports to 0, buffer "", canUndo false (crop 5-undo); two typed spaces do the same (diag mode C). Redo does not bring it back. Fix lives in TextualTab.tsx, outside D5. Probe: ~/.jjodel-lanes/P-2026-11-07-0841/diag-undo.mjs, MODE=B|C|D.

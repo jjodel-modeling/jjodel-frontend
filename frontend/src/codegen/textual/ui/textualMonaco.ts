@@ -4,7 +4,7 @@
  * ranges, definition, references, hover), a Monarch tokenizer for the EBNF tab, and one light theme (D-UI-15). Step D lane
  * D2c adds the seventh, completion (docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §3.3 C4), and lane D3b
  * the eighth, the code actions of the parse errors' fixes (same report §4), and lane D4 the ninth, rename through the text
- * (same report §5).
+ * (same report §5), and lane D5 the tenth and eleventh, Format Document and Format Selection (same report §6.2).
  *
  * A Monaco theme is global: the theme here is the JjScript theme (`vs`, the JjTL colours on the `.jjscript` tokens) plus
  * the rules of the text and of the EBNF, so a JjScript editor beside the tab keeps its colours. The semantic token types
@@ -19,6 +19,7 @@ import type * as Monaco from 'monaco-editor';
 import { jjscriptThemeRules } from '../../../jjscript/editor/jjscriptLanguage';
 import { jjtlTheme } from '../../../jjtl/editor/jjtlTheme';
 import type { ConcreteGrammar } from '../concreteGrammar';
+import { formatText, formatTextRange, minimalEdit } from '../format';
 import { analyzeText, completionsAt, renameEdits, renameLocation, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
 import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
@@ -365,6 +366,28 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             }
             const versionId = model.getVersionId();
             return { edits: out.edits.map(e => ({ resource: model.uri, versionId, textEdit: { range: rangeOf(model, e), text: e.text } })) };
+        },
+    });
+
+    // Step D lane D5 (report §6.2, decision D5): a format is an editor edit, never a model write; the typing pause applies
+    // it like any edit, and a format never changes meaning. One edit, the common prefix and suffix left out, so the caret
+    // and the decorations of the untouched objects stay; none on a text that is not applicable.
+    const formatEdits = (model: Monaco.editor.ITextModel, formatted: string | null): Monaco.languages.TextEdit[] => {
+        const e = formatted === null ? null : minimalEdit(model.getValue(), formatted);
+        return e ? [{ range: rangeOf(model, e), text: e.text }] : [];
+    };
+    monaco.languages.registerDocumentFormattingEditProvider(TEXTUAL_LANGUAGE_ID, {
+        provideDocumentFormattingEdits: model => {
+            const r = readingOf(model);
+            return formatEdits(model, r ? formatText(r.text, r.grammar) : null);
+        },
+    });
+    monaco.languages.registerDocumentRangeFormattingEditProvider(TEXTUAL_LANGUAGE_ID, {
+        provideDocumentRangeFormattingEdits: (model, range) => {
+            const r = readingOf(model);
+            const start = model.getOffsetAt({ lineNumber: range.startLineNumber, column: range.startColumn });
+            const end = model.getOffsetAt({ lineNumber: range.endLineNumber, column: range.endColumn });
+            return formatEdits(model, r ? formatTextRange(r.text, r.grammar, start, end) : null);
         },
     });
 
