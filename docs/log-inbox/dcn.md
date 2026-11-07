@@ -57,3 +57,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat, 2026-11-07: browser parity with base on scene_3_DemoESM, 17 gestures identical, P-2026-11-07-0750)
 **Notes**: `nucleus` is optional: the existing suites build SimRun literals without it, so `nucleusOf` falls back to the Petri nucleus of `run.net`, cached per net. Switched also `inputAsks`'s `terminated`, on the path of Play and single step. Bench 12/12 killed. Gates: typecheck 0; sim 1560/1560; full run the known three plus an irSelectionRing Chromium hook timeout under load (5/5 alone); build 0. Probe sim-event-attrs-browser 3091 vs base 3092: same 4 PASS lines; no probe covers step back or the Clock.
 **Prompt document name**: 2026-11-07 07:01
+
+## 2026-11-07 — feat: the classification accessor on the JjEL evaluation context
+**Prompt**: DCN L3.3 (P-2026-11-07-0940): `JjelClassificationAccess { isIn }` beside `JjelStateAccess`, optional `classification` on `EvaluationContext` inherited by child scopes; `ClassificationTest` evaluates its receiver and asks the accessor, throws without one, a non-boolean answer an error; optional accessor on `buildGuardContext`; tests first, mutation bench, one code commit.
+**Files touched**: 969aa0b3d — `frontend/src/jjel/evaluator/context.ts`, `evaluator.ts`, `frontend/src/model/simulation/guardContext.ts`, `frontend/src/jjel/__tests__/classificationAccess.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Without an accessor the throw comes before the receiver is evaluated, as `.[a]` does. The receiver goes to `isIn` as evaluated, not by id. Bench 8/9 killed; survivor `return !!answer` after the typeof guard is equivalent. Gates: typecheck 0; jjel + simulation 1350/1350; full run the known three plus a languageService 50 ms budget and an irSelectionRing hook timeout under load (38/38 alone); build 0.
+**Prompt document name**: 2026-11-07 09:40
