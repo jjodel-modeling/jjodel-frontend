@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1235
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (one prop in `EditorV2.tsx`, behaviour shared by every notation; a decision row)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · fix af1230b5d, probe 5cba3621c, docs 892a962bb · Alfonso visual GO 2026-11-07 15:10 on :3005 (binding declared from the console, pages added from the console)
 Request: none (Alfonso, 2026-11-07 12:32: «decidi tu», on the chat's option 1)
 Depends: P-2026-11-07-0155
 Corregge: —

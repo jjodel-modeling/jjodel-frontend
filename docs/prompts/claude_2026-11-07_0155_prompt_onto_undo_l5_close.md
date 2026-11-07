@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0155
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: fast (probe setup and docs only; no product code)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · probe 23e741a97, docs 5101a9ecb · Alfonso visual GO 2026-11-07 15:10 on :3005 (binding declared from the console, pages added from the console)
 Request: none (Alfonso: «ok», 2026-11-06 21:45, to option (c) and its lane plan; closing lane of the plan)
 Depends: P-2026-11-07-0110
 Corregge: —
