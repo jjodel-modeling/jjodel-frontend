@@ -2608,3 +2608,16 @@ Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Repor
 **Prompt document name**: 2026-11-07 09:12
 
 **Ticket** (found by this lane's scenario-2 run, not fixed, cause not measured): typing `// end state` then Enter gave `// end stateState` with no newline (crop `s2/1-before.png`), which reads as Enter accepting a completion item opened inside a comment.
+
+## 2026-11-07 — merge: textual-undo-agreement into alfonso-frontend-jjtl (P-2026-11-07-1103)
+**Prompt**: `claude_2026-11-07_1103_prompt_merge_textual-undo-agreement.md`, a direct merge by `lane-run merge --direct`, no session: `textual-undo-agreement` at `f93c79a12` into `alfonso-frontend-jjtl`, merge base `e08c85271`, 5 commits on the branch side.
+**Files touched**: merge `319be0670`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0912_prompt_textual_undo_agreement.md`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `319be0670` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14621 tests in 543 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: undo fix crops 1-format-undo-after-pause, 2-spaces-undo-after-pause, 3-scenario2-after-rename in ~/.jjodel-lanes/P-2026-11-07-0912/ checked by the chat
+**Notes**: Rollback tag `pre-textual-undo-agreement-P-2026-11-07-1103` on `e71c6abdc` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1103/result.json`.
+**Prompt document name**: 2026-11-07 11:03
