@@ -172,3 +172,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (probes and four light-theme crops of P-2026-11-07-1352, LIR §6; Alfonso's visual check due)
 **Notes**: useJjomSync takes the tab viewpoint by parameter: EditorV2Inner calls it above the EditorContext.Provider it renders (LIR §0). Gates on 0002f1ae4: typecheck exit 0, 0 error TS; build exit 0; vitest 554 files, 14791 tests (tip 14764 + 27), 1 failed (tolerant 1029 ms > 1000) and 2 Chromium close hooks timed out (irCollapsedRender, irSelectionRing), 82/82 alone; 3 known window files. At the AM-8 stop a broad pkill -f vitest -U uid may have killed other sessions' vitest runs.
 **Prompt document name**: 2026-11-07 12:49
+
+## 2026-11-07 — merge: multi-tab-l3 into alfonso-frontend-jjtl (P-2026-11-07-1438)
+**Prompt**: `claude_2026-11-07_1438_prompt_merge_multi-tab-l3.md`, lane full (merge): `multi-tab-l3` at `17e21bac6` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `9c75afa97`: the 20 files of the branch (this inbox, the LIR, two L3 prompts, `EditorV2.tsx`, `useJjomSync.ts`, `canvasToJjom.ts`, `jjomTransformers.ts`, `useContentSize.ts`, four new test files and seven test mocks); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9c75afa97`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 557 files, 14856 passed and 2 skipped as expected (tip 14829 + 27), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO on the P-2026-11-07-1352 app check of the same code: two tabs on two models at their own viewpoints 4/4, a drag in B writes under its tab key only, single tab 3/3, container 0 failures, 0457 scenes unchanged)
+**Notes**: Tip moved during the gates by another chat's docs-only `df5788565` (codegen inbox, 1418 Status), accepted as trunk; probes 14/14 re-run on the merged tree, R-TXT-59 absent. Branch vitest not run in `/Users/alfonso/jjodel-w-mtl3` (no node_modules; writing forbidden): 27 new tests counted at `17e21bac6`. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 14:38
