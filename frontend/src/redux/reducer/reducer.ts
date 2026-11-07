@@ -1260,7 +1260,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 return ret;
             }
             // An action that is not a user edit (the viewpoint write of a tab gaining focus, R-MT-20): no entry, no merge.
-            if (action.noUndo) return ret;
+            // A batch counts as one when every action in it is flagged; a batch mixing one with an edit keeps its entry.
+            if (action.noUndo || (action.className === 'CompositeAction' && (action as CompositeAction).actions?.length && (action as CompositeAction).actions.every((a) => a.noUndo))) return ret;
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
