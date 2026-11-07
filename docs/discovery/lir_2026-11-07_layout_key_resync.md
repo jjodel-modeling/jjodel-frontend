@@ -130,3 +130,59 @@ two undetected, the same 2^-32 order the content hash already accepts for every 
 
 The re-render cost of a full position patch on 407 nodes. Not a propagation question: no layer beyond the ones
 above receives anything new.
+
+## Addendum P-2026-11-07-0555 (1): what the re-transform of a switch does that a key change does not need
+
+**Prompt-ID**: P-2026-11-07-0555, item (1), written before any code. **Source**: the CPU profiles lane 0431 took on
+this code (`03a093081`, `~/.jjodel-lanes/P-2026-11-07-0431/vp-cost-out/perfclick-{head,parent}-lp-r{1,2,3}-vp.cpuprofile`,
+switch «Harness / Lane process (BPMN)» → «Harness / Lane process», 407-instance harness model), attributed by stack
+(inclusive time of the samples with a frame of the named function or file), mean of three runs each side.
+
+| Inclusive, ms (mean r1-r3) | head `03a093081` | parent `753122b0b` | delta |
+|---|---|---|---|
+| whole switch (root) | 5689 | 4966 | +723 |
+| frames of `useJjomSync.ts` or `vertexSnapshot.ts` | 279 | 48 | +231 |
+| of which the incremental effect | 226 | 0 | +226 |
+| of which `jjomVertexToRFNode` → `objectVertexToRFNode` | 214 | 0 | +214 |
+| `DynamicHandles.tsx` (handle re-measure, `updateNodeInternals`) | 313 | 131 | +182 |
+| `IRNodeContent.tsx` / `useContentSize.ts` | 266 / 329 | 222 / 301 | +43 / +27 |
+
+`LObject.name` reads per switch: 3458 head, 407 parent (the probe's counter): +3051, the figure
+`discovery_2026-10-21_jjomsync_incremental.md` §3.3 measured for one full re-transform. The L-layer self time 0431
+named (`joiner/proxy.ts`, `LModelElement.tsx`) sits under `objectVertexToRFNode` for 153 of its 256 ms in head r3.
+Fibers committed per switch: 14916-14922 head, 13140 parent.
+
+**The hypothesis holds.** In `utils/jjomTransformers.ts` the layout key enters a vertex's node through one function
+only, `effectiveLayoutOf` (`:58-60`, `readVertexLayout(raw, getActiveLayoutKey())` on the vertex D-object), read for
+`position` by all four node types (`:202`, `:249`, `:272`, `:478`), for the top-level `width`/`height` of class, enum
+and object nodes through `manualSizeOf` (`:74-85`), and for `style.width`/`style.height` of a package node (`:277-278`,
+defaults 400 and 300). Its other caller (`:545-546`) is `computeOptimalHandles`, an edge read. Every other field of the
+node (`id`, `type`, the package's `zIndex`, all of `data`) reads the model element through L proxies, or the vertex
+D-object (`ghostOffsets`, `:179`), which the snapshot holds by reference. Nothing there reads `state.viewpoint`. So a
+vertex whose D-object, model element D-object and content hash are unchanged, and whose `ch:` number moved only by the
+key term, gets from the transformer the cached node with a new geometry. The 214 ms of `objectVertexToRFNode` (the
+data build, the proxy reads, `namelessTargetLabel` 51 ms) plus one `LPointerTargetable.fromPointer` per vertex is the
+work a key change does not need. The geometry is `readVertexLayout` under the new key on the D-object the snapshot
+already holds, and the existing comparison against `rfNodeCache` (`useJjomSync.ts:1404-1435`) patches position and
+size exactly as it does today.
+
+**What the cheap path does not remove.** The other ~490 ms of the delta follow from the nodes actually moving, which
+the parent does not do: `DynamicHandles` re-measures the handles of the moved nodes (+182), React Flow and React
+re-render them (+1780 fibers), the IR content re-reads its size. Projected head-minus-parent after the change: about
++500 ms, above the 300 ms target of item (3). Lowering that part is outside `useJjomSync.ts` and `vertexSnapshot.ts`.
+
+**The cheap path, as it will be written (item 2).** A vertex goes through it only when the transformer would return
+the cached node with new geometry, decided on the snapshot alone and failing towards the full transform:
+- `!snapshotUnchanged`, the vertex D-object and the model element D-object `===` to the last run's, a cached node
+  exists, and the layout key in force differs from the key of the last run;
+- the `ch:` number equals the last run's with the last run's key term subtracted and the new one added. `mixNum`
+  adds the key term last (`h * 31 + term`, mod 2^32), so this is exact: equal iff the content hash is equal (the
+  2^-32 collision the hash already accepts). A vertex carried over by the anti-bounce window holds an older key's
+  number, the subtraction of the last run's term does not cancel it, and it takes the full transform, as today.
+- The key of the last run is a ref beside `prevElementsRef`, written where it is written; the key of the run comes
+  from a `useSelector(getLayoutKeyOf)`, the same state the snapshot was built on. The snapshot map keeps its shape,
+  so the carry-over and the tests of `03a093081` stand unchanged.
+- The geometry mirrors `jjomTransformers.ts` (`effectiveLayoutOf`, `manualSizeOf`, the package defaults) as a pure
+  function in `vertexSnapshot.ts`: the transformer imports `joiner`, so the bench cannot call it, and moving its
+  helper out is a file outside this lane. The mirror is a maintenance rule (a geometry read added to the transformer
+  must be added there), checked in the app by the 0431 probes in item (3).
