@@ -197,3 +197,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no UI path; the two halt lines are covered by tests; chat GO)
 **Notes**: Merge tree `85656ba5a` equal to the merge-tree measure; probes 12/12 once, control R-MT-25 absent; no union resolution. Load average ~150 during the full runs; the tip itself showed the same kind of load reds (outline, tolerant, two Chromium launches). Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44` (no node_modules; writing forbidden): 34 new tests counted at `eaac8a39c` (18 + 16), matched on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 15:45
+
+## 2026-11-07 — feat: an invocation is one step under Interleave too (R-DCN-22)
+**Prompt**: `claude_2026-11-07_1650_prompt_dcn_l44b_atomic_invocation.md`, lane full: under Interleave an invocation offers one candidate, the static operation and every redefinition of an active dynamic class fused into one parallel assignment on the previous σ; two writes of one slot halt double-assignment (R-SIM-17).
+**Files touched**: `2b28fc242`: `dcnStep.ts`, `__tests__/dcnStep.test.ts`; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck exit 0 (0 `error TS`); dcn 60/60; simulation suites 55 files, 1658 passed; full vitest 557 passed, 3 red at import (the known `window` three), 14934 passed, 2 skipped; build exit 0 (chunk-size warning only).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (nucleus not wired into the run; prompt: no visual check owed)
+**Notes**: The W5-gap test is replaced by «land() under Interleave runs with its redefinition in one step», the Sync case kept as its own test, a double-assignment test added. Bench in the commit: 4 of 5 mutants killed; the survivor (singleton shortcut to netStep removed) is equivalent, kept so the non-invocation path stays as in L4.4. A redefinition selected alone is inadmissible.
+**Prompt document name**: 2026-11-07 16:50

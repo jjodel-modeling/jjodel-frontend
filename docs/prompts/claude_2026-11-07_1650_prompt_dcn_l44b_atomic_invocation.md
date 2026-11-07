@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1650
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 2b28fc242 · no visual check owed (nucleus only, not wired into the run) · log entry in docs/log-inbox/dcn.md
 Lane: full (behaviour change in the DCN nucleus)
 Depends: R-DCN-4 as amended by R-DCN-22, R-DCN-23, R-SIM-17; L4.4 (`dcnStep.ts`, on the trunk since 601b46ceb)
 Worktree: ~/jjodel-w-dcn-l44b, branch dcn-l44b, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
