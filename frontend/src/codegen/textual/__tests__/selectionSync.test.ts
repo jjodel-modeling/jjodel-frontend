@@ -5,8 +5,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
+import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
+import { parseText } from '../parser';
+import { printTextModel } from '../printer';
 import type { ObjectSpan } from '../printer';
+import { portGrammar, portObjects, PORT_TEXT_CLIKE } from './portCorpus';
 
 // `Family f { members: [ Member a { name = "x" } Member b ] }` as spans: a root, two children, a reference inside a.
 //            0         1         2         3         4         5
@@ -199,6 +202,52 @@ describe('selectedSpans', () => {
     it('follows a span that moved after a reprint: the new spans, the same id', () => {
         const moved: ObjectSpan = { id: 'a', start: A.start + 12, end: A.end + 12 };
         expect(selectedSpans([ROOT, moved, B], ['a'])).toEqual([moved]);
+    });
+});
+
+// Lane F2 (P-2026-11-08-0027; R-TXT-55 F6, F12): a generated line to the model line. The origin's element and feature to
+// the range the tab reveals: the feature's item inside the element's carried span, else the object's first line. The port
+// corpus through the printer and the parser: the spans and the tree the tab holds, not hand-made ones.
+describe('revealedRange', () => {
+    const g = portGrammar();
+    const printed = printTextModel(g, portObjects());
+    const text = printed.text;
+    const tree = parseText(text, g).tree;
+    const shown = (t: string, r: { start: number; end: number } | null): string | null => (r ? t.slice(r.start, r.end) : null);
+
+    it('gives the item of the feature inside the element\'s span', () => {
+        expect(text).toBe(PORT_TEXT_CLIKE);
+        expect(shown(text, revealedRange(printed.spans, 'p3', 'driver', text, tree))).toBe('= instr & {} & and(ready)');
+        expect(shown(text, revealedRange(printed.spans, 'p1', 'type', text, tree))).toBe('Word(32)');
+        expect(shown(text, revealedRange(printed.spans, 'm', 'name', text, tree))).toBe('cpu');
+    });
+
+    it('never gives the item of a contained object: the owner\'s own items only', () => {
+        expect(shown(text, revealedRange(printed.spans, 'p1', 'width', text, tree))).toBe('instr : Word(32)');
+    });
+
+    it('gives the object\'s first line for a feature the text does not write, for no feature, and without the tree', () => {
+        expect(shown(text, revealedRange(printed.spans, 'p1', 'driver', text, tree))).toBe('instr : Word(32)');
+        expect(shown(text, revealedRange(printed.spans, 'p1', undefined, text, tree))).toBe('instr : Word(32)');
+        expect(shown(text, revealedRange(printed.spans, 'p1', 'type', text))).toBe('instr : Word(32)');
+    });
+
+    it('gives nothing for an element with no carried span, or a collapsed one (E8)', () => {
+        expect(revealedRange(printed.spans, 'zz', 'name', text, tree)).toBeNull();
+        expect(revealedRange([], 'p1', 'type', text, tree)).toBeNull();
+        expect(revealedRange([{ id: 'p1', start: 30, end: 30 }], 'p1', 'type', text, tree)).toBeNull();
+        // A collapsed span before the live one of the same id does not hide it.
+        expect(shown(text, revealedRange([{ id: 'p1', start: 30, end: 30 }, ...printed.spans], 'p1', 'type', text, tree))).toBe('Word(32)');
+    });
+
+    it('follows the spans and the tree of a reprint: the item where the new text writes it', () => {
+        const objects = portObjects().map(o => (o.id === 'm' ? { ...o, slots: { ...o.slots, inputs: ['p1'] } } : o)).filter(o => o.id !== 'p2' && o.id !== 'b1');
+        const again = printTextModel(g, objects);
+        const r = revealedRange(again.spans, 'p3', 'driver', again.text, parseText(again.text, g).tree);
+        expect(again.text).not.toBe(text);
+        expect(shown(again.text, r)).toBe('= instr & {} & and(ready)');
+        expect(r!.start).toBe(again.text.indexOf('= instr'));
+        expect(r!.start).not.toBe(text.indexOf('= instr'));
     });
 });
 
