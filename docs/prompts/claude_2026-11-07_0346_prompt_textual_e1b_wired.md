@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0346
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 0be037a6f (code, bench 6/6 killed) · stopped at the RC-51 soft ceiling, continued by P-2026-11-07-0510
 Lane: full (Text tab; tests; app check with real canvas gestures and crops)
 Depends: P-2026-11-07-0048 (E1a, `reprintChanged` in textReprint.ts, on this branch), R-TXT-54 (E3, E10), R-TXT-20
 Worktree: ~/jjodel-w-texte1, branch textual-e1-reprint (after taking the trunk)

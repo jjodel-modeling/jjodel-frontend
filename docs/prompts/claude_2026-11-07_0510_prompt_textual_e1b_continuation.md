@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0510
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 40b7be107 (code, bench 3/3 killed) · gates green · app check 11/11 PASS, crops in ~/.jjodel-lanes/P-2026-11-07-0510/, checked by the chat · log entry in docs/log-inbox/codegen.md
 Lane: full (Text tab and its test; app check)
 Depends: P-2026-11-07-0346 (E1b, stopped at the soft ceiling; code commit 0be037a6f), R-TXT-54
 Worktree: ~/jjodel-w-texte1, branch textual-e1-reprint

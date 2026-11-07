@@ -2389,3 +2389,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile: the branch takes the trunk
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0251/result.json`.
 **Prompt document name**: 2026-11-07 02:51
+
+## 2026-11-07 — feat(codegen): E1b, T10 wired into the Text tab (P-2026-11-07-0510)
+**Prompt**: `claude_2026-11-07_0346_prompt_textual_e1b_wired.md` (stopped at the RC-51 soft ceiling) and its continuation `claude_2026-11-07_0510_prompt_textual_e1b_continuation.md`: the Text tab's reprint splices with `reprintChanged`, and a comment-only edit becomes the agreement.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (code `0be037a6f`, bench 6/6; `40b7be107`, bench 3/3); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `40b7be107`: typecheck 0, build 0, check:docs and check:codegen-lazy green; vitest 14530 passed, 3 baseline import reds, plus the 1000 ms guard of `tolerant.test.ts`, 56/56 alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: scenario 2 by canvas gestures, 11/11 PASS, crops 1-4 in `~/.jjodel-lanes/P-2026-11-07-0510/`, checked by the chat (comments kept after rename and delete)
+**Notes**: Behaviour change: after a comment-only edit Cmd/Ctrl+Z is the app's undo, as after an application. The probe shows the docked Text panel with a probe-only CSS rule (PinnableDock hides it); no product change, placement is lane E3. Object count via `allSubObjects.length` (10, then 9). Handoff: `~/.jjodel-lanes/P-2026-11-07-0346/handoff.md`.
+**Prompt document name**: 2026-11-07 05:10
