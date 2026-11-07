@@ -19,6 +19,21 @@ export interface TextAttribute {
     readonly upper?: number;
     /** The documentation (the GenModel `documentation` detail of Ecore), where the metamodel carries it (step B1, hover). */
     readonly doc?: string;
+    /** Its values are JjEL (R-TXT-55 F1): typed by the `Expression` or `Action` primitive, read off the id (`jjelOf`). */
+    readonly jjel?: JjelMode;
+}
+
+/** The two JjEL primitives of the core (R-SIM-44): an Expression parses as one, an Action as a sequence of statements. */
+export type JjelMode = 'expression' | 'action';
+
+/**
+ * R-TXT-55 F1: the JjEL mode of an attribute from its type's id, keyed on the primitive's id as conformance keys it
+ * (ConformanceValidator.ts), never on its name: a user class called Expression is not JjEL. EString is not JjEL (F11).
+ */
+export function jjelOf(typeId: unknown): { jjel?: JjelMode } {
+    if (typeId === 'Pointer_EXPRESSION') return { jjel: 'expression' };
+    if (typeId === 'Pointer_ACTION') return { jjel: 'action' };
+    return {};
 }
 
 export interface TextReference {
@@ -85,6 +100,8 @@ export interface TextFeature {
     readonly many: boolean;
     /** Set only when the metamodel's data says (TextAttribute.ordered). */
     readonly ordered?: boolean;
+    /** As TextAttribute.jjel, set only on an attribute that has it. */
+    readonly jjel?: JjelMode;
 }
 
 function classNamed(mm: TextMetamodel, name: string): TextClass | undefined {
@@ -122,7 +139,8 @@ export function classFeatures(mm: TextMetamodel, c: TextClass): TextFeature[] {
     const out: TextFeature[] = [];
     for (const k of [...classAncestors(mm, c), c]) {
         for (const a of k.attributes ?? []) {
-            out.push({ name: a.name, owner: k.name, kind: 'attribute', type: a.type, many: !!a.many, ...(a.ordered !== undefined ? { ordered: a.ordered } : {}) });
+            out.push({ name: a.name, owner: k.name, kind: 'attribute', type: a.type, many: !!a.many, ...(a.ordered !== undefined ? { ordered: a.ordered } : {}),
+                ...(a.jjel ? { jjel: a.jjel } : {}) });
         }
         for (const r of k.references ?? []) {
             out.push({ name: r.name, owner: k.name, kind: r.containment ? 'containment' : 'reference', type: r.type, many: !!r.many,

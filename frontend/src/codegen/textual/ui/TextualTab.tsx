@@ -34,7 +34,7 @@ import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGramma
 import { JjodelEvents } from '../../../events/registry';
 import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
-import { classFeatures } from '../metamodel';
+import { classFeatures, jjelOf } from '../metamodel';
 import { readNewModel } from '../modelLines';
 import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
 import type { MarkedViolation } from '../conformanceMarks';
@@ -164,7 +164,7 @@ export function textInputOf(globals: Readonly<Record<string, any>>, lookup?: Rea
             name: nameOf(c),
             isAbstract: !!c.isAbstract || !!c.isInterface,
             supers: list(c.superTypes).map(nameOf),
-            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a), ...boundsOf(a), ...withDoc(a) })),
+            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a), ...boundsOf(a), ...withDoc(a), ...jjelOf(lookup?.[a?.id]?.type) })),
             references: list(c.references).map(r => ({
                 name: nameOf(r),
                 type: String(r.type ?? ''),
