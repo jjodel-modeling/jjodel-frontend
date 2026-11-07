@@ -2363,3 +2363,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — the branch takes the trunk
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0117/result.json`.
 **Prompt document name**: 2026-11-07 01:17
+
+## 2026-11-07 — feat(codegen): D3b, quick fixes and conformance markers (P-2026-11-07-0157)
+**Prompt**: `claude_2026-11-07_0157_prompt_textual_d3b_actions.md`, row D3b of the D report §8: a CodeActionProvider turning D3a's `fix` into quick fixes (D6); conformance violations as warnings on the carried spans of object and feature, source `conformance`, never blocking the apply (D8); tests; app check with crops.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts`, `__tests__/conformanceMarks.test.ts` (new) (`4bae15ec2`); `conformanceMarks.ts` (new), `ui/TextualTab.tsx`, the same test (`90d1c79b6`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck exit 0; full vitest 14514 passed, 2 skipped, red the 3 baseline import files and 2 Chromium-layout files under load, 18/18 alone; build exit 0, dynamic-import warnings 7 as before; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The provider test lives in conformanceMarks.test.ts, the only test file in scope. useConformance is loaded by a dynamic import (it imports joiner, which the bench cannot). Conformance marks offer no fix yet (§4.3 rows). The quick-fix menu truncates `replace with "in…`. App check: 3 steps, ALL PASS, crops d3b-1..3b in ~/.jjodel-lanes/P-2026-11-07-0157/.
+**Prompt document name**: 2026-11-07 01:57
+
+**Ticket** (P-2026-11-07-0157): a model created from text by `createModelFromText` reads `Module cpu`, D name and L `$name` `cpu`, but its raw `name` slot is `[]`, so useConformance reports «missing required attribute "name"» on a named object. Measured by the probe (`MEAS 3 the Module rows`); the app check used it as its conformance warning. Owner: the textual apply or the identity slot write, not this lane.

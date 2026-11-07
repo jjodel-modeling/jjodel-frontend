@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0157
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 4bae15ec2..90d1c79b6 · gates green · app check ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-07-0157/ · log entry in docs/log-inbox/codegen.md
 Lane: full (Monaco providers, Text tab, a new pure module; tests; app check with crops)
 Depends: P-2026-11-06-2328 (D3a, `fix` on TextParseError, on this branch), R-TXT-53 (D6, D8), D report §4 and §8 row D3b
 Worktree: ~/jjodel-w-textd, branch textual-d-writing-aids (after taking the trunk)
