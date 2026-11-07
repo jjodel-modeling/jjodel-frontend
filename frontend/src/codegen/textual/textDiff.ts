@@ -546,7 +546,9 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 // R-TXT-45: the same application clears it, and an empty slot reads nameless, so it is not one the app
                 // names: listed, it made a text differing from the print only in layout reprint with a false status.
                 const name = identityOf(g, o);
-                if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
+                // Written also when the handle is the name: `create instance of C "h"` names `data.name` and
+                // `initialName`, not the identity slot, which conformance and the XMI export read raw (P-2026-11-07-0253).
+                if (name !== null) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
                 if (name === null && g.objects[o.cls]?.named) lines.push(`set ${h}.name = ""`);
                 break;
             }
