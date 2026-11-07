@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0440
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · a99ea2482 · app check done by P-2026-11-07-0457 (LIR addendum) · non fuso: visual check due
 Lane: full (five files, `viewpoint/` subtree LIR trigger; not critical zone)
 Depends: L1 (merged 04b782a5b), R-MT-1..18, R-LAY-19, docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §7 row L2, §9 Q2 and Q7
 Worktree: ~/jjodel-w-mtl2, branch multi-tab-l2, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

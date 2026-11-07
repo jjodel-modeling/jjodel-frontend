@@ -26,7 +26,8 @@ vi.mock('../../DockManager', () => ({
 }));
 vi.mock('../EditorSwitch.scss', () => ({}));
 
-import { isActiveDockTab, savedViewpointToRestore, saveViewpointPreference } from '../EditorSwitch';
+import { initialTabViewpoint, isActiveDockTab, savedViewpointToRestore, saveViewpointPreference, writeFocusViewpoint } from '../EditorSwitch';
+import { activateViewpoint } from '../../../../utils/lastViewpoint';
 
 const KEY = (m: string) => 'jjodel.editorPrefs.' + m;
 
@@ -88,6 +89,37 @@ describe('EditorSwitch viewpoint preferences (R-MT-16)', () => {
             ls.set(KEY('mA'), '{not json');
             expect(savedViewpointToRestore('mA', 'vpV')).toBeNull();
         });
+        // R-MT-18 (L2): a saved '' is abstract syntax, a preference like any other, and it is
+        // restored as such; it is not "nothing saved" (scene 3b of P-2026-11-07-0105).
+        it('restores a saved abstract syntax as the empty id, distinct from no saved preference', () => {
+            expect(savedViewpointToRestore('mA', 'vpV')).toBeNull();
+            ls.set(KEY('mA'), JSON.stringify({ viewpointId: '', editorMode: 'flow' }));
+            expect(savedViewpointToRestore('mA', 'vpV')).toBe('');
+        });
+        it('does not restore a saved abstract syntax that is already in force', () => {
+            ls.set(KEY('mA'), JSON.stringify({ viewpointId: '' }));
+            expect(savedViewpointToRestore('mA', null)).toBeNull();
+            expect(savedViewpointToRestore('mA', '')).toBeNull();
+        });
+        it('does not restore a saved abstract syntax for a tab mounting behind the active one', () => {
+            ls.set(KEY('mB'), JSON.stringify({ viewpointId: '' }));
+            expect(savedViewpointToRestore('mB', 'vpV')).toBeNull();
+        });
+    });
+
+    // L2: the tab's own viewpoint starts from the root, or from what the mount restores.
+    describe('initialTabViewpoint', () => {
+        it('initialises from the root when nothing is restored', () => {
+            expect(initialTabViewpoint('vpV', null)).toBe('vpV');
+            expect(initialTabViewpoint(null, null)).toBeNull();
+        });
+        it('takes the restored viewpoint over the root', () => {
+            expect(initialTabViewpoint('vpV', 'vpW')).toBe('vpW');
+        });
+        it('takes a restored abstract syntax as null, the canonical empty (R-IRN-21)', () => {
+            expect(initialTabViewpoint('vpV', '')).toBeNull();
+            expect(initialTabViewpoint('', null)).toBeNull();
+        });
     });
 
     describe('saveViewpointPreference', () => {
@@ -100,6 +132,26 @@ describe('EditorSwitch viewpoint preferences (R-MT-16)', () => {
         it('writes abstract syntax as the empty id', () => {
             saveViewpointPreference('mA', null);
             expect(JSON.parse(ls.get(KEY('mA'))!)).toEqual({ viewpointId: '', editorMode: 'flow' });
+        });
+    });
+
+    // R-MT-20 (P-2026-11-07-0935): the focus write is not a user edit, so it adds no undo entry.
+    describe('writeFocusViewpoint', () => {
+        beforeEach(() => { vi.mocked(activateViewpoint).mockClear(); });
+        it('writes the tab viewpoint without an undo entry when it differs from the root', () => {
+            expect(writeFocusViewpoint('vpV', 'vpW')).toBe(true);
+            expect(activateViewpoint).toHaveBeenCalledTimes(1);
+            expect(activateViewpoint).toHaveBeenCalledWith('vpW', { undoable: false });
+        });
+        it('writes abstract syntax as null, without an undo entry', () => {
+            expect(writeFocusViewpoint('vpV', null)).toBe(true);
+            expect(activateViewpoint).toHaveBeenCalledWith(null, { undoable: false });
+        });
+        it('writes nothing when the tab viewpoint is the root one, the empty forms included', () => {
+            expect(writeFocusViewpoint('vpV', 'vpV')).toBe(false);
+            expect(writeFocusViewpoint('', null)).toBe(false);
+            expect(writeFocusViewpoint(undefined, null)).toBe(false);
+            expect(activateViewpoint).not.toHaveBeenCalled();
         });
     });
 });

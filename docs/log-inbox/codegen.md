@@ -2557,6 +2557,78 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0717/result.json`.
 **Prompt document name**: 2026-11-07 07:17
 
+## 2026-11-07 — feat(codegen): E2a, text to canvas selection (P-2026-11-07-0746, P-2026-11-07-0840)
+**Prompt**: `claude_2026-11-07_0746_prompt_textual_e2a_select.md` (stopped at the RC-51 soft ceiling after item 1) and its continuation `claude_2026-11-07_0840_prompt_textual_e2a_continuation.md`: a click or cursor key in the Text tab, or an outline click, selects the caret's object on the canvas and in Properties (R-TXT-54 E2, E4-E7).
+**Files touched**: `frontend/src/codegen/textual/selectionSync.ts`, `__tests__/selectionSync.test.ts` (`ef8c76e3c`, `5ca6ac98a`), `ui/TextualTab.tsx` (`5ca6ac98a`); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest: the 3 baseline import reds plus `tolerant.test.ts` timing guard (1056 ms > 1000 under full-suite load), green alone (64/64).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: app check run7 27/27 and the crop 2 retake 3/3 (`probe2.mjs`), crops 1-6 and `2-after-two-arrowdown.png` in ~/.jjodel-lanes/P-2026-11-07-0746/ viewed by the session; GO pending
+**Notes**: Two findings the discovery did not foresee, both fixed in DOVE: the canvas unmounts nodes out of view, so `canvasVertexIds` walks the graphs of the mounted nodes; rc-dock keeps an inactive tab mounted, aria-hidden, visibility hidden, with a non-zero box (contra §6.4), now refused. `_lastSelected` is a transient root key outside the sync: see the §7.2 draft of discovery_2026-11-06_textual_e_sync.md. Bench 7/7 and 6/6 in the commits.
+**Prompt document name**: 2026-11-07 08:40
+
+## 2026-11-07 — merge: textual-e2a-select into alfonso-frontend-jjtl (P-2026-11-07-0927)
+**Prompt**: `claude_2026-11-07_0927_prompt_merge_textual-e2a-select.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `57280dd8f`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load ~85 (hook tests laneRun, laneRunDirect, laneTracking; textual completion, languageService, tolerant; irCollapsedRender, irSelectionRing), all green alone at load 6-20; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: E2a crops 1-6 and 2-after-two-arrowdown in ~/.jjodel-lanes/P-2026-11-07-0746/ checked by the chat (caret selects its node, typing selects nothing, outline click, Properties follows)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0927/result.json`.
+**Prompt document name**: 2026-11-07 09:27
+
+## 2026-11-07 — ticket: A canvas create gets no undo step of its own (reducer.ts:1280 vertex merge)
+**Ticket**: An object dropped on the v2 canvas never gets an undo step of its own. Measured by P-2026-11-07-0654 (docs/discovery/discovery_2026-11-07_slot_identity_656.md §9, on branch slot-identity-656): after `syncCreateObject` the state history keeps the same length (undoDelta 0), and one Undo reverts the user's previous action while the new object stays.
+
+Cause (read): `reducer.ts:1280` merges every delta that touches a vertex (`delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs`) into the previous undo entry. The drop of a new object creates a vertex, so its creation folds into whatever came before.
+
+Expected: a delta that creates a DObject is not merged by the vertex rule; one Undo removes the dropped object (and its vertex), and nothing else.
+
+Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Report.
+**Priority**: medium
+**Found in**: P-2026-11-07-0654
+
+## 2026-11-07 — fix(codegen): Cmd+Z after a no-change edit undoes the text (P-2026-11-07-0912)
+**Prompt**: `claude_2026-11-07_0912_prompt_textual_undo_agreement.md`: after a Format, typed spaces or a comment read as «No change», Cmd/Ctrl+Z went to the app's undo and reverted the previous model change; it must undo the text edit, with T10's splice kept.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (red `41c2916de`), `frontend/src/codegen/textual/ui/TextualTab.tsx` (`0272658db`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 05:10 (E1b decision 4, the undo hand-over after a comment-only edit)
+**Causa**: (c)
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest 14593 passed, the 3 baseline import reds plus two Chromium hook timeouts (`irCollapsedRender`, `irSelectionRing`), green alone (18/18).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: undo probe B-E all PASS, pre-fix control reproduces the bug (buffer empty, Ports 0); scenario 2 11/11; crops 1-3 in ~/.jjodel-lanes/P-2026-11-07-0912/ viewed by the session; GO pending
+**Notes**: Cause: `unchangedAgreement` made the no-change text `sync.text` and `updateUndoKey` gave Cmd+Z to the app on it. Fix: the agreement keeps `appText`, the text of the last application or reprint; `appUndoKey` routes to the app only there. Bench 5/5. No formatter on this branch (D5): the probe formats by minimal edits. Scenario 2 needed a Zoom out gesture: since E2a a text click scrolls the canvas off `push`.
+**Prompt document name**: 2026-11-07 09:12
+
+**Ticket** (found by this lane's scenario-2 run, not fixed, cause not measured): typing `// end state` then Enter gave `// end stateState` with no newline (crop `s2/1-before.png`), which reads as Enter accepting a completion item opened inside a comment.
+
+## 2026-11-07 — merge: textual-undo-agreement into alfonso-frontend-jjtl (P-2026-11-07-1103)
+**Prompt**: `claude_2026-11-07_1103_prompt_merge_textual-undo-agreement.md`, a direct merge by `lane-run merge --direct`, no session: `textual-undo-agreement` at `f93c79a12` into `alfonso-frontend-jjtl`, merge base `e08c85271`, 5 commits on the branch side.
+**Files touched**: merge `319be0670`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0912_prompt_textual_undo_agreement.md`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `319be0670` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14621 tests in 543 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: undo fix crops 1-format-undo-after-pause, 2-spaces-undo-after-pause, 3-scenario2-after-rename in ~/.jjodel-lanes/P-2026-11-07-0912/ checked by the chat
+**Notes**: Rollback tag `pre-textual-undo-agreement-P-2026-11-07-1103` on `e71c6abdc` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1103/result.json`.
+**Prompt document name**: 2026-11-07 11:03
+
+## 2026-11-07 — ticket: Text tab: Enter at the end of a comment accepts a completion (// end stateState)
+**Ticket**: Seen by P-2026-11-07-0912 (undo fix lane) during its scenario-2 probe run, reported in its log entry as a Ticket paragraph, cause not measured: in the Text tab, typing `// end state` at the end of a line and then Enter gave `// end stateState` on one line, with no newline inserted, as if the Enter accepted a completion item (`State`) instead of breaking the line.
+
+To measure first: whether the suggest widget is open inside a comment (completion should not trigger inside `//` comments), and whether Enter accepts a suggestion there. Files likely involved: `codegen/textual/ui/textualMonaco.ts` (CompletionItemProvider, D2c), `codegen/textual/languageService.ts` (`completionsAt`).
+**Priority**: high
+**Found in**: P-2026-11-07-0912
+
 ## 2026-11-07 — feat(codegen): D5, Format Document and Format Selection (P-2026-11-07-0747, P-2026-11-07-0841)
 **Prompt**: `claude_2026-11-07_0747_prompt_textual_d5_format.md` (lane D5, R-TXT-53 D5: pure format, Monaco document and range providers), stopped at the soft ceiling; `claude_2026-11-07_0841_prompt_textual_d5_continuation.md` finished it from the handoff: the undo after Format, crops, docs.
 **Files touched**: `frontend/src/codegen/textual/format.ts` (new), `__tests__/format.test.ts` (new) in 65eda512f; `ui/textualMonaco.ts` in afb9d681b; 0841: no code; this entry and the Status of both prompt files.
@@ -2571,6 +2643,19 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Prompt document name**: 2026-11-07 07:47
 
 **Ticket** (P-2026-11-07-0841, medium): after the pause, Cmd+Z following any meaning-free edit (Format, typed spaces, a comment) is the app's undo, not the editor's: `unchangedAgreement` (TextualTab.tsx:1493-1494, E1b) makes the text the agreement, the R-TXT-26 key (:1602-1606) routes Cmd+Z to UndoAction, which undoes the previous store step. Measured: Format, pause "No change", Cmd+Z: 4 Ports to 0, buffer "", canUndo false (crop 5-undo); two typed spaces do the same (diag mode C). Redo does not bring it back. Fix lives in TextualTab.tsx, outside D5. Probe: ~/.jjodel-lanes/P-2026-11-07-0841/diag-undo.mjs, MODE=B|C|D.
+
+## 2026-11-07 — merge: textual-d5-format into alfonso-frontend-jjtl (P-2026-11-07-1141)
+**Prompt**: `claude_2026-11-07_1141_prompt_merge_textual-d5-format.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d5-format` at `b6bbe612e` into `alfonso-frontend-jjtl`, merge base `db79d40ff`, 5 commits on the branch side.
+**Files touched**: merge `938b5fe1f`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0747_prompt_textual_d5_format.md`, `docs/prompts/claude_2026-11-07_0841_prompt_textual_d5_continuation.md`, `frontend/src/codegen/textual/__tests__/format.test.ts`, `frontend/src/codegen/textual/format.ts`, `frontend/src/codegen/textual/ui/textualMonaco.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `938b5fe1f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14729 tests in 548 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D5 crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/ and 5-undo in ~/.jjodel-lanes/P-2026-11-07-0841/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d5-format` on `376a2273e` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1141/result.json`.
+**Prompt document name**: 2026-11-07 11:41
 
 ## 2026-11-07 — fix(codegen): #687, Enter at a comment's end breaks the line (P-2026-11-07-1145)
 **Prompt**: `claude_2026-11-07_1145_prompt_textual_687_comment_enter.md` (ticket #687, lane full): `// end state` then Enter accepted a completion (`stateState`); cause by real gestures, smallest fix, tests red first, app check. TextualTab.tsx approved by the chat for the one option line.

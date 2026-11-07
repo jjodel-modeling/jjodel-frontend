@@ -43,7 +43,8 @@ export type JjelExpression =
     | WithDoExpr
     | IndexAccessExpr
     | ObjectLiteralExpr
-    | StateAccessExpr;
+    | StateAccessExpr
+    | ClassificationTestExpr;
 
 // ============================================
 // LITERALS
@@ -325,6 +326,24 @@ export interface StateAccessExpr extends JjelASTNode {
     type: 'StateAccess';
     object: JjelExpression;
     attribute: string;
+}
+
+// ============================================
+// CLASSIFICATION TEST
+// ============================================
+
+/**
+ * Classification test: expr.in(V::D), true when the dynamic class D of the
+ * viewpoint V is active for the receiver (R-DCN-7). A member call `in` whose
+ * single argument is a qualified name; `in` with any other argument stays a
+ * MethodCall. Evaluated through an accessor the caller binds (lane L3.3).
+ * Examples: self.in(Mode::Charging), self.wau.in(Alert::Safe)
+ */
+export interface ClassificationTestExpr extends JjelASTNode {
+    type: 'ClassificationTest';
+    object: JjelExpression;
+    viewpoint: string;
+    dynamicClass: string;
 }
 
 // ============================================

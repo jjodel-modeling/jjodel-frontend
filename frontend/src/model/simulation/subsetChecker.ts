@@ -210,6 +210,7 @@ function children(e: JjelExpression): Array<[JjelExpression, readonly string[]]>
         case 'IndexAccess': return [[e.object, []], [e.index, []]];
         case 'ObjectLiteral': return e.entries.map(x => [x.value, []] as [JjelExpression, string[]]);
         case 'StateAccess': return [[e.object, []]];
+        case 'ClassificationTest': return [[e.object, []]];
         default: {
             const never: never = e;
             return never;
@@ -389,6 +390,10 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             return;
         case 'StateAccess':
             // Reading state is exportable (R-SIM-30); `node.[x]` is E-NODE through its object.
+            plain(e.object);
+            return;
+        case 'ClassificationTest':
+            report(w, 'E-CALL', `\`in(${e.viewpoint}::${e.dynamicClass})\` tests a dynamic class, and a classification has no translation here (R-DCN-7).`, e);
             plain(e.object);
             return;
         default: {

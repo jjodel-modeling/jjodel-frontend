@@ -1306,11 +1306,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 
 ## 2026-11-05 — docs: closure of the blocked jjtl-method-failure-error merge
 **Prompt**: P-2026-11-05-2234, direct merge of `jjtl-method-failure-error` (R-FA-12), landed as `1b70ba7f3`, reported blocked by the vitest gate.
-**File toccati**: the merge prompt's `Status:` line, this entry
-**Esito**: ✅ completato
+**Files touched**: the merge prompt's `Status:` line, this entry
+**Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Note**: The one red test, `laneRun.test.ts` (lane-run monitor kills), failed twice at load 70-244 (status null, the 20 s limit of its spawn) and passes alone at load 7. The merge touches no harness script. `lane-run go` refuses a blocked merge, so this closure is by hand. The app's write-back of a failed run remains unmeasured.
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The one red test, `laneRun.test.ts` (lane-run monitor kills), failed twice at load 70-244 (status null, the 20 s limit of its spawn) and passes alone at load 7. The merge touches no harness script. `lane-run go` refuses a blocked merge, so this closure is by hand. The app's write-back of a failed run remains unmeasured.
+**Prompt document name**: 2026-11-05 22:34
 
 ## 2026-11-06 — fix(jjtl): a failing builtin names the rule and source element (P-2026-11-06-2305)
 **Prompt**: P-2026-11-06-2305: R-FA-13, a builtin failing inside JjTL names rule and source element as R-FA-12 does, tests first, node regression; then measure only what the app writes for a failed run.
@@ -1337,3 +1342,29 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: R-FA-13: node runs 6/6 byte-equal, the app writes no model after a failed run
 **Notes**: Rollback tag `pre-jjtl-builtin-errors` on `a743c3f37` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0011/result.json`.
 **Prompt document name**: 2026-11-07 00:11
+
+## 2026-11-07 — fix(jjtl): a failed run returns no target model (P-2026-11-07-1125)
+**Prompt**: P-2026-11-07-1125: R-FA-14, the executor returns no target model for a failed run; failing test first, callers listed, R-FA-14 registered. Resumed after a question: Alfonso adopted (a), rewrite the two test files that read the model of a failed run.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/failed-run-no-target.test.ts`, `frontend/src/jjtl/executor/__tests__/called-lazy-rules.test.ts`, `frontend/src/jjtl/executor/__tests__/containment-placement.test.ts` (6c51a33ae); `frontend/src/jjtl/SPEC.md` (b29f10fd0); `docs/decisions.md` (970f5bbb4); this entry and the prompt's `Status:` line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0; JjTL+JjEL 1,252/1,252, only the known import-red ai-prompt-sanitization.test.ts; full suite and build not run
+**Out-of-scope changes**: yes — called-lazy-rules.test.ts and containment-placement.test.ts, not in the prompt, rewritten on Alfonso's answer (a); more than five files, listed above
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI change, no app probe by the prompt)
+**Notes**: Red 2/4 before. Callers: ProjectEditor.tsx:1606 returns first, JjtlDevelopmentEnv.tsx:361 and jjodelConverter.ts:358 read on success only. Moved to pointer variants, called-lazy-rules.test.ts at e73016a49: 127, 171, 362, 386, 408, 569-570. Dropped, no successful variant: called-lazy-rules.test.ts:700 (roots), containment-placement.test.ts:232-236 (placed once, roots). Bench: unique off x2, let unrealized, all killed.
+**Prompt document name**: 2026-11-07 11:25
+
+## 2026-11-07 — docs: closure of the blocked jjtl-failed-run-no-target merge
+**Prompt**: P-2026-11-07-1152, direct merge of `jjtl-failed-run-no-target` (R-FA-14), landed as `354ba3cdd`, reported blocked by the vitest gate.
+**Files touched**: the merge prompt's `Status:` line, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 11:25 (two callers of a failed run outside jjtl/ were missed)
+**Causa**: (c)
+**Regressions**: yes (two red cases in jjtlSourceValues.test.ts, fixed by 40b586823)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Two red cases in `jjtlSourceValues.test.ts`, outside `jjtl/`: its helper read `targetModel` of a failed run, which R-FA-14 removes. The lane ran only the JjTL and JjEL suites and missed them. Fixed on the trunk by `40b586823` (16/16 green). `lane-run go` refuses a blocked merge, so this closure is by hand.
+**Prompt document name**: 2026-11-07 11:52

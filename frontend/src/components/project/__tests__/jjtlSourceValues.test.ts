@@ -201,7 +201,7 @@ describe.each([
 ] as const)('a many-valued feature with one value or none — %s', (_label, withSource) => {
     const run = async (upperBound: number | undefined) => {
         const result = await execute(parseJjtl(RULE, withSource), source(upperBound), TARGET);
-        return { m: result.targetModel!.instances.get('M')![0], warnings: result.warnings, result };
+        return { m: result.targetModel?.instances.get('M')?.[0], warnings: result.warnings, result };
     };
 
     it('reaches the rules as a collection: size, first, map, forall', async () => {
@@ -226,7 +226,8 @@ describe.each([
         expect(result.errors[0]).toMatch(/^Failed to map \(creation\) -> d: Method 'size' failed in expression at line 9, column \d+ \(rule 'Arbiter -> M', source element 'arb'\): Unknown method 'size' for type String/);
         expect(warnings.some(w => /Unknown method 'map'/.test(w))).toBe(true);
         expect(warnings.some(w => /ForAll collection is not an array/.test(w))).toBe(true);
-        expect(m.c ?? null).toBeNull();
-        expect(m.regs ?? []).toEqual([]);
+        // A failed run returns no target model (R-FA-14).
+        expect(m).toBeUndefined();
+        expect(result.targetModel).toBeUndefined();
     });
 });
