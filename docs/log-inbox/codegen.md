@@ -2295,7 +2295,7 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
+**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; crops checked by the chat
 **Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
 **Prompt document name**: 2026-11-06 23:01
 
@@ -2449,7 +2449,7 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; visual GO pending
+**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; crops checked by the chat
 **Notes**: Two new tests red on HEAD; five pinned tests gain the `set h.name` line (listed in the commit bodies). Gates: typecheck 0; vitest 3 baseline import reds, 14505 passed, no timing red; build, check:docs, check:codegen-lazy exit 0. Probe 10/10 PASS: raw slots `["cpu"]`, `["result"]`, `["ready"]`, conformance empty, XMI names, no page errors. Causa from the report: a wrong assumption that the handle names the slot; the report names no originating prompt. B1 (console) stays for N1's ticket.
 **Prompt document name**: 2026-11-07 03:44
 
@@ -2569,3 +2569,18 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: app check run7 27/27 and the crop 2 retake 3/3 (`probe2.mjs`), crops 1-6 and `2-after-two-arrowdown.png` in ~/.jjodel-lanes/P-2026-11-07-0746/ viewed by the session; GO pending
 **Notes**: Two findings the discovery did not foresee, both fixed in DOVE: the canvas unmounts nodes out of view, so `canvasVertexIds` walks the graphs of the mounted nodes; rc-dock keeps an inactive tab mounted, aria-hidden, visibility hidden, with a non-zero box (contra §6.4), now refused. `_lastSelected` is a transient root key outside the sync: see the §7.2 draft of discovery_2026-11-06_textual_e_sync.md. Bench 7/7 and 6/6 in the commits.
 **Prompt document name**: 2026-11-07 08:40
+
+## 2026-11-07 — fix(codegen): Cmd+Z after a no-change edit undoes the text (P-2026-11-07-0912)
+**Prompt**: `claude_2026-11-07_0912_prompt_textual_undo_agreement.md`: after a Format, typed spaces or a comment read as «No change», Cmd/Ctrl+Z went to the app's undo and reverted the previous model change; it must undo the text edit, with T10's splice kept.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (red `41c2916de`), `frontend/src/codegen/textual/ui/TextualTab.tsx` (`0272658db`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 05:10 (E1b decision 4, the undo hand-over after a comment-only edit)
+**Causa**: (c)
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest 14593 passed, the 3 baseline import reds plus two Chromium hook timeouts (`irCollapsedRender`, `irSelectionRing`), green alone (18/18).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: undo probe B-E all PASS, pre-fix control reproduces the bug (buffer empty, Ports 0); scenario 2 11/11; crops 1-3 in ~/.jjodel-lanes/P-2026-11-07-0912/ viewed by the session; GO pending
+**Notes**: Cause: `unchangedAgreement` made the no-change text `sync.text` and `updateUndoKey` gave Cmd+Z to the app on it. Fix: the agreement keeps `appText`, the text of the last application or reprint; `appUndoKey` routes to the app only there. Bench 5/5. No formatter on this branch (D5): the probe formats by minimal edits. Scenario 2 needed a Zoom out gesture: since E2a a text click scrolls the canvas off `push`.
+**Prompt document name**: 2026-11-07 09:12
+
+**Ticket** (found by this lane's scenario-2 run, not fixed, cause not measured): typing `// end state` then Enter gave `// end stateState` with no newline (crop `s2/1-before.png`), which reads as Enter accepting a completion item opened inside a comment.

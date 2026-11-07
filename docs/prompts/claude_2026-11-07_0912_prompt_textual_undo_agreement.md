@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0912
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 41c2916de (red), 0272658db · gates green · undo probe B-E PASS, scenario 2 11/11; verifica visiva in attesa del GO (crops 1-3 in ~/.jjodel-lanes/P-2026-11-07-0912/)
 Lane: full (Text tab undo routing and tests; app check)
 Depends: P-2026-11-07-0510 (E1b, `unchangedAgreement`), P-2026-11-07-0841 (D5 diagnostic that found it), R-TXT-26, R-TXT-54
 Worktree: ~/jjodel-w-textundo, branch textual-undo-agreement (from textual-e2a-select e08c85271, so E2a is in; merges after E2a)
