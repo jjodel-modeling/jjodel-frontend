@@ -152,3 +152,18 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no UI path; the L4.2 dialog ticket is checked by simRolesDraft.test.ts; chat GO)
 **Notes**: Merge tree `b1469f16d` equal to the merge-tree measure; probes 5/5 once; no union resolution. Branch vitest count not run in `/Users/alfonso/jjodel-w-dcn-l42` (no node_modules there; writing forbidden): the 35 new tests counted at `178c1c837` (+1, +17, +17), matched on the merge. First hooks run killed (exit 144) beside the full suite, 967/967 alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 13:08
+
+## 2026-11-07 — feat: σ-backed handles for DCN instances, the classification accessor bound
+**Prompt**: DCN L4.3 (P-2026-11-07-1410): a pure module building per σ a handle per instance (own, inherited, dormant slots from σ; links to the linked handles; name and classifier), `isIn` over the invariants memoized per (instance, class), unknown names and W2 cycles throwing; an optional DCN binding on `buildGuardContext` and `evaluateOutput`; tests first, mutation bench, one code commit.
+**Files touched**: dfcd795c3 — `frontend/src/model/simulation/dcn/dcnHandles.ts` (new), `dcn/__tests__/dcnHandles.test.ts` (new), `guardContext.ts`, `boardOutputs.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 23/24 killed; M11 (memo removed) survives, unobservable through any output. Gates: typecheck 0, sim+JjEL+sim-UI 68 files/2236 green, full run 5 red files: the known three plus two Chromium afterAll timeouts under load, 18/18 green alone; build 0. Links read from the model (spec §6, fixed), upper bound via `options.upper`. `generalizationClosure` duplicated (not exported by dcnCompile.ts).
+**Prompt document name**: 2026-11-07 14:10
+
+**Ticket** (for L4.4, not blocking): the Petri guard checker rejects `.in(V::D)` with E-CALL (`subsetChecker.ts`), so `compileGuard` and `compileOutput` refuse every DCN guard or watch that tests a class; the DCN guard compiler must parse without that check (the test's `dcnGuard`) or the checker must gain a DCN mode.

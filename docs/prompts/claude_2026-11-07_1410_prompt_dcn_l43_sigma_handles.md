@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1410
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · dfcd795c3 · verifica visiva non applicabile (no UI path, the prompt owes none; chat C-2026-11-06-2159, lane auto)
 Lane: full (new nucleus module; one additive change to the guard context builder)
 Depends: R-DCN-2, R-DCN-3, R-DCN-7, R-DCN-12, R-DCN-17; L3.3 (classification accessor), L3.4 (slot writes), L4.2 (`compileDcn`); discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §3.4 and §6 (lane L4.3)
 Worktree: ~/jjodel-w-dcn-l43, branch dcn-l43, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
