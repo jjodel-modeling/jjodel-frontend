@@ -26,7 +26,7 @@ vi.mock('../../DockManager', () => ({
 }));
 vi.mock('../EditorSwitch.scss', () => ({}));
 
-import { isActiveDockTab, savedViewpointToRestore, saveViewpointPreference } from '../EditorSwitch';
+import { initialTabViewpoint, isActiveDockTab, savedViewpointToRestore, saveViewpointPreference } from '../EditorSwitch';
 
 const KEY = (m: string) => 'jjodel.editorPrefs.' + m;
 
@@ -87,6 +87,37 @@ describe('EditorSwitch viewpoint preferences (R-MT-16)', () => {
             expect(savedViewpointToRestore('mA', 'vpV')).toBeNull();
             ls.set(KEY('mA'), '{not json');
             expect(savedViewpointToRestore('mA', 'vpV')).toBeNull();
+        });
+        // R-MT-18 (L2): a saved '' is abstract syntax, a preference like any other, and it is
+        // restored as such; it is not "nothing saved" (scene 3b of P-2026-11-07-0105).
+        it('restores a saved abstract syntax as the empty id, distinct from no saved preference', () => {
+            expect(savedViewpointToRestore('mA', 'vpV')).toBeNull();
+            ls.set(KEY('mA'), JSON.stringify({ viewpointId: '', editorMode: 'flow' }));
+            expect(savedViewpointToRestore('mA', 'vpV')).toBe('');
+        });
+        it('does not restore a saved abstract syntax that is already in force', () => {
+            ls.set(KEY('mA'), JSON.stringify({ viewpointId: '' }));
+            expect(savedViewpointToRestore('mA', null)).toBeNull();
+            expect(savedViewpointToRestore('mA', '')).toBeNull();
+        });
+        it('does not restore a saved abstract syntax for a tab mounting behind the active one', () => {
+            ls.set(KEY('mB'), JSON.stringify({ viewpointId: '' }));
+            expect(savedViewpointToRestore('mB', 'vpV')).toBeNull();
+        });
+    });
+
+    // L2: the tab's own viewpoint starts from the root, or from what the mount restores.
+    describe('initialTabViewpoint', () => {
+        it('initialises from the root when nothing is restored', () => {
+            expect(initialTabViewpoint('vpV', null)).toBe('vpV');
+            expect(initialTabViewpoint(null, null)).toBeNull();
+        });
+        it('takes the restored viewpoint over the root', () => {
+            expect(initialTabViewpoint('vpV', 'vpW')).toBe('vpW');
+        });
+        it('takes a restored abstract syntax as null, the canonical empty (R-IRN-21)', () => {
+            expect(initialTabViewpoint('vpV', '')).toBeNull();
+            expect(initialTabViewpoint('', null)).toBeNull();
         });
     });
 
