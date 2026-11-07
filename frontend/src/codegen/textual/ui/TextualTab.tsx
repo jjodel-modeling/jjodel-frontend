@@ -387,6 +387,14 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
     return { kind: 'apply' };
 }
 
+/**
+ * E1b: a read text that asks for no change of the model (a comment typed, say) is the new agreement, so a later change
+ * of the model splices into it (T10) instead of finding a pending edit. Null for any other decision.
+ */
+export function unchangedAgreement(d: EditDecision, text: string, print: string, base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): TextSync | null {
+    return d.kind === 'unchanged' ? { text, model: print, printed: agreedPrint(base) } : null;
+}
+
 /** What the lookup gives an edit besides the objects (textApply.ts `defaultedSlots`, `referencedElsewhere`). */
 export interface EditEvidence {
     readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
@@ -1433,6 +1441,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             setStatus({ kind: 'guard', ...guard });
             return;
         }
+        const agreed = unchangedAgreement(d, text, r.view.text, r.base);
+        if (agreed) { syncRef.current = agreed; agree(); updateUndoKey(); }
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
     };
 

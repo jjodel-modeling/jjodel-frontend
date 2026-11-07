@@ -30,7 +30,7 @@ import type { RefSpan } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
 import { reprintChanged } from '../textReprint';
 import type { PrintedText } from '../textReprint';
-import { agreedPrint, modelReprint } from '../ui/TextualTab';
+import { agreedPrint, modelReprint, unchangedAgreement } from '../ui/TextualTab';
 import type { TextSync } from '../ui/TextualTab';
 import { GARAGE, grammarOf } from './corpus';
 import { objectsOf } from './spec';
@@ -424,5 +424,24 @@ describe('modelReprint, the Text tab\'s reprint branch (E1b)', () => {
         expect(r.spliced).toBe(true);
         readsAsPrint(G, r.text, next, r.spans);
         expect(r.text).toContain('// a gear\nGear w {\n');
+    });
+});
+
+describe('unchangedAgreement: a text that asks for no change of the model is the agreement (E1b)', () => {
+    const base = { grammar: G, spans: OLD.spans, refs: OLD.refs };
+
+    it('a comment typed and read: the text as typed agrees with the print, and a diagram edit then splices into it (mutant: no agreement on unchanged)', () => {
+        const sync = unchangedAgreement({ kind: 'unchanged' }, TYPED_TEXT, OLD.text, base);
+        expect(sync).toEqual({ text: TYPED_TEXT, model: OLD.text, printed: agreedPrint(base) });
+        const next = printed(G, editing(OBJECTS, 'c2', { name: 'gamma' }));
+        const r = modelReprint(sync!, TYPED, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        for (const c of COMMENTS) expect(r.text).toContain(c);
+    });
+
+    it('any other decision leaves the agreement as it is (mutant: every decision agrees)', () => {
+        for (const d of [{ kind: 'stale' }, { kind: 'errors', count: 1 }, { kind: 'confirm' }, { kind: 'apply' }, { kind: 'refused', reasons: [] }] as const) {
+            expect(unchangedAgreement(d, TYPED_TEXT, OLD.text, base)).toBeNull();
+        }
     });
 });
