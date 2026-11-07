@@ -138,7 +138,9 @@ export function modelLines(mm: TextMetamodel, objects: readonly TextObject[]): M
         for (const f of featuresOf(o.cls)) {
             if (f.kind !== 'attribute') continue;
             if (isNameFeature(f) && typeof o.slots[f.name] === 'string') {
-                if (o.slots[f.name] !== h) lines.push(`set ${h}.name = ${jjscriptString(o.slots[f.name] as string)}`);
+                // Written also when the handle is the name: `create instance of C "h"` names `data.name` and
+                // `initialName`, not the identity slot, which conformance and the XMI export read raw (P-2026-11-07-0253).
+                lines.push(`set ${h}.name = ${jjscriptString(o.slots[f.name] as string)}`);
                 continue;
             }
             const values = asArray(o.slots[f.name]);
