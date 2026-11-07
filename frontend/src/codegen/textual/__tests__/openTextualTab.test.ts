@@ -129,10 +129,20 @@ describe('E9 (R-TXT-54): the Text tab opens beside its model\'s canvas', () => {
         expect(fake.open).not.toHaveBeenCalled();
     });
 
-    it('openTextualTab with no canvas shown opens through DockManager.open, as today (mutant: always docked beside)', () => {
+    it('openTextualTab with the canvas docked but not shown opens through DockManager.open, as today (mutant: always docked beside)', () => {
+        const dock = fakeDock([{ tabs: ['project_summary', 'm'], active: 'project_summary' }]);
+        fake.dock = dock;
         expect(openTextualTab('m', 'Library')).toBe(true);
         expect(fake.open).toHaveBeenCalledTimes(1);
-        expect((fake.dock as any).moves).toEqual([]);
+        expect(dock.moves).toEqual([]);
+    });
+
+    it('openTextualTab moves an open tab out from behind the canvas, then brings it forward (mutant: the move dropped)', () => {
+        const dock = fakeDock([{ tabs: ['project_summary', 'm', TXT], active: 'm' }]);
+        fake.dock = dock;
+        expect(openTextualTab('m', 'Library')).toBe(true);
+        expect(dock.moves.map((m: any) => [m.tab.id, m.direction])).toEqual([[TXT, 'right']]);
+        expect(fake.open).toHaveBeenCalledTimes(1);
     });
 
     it('the title carries the dock\'s not-pinned marker, so PinnableDock shows the panel beside the canvas (mutant: the class dropped)', () => {

@@ -14,9 +14,15 @@
  *
  * `writeTextualSyntax` stores a metamodel's syntax annotations (syntaxRecord.ts), the one write of the record: the Text
  * tab's style picker calls it (step C3a, P-2026-11-04-0412), until the record's editing UI (step T4b).
+ *
+ * Beside the canvas (E9, R-TXT-54, P-2026-11-07-1208): opened while the model's canvas is shown, the tab docks in a
+ * split to the right of the canvas's panel (canvasSelection.ts `dockBeside`, the generator tab's placement), so the
+ * text and the canvas are on screen together; otherwise it opens where it did. The title carries `not-pinned`, the
+ * marker of PinnableDock's tab header (MyRcDock.tsx `TabHeader`): the dock shows a panel only when it holds one
+ * (DockManagerStyles.scss `.not-strip`), and the Text tab's panel beside the canvas holds no other tab.
  */
 
-import type { TabData } from 'rc-dock';
+import type { DockLayout, TabData } from 'rc-dock';
 import DockManager from '../../../components/abstract/DockManager';
 import { DUser, L, LPointerTargetable, U, store } from '../../../joiner';
 import type { LModel, LProject } from '../../../joiner';
@@ -29,6 +35,7 @@ import { createM1 } from '../../../pages/components/Navbar';
 import { JjScriptEvents } from '../../../events/registry';
 import { toast } from '../../../components/Toast/toastDispatch';
 import type { AppBarTabHooks } from '../../ui/generatorTabs';
+import { dockBeside, keepBeside, panelOf, shownCanvas } from '../../ui/canvasSelection';
 import type { SyntaxAnnotations } from '../annotations';
 import { storedSyntax, syntaxPatch } from '../syntaxRecord';
 import TextualTab, { NewTextualTab } from './TextualTab';
@@ -61,9 +68,25 @@ export function writeTextualSyntax(metamodelId: string, record: SyntaxAnnotation
     return true;
 }
 
+/**
+ * Where `openTextualTab` puts the Text tab of `modelId` (E9): `open-beside` when it is not open and the model's canvas
+ * is the tab its panel shows, `move-beside` when it is open in that panel behind the canvas, `activate` when it is
+ * open anywhere else (brought forward where it is, as before), `open` otherwise (the first panel, as before). Only the
+ * model's own canvas counts: `shownCanvas` reads an empty lookup, so another model's editor shown in the panel does not.
+ */
+export type TextualPlacement = 'open-beside' | 'move-beside' | 'activate' | 'open';
+
+export function textualPlacement(dock: DockLayout, modelId: string): TextualPlacement {
+    const canvas = shownCanvas(dock, modelId, {});
+    const panel = panelOf(dock, textualTabId(modelId));
+    if (!panel) return canvas !== null ? 'open-beside' : 'open';
+    return canvas !== null && panel === panelOf(dock, canvas) ? 'move-beside' : 'activate';
+}
+
 /** Opens, or brings forward, the Text tab of `modelId`, titled with `label`; false when the dock or the model is missing. */
 export function openTextualTab(modelId: string, label: string): boolean {
-    if (!DockManager.dock || !modelId) return false;
+    const dock = DockManager.dock;
+    if (!dock || !modelId) return false;
     const model = lookupOf()[modelId];
     if (!model) return false;
     const id = textualTabId(modelId);
@@ -83,9 +106,12 @@ export function openTextualTab(modelId: string, label: string): boolean {
         id,
         group: 'models',
         closable: true,
-        title: <div className="tab-title active-on-mouseenter" data-type="textual">{`${name} · ${label}`}</div>,
+        title: <div className="tab-title active-on-mouseenter not-pinned" data-type="textual">{`${name} · ${label}`}</div>,
         content: <TextualTab key={id} modelId={modelId} label={label} tabId={id} writeSyntax={writeTextualSyntax} />,
     };
+    const placement = textualPlacement(dock, modelId);
+    if (placement === 'open-beside' && dockBeside(dock, tab, modelId)) return true;
+    if (placement === 'move-beside') keepBeside(dock, id, modelId);
     void DockManager.open('models', tab);
     return true;
 }
