@@ -2593,3 +2593,18 @@ Expected: a delta that creates a DObject is not merged by the vertex rule; one U
 Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Report.
 **Priority**: medium
 **Found in**: P-2026-11-07-0654
+
+## 2026-11-07 — fix(codegen): Cmd+Z after a no-change edit undoes the text (P-2026-11-07-0912)
+**Prompt**: `claude_2026-11-07_0912_prompt_textual_undo_agreement.md`: after a Format, typed spaces or a comment read as «No change», Cmd/Ctrl+Z went to the app's undo and reverted the previous model change; it must undo the text edit, with T10's splice kept.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (red `41c2916de`), `frontend/src/codegen/textual/ui/TextualTab.tsx` (`0272658db`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 05:10 (E1b decision 4, the undo hand-over after a comment-only edit)
+**Causa**: (c)
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest 14593 passed, the 3 baseline import reds plus two Chromium hook timeouts (`irCollapsedRender`, `irSelectionRing`), green alone (18/18).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: undo probe B-E all PASS, pre-fix control reproduces the bug (buffer empty, Ports 0); scenario 2 11/11; crops 1-3 in ~/.jjodel-lanes/P-2026-11-07-0912/ viewed by the session; GO pending
+**Notes**: Cause: `unchangedAgreement` made the no-change text `sync.text` and `updateUndoKey` gave Cmd+Z to the app on it. Fix: the agreement keeps `appText`, the text of the last application or reprint; `appUndoKey` routes to the app only there. Bench 5/5. No formatter on this branch (D5): the probe formats by minimal edits. Scenario 2 needed a Zoom out gesture: since E2a a text click scrolls the canvas off `push`.
+**Prompt document name**: 2026-11-07 09:12
+
+**Ticket** (found by this lane's scenario-2 run, not fixed, cause not measured): typing `// end state` then Enter gave `// end stateState` with no newline (crop `s2/1-before.png`), which reads as Enter accepting a completion item opened inside a comment.

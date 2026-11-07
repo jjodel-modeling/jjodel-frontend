@@ -30,7 +30,7 @@ import type { RefSpan } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
 import { reprintChanged } from '../textReprint';
 import type { PrintedText } from '../textReprint';
-import { agreedPrint, modelReprint, unchangedAgreement } from '../ui/TextualTab';
+import { agreedPrint, appUndoKey, modelReprint, unchangedAgreement } from '../ui/TextualTab';
 import type { TextSync } from '../ui/TextualTab';
 import { GARAGE, grammarOf } from './corpus';
 import { objectsOf } from './spec';
@@ -443,5 +443,40 @@ describe('unchangedAgreement: a text that asks for no change of the model is the
         for (const d of [{ kind: 'stale' }, { kind: 'errors', count: 1 }, { kind: 'confirm' }, { kind: 'apply' }, { kind: 'refused', reasons: [] }] as const) {
             expect(unchangedAgreement(d, TYPED_TEXT, OLD.text, base)).toBeNull();
         }
+    });
+});
+
+describe('appUndoKey: Cmd/Ctrl+Z is the app\'s undo only on the text of an application or a reprint (P-2026-11-07-0912)', () => {
+    const base = { grammar: G, spans: OLD.spans, refs: OLD.refs };
+    const printedSync: TextSync = { text: OLD.text, model: OLD.text, printed: agreedPrint(base) };
+
+    it('an application or a reprint: the agreed text routes to the app, any other text to the editor (mutant: the key always on the editor)', () => {
+        expect(appUndoKey(printedSync, OLD.text)).toBe(true);
+        expect(appUndoKey(printedSync, TYPED_TEXT)).toBe(false);
+        expect(appUndoKey(null, OLD.text)).toBe(false);
+    });
+
+    it('a no-change agreement leaves the undo with the editor; back on the printed text it is the app\'s again (mutants: the key on the agreed text, the prior text dropped)', () => {
+        const sync = unchangedAgreement({ kind: 'unchanged' }, TYPED_TEXT, OLD.text, base, printedSync);
+        expect(sync?.text).toBe(TYPED_TEXT);
+        expect(appUndoKey(sync, TYPED_TEXT)).toBe(false);
+        expect(appUndoKey(sync, OLD.text)).toBe(true);
+    });
+
+    it('a second no-change agreement keeps the text of the application, not the first no-change one (mutant: the prior agreement\'s text taken)', () => {
+        const first = unchangedAgreement({ kind: 'unchanged' }, TYPED_TEXT, OLD.text, base, printedSync);
+        const again = `${TYPED_TEXT}\n// later`;
+        const second = unchangedAgreement({ kind: 'unchanged' }, again, OLD.text, base, first);
+        expect(appUndoKey(second, again)).toBe(false);
+        expect(appUndoKey(second, TYPED_TEXT)).toBe(false);
+        expect(appUndoKey(second, OLD.text)).toBe(true);
+    });
+
+    it('scenario 2 holds: after a comment-only agreement a diagram edit still splices and keeps the comments', () => {
+        const sync = unchangedAgreement({ kind: 'unchanged' }, TYPED_TEXT, OLD.text, base, printedSync);
+        const next = printed(G, editing(OBJECTS, 'c2', { name: 'gamma' }));
+        const r = modelReprint(sync!, TYPED, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        for (const c of COMMENTS) expect(r.text).toContain(c);
     });
 });
