@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1208
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 5dcf50283 · gates green · app check ALL PASS (15/15), crops in ~/.jjodel-lanes/P-2026-11-07-1208/, checked by the session · log entry in docs/log-inbox/codegen.md
 Lane: full (open placement, test; app check)
 Depends: E1a/E1b, E2a (merged), R-TXT-54 (E9)
 Worktree: ~/jjodel-w-texte3, branch textual-e3-beside (from trunk e31ec1d02)

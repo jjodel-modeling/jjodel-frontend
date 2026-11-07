@@ -2656,3 +2656,18 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: D5 crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/ and 5-undo in ~/.jjodel-lanes/P-2026-11-07-0841/ checked by the chat
 **Notes**: Rollback tag `pre-textual-d5-format` on `376a2273e` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1141/result.json`.
 **Prompt document name**: 2026-11-07 11:41
+
+## 2026-11-07 — feat(codegen): E3, the Text tab opens beside its model's canvas (P-2026-11-07-1208)
+**Prompt**: `claude_2026-11-07_1208_prompt_textual_e3_beside.md`, row E3 / decision E9 (R-TXT-54): the Text tab opened while its model's canvas is shown docks beside it, visible without the probe-only CSS rule; elsewhere it opens as today. Tests red first, gates, app check with crops.
+**Files touched**: `frontend/src/codegen/textual/__tests__/openTextualTab.test.ts` (red `5b13ac57a`, then `5dcf50283`), `frontend/src/codegen/textual/ui/openTextualTab.tsx` (`5dcf50283`)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `5dcf50283`: typecheck exit 0; full vitest 14751 passed, the 3 baseline import reds plus the `tolerant.test.ts` 1000 ms timing guard (1139 ms), green alone 64/64; build exit 0; check:codegen-lazy ALL GREEN; check:docs run after this entry. Mutation bench 9/9 killed (commit body).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — session, unattended: probe ALL PASS 15/15, crops 1-opened-beside, 2-no-canvas, 3-caret-selects in ~/.jjodel-lanes/P-2026-11-07-1208/ (run1.log)
+**Notes**: Pure `textualPlacement(dock, modelId)`: only the model's own canvas counts (`shownCanvas` with an empty lookup). Visibility: the title carries `not-pinned`, PinnableDock's header marker, so `.not-strip` shows the panel: no SCSS, no dock change. Crop 2 by direct call: the picker lives on the canvas, so no gesture opens the tab with no canvas shown; the project page too (the app bar has no project tab).
+**Prompt document name**: 2026-11-07 12:08
+
+**Ticket** (P-2026-11-07-1208, low): beside the canvas the Text tab has no app bar entry (crop 1: only `demoESM`), unlike the generator tab (Navbar.tsx `syncTabs`); and its panel keeps the split mode's 710px cap of the last panel (abstract/style.scss), which the generator panel lifts in TemplateEditorTab.scss. Both are outside openTextualTab.tsx.
