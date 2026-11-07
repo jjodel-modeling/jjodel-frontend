@@ -1130,10 +1130,15 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
  * folds the entries since the mark with `composeUndoDeltas`. A nested begin only counts; an end without a
  * begin, and a group that pushed fewer than two entries, leave the history as it is.
  * The caller flushes the pending 300 ms COMMIT before calling end, or its deltas land after the group.
+ * The outermost end keeps the group's entry as the tail: while it is on top, a later write the legacy path
+ * would merge into it (a graph create of the sync) composes into it exactly, so one undo still removes every
+ * `idlookup` record (P-2026-11-06-2150, option (c)). A push, an undo, a redo and a begin clear the tail.
  */
 let undoGroup: { depth: number; user: Pointer<DUser>; mark: number } | null = null;
+let undoGroupTail: GObject | null = null;
 
 export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
+    undoGroupTail = null;
     if (undoGroup) { undoGroup.depth++; return; }
     undoGroup = { depth: 1, user, mark: statehistory[user]?.undoable.length ?? 0 };
 }
@@ -1145,6 +1150,7 @@ export function endUndoGroup(): void {
     const history = statehistory[user];
     if (!history) return;
     const start = Math.min(mark, history.undoable.length);
+    if (history.undoable.length - start === 1) undoGroupTail = history.undoable[start];
     if (history.undoable.length - start < 2) return;
     const grouped = history.undoable.splice(start);
     let merged: GObject = grouped[0];
@@ -1153,6 +1159,7 @@ export function endUndoGroup(): void {
     for (const d of grouped) U.arrayRemoveAll(statehistory.all.undoable, d);
     history.undoable.push(merged);
     statehistory.all.undoable.push(merged);
+    undoGroupTail = merged;
     while (history.undoable.length > MAX_HISTORY) history.undoable.shift();
     while (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
 }
@@ -1219,8 +1226,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
     const mergeTolerance = U.UpdatingTimer*1.5;
 
     switch (action.type) {
-        case UndoAction.type: return doUndoRedo(oldState, action, 'undo');
-        case RedoAction.type: return doUndoRedo(oldState, action, 'redo');
+        case UndoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'undo');
+        case RedoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'redo');
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
@@ -1290,7 +1297,13 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 oldState, delta});
 
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
-            if (shouldMerge && allowMerge) {
+            if (shouldMerge && allowMerge && undoGroupTail && pastDelta === undoGroupTail) {
+                // A late write into a group's entry: compose in place (both history stacks hold the same object).
+                const composed = composeUndoDeltas(pastDelta, delta);
+                for (const k of Object.keys(pastDelta)) delete pastDelta[k];
+                Object.assign(pastDelta, composed);
+            }
+            else if (shouldMerge && allowMerge) {
                 // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
                 //   of __jjisEmpty etc must not be done at this stage.
                 let gdelta: Dictionary<string, string[] | GObject> = {};
@@ -1330,6 +1343,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             else if (isRelevantChange) {
                 let user = (action as Action).sender;
+                undoGroupTail = null;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
                 if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();

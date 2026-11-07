@@ -14,9 +14,11 @@ import { resolveTextStyle } from './IRNodeContent';
 export interface IRRowProps {
     /** DObject id of the containment child rendered by this row. */
     childObjectId: string;
+    /** S3b: why the child is an orphan slot (its feature is gone, or out of the closure); present, it marks the row. */
+    orphan?: string;
 }
 
-function IRRow({ childObjectId }: IRRowProps) {
+function IRRow({ childObjectId, orphan }: IRRowProps) {
     const res = useIRRowView(childObjectId);
     if (!res) return null;
     const { compiled, objectId, readCtx } = res;
@@ -25,7 +27,12 @@ function IRRow({ childObjectId }: IRRowProps) {
     // compartment's rowFormat.style and the host node's shape.text, both of which
     // reach here by inheritance.
     return (
-        <div className="ir-row" style={resolveTextStyle(compiled.style, readCtx, objectId)}>
+        <div
+            className={orphan !== undefined ? 'ir-row ir-row--orphan' : 'ir-row'}
+            style={resolveTextStyle(compiled.style, readCtx, objectId)}
+            title={orphan}
+        >
+            {orphan !== undefined && <span className="ir-row__orphan-marker" aria-label={orphan}>!</span>}
             {compiled.template.map((seg, i) => {
                 const v = seg(readCtx, objectId);
                 return <span key={i}>{v == null ? '' : String(v)}</span>;

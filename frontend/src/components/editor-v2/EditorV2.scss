@@ -4151,6 +4151,16 @@ html[data-mode="advanced"] .editor-v2-toolbar {
         background: var(--shell-border);
         margin: 6px 4px;
     }
+
+    // Cascade item (`children` in ContextMenu.tsx): the chevron at the right
+    // edge, and the row stays lit while the panel it opened is shown.
+    &__item--cascade.open {
+        background: var(--float-hover, #f1f5f9);
+    }
+
+    &__chevron {
+        margin-left: auto;
+    }
 }
 
 // ICON COLOUR — the one place the menu glyphs are tinted, and it needs both the

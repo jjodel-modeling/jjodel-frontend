@@ -269,6 +269,20 @@ const BASE_CSS = `
 .react-flow__node.ir-partition-sep-dashed-h .ir-node-content { border-right: 1px dashed var(--border-default) !important; }
 `;
 
+/** S3b (P-2026-10-21-1955): the ghost and orphan rows. A text node of its own after BASE_CSS, in the same tag:
+ *  it appends, and BASE_CSS stays byte-identical (shapeRegistry.test.ts pins its sections). */
+const BINDING_ROWS_CSS = `
+/* S3b ghost row (R-OI-3): a feature of the closure with no slot, drawn by name; muted and
+   italic, its value cell empty with the --editable hover. --materializing: the text typed
+   into it while its slot and value are written; no gesture is offered then. */
+.ir-node-content .ir-compartment .ir-row--ghost { color: var(--color-node-text-muted); font-style: italic; }
+.ir-node-content .ir-compartment .ir-row--materializing { cursor: progress; }
+/* S3b orphan row: a slot whose feature is gone or out of the closure, an error in S3a.
+   The marker carries the colour on its own: a row view's inline text style wins on the row. */
+.ir-node-content .ir-compartment .ir-row--orphan { color: var(--color-error); }
+.ir-node-content .ir-row__orphan-marker { color: var(--color-error); font-weight: 700; flex-shrink: 0; }
+`;
+
 function ensureStyleTag(): HTMLStyleElement | null {
     if (typeof document === 'undefined') return null;
     let tag = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null;
@@ -276,6 +290,7 @@ function ensureStyleTag(): HTMLStyleElement | null {
         tag = document.createElement('style');
         tag.id = STYLE_TAG_ID;
         tag.appendChild(document.createTextNode(BASE_CSS));
+        tag.appendChild(document.createTextNode(BINDING_ROWS_CSS));
         document.head.appendChild(tag);
     }
     return tag;

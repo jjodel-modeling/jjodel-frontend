@@ -390,3 +390,130 @@ describe('a write flagged noUndo adds no undo entry (R-MT-20)', () => {
         expect(s.idlookup.O1.name).toBe('door');
     });
 });
+
+// ── The instance-of cases of oi-s2u (P-2026-10-21-1016, P-2026-10-21-1121), ported to the trunk API, and the group
+// tail of option (c) (P-2026-11-06-2150). A create is emulated by root writes of the new record into `idlookup` and,
+// for a graph create, of its id into `vertexs`, the key `reducer.ts` merges into the top entry at any age; the
+// timings are the ones the S2u discovery measured (a graph create at +789 ms, the seeding at +1629 ms).
+
+const T0 = 2_000_000;
+/** `action` dispatched at `ms` after T0. */
+function at(ms: number, state: any, action: any): any {
+    clock = T0 + ms;
+    return _reducer(state, action as any);
+}
+function instanceState(): any {
+    return {
+        timestamp: T0 - 5000, action_title: '', action_description: '', _lastSelected: { node: '' }, vertexs: [],
+        idlookup: { O1: { id: 'O1', className: 'DObject', name: 'lock' } },
+    };
+}
+/** An object create, as its record reaches `idlookup`. */
+const createInstance = (id: string) => batch(`create ${id}`, [setRoot(`idlookup.${id}`, { id, className: 'DObject', name: '' })]);
+/** A vertex create: the record and the `vertexs` key that the legacy rule merges into the top entry at any age. */
+const graphCreate = (id: string, vertexs: string[]) =>
+    batch(`vertex ${id}`, [setRoot(`idlookup.${id}`, { id, className: 'DVertex', model: 'I1' }), setRoot('vertexs', vertexs)]);
+/** The deferred seeding of a created object (`addObject`, +600 ms after its create). */
+const seed = (id: string, name: string) => batch(`seed ${id}`, [set(id, 'name', name)]);
+/** The node layout write of `instantiate` (its scalar form), up to 300 ms after its TRANSACTION. */
+const layout = (id: string) => batch('Instantiate: node layout', [set(id, 'w', 280), set(id, 'h', 102)]);
+const top = () => history()[history().length - 1];
+/** The keys of a record without the copy counter the reducer hangs on its copies (`clonedCounter`). */
+const keysOf = (o: any) => Object.keys(o ?? {}).filter((k) => k !== 'clonedCounter').sort();
+
+describe('an instantiation is one undo entry with exact contents', () => {
+    beforeEach(() => {
+        clock = T0;
+        // No group entry left as the tail by the previous test (module state of reducer.ts).
+        beginUndoGroup(USER);
+        endUndoGroup();
+    });
+
+    function instantiation(): { before: any, after: any } {
+        let s = instanceState();
+        s = at(0, s, rename('O1', 'a'));
+        const before = s;
+        beginUndoGroup();
+        s = at(150, s, createInstance('I1'));
+        s = at(939, s, graphCreate('V1', ['V1']));
+        s = at(1779, s, seed('I1', 'book1'));
+        endUndoGroup();
+        return { before, after: s };
+    }
+
+    it('its first write pushes an entry of its own, even 150 ms after an unrelated one', () => {
+        let s = at(0, instanceState(), rename('O1', 'a'));
+        beginUndoGroup();
+        s = at(150, s, createInstance('I1'));
+        expect(history()).toHaveLength(2);
+        expect(top().idlookup).toHaveProperty('I1');
+        endUndoGroup();
+    });
+
+    it('a create, a graph create at +789 ms and a seeding at +1629 ms are one entry', () => {
+        instantiation();
+        expect(history()).toHaveLength(2);
+        expect(h.statehistory.all.undoable).toHaveLength(2);
+        expect(h.statehistory.all.undoable[1]).toBe(top());
+        expect(keysOf(top().idlookup)).toEqual(['I1', 'V1']);
+    });
+
+    it('one undo restores idlookup exactly (every created id absent) and redo reapplies the whole group', () => {
+        const { before, after } = instantiation();
+        const undone = at(3000, after, undoAction());
+        expect(ids(undone)).toEqual(ids(before));
+        expect(undone.vertexs).toEqual([]);
+        expect(undone.idlookup.O1.name).toBe('a');
+        expect(history()).toHaveLength(1);
+        const redone = at(3500, undone, redoAction());
+        expect(ids(redone)).toEqual(['I1', 'O1', 'V1']);
+        expect(redone.idlookup.I1.name).toBe('book1');
+        expect(redone.vertexs).toEqual(['V1']);
+    });
+
+    it('a graph create after endUndoGroup merges into the group entry exactly', () => {
+        const { before, after } = instantiation();
+        const s = at(2600, after, graphCreate('V2', ['V1', 'V2']));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(ids(undone)).toEqual(ids(before));
+        expect(undone.vertexs).toEqual([]);
+    });
+
+    it('a late write inside the open group, 700 ms after its last write (past the legacy 450 ms window), joins the group entry', () => {
+        let s = at(0, instanceState(), rename('O1', 'a'));
+        beginUndoGroup();
+        s = at(150, s, createInstance('I1'));
+        s = at(939, s, graphCreate('V1', ['V1']));
+        s = at(1639, s, layout('V1'));
+        endUndoGroup();
+        expect(history()).toHaveLength(2);
+        expect(keysOf(top().idlookup)).toEqual(['I1', 'V1']);
+        expect(s.idlookup.V1.h).toBe(102);
+        const undone = at(3000, s, undoAction());
+        expect(ids(undone)).toEqual(['O1']);
+        // The redo reapplies the whole group, the late write included.
+        expect(at(3500, undone, redoAction()).idlookup.V1.h).toBe(102);
+    });
+
+    it('nested groups: a graph create after the outermost end composes into the entry, one undo removes it from idlookup', () => {
+        let s = at(0, instanceState(), rename('O1', 'a'));
+        const before = s;
+        beginUndoGroup();
+        s = at(100, s, createInstance('I0'));
+        beginUndoGroup();
+        s = at(150, s, createInstance('I1'));
+        s = at(939, s, graphCreate('V1', ['V1']));
+        endUndoGroup();
+        s = at(1200, s, seed('I1', 'book1'));
+        endUndoGroup();
+        expect(history()).toHaveLength(2);
+        s = at(2600, s, graphCreate('V2', ['V1', 'V2']));
+        expect(history()).toHaveLength(2);
+        expect(keysOf(top().idlookup)).toEqual(['I0', 'I1', 'V1', 'V2']);
+        const undone = at(3000, s, undoAction());
+        expect(ids(undone)).toEqual(ids(before));
+        expect(undone.vertexs).toEqual([]);
+        expect(undone.idlookup.O1.name).toBe('a');
+    });
+});

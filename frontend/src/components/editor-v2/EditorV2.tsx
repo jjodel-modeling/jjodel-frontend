@@ -78,10 +78,13 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
+import { creationOptions, instanceObjectRecord, instantiate, objectRecord, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
+import { InstantiationProblemSync } from './problems/InstantiationProblemSync';
 import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
 import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
@@ -363,6 +366,8 @@ interface ContextMenuState {
     childKind?: 'attr' | 'op' | 'ref';
     isMultiSelect?: boolean;
     selectedCount?: number;
+    /** Pane menu of the ontological instantiation: the record and its classifiers. */
+    pane?: { record: OntoBinding; options: CreationOption[] };
 }
 
 // Clipboard state type
@@ -3214,6 +3219,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         []
     );
 
+    // Pane menu of the ontological instantiation (R-OI-10, hooks/instantiate.ts). It opens
+    // only when the metamodel's bag declares an `object` record; without one the pane right
+    // click is left alone, as before.
+    const onPaneContextMenu = useCallback(
+        (event: MouseEvent | React.MouseEvent) => {
+            if (!isModelMode || !modelid) return;
+            const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+            const record = objectRecord(get, modelid);
+            if (!record) return;
+            event.preventDefault();
+            setContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                pane: { record, options: creationOptions(get, record, modelid) },
+            });
+        },
+        [isModelMode, modelid]
+    );
+
+    // One instantiation with its slots, one undo entry; its vertex is the one useJjomSync Step 2bis
+    // gives a new root, placed by the layout write of instantiate (hooks/instantiate.ts header):
+    // at the right click under the layout in force, at the centre of the view under any other
+    // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
+    // viewports and the pane are read at the click, not when the write lands. The layout in force is the tab's
+    // (P-2026-11-07-1620): its viewpoint goes to instantiate, its key decides where the click lands.
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+        const activeKey = tabLayoutKey();
+        const clickAt = click ? screenToFlowPosition(click) : null;
+        const current = getViewport();
+        const el = editorContainerRef.current;
+        const pane = { width: el?.clientWidth ?? 0, height: el?.clientHeight ?? 0 };
+        const placeAt = (layoutKey: string) => {
+            if (layoutKey === activeKey && clickAt) return clickAt;
+            if (pane.width <= 0 || pane.height <= 0) return null;
+            return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
+        };
+        void instantiate(classifierId, record, placeAt, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
+        });
+    }, [screenToFlowPosition, getViewport, modelid]);
+
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
         clearSyntheticEdgeSelection();     // IR object-as-edge selection lives outside the base state
@@ -3499,6 +3545,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const canResetSize = !!node
                 && (node.type === 'objectNode' || node.type === 'classNode' || node.type === 'enumNode')
                 && ((node as any).width != null || (node as any).height != null);
+
+            // «New instance» on a node whose object is a classifier the metamodel's `object`
+            // record lets be instantiated (R-OI-10).
+            if (isModelMode && modelid && node) {
+                const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                const record = objectRecord(get, modelid);
+                const objectId: unknown = get(node.id)?.model;
+                if (record && typeof objectId === 'string'
+                    && creationOptions(get, record, modelid).some(o => o.id === objectId)) {
+                    items.push(
+                        { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
+                        { divider: true },
+                    );
+                }
+                // «Sync slots» on an instance the `object` record judges (S3a, R-OI-9): only the missing slots;
+                // disabled when none is missing. The same function the missing-slot problem's action runs.
+                const instanceRecord = typeof objectId === 'string' ? instanceObjectRecord(get, modelid, objectId) : null;
+                if (instanceRecord && typeof objectId === 'string') {
+                    const plan = syncSlotsPlan(get, instanceRecord, objectId);
+                    const missing = 'error' in plan ? 0 : plan.slots.length;
+                    items.push(
+                        {
+                            label: 'Sync slots', icon: 'bi-arrow-repeat', disabled: missing === 0,
+                            tooltip: missing === 0 ? 'Every feature of the classifier has a slot' : undefined,
+                            onClick: () => void syncSlots(objectId, instanceRecord).then(result => {
+                                if (!result.ok) console.warn('[EditorV2] syncSlots:', result.problems);
+                            }),
+                        },
+                        { divider: true },
+                    );
+                }
+            }
 
             // M1: composition children for object nodes (uses compositionCompat utility)
             if (isModelMode && node?.type === 'objectNode') {
@@ -3866,6 +3944,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onClick: () => deleteEdge(contextMenu.edgeId!),
                 },
             ];
+        }
+
+        // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
+        if (contextMenu?.pane) {
+            const { record, options } = contextMenu.pane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
+            return [{
+                label: 'New instance of',
+                icon: 'bi-plus-square',
+                disabled: options.length === 0,
+                tooltip: options.length === 0 ? 'No class to instantiate' : undefined,
+                children: options.map(o => ({
+                    label: o.name,
+                    icon: 'bi-box',
+                    onClick: () => runInstantiate(o.id, record, click),
+                })),
+            }];
         }
         return [];
     };
@@ -5013,6 +5108,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onDragOver={onDragOver}
                 onNodeContextMenu={handleCanvasNodeContextMenu}
                 onEdgeContextMenu={handleCanvasEdgeContextMenu}
+                onPaneContextMenu={onPaneContextMenu}
                 onNodeClick={handleCanvasNodeClick}
                 onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
@@ -5029,7 +5125,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 snapGrid={[16, 16]}
                 multiSelectionKeyCode="Shift"
                 selectionMode={SelectionMode.Partial}
-                panOnDrag={[0, 1, 2]}
+                panOnDrag={[0, 1]}
                 zoomOnScroll={false}
                 panOnScroll={false}
                 panOnScrollMode={PanOnScrollMode.Free}
@@ -5137,6 +5233,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
+                <InstantiationProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
                 <PalettePanel
