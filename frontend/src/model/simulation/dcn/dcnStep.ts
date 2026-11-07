@@ -23,15 +23,22 @@
  *   assignment whose marker disagrees with "the attribute is a slot of the
  *   element" halts `undeclared`, so `self.[battery] := e` never lands on the
  *   slot `battery`.
+ * - An invocation is one step under every policy (R-DCN-22, amending R-DCN-4):
+ *   the static operation and every enabled redefinition, that is of an active
+ *   dynamic class, are fused into one transition run by the shared step, one
+ *   parallel assignment read on σ, so two writes of one slot halt
+ *   `double-assignment` (R-SIM-17). The candidate is the static operation's id;
+ *   a redefinition is never selectable alone.
  * - Interleave (the default, R-DCN-4) is SoSyM Definition 3: each transition
  *   (σ, Vi, σ′) is triggered by one viewpoint, and a trajectory is one
  *   interleaving of them. So one step fires one contribution, chosen through
- *   the selector, and two ticks may fire two monitors in either order. Sync
- *   fires every candidate of the input in one parallel assignment read on σ:
+ *   the selector, and two ticks may fire two monitors in either order; the
+ *   order applies to the monitors of different viewpoints and to distinct
+ *   invocations, never to an operation and its own redefinitions. Sync fires
+ *   every candidate of the input in one parallel assignment read on σ:
  *   `candidates` answers the one candidate `DCN_SYNC_SELECTOR`, and the step
- *   fuses the real ones into one transition run by the shared step, so two
- *   writes of one slot halt `double-assignment` (R-SIM-17). The label lists the
- *   real candidates. Ask | Random over `candidates` stays the caller's.
+ *   fuses the real ones as above. The label lists the real candidates under
+ *   both. Ask | Random over `candidates` stays the caller's.
  * - After a fired step σ′ is classified, and checked in this order: ranges (the
  *   core's `domain` halt, already given), completeness of every complete
  *   viewpoint over every instance (`unclassified`; an invariant that throws is
@@ -94,7 +101,7 @@ export interface DcnNucleus extends SimNucleus {
     readonly net: CompiledNet;
     readonly guards: GuardOracle;
     readonly actions: ActionOracle;
-    /** The candidates of `cfg`: the net's under Interleave; under Sync `DCN_SYNC_SELECTOR` alone when any is enabled. */
+    /** The candidates of `cfg`: the net's under Interleave, a redefinition folded into its invocation; under Sync `DCN_SYNC_SELECTOR` alone when any is enabled. */
     candidates(cfg: NetConfiguration, guards: GuardOracle): CandidateSet;
     classify(state: SimState): DcnClassification;
 }
@@ -306,23 +313,37 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
         return out;
     };
 
-    const candidates = (cfg: NetConfiguration, g: GuardOracle): CandidateSet => {
-        const cs = netCandidates(net, cfg, g);
-        if (policy === 'interleave' || cs.candidates.length === 0) return cs;
-        return { ...cs, candidates: [{ transition: DCN_SYNC_SELECTOR, unsafe: null }] };
+    /** The step of each enabled transition: under Sync one for all, under Interleave a redefinition joins its invocation (R-DCN-22). */
+    const groups = (cs: CandidateSet): Map<string, string[]> => {
+        const out = new Map<string, string[]>();
+        for (const c of cs.candidates) {
+            const key = policy === 'sync' ? DCN_SYNC_SELECTOR : m.redefines.get(c.transition) ?? c.transition;
+            let members = out.get(key);
+            if (!members) out.set(key, members = []);
+            members.push(c.transition);
+        }
+        return out;
     };
 
-    const sync = (cfg: NetConfiguration, selector: string | null, g: GuardOracle, a: ActionOracle, derived: Parameters<SimNucleus['step']>[4]): StepOutcome => {
+    const candidates = (cfg: NetConfiguration, g: GuardOracle): CandidateSet => {
+        const cs = netCandidates(net, cfg, g);
+        const own = new Map(cs.candidates.map(c => [c.transition, c]));
+        return { ...cs, candidates: [...groups(cs).keys()].map(id => own.get(id) ?? { transition: id, unsafe: null }) };
+    };
+
+    const fusedStep = (cfg: NetConfiguration, selector: string | null, g: GuardOracle, a: ActionOracle, derived: Parameters<SimNucleus['step']>[4]): StepOutcome => {
         const cs = netCandidates(net, cfg, g);
         if (cs.candidates.length === 0 || selector === null) return netStep(net, cfg, selector, g, a, derived);
         const real = cs.candidates.map(c => c.transition);
-        if (selector !== DCN_SYNC_SELECTOR) {
+        const members = groups(cs).get(selector);
+        if (members === undefined) {
             const label: NetLabel = { event: cfg.event, selector, candidates: real, evaluated: cs.evaluated, consumed: [], produced: [], assignments: [] };
             return { kind: 'inadmissible', label };
         }
-        const chosen = real.map(id => byId.get(id)!);
+        if (members.length === 1 && members[0] === selector) return netStep(net, cfg, selector, g, a, derived);
+        const chosen = members.map(id => byId.get(id)!);
         const fused: NetTransition = {
-            id: DCN_SYNC_SELECTOR,
+            id: selector,
             origin: chosen.flatMap(t => t.origin),
             preset: [], postset: [], inhibitors: [],
             triggers: cfg.event === null ? [] : [cfg.event],
@@ -330,7 +351,7 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
             elseOf: null,
             actionSites: chosen.flatMap(t => t.actionSites),
         };
-        const out = netStep({ ...net, transitions: [fused] }, cfg, DCN_SYNC_SELECTOR, g, a, derived);
+        const out = netStep({ ...net, transitions: [fused] }, cfg, selector, g, a, derived);
         return { ...out, label: { ...out.label, candidates: real, evaluated: cs.evaluated } } as StepOutcome;
     };
 
@@ -346,7 +367,7 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
         step(cfg, selector, g, a, derived) {
             const found: { reason: HaltReason | null } = { reason: null };
             const checked = marked(a, found);
-            let out = policy === 'sync' ? sync(cfg, selector, g, checked, derived) : netStep(net, cfg, selector, g, checked, derived);
+            let out = fusedStep(cfg, selector, g, checked, derived);
             if (out.kind === 'halted' && out.reason.kind === 'action-defect' && found.reason !== null) out = { ...out, reason: found.reason };
             if (out.kind !== 'fired') return out;
             const halt = classifyState(m, snapshot, out.next.state).halt;
