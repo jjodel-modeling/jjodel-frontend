@@ -111,3 +111,31 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat, L4.1 browser parity P-2026-11-07-0750, L2.3 roles dialog crops P-2026-11-07-1012; the rest has no UI path)
 **Notes**: One conflict, docs/log-inbox/dcn.md, by union (trunk whole, then the five branch entries). Tip moved by two docs commits of another chat (9053a07b8, 896362e52), accepted as first parent. Probes 77/77, control R-MT-24 absent. Gates: typecheck 0, vitest 14709 (14621 trunk + 88 branch, counted here: the dcn tree has no node_modules; known 3 red at import; a Chromium afterAll timed out under load, alone 18/18), hooks 967, build 0, check:docs 5/5, agents, scripts, addonly PASS.
 **Prompt document name**: 2026-11-07 11:23
+
+## 2026-11-07 — feat: the DCN compiler, resolved roles and model to a placeless net
+**Prompt**: DCN L4.2 (P-2026-11-07-1216): pure module `dcnCompile.ts` from the resolved dcn roles, a model read view and the R-OI binding to a CompiledNet with no places, one transition per invocation and per monitor contribution with opaque ids and a side table; σ seeded from the closure, dormant slots included; domains from range bounds; optional instance key on StateAttributeDecl; plus the L2.3 ticket (dialog under `dcn` shows the dcn group only).
+**Files touched**: a5bef0684 — `frontend/src/model/simulation/dcn/dcnCompile.ts` (new), `dcn/__tests__/dcnCompile.test.ts` (new), `netTypes.ts`; 839affc1a — `frontend/src/components/editor-v2/sim/simRolesDraft.ts`, `sim/__tests__/simRolesDraft.test.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 25/26 (survivor: precondition read on a monitor, which has none) and 3/3 with M16. Dialog hide rule changed locally in simRolesDraft.ts, not the shared list (validator and codec read it). All ticks on one event `dcn-tick` (R-SIM-122). Parameters, range bounds, literals passed as an extra `features` input. Generalization walk copied from bindingReader. String flagged without domain. Closure written by the chat from the handoff.
+**Prompt document name**: 2026-11-07 12:16
+
+## 2026-11-07 — feat: slot writes `self.battery := e` in a DCN action mode
+**Prompt**: DCN L3.4 (P-2026-11-07-1215): `parseAction(source, { dcn: true })` admits a member target as a new `SlotTarget` node, `JjelAction.target` widened to the union; `actionEvaluator.ts` returns a slot write as an assignment marked `slot: true`; the core unchanged (an `undeclared` halt until L4.4); tests first, mutation bench, one code commit.
+**Files touched**: 5d86470c9 — `frontend/src/jjel/types/ast.ts`, `frontend/src/jjel/parser/parser.ts`, `frontend/src/model/simulation/actionEvaluator.ts`, `frontend/src/model/simulation/__tests__/slotAction.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — every suite green but `irCollapsedRender.test.ts`, whose Chromium `afterAll` timed out in 2 of 6 runs on the branch (all 13 tests passing) and in 0 of 5 on the tip; nothing it imports changed
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: New node, not MemberAccess: `SlotTarget` carries `object` and `attribute`, the field names of `StateAccessExpr`, so the six readers outside jjel/ (printer, stcChecks, simBridge, simStateUsage) compile unchanged; none selects the mode. The marker type `ActionAssignment` lives in actionEvaluator.ts, since netTypes.ts was off limits. Bench 14/14 killed. Gates: typecheck 0, jjel+simulation 1394/1394, full run 546/550 (the known 3 + the flake above), build 0.
+**Prompt document name**: 2026-11-07 12:15
+
+**Ticket** (for L4.4, not blocking): the core keys an assignment by `element` and `attr` only, so a slot named like a declared state attribute of the same element would be applied to σ as that attribute, not halted `undeclared`. L4.4 has to read `slot` before the declaration lookup in `netStep.ts`.
