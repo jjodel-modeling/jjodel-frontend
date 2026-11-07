@@ -186,3 +186,72 @@ the cached node with new geometry, decided on the snapshot alone and failing tow
   function in `vertexSnapshot.ts`: the transformer imports `joiner`, so the bench cannot call it, and moving its
   helper out is a file outside this lane. The mirror is a maintenance rule (a geometry read added to the transformer
   must be added there), checked in the app by the 0431 probes in item (3).
+
+## Addendum P-2026-11-07-0628: closing figures (items 3 and 4 of P-2026-11-07-0555)
+
+**Prompt-ID**: P-2026-11-07-0628, measurement only, no source change. Head `8328662df` (the cheap path), parent
+`753122b0b` (before R-MT-19), both on the dev server (ports 3197 / 3198, the 0555 lane configs, parent in a temporary
+worktree), probes run unedited from `~/.jjodel-lanes/P-2026-11-07-0555/`.
+
+### Cost of one switch, 407-instance harness model
+
+Same probe and switch as 0431 (§ above): «Harness / Lane process (BPMN)» → «Harness / Lane process», CDP profiler on,
+`wallMs` includes the 3000 ms quiet window. Order H0 P0 (warm-up, discarded: 5178 / 5085) then H1 P1 H2 P2 H3 P3; the
+1-minute load was between 3 and 17 at the start and end of every measured run.
+
+| run | head wallMs | head longtaskSum | head busyMs | parent wallMs | parent longtaskSum | parent busyMs |
+|---|---|---|---|---|---|---|
+| 1 | 5374 | 2153 | 2453 | 5632 | 2514 | 2795 |
+| 2 | 6496 | 3073 | 3558 | 4871 | 1637 | 2041 |
+| 3 | 5021 | 1838 | 2210 | 4968 | 1682 | 2085 |
+
+Mean wall head 5630, parent 5157, delta **+474 ms** (0431, before the cheap path: +723); longtaskSum +410; busyMs
++433. Adjacent pairs head − parent: −258, +1625, +53; medians 5374 / 4968, +406. Run H2 is the outlier (load 11 → 17
+across it). Order control H4 / P4: 6398 / 5636 (+762), discarded: the load rose to 29 during H4 and to 56 during
+P4, a different band. The spread between runs (±700 ms) is wider than the delta, so +474 is a mean over noise, not
+a fixed cost. It is still above the 300 ms target of item (3).
+
+**What the cheap path removed.** `LObject.name` reads per switch 407 head, 407 parent (0431 head: 3458): the
+transformer does not run on a key-only switch. Inclusive ms, mean r1-r3, files on the stack (`work/byfile.mjs`):
+
+| Inclusive, ms (mean r1-r3) | head `8328662df` | parent `753122b0b` | delta | 0431 delta |
+|---|---|---|---|---|
+| all sampled frames | 2040 | 1628 | +412 | |
+| `useJjomSync.ts` or `vertexSnapshot.ts` | 64 | 54 | +10 | +231 |
+| `jjomTransformers.ts` | 0 | 0 | 0 | +214 |
+| `DynamicHandles.tsx` | 309 | 160 | +149 | +182 |
+| `@xyflow/react` | 575 | 389 | +186 | |
+| `IRNodeContent.tsx` / `useContentSize.ts` | 307 / 344 | 261 / 321 | +46 / +23 | +43 / +27 |
+
+Fibers committed per switch (sum over commits): 20873 head, 18871 parent (+2002).
+
+**Where the remaining time goes.** The sync layer's share fell from +231 to +10 ms. What is left is what the 0555
+estimate (about +500 ms) named: the nodes that really move under the new key. React Flow applies the position
+patch and re-renders those nodes (+186 in `@xyflow/react`, +2002 fibers), `DynamicHandles` re-measures their handles
+through `updateNodeInternals` (+149), and the IR content re-reads its size (+69). The parent does none of this because
+it leaves every node at the old key's position, which is the defect R-MT-19 fixes. That cost is in React Flow and in
+`DynamicHandles.tsx`, outside `useJjomSync.ts` and `vertexSnapshot.ts`. No code is changed here; whether the cost is
+accepted is Alfonso's call.
+
+### The 0431 probes on the cheap path
+
+- **Layout switch**, three-node fixture, 3 runs, port 3197: 108 ROW, 63 PASS, FAILURES 0, page errors 0/0/0. Matches
+  out of 3 nodes at +4 s | +10 s: steps 1-6 (A baseline, A→B, B→A, reload on B, B→A after reload, rename Alpha) all
+  3|3 in r1, r2 and r3, the same as 0431 on `03a093081`. Crops of run 1 (light theme) in
+  `~/.jjodel-lanes/P-2026-11-07-0555/crops-0628/`. The 0431 crops this probe overwrites were restored from
+  `crops-0431-backup` and compared byte for byte.
+- **Container viewpoint** (BPMN scene, graphVertex pools and lanes), BPMN → Flat (+ drag of «Check order») → BPMN,
+  1 run: FAILURES 0, page errors 0. Keys BPMN/Flat/BPMN; 12/12 node boxes and every container box identical c0 vs
+  c2; 0 hulls in both reads; under Flat 3 of 11 nodes away from their BPMN positions. Container boxes: Shop 100,100
+  900x360; Customer 100,520 900x200; Sales 130,100 870x180; Warehouse 130,280 870x180. These match the fixture's
+  oracle (`scripts/probe/bpmn-lanes-fixture.ts:126-127`). The 0431 read on `03a093081` recorded Sales at its stored
+  position (1100,520 200x180) and Warehouse over the whole band (130,100 870x360), so the partition pass had not
+  placed the lanes in that read. One run per side cannot tell whether that was a defect of `03a093081` or the timing
+  of that read. In both runs the boxes are equal c0 vs c2, which is what the probe checks.
+
+### Gates on `8328662df`
+
+typecheck exit 0 (lane 0555). Build exit 0. Full vitest (lane 0555): 5 files and 3 tests red. Three files are the
+§17 import failures; the 3 tests are ms budgets in `codegen/textual` (`tolerant.test.ts` ×2, `languageService.test.ts`
+×1), code this branch does not touch. Rerun alone at 1-minute load 12-14: 2 files, 103 tests, all green. Classified as
+load, not a regression.

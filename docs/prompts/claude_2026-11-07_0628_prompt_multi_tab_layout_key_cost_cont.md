@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0628
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · closing docs commit · switch +474 ms over parent (300 ms target not met, the cost is a question for Alfonso); verifica visiva in attesa del GO (crops in ~/.jjodel-lanes/P-2026-11-07-0555/crops-0628/)
 Lane: full (measurement and closure; no source change)
 Depends: P-2026-11-07-0555 (tests e6aa6c026, fix 8328662df, LIR addendum e6241d590), handoff in ~/.jjodel-lanes/P-2026-11-07-0555/handoff.md
 Worktree: ~/jjodel-w-mtlk, branch multi-tab-layout-key, at this prompt's commit (node_modules by the P14 symlink, removed at the end)

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0555
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · e6241d590, e6aa6c026, 8328662df · soft context ceiling, items 3-5 continued by P-2026-11-07-0628
 Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23 for the R-MT-19 fix, launched with --critical-zone-goahead P-2026-11-07-0555)
 Depends: P-2026-11-07-0430 (fix 03a093081), P-2026-11-07-0431 (measures in ~/.jjodel-lanes/P-2026-11-07-0431/results-0431.md), R-MT-19
 Worktree: ~/jjodel-w-mtlk, branch multi-tab-layout-key, at this prompt's commit (node_modules by the P14 symlink, removed at the end)

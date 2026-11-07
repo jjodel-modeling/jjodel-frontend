@@ -55,3 +55,29 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Rollback tag `pre-multi-tab-l0b` on `275486660`. Docs-only merge; the red files are timing tests outside the merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0351/result.json`.
 **Prompt document name**: 2026-11-07 03:51
+
+## 2026-11-07 — fix: a viewpoint switch re-transforms every vertex once (R-MT-19)
+**Prompt**: `claude_2026-11-07_0430_prompt_multi_tab_layout_key_fix.md`, lane full, critical zone: the layout key becomes an input of the incremental sync of `useJjomSync.ts`, LIR first, red tests first, fix, gates; visual check in lane P-2026-11-07-0431.
+**Files touched**: `docs/discovery/lir_2026-11-07_layout_key_resync.md` (f17528bb1); `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshotLayoutKey.test.ts` (b1c6dd226); `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts` (03a093081); this entry and the Status of the prompt file, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. No app check in this lane (lane 0431). Gates on 03a093081: typecheck exit 0; vitest 14532 passed, 2 skipped, 3 files red at import (the §17 set); build exit 0, chunk-size warning only; check:docs exit 0.
+**Out-of-scope changes**: yes. Six files, all named by the prompt. The selector-2 body and the `:1406` comparison moved verbatim into `vertexSnapshot.ts`, so the bench executes them: beyond the bare key check.
+**Layer Impact Report**: produced
+**Smoke visivo**: app probes passed (lanes 0431 on 03a093081, 0628 on 8328662df): layout switch 3|3 on all 6 steps × 3 runs, container switch c0 = c2; Alfonso's visual GO still owed (crops in ~/.jjodel-lanes/P-2026-11-07-0555/crops-0628/)
+**Notes**: Red 8/8 on b1c6dd226, green 8/8. Bench: dropping term:layoutKey kills 3, the key on edges 1, the ch: comparison 3. The key sits in each vertex's ch: number, not a per-run flag, so the anti-bounce carry-over keeps the old key (LIR). Not executed by the bench: the hook wiring and the transformer (joiner, no DOM). The prompt's reference lir_2026-10-21_jjomsync_incremental.md does not exist in docs/discovery.
+**Prompt document name**: 2026-11-07 04:30
+
+## 2026-11-07 — perf: a key-only layout switch skips the transformer (R-MT-19)
+**Prompt**: `claude_2026-11-07_0555_prompt_multi_tab_layout_key_cost.md`, lane full, critical zone: cut the cost of the re-transform 0430 added to a viewpoint switch; items 3-5 (probes, gates, closure) continued by P-2026-11-07-0628 after the soft context ceiling.
+**Files touched**: `docs/discovery/lir_2026-11-07_layout_key_resync.md` (e6241d590, closing addendum in the 0628 docs commit); `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshotLayoutKey.test.ts` (e6aa6c026); `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts` (8328662df); this inbox and the Status of prompts 0430, 0431, 0555, 0628 (0628 docs commit).
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-07 04:30
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile in this lane: app probes pass on 8328662df (layout 3|3 on all 6 steps × 3 runs, container c0 = c2); Alfonso's visual GO is owed
+**Notes**: Switch on the 407-object model, head minus parent: +474 ms mean over 3 pairs (0431: +723), above the 300 ms target; noisy pairs. LObject.name reads per switch dropped from 3458 to 407. Sync files +10 ms (was +231). The rest is React Flow (+186) and DynamicHandles (+149) on nodes that really move, out of scope; acceptance is Alfonso's call. Vitest ms-budget reds are from load: green when rerun alone. 9 files across the lanes, all named by the prompts. Figures in the LIR addendum.
+**Prompt document name**: 2026-11-07 05:55

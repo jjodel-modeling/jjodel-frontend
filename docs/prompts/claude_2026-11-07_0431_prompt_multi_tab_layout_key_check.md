@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0431
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · no commit of its own: probes on 03a093081, stopped by the cost gate (+723 ms) before item 5; closed by P-2026-11-07-0555 and P-2026-11-07-0628
 Lane: full (measurement and closure of a critical-zone fix; no source change)
 Depends: P-2026-11-07-0430 (code and gates on branch multi-tab-layout-key), R-MT-19
 Worktree: ~/jjodel-w-mtlk, branch multi-tab-layout-key, at the closing code commit of P-2026-11-07-0430 plus this prompt (node_modules by the P14 symlink, removed at the end)
