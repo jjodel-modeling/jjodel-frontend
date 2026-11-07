@@ -1,5 +1,8 @@
 # Discovery: can a hook set the Claude Code session title? (P-2026-11-07-1830)
 
+## 0. Answer in brief
+A hook can set the session title of a CLI session: `SessionStart` at startup and at resume, from an environment variable or from a file, stored as `custom-title` and `agent-name` entries in the session JSONL (last wins), at about 100-215 ms per hook. The `claude --resume` picker does not show it for lane sessions: Alfonso's check on 2026-11-07 (19:01) found neither probe session in the picker, opened from `/tmp/title-probe/work` (project key `-tmp-...`, empty) and from `/private/tmp/title-probe/work` (the real key `-private-tmp-...`, no match for `probe-C`). The sessions are `claude -p` runs (`entrypoint: sdk-cli`), the same form `lane-run` uses. Decision: no follow-up lane; the lane board already shows Prompt-ID, front and phase.
+
 ## Hypothesis
 `SessionStart` (docs) and `UserPromptSubmit` (issue anthropics/claude-code #34243) accept
 `hookSpecificOutput.sessionTitle`, with the effect of `/rename`. If so, a lane could title its session with
