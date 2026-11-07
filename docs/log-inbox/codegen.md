@@ -2376,3 +2376,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: 19 tests on GARAGE, a one-root model, DemoESM (scene_3) and the null fallbacks; 6 mutants on rules 1, 2, 4 all killed (commit body). Gates: typecheck 0, vitest 14512 passed with the 3 baseline import reds, build 0, check:codegen-lazy green. Inputs need the old print's spans: E1b must keep them with the agreement. Own comments of a changed object move by owner (R4).
 **Prompt document name**: 2026-11-07 00:48
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0251)
+**Prompt**: `claude_2026-11-07_0251_prompt_textual-e1-reprint_take_trunk.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `7807c9c78`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 120 (laneTracking, completion, languageService, tolerant, irCollapsedRender, irSelectionRing), all green alone at load 2; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: the branch takes the trunk
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0251/result.json`.
+**Prompt document name**: 2026-11-07 02:51
