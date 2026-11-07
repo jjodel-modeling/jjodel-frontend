@@ -18,6 +18,8 @@
  * dies when the line is dropped.
  */
 
+import { readVertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
+
 type Lookup = Record<string, any>;
 
 const CHILD_KEYS = ['attributes', 'references', 'operations', 'literals', 'features'] as const;
@@ -211,7 +213,7 @@ export function vertexChildrenHash(L: Lookup, modelElem: any): number {
  */
 export function elementSnapshotsOf(L: Lookup, ids: readonly string[], layoutKey: string): Map<string, any> | null {
     if (ids.length === 0) return null;
-    const keyTerm = mixStr(0, layoutKey);
+    const keyTerm = keyTermOf(layoutKey);
     const result = new Map<string, any>();
     for (const id of ids) {
         const elem = L[id];
@@ -238,4 +240,58 @@ export function snapshotUnchanged(prev: Map<string, any>, curr: Map<string, any>
     return prev.get(id) === curr.get(id)
         && prev.get(`model:${id}`) === curr.get(`model:${id}`)
         && curr.get(`ch:${id}`) === prev.get(`ch:${id}`);
+}
+
+/** The term `elementSnapshotsOf` mixes last into a vertex's `ch:` number (`term:layoutKey`). */
+function keyTermOf(layoutKey: string): number {
+    return mixStr(0, layoutKey);
+}
+
+/**
+ * Whether vertex `id` moved between the last run's snapshot (`prev`, built under `prevKey`) and this
+ * run's (`curr`, under `currKey`) by the layout key alone (P-2026-11-07-0555). The key enters
+ * `jjomVertexToRFNode` only through `effectiveLayoutOf` (position and size), so for such a vertex
+ * the transformer would return the cached node with a new geometry, and the hook patches
+ * `rekeyedNode` instead of paying its proxy reads. Same D-object, same model element D-object, and
+ * a `ch:` number equal to the last one with the old key's term swapped for the new one:
+ * `term:layoutKey` adds the term last (`h * 31 + term`, mod 2^32), so the swap is exact and holds
+ * iff the content hash is unchanged. A number mixed under a key other than `prevKey` (a vertex the
+ * anti-bounce window carried over) does not cancel, and that vertex takes the full transform.
+ */
+export function layoutKeyOnlyChange(
+    prev: Map<string, any>, curr: Map<string, any>, id: string, prevKey: string, currKey: string,
+): boolean {
+    if (prevKey === currKey) return false;
+    const elem = curr.get(id);
+    if (elem === undefined || prev.get(id) !== elem) return false;
+    if (typeof elem.className !== 'string' || !elem.className.includes('Vertex')) return false;
+    if (prev.get(`model:${id}`) !== curr.get(`model:${id}`)) return false;
+    const before = prev.get(`ch:${id}`);
+    const after = curr.get(`ch:${id}`);
+    if (typeof before !== 'number' || typeof after !== 'number') return false;
+    return ((before - keyTermOf(prevKey) + keyTermOf(currKey)) | 0) === after;
+}
+
+/**
+ * The node `jjomVertexToRFNode` returns for `vertex` (its D-object) under `layoutKey` when only the
+ * key changed: `cached`, its last output, with the geometry read again (P-2026-11-07-0555). A
+ * mirror of the transformer's geometry reads, which import `joiner` and do not run in the bench:
+ * `effectiveLayoutOf` for the position (a non-number reads 0), `manualSizeOf` for the top-level
+ * size of a class, enum or object node, the package node's `style` (400 x 300 by default).
+ * MAINTENANCE: a geometry read added to `utils/jjomTransformers.ts` must be added here.
+ */
+export function rekeyedNode<N extends { type?: string }>(cached: N, vertex: any, layoutKey: string): N {
+    const eff = readVertexLayout((vertex ?? {}) as VertexLayoutSource, layoutKey);
+    const position = { x: typeof eff.x === 'number' ? eff.x : 0, y: typeof eff.y === 'number' ? eff.y : 0 };
+    if (cached.type === 'packageNode') {
+        const width = typeof eff.w === 'number' ? eff.w : 400;
+        const height = typeof eff.h === 'number' ? eff.h : 300;
+        return { ...cached, position, style: { zIndex: -1, width, height } };
+    }
+    const { width: _w, height: _h, ...rest } = cached as any;
+    const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : undefined;
+    const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : undefined;
+    return (eff.isResized && w !== undefined && h !== undefined
+        ? { ...rest, position, width: w, height: h }
+        : { ...rest, position }) as N;
 }
