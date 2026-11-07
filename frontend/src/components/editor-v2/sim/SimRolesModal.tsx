@@ -111,7 +111,7 @@ export interface SimRolesModalProps {
     onApplied: (warning: string | null) => void;
 }
 
-/** The two model kinds of the first open (4a), with the presets of each (engine names, D7). */
+/** The model kinds of the first open (4a), with the presets of each (engine names, D7); Dynamic classification from R-DCN-8. */
 const KINDS: ReadonlyArray<{ shape: ProfileShape; title: string; icon: string; description: string; presets: SystemProfileId[] }> = [
     {
         shape: 'controlFlow', title: 'Control flow', icon: 'bi-diagram-2',
@@ -119,12 +119,20 @@ const KINDS: ReadonlyArray<{ shape: ProfileShape; title: string; icon: string; d
         presets: ['stateMachine', 'extendedStateMachine', 'flowchart'],
     },
     { shape: 'petri', title: 'Petri net', icon: 'bi-bezier2', description: 'Tokens on places, weighted arcs.', presets: ['petri'] },
+    {
+        shape: 'dcn', title: 'Dynamic classification', icon: 'bi-layers',
+        description: 'Objects classified by invariants, in viewpoints.', presets: ['dynamicClassification'],
+    },
 ];
 
 const SHAPE_LABEL: Record<ProfileShape, { icon: string; label: string }> = {
     controlFlow: { icon: 'bi-diagram-2', label: 'Control flow' },
     petri: { icon: 'bi-bezier2', label: 'Petri net' },
+    dcn: { icon: 'bi-layers', label: 'Dynamic classification' },
 };
+
+/** The header's presets: the panel's, and Dynamic classification, which the panel's select does not offer yet. */
+const HEADER_PROFILE_IDS: readonly SystemProfileId[] = [...PANEL_PROFILE_IDS, 'dynamicClassification'];
 
 const label = (r: RoleId) => roleDescriptor(r).label;
 
@@ -864,7 +872,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const shape = SHAPE_LABEL[profile.shape];
     // The select shows the preset, or the system profile a user copy is based on; «Custom» and the others as a state.
     const base = profile.system ? profile.id : profile.basedOn ?? '';
-    const presetValue = preset ?? (PANEL_PROFILE_IDS.some(id => id === base) ? base : '');
+    const presetValue = preset ?? (HEADER_PROFILE_IDS.some(id => id === base) ? base : '');
     const modified = isModified(profile);
     const statusText = VERDICT_LABEL[status.status];
     const statusTitle = pillTitle(status, verdicts);
@@ -898,7 +906,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         onChange={e => { setPreset(e.target.value); setDraftProfile(null); setError(null); }}
                     >
                         {!presetValue && <option value="" disabled hidden>{profile.name || 'Custom'}</option>}
-                        {PANEL_PROFILE_IDS.map(id => <option value={id} key={id}>{systemProfile(id)?.name}</option>)}
+                        {HEADER_PROFILE_IDS.map(id => <option value={id} key={id}>{systemProfile(id)?.name}</option>)}
                     </select>
                     <span className="sim-roles-modal__dot">·</span>
                     {/* «Save as…» (R-SIM-47): a name makes a user copy of the profile, written by Apply in `simProfile`. */}
