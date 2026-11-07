@@ -10,6 +10,8 @@
  * Checks:
  *   S2-0  before the binding, a right click on the pane opens no menu (the canvas behaves as before);
  *   S2-1  with the binding, the cascade «New instance of ▸» lists exactly Book, Library, Magazine, Member;
+ *         S2-1m, before it, a right click that moves 3 px between press and release opens the cascade too (R-OI-17,
+ *         P-2026-11-07-1235: with the right button in panOnDrag the movement panned and opened no menu);
  *   S2-2  «Book» makes one InstanceSpecification classified by Book, four slots whose defining features are isbn,
  *         genre, title, year (the S1 closure, own first), no value object, one vertex (useJjomSync Step 2bis: a
  *         vertex placed at the click broke the undo of the instantiation, measured in this lane);
@@ -256,6 +258,26 @@ try {
     out.binding = written;
     out.historyAfterBinding = await history(page);
     check('S2-B the records object and link are written into the metamodel bag through mm.state', written.ok, { missing: written.missing, bytes: written.raw?.length ?? 0 });
+
+    // ── S2-1m: a right click that moves 3 px between press and release (a trackpad's two-finger click) ─────────────
+    // With the right button in panOnDrag the movement was a pan and no menu opened (R-OI-17, P-2026-11-07-1235).
+    const pm = (await emptyPanePoint(page, 'left'))!;
+    const vpOf = () => page.evaluate(() => (document.querySelector('.dock-tabpane-active .react-flow__viewport') as HTMLElement | null)?.style.transform ?? null);
+    await page.mouse.click(pm.x, pm.y);            // a pointerdown first: arms U.userHasInteracted
+    await wait(page, 200);
+    const vm0 = await vpOf();
+    await page.mouse.move(pm.x, pm.y);
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.move(pm.x + 3, pm.y, { steps: 3 });
+    await page.mouse.up({ button: 'right' });
+    await wait(page, 500);
+    const mParent = page.locator(MENU).first().locator('.context-menu__item--cascade').first();
+    const mLabel = (await mParent.count()) ? (await mParent.innerText()).trim() : null;
+    if (mLabel) { await mParent.hover(); await wait(page, 400); }
+    out.rightClickMoved = { at: pm, parent: mLabel, panels: await menuCount(page), viewport: [vm0, await vpOf()] };
+    check('S2-1m a right click that moves 3 px on the empty pane opens the «New instance of ▸» cascade',
+        mLabel === 'New instance of' && (await menuCount(page)) > 1, out.rightClickMoved);
+    if (await menuCount(page)) await closeMenu(page);
 
     // ── S2-1: the cascade ─────────────────────────────────────────────────────────────────────────────────────────
     const p1 = (await emptyPanePoint(page, 'left'))!;
