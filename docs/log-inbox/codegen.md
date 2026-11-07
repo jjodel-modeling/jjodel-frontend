@@ -2755,3 +2755,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Prompt document name**: 2026-11-07 12:30
 
 **Ticket** (observed, outside L2, unchanged by it): an old object (`data.name` old1, `initialName` Module_1, slot `[]`) shows `old1` in the tree but exports `name="Module_1"`, since the export follows `get_values` while `get_name` returns `data.name` (report §4 O). A nameless object shows a truncated id in the tree while the status bar still reads `conforms to portprobe`. The dropped `Module_0` node renders no `name` row, the console-created `x1` does. Crops 2-4.
+
+## 2026-11-07 — merge: slot-identity-656 into alfonso-frontend-jjtl (P-2026-11-07-1418)
+**Prompt**: `claude_2026-11-07_1418_prompt_merge_slot-identity-656.md`, a direct merge by `lane-run merge --direct`, no session: `slot-identity-656` at `4c948d6e9` into `alfonso-frontend-jjtl`, merge base `4ad2bf5fc`, 13 commits on the branch side.
+**Files touched**: merge `c529f5dfe`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-07_slot_identity_656.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0654_prompt_slot_identity_656_discovery.md`, `docs/prompts/claude_2026-11-07_0720_prompt_slot_identity_656_continuation.md`, `docs/prompts/claude_2026-11-07_1003_prompt_slot_identity_656_l1_executor.md`, `docs/prompts/claude_2026-11-07_1230_prompt_slot_identity_656_l2_read.md`, `frontend/src/model/conformance/ConformanceValidator.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c529f5dfe` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14831 tests in 553 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #656 L2 crops 1-console-create-problems, 2-canvas-drop-problems, 3-xmi, 4-empty-name in ~/.jjodel-lanes/P-2026-11-07-1230/ checked by the chat
+**Notes**: Rollback tag `pre-slot-identity-656` on `083b273e4` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1418/result.json`.
+**Prompt document name**: 2026-11-07 14:18
