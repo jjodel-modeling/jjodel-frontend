@@ -289,6 +289,8 @@ export interface TextSync {
     readonly refs?: readonly RefSpan[];
     /** E1b (R-TXT-54 E10): the print `model` was agreed as, for T10's splice. */
     readonly printed?: AgreedPrint;
+    /** P-2026-11-07-0912: a no-change agreement's text of the last application or reprint, where Cmd/Ctrl+Z is the app's undo. */
+    readonly appText?: string;
 }
 
 /** E1b: the old print of an agreement: its object spans, its reference tokens, and the grammar it was printed in. */
@@ -393,10 +395,21 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
 
 /**
  * E1b: a read text that asks for no change of the model (a comment typed, say) is the new agreement, so a later change
- * of the model splices into it (T10) instead of finding a pending edit. Null for any other decision.
+ * of the model splices into it (T10) instead of finding a pending edit. Null for any other decision. P-2026-11-07-0912:
+ * it keeps the text of the last application or reprint (`prior`'s), so the undo stays with the editor (`appUndoKey`).
  */
-export function unchangedAgreement(d: EditDecision, text: string, print: string, base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): TextSync | null {
-    return d.kind === 'unchanged' ? { text, model: print, printed: agreedPrint(base) } : null;
+export function unchangedAgreement(d: EditDecision, text: string, print: string, base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>, prior?: TextSync | null): TextSync | null {
+    if (d.kind !== 'unchanged') return null;
+    const appText = prior ? prior.appText ?? prior.text : undefined;
+    return { text, model: print, printed: agreedPrint(base), ...(appText !== undefined ? { appText } : {}) };
+}
+
+/**
+ * R-TXT-26, P-2026-11-07-0912: Cmd/Ctrl+Z is the app's undo when the editor holds the text of the last application or
+ * reprint; after a no-change agreement it stays the editor's, so a Format or a typed space is undone in the text.
+ */
+export function appUndoKey(sync: TextSync | null, text: string): boolean {
+    return !!sync && text === (sync.appText ?? sync.text);
 }
 
 /** What the lookup gives an edit besides the objects (textApply.ts `defaultedSlots`, `referencedElsewhere`). */
@@ -1333,7 +1346,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const updateUndoKey = (): void => {
         const editor = editorRef.current;
-        undoKeyRef.current?.set(!!editor && !!syncRef.current && editor.getValue() === syncRef.current.text);
+        undoKeyRef.current?.set(!!editor && appUndoKey(syncRef.current, editor.getValue()));
     };
 
     /**
@@ -1499,7 +1512,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             setStatus({ kind: 'guard', ...guard });
             return;
         }
-        const agreed = unchangedAgreement(d, text, r.view.text, r.base);
+        const agreed = unchangedAgreement(d, text, r.view.text, r.base, sync);
         if (agreed) { syncRef.current = agreed; agree(); updateUndoKey(); }
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
     };
