@@ -27,7 +27,7 @@ vi.mock('../../../sync/canvasToJjom', () => ({
 vi.mock('../irResolve', () => ({ useIRRowView: () => null }));
 vi.mock('@xyflow/react', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@xyflow/react')>();
-    return { ...actual, useReactFlow: () => ({ setEdges: () => {}, getNodes: () => [] }), useInternalNode: () => undefined, useEdges: () => [] };
+    return { ...actual, useReactFlow: () => ({ setEdges: () => {}, getNodes: () => [] }), useStoreApi: () => ({}), useInternalNode: () => undefined, useEdges: () => [] };
 });
 
 import IRNodeContent from '../IRNodeContent';

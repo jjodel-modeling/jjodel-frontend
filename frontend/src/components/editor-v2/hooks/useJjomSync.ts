@@ -46,7 +46,7 @@ import {
     isSingletonSuppressed,
 } from '../sync/syncState';
 import { elementSnapshotsOf, snapshotUnchanged, layoutKeyOnlyChange, rekeyedNode } from '../sync/vertexSnapshot';
-import { getLayoutKeyOf } from '../viewpoint/layout/vertexLayoutAdapter';
+import { getLayoutKeyOf, getLayoutKeyFor } from '../viewpoint/layout/vertexLayoutAdapter';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
@@ -284,6 +284,7 @@ export function useJjomSync(
     setEdges: SetEdges,
     onInitialized?: () => void,
     layoutOptions?: AutoLayoutOptions,
+    viewpointId?: string | null,
 ): UseJjomSyncResult {
     const layout = layoutOptions
         ? { ...DEFAULT_LAYOUT, ...layoutOptions }
@@ -1149,11 +1150,17 @@ export function useJjomSync(
     // Plus, per element with a model element, a content hash of everything else the
     // vertex's node renders, the layout key in force included (R-MT-19): a single number
     // entry per vertex — avoids infinite re-render loops. See sync/vertexSnapshot.ts.
+    // The key is the tab's (multi-tab L3): `viewpointId` is the viewpoint of the tab that owns this
+    // canvas, `undefined` when none does, which reads the root as before. A parameter and not the
+    // EditorContext: EditorV2Inner calls this hook above the provider it renders.
+    const layoutKeyIn = (state: DState): string => viewpointId === undefined
+        ? getLayoutKeyOf(state) : getLayoutKeyFor(state, viewpointId);
     const elementSnapshots = useSelector((state: DState) =>
-        elementSnapshotsOf(state.idlookup as any, subElementIds, getLayoutKeyOf(state)), mapReferenceEqual);
+        elementSnapshotsOf(state.idlookup as any, subElementIds, layoutKeyIn(state)), mapReferenceEqual);
     // The key that snapshot was built under, read off the same state: the incremental sync compares
-    // it with prevLayoutKeyRef to patch a vertex the key alone moved (P-2026-11-07-0555).
-    const layoutKey = useSelector((state: DState) => getLayoutKeyOf(state));
+    // it with prevLayoutKeyRef to patch a vertex the key alone moved (P-2026-11-07-0555), and hands
+    // it to every transform below.
+    const layoutKey = useSelector((state: DState) => layoutKeyIn(state));
 
     // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
     // Called by the init push, by the flush after its patches, and by its own poll.
@@ -1242,11 +1249,11 @@ export function useJjomSync(
 
             for (const v of vertices) {
                 if (isSingletonSuppressed(v.id)) continue;
-                const rfNode = jjomVertexToRFNode(v);
+                const rfNode = jjomVertexToRFNode(v, layoutKey);
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
             for (const e of edges) {
-                const rfEdge = jjomEdgeToRFEdge(e);
+                const rfEdge = jjomEdgeToRFEdge(e, layoutKey);
                 // Skip orphan edges (source/target vertex not in graph)
                 if (rfEdge && nodeCache.has(rfEdge.source) && nodeCache.has(rfEdge.target)) {
                     edgeCache.set(rfEdge.id, rfEdge);
@@ -1326,7 +1333,7 @@ export function useJjomSync(
                         // Skip if already in cache (previous cycle's consumeDropCreated)
                         if (!isDropCreated && rfNodeCache.current.has(id)) continue;
 
-                        const rfNode = jjomVertexToRFNode(lProxy);
+                        const rfNode = jjomVertexToRFNode(lProxy, layoutKey);
                         if (rfNode) {
                             if (isDropCreated) {
                                 rfNode.data = { ...rfNode.data, autoEdit: true };
@@ -1342,7 +1349,7 @@ export function useJjomSync(
                             continue;
                         }
 
-                        const rfEdge = jjomEdgeToRFEdge(lProxy);
+                        const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
@@ -1408,7 +1415,7 @@ export function useJjomSync(
                 const className = rekeyed ? elementSnapshots.get(id).className : (lProxy.className ?? lProxy.__raw?.className);
 
                 if (isVertexClassName(className)) {
-                    const rfNode = rekeyed ?? jjomVertexToRFNode(lProxy);
+                    const rfNode = rekeyed ?? jjomVertexToRFNode(lProxy, layoutKey);
                     if (rfNode) {
                         const existing = rfNodeCache.current.get(id);
                         if (existing) {
@@ -1458,7 +1465,7 @@ export function useJjomSync(
                         }
                     }
                 } else if (isEdgeClassName(className)) {
-                    const rfEdge = jjomEdgeToRFEdge(lProxy);
+                    const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                     if (rfEdge) {
                         // Preserve handles from applyDistribution
                         const existing = rfEdgeCache.current.get(id);

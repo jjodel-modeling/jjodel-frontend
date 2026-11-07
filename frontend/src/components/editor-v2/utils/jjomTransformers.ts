@@ -49,14 +49,17 @@ import { chooseEdgeSides } from './edgeRouting';
  * file goes through here — positions, sizes, and the geometry `computeOptimalHandles` uses to
  * pick anchors — so a node never ends up placed on one record and anchored on the other.
  *
+ * `layoutKey` is the key of the canvas being built (its tab's viewpoint, multi-tab L3): the three
+ * exports take it optional and read `getActiveLayoutKey()` once per call when it is absent.
+ *
  * `raw` is the D-object (`vertex.__raw ?? vertex`), which satisfies `VertexLayoutSource`
  * structurally. Missing or non-numeric fields are NOT patched here: the callers' existing
  * `typeof … === 'number'` guards and defaults keep working exactly as before — and a nullish
  * `raw` (computeOptimalHandles can be handed an unresolved endpoint) yields an all-undefined
  * record, which those same guards turn into the very defaults the `sRaw?.x` form used to give.
  */
-function effectiveLayoutOf(raw: any): VertexLayout {
-    return readVertexLayout((raw ?? {}) as VertexLayoutSource, getActiveLayoutKey());
+function effectiveLayoutOf(raw: any, layoutKey: string): VertexLayout {
+    return readVertexLayout((raw ?? {}) as VertexLayoutSource, layoutKey);
 }
 
 /**
@@ -71,12 +74,12 @@ function effectiveLayoutOf(raw: any): VertexLayout {
  * top-level width/height, the same fields a NodeResizer drag writes via
  * applyNodeChanges (and the same ones resetNodeSize drops).
  */
-function manualSizeOf(raw: any): { width?: number; height?: number } {
+function manualSizeOf(raw: any, layoutKey: string): { width?: number; height?: number } {
     if (!raw) return {};
     // Per-layout read-through: `isResized` and w/h are read off the SAME record, never mixed
     // between a layout record and the seed (the fallback is per record, R-LAY-15). Sizes are
     // therefore independent per layout, "Reset size" included.
-    const eff = effectiveLayoutOf(raw);
+    const eff = effectiveLayoutOf(raw, layoutKey);
     if (!eff.isResized) return {};
     const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : undefined;
     const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : undefined;
@@ -87,7 +90,7 @@ function manualSizeOf(raw: any): { width?: number; height?: number } {
 /**
  * Map a JjOM vertex (LVertex with LClass model) to a React Flow classNode.
  */
-function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
+function classVertexToRFNode(vertex: any, layoutKey: string): Node<ClassNodeData> {
     const lClass = vertex.model;
     const attrs: MetaAttribute[] = [];
     const refs: MetaReference[] = [];
@@ -199,7 +202,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // Use __raw for reliable numeric coordinates (LProxy gotcha:
     // proxy getters return {} instead of numbers when stale)
     const raw = vertex.__raw ?? vertex;
-    const eff = effectiveLayoutOf(raw);
+    const eff = effectiveLayoutOf(raw, layoutKey);
     const x = typeof eff.x === 'number' ? eff.x : 0;
     const y = typeof eff.y === 'number' ? eff.y : 0;
 
@@ -211,7 +214,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         id: vertex.id,
         type: 'classNode',
         position: { x, y },
-        ...manualSizeOf(raw),
+        ...manualSizeOf(raw, layoutKey),
         data: {
             label: lClass?.name ?? 'Class',
             isAbstract: !!lClass?.abstract,
@@ -228,7 +231,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
 /**
  * Map a JjOM vertex (LVertex with LEnumerator model) to a React Flow enumNode.
  */
-function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
+function enumVertexToRFNode(vertex: any, layoutKey: string): Node<EnumNodeData> {
     const lEnum = vertex.model;
     const literals: MetaLiteral[] = [];
 
@@ -246,7 +249,7 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
 
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const eff = effectiveLayoutOf(raw);
+    const eff = effectiveLayoutOf(raw, layoutKey);
     const x = typeof eff.x === 'number' ? eff.x : 0;
     const y = typeof eff.y === 'number' ? eff.y : 0;
 
@@ -254,7 +257,7 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
         id: vertex.id,
         type: 'enumNode',
         position: { x, y },
-        ...manualSizeOf(raw),
+        ...manualSizeOf(raw, layoutKey),
         data: {
             label: lEnum?.name ?? 'Enum',
             literals,
@@ -265,11 +268,11 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
 /**
  * Map a JjOM vertex (LVertex with LPackage model) to a React Flow packageNode.
  */
-function packageVertexToRFNode(vertex: any): Node<PackageNodeData> {
+function packageVertexToRFNode(vertex: any, layoutKey: string): Node<PackageNodeData> {
     const lPackage = vertex.model;
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const eff = effectiveLayoutOf(raw);
+    const eff = effectiveLayoutOf(raw, layoutKey);
     const x = typeof eff.x === 'number' ? eff.x : 0;
     const y = typeof eff.y === 'number' ? eff.y : 0;
     // Same record as the position above: a package moved AND resized under a viewpoint
@@ -296,7 +299,7 @@ function packageVertexToRFNode(vertex: any): Node<PackageNodeData> {
  * Map a JjOM vertex (LVertex with LObject model) to a React Flow objectNode.
  * Used for M1 (model instance) editing.
  */
-function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
+function objectVertexToRFNode(vertex: any, layoutKey: string): Node<ObjectNodeData> {
     const lObject = vertex.model;
     const features: FeatureValueRow[] = [];
 
@@ -475,7 +478,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
 
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const eff = effectiveLayoutOf(raw);
+    const eff = effectiveLayoutOf(raw, layoutKey);
     const x = typeof eff.x === 'number' ? eff.x : 0;
     const y = typeof eff.y === 'number' ? eff.y : 0;
 
@@ -483,7 +486,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
         id: vertex.id,
         type: 'objectNode',
         position: { x, y },
-        ...manualSizeOf(raw),
+        ...manualSizeOf(raw, layoutKey),
         data: {
             label: lObject?.name ?? 'obj',
             instanceOfClassName,
@@ -496,22 +499,24 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
 /**
  * Transform a single JjOM vertex (LVertex) into the appropriate React Flow Node.
  * Returns null if the vertex type is not recognized or has no model.
+ * `layoutKey`: the canvas's layout key; absent, the root's (`getActiveLayoutKey()`).
  */
-export function jjomVertexToRFNode(vertex: any): Node | null {
+export function jjomVertexToRFNode(vertex: any, layoutKey?: string): Node | null {
     const model = vertex?.model;
 
     if (!model) return null;
+    const key = layoutKey ?? getActiveLayoutKey();
 
     const className = model.className ?? model.__raw?.className;
     switch (className) {
         case 'DClass':
-            return classVertexToRFNode(vertex);
+            return classVertexToRFNode(vertex, key);
         case 'DEnumerator':
-            return enumVertexToRFNode(vertex);
+            return enumVertexToRFNode(vertex, key);
         case 'DPackage':
-            return packageVertexToRFNode(vertex);
+            return packageVertexToRFNode(vertex, key);
         case 'DObject':
-            return objectVertexToRFNode(vertex);
+            return objectVertexToRFNode(vertex, key);
         default:
             return null;
     }
@@ -534,6 +539,7 @@ function computeOptimalHandles(
     sourceVertex: any,
     targetVertex: any,
     isInheritance: boolean = false,
+    layoutKey: string,
 ): { sourceHandle: string; targetHandle: string } {
     // Use __raw to get reliable numeric values — LProxy getters return {}
     // instead of numbers, which causes NaN and wrong fallthrough.
@@ -542,8 +548,8 @@ function computeOptimalHandles(
     // Anchors are picked from the SAME geometry the nodes are placed on: reading the
     // scalars here while the nodes sit on a viewpoint record would anchor edges on the
     // wrong side without moving a single node.
-    const sEff = effectiveLayoutOf(sRaw);
-    const tEff = effectiveLayoutOf(tRaw);
+    const sEff = effectiveLayoutOf(sRaw, layoutKey);
+    const tEff = effectiveLayoutOf(tRaw, layoutKey);
     const sx = typeof sEff?.x === 'number' ? sEff.x : 0;
     const sy = typeof sEff?.y === 'number' ? sEff.y : 0;
     const sw = typeof sEff?.w === 'number' ? sEff.w : 180;
@@ -571,7 +577,7 @@ function computeOptimalHandles(
  * Transform a JjOM edge (LEdge) into a React Flow Edge.
  * Returns null if the edge cannot be mapped.
  */
-export function jjomEdgeToRFEdge(edge: any): Edge | null {
+export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
     if (!edge) {
         return null;
     }
@@ -584,7 +590,7 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
 
     // Compute optimal handle sides from vertex positions
     const isInheritance = !!edge.isExtend;
-    const handles = computeOptimalHandles(startVertex, endVertex, isInheritance);
+    const handles = computeOptimalHandles(startVertex, endVertex, isInheritance, layoutKey ?? getActiveLayoutKey());
 
     // Check M1 instance edges FIRST — before isReference/isExtend.
     // M1 edges also have isReference === true but need different RF types
@@ -722,21 +728,23 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
 }
 
 /**
- * Batch-transform all vertices and edges from a JjOM graph.
+ * Batch-transform all vertices and edges from a JjOM graph, under one layout key.
  */
 export function transformJjomGraph(
     vertices: any[],
     edges: any[],
+    layoutKey?: string,
 ): { nodes: Node[]; edges: Edge[] } {
+    const key = layoutKey ?? getActiveLayoutKey();
     const rfNodes: Node[] = [];
     for (const v of vertices) {
-        const node = jjomVertexToRFNode(v);
+        const node = jjomVertexToRFNode(v, key);
         if (node) rfNodes.push(node);
     }
 
     const rfEdges: Edge[] = [];
     for (const e of edges) {
-        const edge = jjomEdgeToRFEdge(e);
+        const edge = jjomEdgeToRFEdge(e, key);
         if (edge) rfEdges.push(edge);
     }
 
