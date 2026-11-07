@@ -1306,11 +1306,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 
 ## 2026-11-05 — docs: closure of the blocked jjtl-method-failure-error merge
 **Prompt**: P-2026-11-05-2234, direct merge of `jjtl-method-failure-error` (R-FA-12), landed as `1b70ba7f3`, reported blocked by the vitest gate.
-**File toccati**: the merge prompt's `Status:` line, this entry
-**Esito**: ✅ completato
+**Files touched**: the merge prompt's `Status:` line, this entry
+**Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Note**: The one red test, `laneRun.test.ts` (lane-run monitor kills), failed twice at load 70-244 (status null, the 20 s limit of its spawn) and passes alone at load 7. The merge touches no harness script. `lane-run go` refuses a blocked merge, so this closure is by hand. The app's write-back of a failed run remains unmeasured.
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The one red test, `laneRun.test.ts` (lane-run monitor kills), failed twice at load 70-244 (status null, the 20 s limit of its spawn) and passes alone at load 7. The merge touches no harness script. `lane-run go` refuses a blocked merge, so this closure is by hand. The app's write-back of a failed run remains unmeasured.
+**Prompt document name**: 2026-11-05 22:34
 
 ## 2026-11-06 — fix(jjtl): a failing builtin names the rule and source element (P-2026-11-06-2305)
 **Prompt**: P-2026-11-06-2305: R-FA-13, a builtin failing inside JjTL names rule and source element as R-FA-12 does, tests first, node regression; then measure only what the app writes for a failed run.
@@ -1353,6 +1358,13 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 
 ## 2026-11-07 — docs: closure of the blocked jjtl-failed-run-no-target merge
 **Prompt**: P-2026-11-07-1152, direct merge of `jjtl-failed-run-no-target` (R-FA-14), landed as `354ba3cdd`, reported blocked by the vitest gate.
-**File toccati**: the merge prompt's `Status:` line, this entry
-**Esito**: ✅ completato
-**Note**: Two red cases in `jjtlSourceValues.test.ts`, outside `jjtl/`: its helper read `targetModel` of a failed run, which R-FA-14 removes. The lane ran only the JjTL and JjEL suites and missed them. Fixed on the trunk by `40b586823` (16/16 green). `lane-run go` refuses a blocked merge, so this closure is by hand.
+**Files touched**: the merge prompt's `Status:` line, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 11:25 (two callers of a failed run outside jjtl/ were missed)
+**Causa**: (c)
+**Regressions**: yes (two red cases in jjtlSourceValues.test.ts, fixed by 40b586823)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Two red cases in `jjtlSourceValues.test.ts`, outside `jjtl/`: its helper read `targetModel` of a failed run, which R-FA-14 removes. The lane ran only the JjTL and JjEL suites and missed them. Fixed on the trunk by `40b586823` (16/16 green). `lane-run go` refuses a blocked merge, so this closure is by hand.
+**Prompt document name**: 2026-11-07 11:52
