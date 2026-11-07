@@ -1071,6 +1071,9 @@ interface ExecutionResult {
 }
 ```
 
+A failed run (`success: false`) returns no target model: `targetModel` is `undefined`, so no caller
+can write a partial one. Its errors, warnings and trace are returned as for any run (R-FA-14).
+
 ---
 
 ## 12. Implementation Status and Gaps
