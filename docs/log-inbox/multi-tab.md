@@ -147,3 +147,15 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-07 09:35
 
 **Ticket** (P-2026-11-07-0935): out of scope, approved: reducer.ts (core), action.ts, lastViewpoint.ts; 7 code and test files, above the five of rule 19. The reducer clause on CompositeAction goes beyond the approved one-line check on the dispatched action: same line, same effect, reported for ratification. The undoGroup harness CompositeAction mock became a class. A dev server reloaded on reducer.ts made the probe time out at B's picker twice (with and without the clause); a fresh server passed 3/3.
+## 2026-11-07 — merge: multi-tab-l2 into alfonso-frontend-jjtl (P-2026-11-07-1210)
+**Prompt**: `claude_2026-11-07_1210_prompt_merge_multi-tab-l2.md`, lane full (merge): `multi-tab-l2` at `dcd7ed29d` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `02c2ff850`: the 17 files of the branch (this inbox, the LIR, three L2 prompts, `EditorSwitch.tsx`, `EditorV2.tsx`, `Toolbar.tsx`, `EditorContext.tsx`, `vertexLayoutAdapter.ts`, `action.ts`, `reducer.ts`, `lastViewpoint.ts` and four test files); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `02c2ff850`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 550 files, 14764 tests as expected (tip 14743 + 21), 1 failed (`outline` 10 ms budget at 10.03 ms, green 3/3 alone), 3 files red: the known `window` imports. Tip at load ~100: 2 failed, 7 files red, green alone or Chromium close hook only.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO on the P-2026-11-07-0935 app check of the same code: focus write +0 undo entries 3/3, picker keeps its entry; V1, V2, R-MT-18 3/3; one tab unchanged)
+**Notes**: Merge tree `e75e02472` equal to the merge-tree measure; probes 15/15 once, R-FA-15 absent. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtl2` (no node_modules there; writing forbidden): the 21 new tests counted at `dcd7ed29d` (undoGroup `dt` loop counted twice), the four files 76/76 green on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 12:10
