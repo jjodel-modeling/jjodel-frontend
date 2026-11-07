@@ -2913,3 +2913,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato (F1e crops 1-known, 2-unknown, 3-pascal in ~/.jjodel-lanes/P-2026-11-07-1736/, checked by the chat)
 **Notes**: Closed by hand by the chat on Alfonso's go (2026-11-08 00:02). The collision is a harness defect: `lane-run merge` takes the current minute as Prompt-ID without checking other chats.
 **Prompt document name**: 2026-11-07 18:34
+
+## 2026-11-07 — feat(codegen): D3c, validation-rule markers in the Text tab (P-2026-11-07-1838)
+**Prompt**: `claude_2026-11-07_1838_prompt_textual_d3c_rules.md`, row D3c of the D report §8 (D9, D8): the problems a run of the user's validation rules writes in the problems registry, as warnings on the carried spans of the Text tab, their own owner, never read by the apply; tests; app check with crops.
+**Files touched**: `frontend/src/codegen/textual/conformanceMarks.ts`, `__tests__/conformanceMarks.test.ts` (`8d7605eef`); `ui/TextualTab.tsx`, the same test (`8cdb3ea8f`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck exit 0; full vitest 14967 passed, 2 skipped, red the 3 baseline import files and 3 load files (irCollapsedRender, irSelectionRing, tolerant), 82/82 alone; build exit 0, dynamic-import warnings 7 as before; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: R3 measured: the entry's `nodeId` is the DObject id the spans carry; the vertex entry matches no span. A model change after a run (an apply) makes it stale and withdraws its entries (R-VAL-18), so the marker goes until the next Validate. No viewpoint on the entry: source `validation`, code the rule name. App check 15/15 ALL PASS, crops 1-before-run..5-rerun in ~/.jjodel-lanes/P-2026-11-07-1838/.
+**Prompt document name**: 2026-11-07 18:38
