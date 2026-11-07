@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0750
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · probe only, no commit · 17 gestures identical on the branch and on 28063e561, crops read by the chat
 Lane: full (continuation of P-2026-11-07-0701, stopped at the context ceiling)
 Corregge: 2026-11-07 07:01 (stopped at the soft context ceiling before the browser probe, RC-51)
 Worktree: ~/jjodel-w-dcn-l41, branch dcn-l41, at the commit that adds this prompt on top of 8de3f6ae8
