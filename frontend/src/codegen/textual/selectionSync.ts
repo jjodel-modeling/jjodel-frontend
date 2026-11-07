@@ -5,6 +5,9 @@
  * Text to canvas: a caret moved by the user selects, on the canvas, the innermost object whose carried span holds it
  * (E4; a reference token is its owner's, E5), once per object, and only when the canvas draws it as a node (E6).
  *
+ * Canvas to text (lane E2b, P-2026-11-07-1635; §5.2, §6.3): the elements selected on the canvas are highlighted on
+ * their carried spans; an element without one is silent (E8).
+ *
  * Pure: no React, no Monaco, no store.
  */
 
@@ -82,4 +85,28 @@ export function canvasVertexIds(lookup: Readonly<Record<string, any>>, mounted: 
     const graphs = new Set(mounted.map(id => lookup[id]?.graph).filter((g): g is string => typeof g === 'string'));
     for (const g of graphs) walk(lookup[g]?.subElements);
     return out;
+}
+
+/**
+ * The carried spans of the elements selected on the canvas, in selection order (the last is the one just clicked), each
+ * element once. An element with no span (a stale tab, an unprinted object, E8) or with a collapsed one gives nothing.
+ */
+export function selectedSpans(spans: readonly ObjectSpan[], elementIds: readonly string[]): ObjectSpan[] {
+    const byId = new Map<string, ObjectSpan>();
+    for (const s of spans) if (s.end > s.start && !byId.has(s.id)) byId.set(s.id, s);
+    const out: ObjectSpan[] = [];
+    const seen = new Set<string>();
+    for (const id of elementIds) {
+        const s = byId.get(id);
+        if (s && !seen.has(id)) { seen.add(id); out.push(s); }
+    }
+    return out;
+}
+
+/**
+ * The last id the text path holds as sent, after the canvas published `elementIds`: the one element selected, so a caret
+ * in it does not select it again (§6.1); null for none or several, so a caret in any of them selects it alone.
+ */
+export function lastSelectedOf(elementIds: readonly string[]): string | null {
+    return elementIds.length === 1 ? elementIds[0] : null;
 }

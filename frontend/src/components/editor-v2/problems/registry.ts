@@ -52,16 +52,26 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * those no container claims beside claimed ones, mapped by `containmentToProblems.ts` from the containment model the
  * presentation pass builds. Same price and same reasoning as the two above; the S2 prompt asks for it by name.
  *
- * `'dcn'` (P-2026-11-07-1825, lane L2.4) is the seventh: the DCN well-formedness checks W1..W4, W6, R-DCN-13 and
+ * `'instantiation'` (R-OI-3, P-2026-10-21-1600 S3a) is the seventh: the slots of an instance that do not match its
+ * classifier's feature closure (missing, orphan, two for one feature), a value of the wrong type, a cycle in the
+ * generalization, mapped by `instantiationToProblems.ts` and written by `InstantiationProblemSync`. One kind for all
+ * five findings (the finding is in the id and the title). Same price as the four above, asked for by name.
+ *
+ * `'dcn'` (P-2026-11-07-1825, lane L2.4) is the eighth: the DCN well-formedness checks W1..W4, W6, R-DCN-13 and
  * R-DCN-16 (spec §5) on the class-level elements, mapped by `dcnToProblems.ts` and published by `DcnProblemSync`.
  * Same price and same reasoning as the three above; the L2.4 prompt authorizes it by name.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'dcn';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'instantiation' | 'dcn';
 
 export interface NodeProblemAction {
     label: string;
     type: 'focus-node' | 'scroll-to-node' | 'custom';
     targetNodeId?: string;
+    /**
+     * A `'custom'` action's own effect, called by the overlay before the target path (S3a «Sync slots»). A closure, so
+     * session-local like the rest of the registry and never serialized. Additive optional property (rule 11).
+     */
+    run?: () => void;
 }
 
 // Per-violation detail carried by 'conformance' problems, so the overlay can

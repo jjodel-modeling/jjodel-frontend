@@ -2859,3 +2859,44 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: F1d crops 1-self-dot, 1-self-dot-accept, 3-pascal-accept, 4-outside in ~/.jjodel-lanes/P-2026-11-07-1622/ checked by the chat
 **Notes**: Rollback tag `pre-textual-f1d-complete` on `9d80bf810` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1733/result.json`.
 **Prompt document name**: 2026-11-07 17:33
+
+## 2026-11-07 — feat(codegen): E2b, canvas selection highlighted in the Text tab (P-2026-11-07-1635)
+**Prompt**: `claude_2026-11-07_1635_prompt_textual_e2b_highlight.md`, row E2b of discovery_2026-11-06_textual_e_sync §9.1 (R-TXT-54 E1, E8): the `CANVAS_SELECTION_CHANGED` listener, a highlight collection on the selected objects' spans, reveal without caret or focus, the highlight kept across reprint, apply and splice, no ping-pong (§6.1).
+**Files touched**: `codegen/textual/selectionSync.ts`, `__tests__/selectionSync.test.ts` (8f4fd2338); `ui/TextualTab.tsx`, `ui/TextualTab.scss` (dae6ba6c1)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck 0 errors; vitest 14940 passed, 2 skipped, 3 baseline import reds; build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — unattended, probe `~/.jjodel-lanes/P-2026-11-07-1635/probe.mjs` (run2.log, 24/24, real canvas and text gestures, DOM and Monaco state); crops 1-click, 2-multi, 2b-clear, 3-after-apply, 3b-after-reprint, 4-no-loop in the same folder, to Alfonso.
+**Notes**: Reveal on the last span in selection order (the node just clicked, §5.3, §8.2), not the first. A one-element canvas selection resets E2a's last-sent id (`lastSelectedOf`), so a caret in a node clicked on the canvas does not reselect it. Mutation: dropping the repaint fails only 3b (app undo reprint); the apply alone keeps the highlight by Monaco's tracking. A tab opened over an existing selection shows no highlight until the next change (the event fires on change only).
+**Prompt document name**: 2026-11-07 16:35
+
+## 2026-11-07 — merge: textual-e2b-highlight into alfonso-frontend-jjtl (P-2026-11-07-1821)
+**Prompt**: `claude_2026-11-07_1821_prompt_merge_textual-e2b-highlight.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e2b-highlight` at `62f8ca670` into `alfonso-frontend-jjtl`, merge base `c0ee2cc00`, 4 commits on the branch side.
+**Files touched**: merge `e13181617`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1635_prompt_textual_e2b_highlight.md`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e13181617` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14963 tests in 561 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E2b crops 1-click, 2-multi, 3-after-apply, 4-no-loop in ~/.jjodel-lanes/P-2026-11-07-1635/ checked by the chat
+**Notes**: Rollback tag `pre-textual-e2b-highlight` on `63b99779b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1821/result.json`.
+**Prompt document name**: 2026-11-07 18:21
+
+## 2026-11-07 — feat(codegen): F1e, `self.<f>` name check in the islands (P-2026-11-07-1736)
+**Prompt**: `claude_2026-11-07_1736_prompt_textual_f1e_names.md`, row F1e of the step F report, decision F5 (R-TXT-55): in a well-formed island, `self.<f>` / `self?.<f>` naming no feature of the owner's class (inherited included) gives one jjel warning on `<f>`.
+**Files touched**: `79f7dbbc2` textual/__tests__/jjelIslands.test.ts (red); `83d82e12a` textual/jjelIslands.ts, textual/__tests__/jjelIslands.test.ts (all under frontend/src/codegen/); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe ALL PASS on 3736 (DemoESM, typed keys, style picker, hover); markers read from Monaco; crops 1-known, 2-unknown, 3-pascal in ~/.jjodel-lanes/P-2026-11-07-1736/, checked by the session
+**Notes**: The island carries its owner's class and feature names (optional fields), so TextualTab is untouched. `.[x]` state, method calls and `self` after a dot are not checked. Bench 13/13 killed (first-only after a test fix). Gates: typecheck 0, build 0, check:docs 0, codegen-lazy 0, vitest 3 import reds only.
+**Prompt document name**: 2026-11-07 17:36
+
+**Ticket** (F1c wiring, measured in the probe): every reprint, the style switch included, calls `setMarkers(null)` (TextualTab.tsx:1391), so a printed text carries no jjel warning until it is edited: a stale `self.<f>` after a rename (report §9 R4) is not shown on open. Not fixed here (outside marker lines); a lane of its own.

@@ -44,7 +44,8 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { reprintChanged } from '../textReprint';
-import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
+import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
 import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
@@ -1220,13 +1221,16 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {} });
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void; canvas: (elementIds: readonly string[]) => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {}, canvas: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
     // E2a (R-TXT-54): a caret the user moved selects its object on the canvas after a short wait; the last id it selected.
     const caretPause = useMemo(() => pauseOf(CARET_SELECT_DELAY_MS, () => handlers.current.caret()), []);
     useEffect(() => () => caretPause.cancel(), [caretPause]);
     const canvasSelectedRef = useRef<string | null>(null);
+    // E2b (R-TXT-54 E1): the elements selected on the canvas, highlighted on their spans by a collection of their own.
+    const canvasIdsRef = useRef<readonly string[]>([]);
+    const canvasHighlightRef = useRef<ReturnType<MonacoEditor['createDecorationsCollection']> | null>(null);
 
     const setDecorations = (spans: readonly ObjectSpan[]): void => {
         const editor = editorRef.current;
@@ -1244,6 +1248,34 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
         setConformanceMarkers();
+        paintCanvasSelection(false);
+    };
+
+    /**
+     * E2b (R-TXT-54 E1, E8; discovery §5.3): the canvas's selection highlighted on the carried spans, set again each time
+     * the spans are (a reprint, an application, a splice). `reveal` scrolls to the span of the element just clicked, the
+     * last in selection order: a scroll only, so the caret and the focus stay the user's and no cursor event fires (§6.1).
+     */
+    const paintCanvasSelection = (reveal: boolean): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        const highlight = canvasHighlightRef.current;
+        if (!editor || !monaco || !m || !highlight) return;
+        const ranges = selectedSpans(carriedSpans(), canvasIdsRef.current).map(s => {
+            const from = m.getPositionAt(s.start);
+            const to = m.getPositionAt(s.end);
+            return new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column);
+        });
+        highlight.set(ranges.map(range => ({
+            range,
+            options: {
+                className: 'textual-tab__canvas-selected',
+                stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+                overviewRuler: { color: { id: 'editorOverviewRuler.selectionHighlightForeground' }, position: monaco.editor.OverviewRulerLane.Center },
+            },
+        })));
+        if (reveal && ranges.length) editor.revealRangeInCenterIfOutsideViewport(ranges[ranges.length - 1], monaco.editor.ScrollType.Smooth);
     };
 
     /**
@@ -1637,7 +1669,22 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             if (applyingRef.current || rewritingRef.current) { caretPause.poke(); return; }
             selectAt(m.getOffsetAt(p), false);
         },
+        // E2b (§5.1, §6.1): the canvas's selection, its echo of a caret move included, which marks the caret's own object.
+        canvas: elementIds => {
+            canvasIdsRef.current = elementIds;
+            canvasSelectedRef.current = lastSelectedOf(elementIds);
+            paintCanvasSelection(true);
+        },
     };
+
+    useEffect(() => {
+        const onSelection = (e: Event): void => {
+            const detail = (e as CustomEvent<CanvasSelectionDetail>).detail;
+            if (detail?.modelId === modelId && Array.isArray(detail.elementIds)) handlers.current.canvas(detail.elementIds);
+        };
+        window.addEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
+        return () => window.removeEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
+    }, [modelId]);
 
     const onConfirm = (): void => {
         const editor = editorRef.current;
@@ -1666,6 +1713,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const onMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        canvasHighlightRef.current = editor.createDecorationsCollection();
         const m = editor.getModel();
         if (ui && m) {
             const session = ui.openTextualSession(m, { base: () => readRef.current.base, keep: () => carriedRefs() });

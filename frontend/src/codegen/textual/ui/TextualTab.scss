@@ -234,6 +234,11 @@
             outline: none !important;
         }
 
+        // E2b (P-2026-11-07-1635): the spans of the objects selected on the canvas, in the canvas's selection tint.
+        .textual-tab__canvas-selected {
+            background: var(--color-canvas-accent-subtle);
+        }
+
         // Step B2 (P-2026-11-04-0146): the global `.monaco-scrollable-element { left: 30px !important }` of
         // skeleton.scss shifted the hover's content 30 px inside a box sized to it, so the last 30 px were clipped.
         // Monaco already fits the box to its content up to its own max width; the code spans take the editor's font.
