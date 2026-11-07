@@ -25,16 +25,41 @@ vi.mock('../../../pages/components/Navbar', () => ({ createM1: () => null }));
 vi.mock('../../../components/Toast/toastDispatch', () => ({ toast: {} }));
 vi.mock('../ui/TextualTab', () => ({ default: () => null, NewTextualTab: () => null }));
 
-import { openTextualTab, writeTextualSyntax } from '../ui/openTextualTab';
+import { openTextualTab, textualPlacement, textualTabId, writeTextualSyntax } from '../ui/openTextualTab';
 import { encodeSyntax, TEXTUAL_SYNTAX_KEY, withStyleBase } from '../syntaxRecord';
 import type { SyntaxAnnotations } from '../annotations';
+
+/**
+ * A fake rc-dock with the panels `panels`, each a list of tab ids and the shown one (the first when none): `find` gives
+ * a tab with its panel as `parent`, as rc-dock does; `dockMove` records the move.
+ */
+function fakeDock(panels: { tabs: string[]; active?: string }[]) {
+    const moves: { tab: any; target: any; direction: string }[] = [];
+    const built = panels.map(p => {
+        const panel: any = { activeId: p.active, tabs: [] };
+        panel.tabs = p.tabs.map(id => ({ id, content: null, parent: panel }));
+        return panel;
+    });
+    return {
+        moves,
+        find: (id: string) => built.flatMap(p => p.tabs).find((t: any) => t.id === id),
+        dockMove: (tab: any, target: any, direction: string) => { moves.push({ tab, target, direction }); },
+        updateTab: () => true,
+        getLayout: () => ({ dockbox: { children: built } }),
+    } as any;
+}
 
 const RECORD: SyntaxAnnotations = { v: 1, language: 'Shelf', features: { A_Book_genre: { keyword: '' } } };
 
 beforeEach(() => {
     writes.length = 0;
     fake.open.mockClear();
-    state.idlookup = { mm: { id: 'mm', name: 'Library', _state: { other: 'kept', [TEXTUAL_SYNTAX_KEY]: encodeSyntax(RECORD) } }, m: { id: 'm', name: 'city', instanceof: 'mm' } };
+    fake.dock = fakeDock([{ tabs: ['project_summary'] }]);
+    state.idlookup = {
+        mm: { id: 'mm', name: 'Library', _state: { other: 'kept', [TEXTUAL_SYNTAX_KEY]: encodeSyntax(RECORD) } },
+        m: { id: 'm', className: 'DModel', name: 'city', instanceof: 'mm' },
+        n: { id: 'n', className: 'DModel', name: 'town', instanceof: 'mm' },
+    };
 });
 
 describe('writeTextualSyntax, called by the style picker', () => {
@@ -62,5 +87,57 @@ describe('the Text tab of a model', () => {
         expect(openTextualTab('m', 'Library')).toBe(true);
         const tab = (fake.open.mock.calls[0] as unknown[])[1] as any;
         expect(tab.content.props.writeSyntax).toBe(writeTextualSyntax);
+    });
+});
+
+describe('E9 (R-TXT-54): the Text tab opens beside its model\'s canvas', () => {
+    const TXT = textualTabId('m');
+
+    it('not open, the model\'s canvas shown: beside it (mutant: the canvas test dropped, the tab opens as today)', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm'], active: 'm' }]), 'm')).toBe('open-beside');
+    });
+
+    it('not open, the canvas docked but the project page shown: as today (mutant: a docked canvas counts as shown)', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm'], active: 'project_summary' }]), 'm')).toBe('open');
+    });
+
+    it('not open, another model\'s canvas shown in the panel: as today (mutant: shownCanvas read with the store\'s lookup)', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm', 'n'], active: 'n' }]), 'm')).toBe('open');
+    });
+
+    it('not open, no canvas of the model docked: as today', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary'] }]), 'm')).toBe('open');
+    });
+
+    it('open behind the shown canvas, in its panel: moved beside it (mutant: an open tab is only brought forward)', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm', TXT], active: 'm' }]), 'm')).toBe('move-beside');
+    });
+
+    it('open in a panel of its own beside the canvas: brought forward where it is (mutant: moved whenever the canvas is shown)', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm'], active: 'm' }, { tabs: [TXT] }]), 'm')).toBe('activate');
+    });
+
+    it('open and shown in the canvas\'s panel, the canvas behind it: brought forward where it is', () => {
+        expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm', TXT], active: TXT }]), 'm')).toBe('activate');
+    });
+
+    it('openTextualTab docks the new tab right of the canvas\'s panel, not through DockManager.open (mutant: the placement not applied)', () => {
+        const dock = fakeDock([{ tabs: ['project_summary', 'm'], active: 'm' }]);
+        fake.dock = dock;
+        expect(openTextualTab('m', 'Library')).toBe(true);
+        expect(dock.moves.map((m: any) => [m.tab.id, m.target.tabs.map((t: any) => t.id), m.direction])).toEqual([[TXT, ['project_summary', 'm'], 'right']]);
+        expect(fake.open).not.toHaveBeenCalled();
+    });
+
+    it('openTextualTab with no canvas shown opens through DockManager.open, as today (mutant: always docked beside)', () => {
+        expect(openTextualTab('m', 'Library')).toBe(true);
+        expect(fake.open).toHaveBeenCalledTimes(1);
+        expect((fake.dock as any).moves).toEqual([]);
+    });
+
+    it('the title carries the dock\'s not-pinned marker, so PinnableDock shows the panel beside the canvas (mutant: the class dropped)', () => {
+        openTextualTab('m', 'Library');
+        const tab = (fake.open.mock.calls[0] as unknown[])[1] as any;
+        expect(String(tab.title.props.className).split(/\s+/)).toContain('not-pinned');
     });
 });
