@@ -3242,9 +3242,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // gives a new root, placed by the layout write of instantiate (hooks/instantiate.ts header):
     // at the right click under the layout in force, at the centre of the view under any other
     // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
-    // viewports and the pane are read at the click, not when the write lands.
+    // viewports and the pane are read at the click, not when the write lands. The layout in force is the tab's
+    // (P-2026-11-07-1620): its viewpoint goes to instantiate, its key decides where the click lands.
     const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
-        const activeKey = getActiveLayoutKey();
+        const activeKey = tabLayoutKey();
         const clickAt = click ? screenToFlowPosition(click) : null;
         const current = getViewport();
         const el = editorContainerRef.current;
@@ -3254,7 +3255,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (pane.width <= 0 || pane.height <= 0) return null;
             return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
         };
-        void instantiate(classifierId, record, placeAt).then(result => {
+        void instantiate(classifierId, record, placeAt, viewpointIdRef.current).then(result => {
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
     }, [screenToFlowPosition, getViewport, modelid]);

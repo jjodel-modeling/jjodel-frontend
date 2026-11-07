@@ -23,7 +23,7 @@ import { DState, store } from '../../../joiner';
 import { instanceObjectRecord, instantiationInFlight, readOntoBindings, syncSlots, type DGet } from '../hooks/instantiate';
 import { detectInstantiationProblems, type InstantiationFinding } from './instantiationToProblems';
 import { buildVertexResolver } from './vertexResolver';
-import { clearProblem, getProblemIdsOwnedBy, markResolved, registerProblem, type NodeProblem } from './registry';
+import { acquireProducerMount, clearProblem, getProblemIdsOwnedBy, markResolved, registerProblem, type NodeProblem } from './registry';
 
 interface Props {
     modelid: string | undefined;
@@ -121,12 +121,13 @@ export function InstantiationProblemSync({ modelid, graphId }: Props) {
         };
     }, [modelid, graphId, sig]);
 
-    // The model changes or the editor closes: this producer's entries for it go outright.
+    // The model changes or the last editor on it closes (`acquireProducerMount`, multi-tab L4b): this producer's
+    // entries for it go outright; another tab on the same model keeps its badges.
     useEffect(() => {
         if (!modelid) return;
-        return () => {
+        return acquireProducerMount(INSTANTIATION_KIND, modelid, () => {
             for (const id of getProblemIdsOwnedBy(INSTANTIATION_KIND, modelid)) clearProblem(id);
-        };
+        });
     }, [modelid]);
 
     return null;

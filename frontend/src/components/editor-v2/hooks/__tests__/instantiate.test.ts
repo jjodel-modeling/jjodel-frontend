@@ -484,6 +484,11 @@ describe('S3b: ghost rows and orphan rows (instanceRows, materializePlan)', () =
 // replaced, a nested begin only counts, the outermost end folds the entries since its mark into one, older record kept.
 const h = vi.hoisted(() => {
     const s: any = { lookup: {}, entries: [], depth: 0, mark: 0, opened: [], closed: [], layoutLands: true, vertexAfterMs: 20, made: 0 };
+    // The root's viewpoint, the viewpoints whose IR draws the instance, the node layout writes resolved (P-2026-11-07-1620).
+    Object.assign(s, { rootVp: undefined, irDraws: [], layoutCalls: [] });
+    // `getLayoutKeyFor`'s rule: an exclusive viewpoint is its own key, anything else abstract syntax.
+    s.keyFor = (state: any, vp: unknown) =>
+        (typeof vp === 'string' && state?.idlookup?.[vp]?.isExclusiveView ? vp : '__abstract__');
     s.write = (id: string, rec: any) => {
         s.entries.push({ [id]: s.lookup[id] === undefined ? undefined : structuredClone(s.lookup[id]) });
         s.lookup[id] = rec;
@@ -534,15 +539,28 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock('../../../../joiner', () => ({
-    store: { getState: () => ({ idlookup: h.lookup, viewpoint: undefined }) },
+    store: { getState: () => ({ idlookup: h.lookup, viewpoint: h.rootVp }) },
     TRANSACTION: (_name: string, f: () => void) => f(),
     SetFieldAction: { new: (id: string, key: string, value: unknown) => h.setField(id, key, value) },
 }));
 vi.mock('../createAdapter', () => ({ createInstance: (...a: any[]) => (h.create as any)(...a) }));
-vi.mock('../../viewpoint/ir/irResolveCore', () => ({ computeIRSignature: () => null, getIRIndex: () => null, resolveIRView: () => null }));
+vi.mock('../../viewpoint/ir/irResolveCore', () => ({
+    computeIRSignature: (_s: unknown, vp: unknown) => (h.irDraws.includes(vp) ? `sig:${vp}` : null),
+    getIRIndex: (_s: unknown, signature: unknown) => signature,
+    resolveIRView: () => ({ kind: 'vertex', ir: {} }),
+}));
 vi.mock('../../viewpoint/ir/irReadCtxLproxy', () => ({ makeReadCtx: () => ({}) }));
-vi.mock('../../viewpoint/layout/vertexLayoutAdapter', () => ({ getLayoutKeyOf: () => '__abstract__' }));
-vi.mock('../../viewpoint/layout/vertexLayout', () => ({ resolveVertexLayoutWrite: (_v: unknown, patch: unknown) => ({ target: 'scalars', patch }) }));
+vi.mock('../../viewpoint/layout/vertexLayoutAdapter', () => ({
+    getLayoutKeyOf: (state: any) => h.keyFor(state, state?.viewpoint),
+    getLayoutKeyFor: (state: any, vp: unknown) => h.keyFor(state, vp),
+}));
+vi.mock('../../viewpoint/layout/vertexLayout', () => ({
+    resolveVertexLayoutWrite: (_v: unknown, patch: unknown, layoutKey: string) => {
+        h.layoutCalls.push({ layoutKey, patch });
+        // An exclusive viewpoint's key goes to the vertex's dictionary, abstract syntax to its scalars (R-LAY-16).
+        return layoutKey === '__abstract__' ? { target: 'scalars', patch } : { target: 'dictionary', vpId: layoutKey, record: patch };
+    },
+}));
 vi.mock('../../../../redux/reducer/reducer', () => ({ beginUndoGroup: () => h.begin(), endUndoGroup: () => h.end() }));
 
 describe('instantiate: one undo entry per instantiation, one deadline per instantiation (P-2026-11-06-2225)', () => {
@@ -690,5 +708,56 @@ describe('instantiate: one undo entry per instantiation, one deadline per instan
         expect(h.entries).toHaveLength(1);
         h.undo();
         expect(h.lookup).toEqual(before);
+    });
+});
+
+describe('instantiate under the layout of the tab, not the root (P-2026-11-07-1620)', () => {
+    // Two exclusive viewpoints of the project; the root shows CD while the tab the click is in shows another.
+    const bare = { name: 'object', typeReference: 'r_InstanceSpecification_classifier', featureContainer: 'r_Class_ownedAttributes' };
+    const CLICK = { x: 11, y: 22 };
+    const CENTRE = { x: 500, y: 300 };
+    // runInstantiate's placement: the click under the key of the tab, the centre of the view under any other.
+    const placeFor = (tabKey: string) => (layoutKey: string) => (layoutKey === tabKey ? CLICK : CENTRE);
+    const run = async (o: { viewpoint?: string | null; tabKey: string; irDraws?: string[] }) => {
+        const db = uml().db;
+        db.CD = { className: 'DViewPoint', id: 'CD', isExclusiveView: true };
+        db.OD = { className: 'DViewPoint', id: 'OD', isExclusiveView: true };
+        Object.assign(h, { lookup: db, entries: [], depth: 0, mark: 0, opened: [], closed: [], made: 0, layoutLands: true, vertexAfterMs: 20 });
+        Object.assign(h, { rootVp: 'CD', irDraws: o.irDraws ?? [], layoutCalls: [] });
+        try {
+            const r = await instantiate('Book', bare as any, placeFor(o.tabKey), o.viewpoint);
+            expect(r.problems).toEqual([]);
+            // One entry per layout key, the point written there (a node laid out twice keeps its last write).
+            const at = new Map<string, unknown>();
+            for (const c of h.layoutCalls) at.set(c.layoutKey, { x: c.patch.x, y: c.patch.y });
+            return Object.fromEntries(at);
+        } finally {
+            Object.assign(h, { rootVp: undefined, irDraws: [], layoutCalls: [] });
+        }
+    };
+    beforeAll(async () => {
+        await Promise.all([import('../../../../joiner'), import('../createAdapter'), import('../../../../redux/reducer/reducer')]);
+    });
+
+    it('layoutTargets: an abstract-syntax tab is in force, the root\'s exclusive viewpoint one more layout', () => {
+        const lookup = { CD: { className: 'DViewPoint', isExclusiveView: true }, OD: { className: 'DViewPoint', isExclusiveView: true } };
+        expect(layoutTargets(lookup, null, '__abstract__')).toEqual([
+            { vp: undefined, layoutKey: '__abstract__', active: true },
+            { vp: 'CD', layoutKey: 'CD', active: false }, { vp: 'OD', layoutKey: 'OD', active: false },
+        ]);
+    });
+
+    it('an abstract-syntax tab under an exclusive root: the click lands in the tab\'s layout (killed by the root in force)', async () => {
+        // CD's IR draws the instance, so the root's layout takes the centre; the tab's takes the click.
+        expect(await run({ viewpoint: null, tabKey: '__abstract__', irDraws: ['CD'] })).toEqual({ __abstract__: CLICK, CD: CENTRE });
+    });
+
+    it('an exclusive tab whose IR does not draw the instance: its layout still takes the click (killed by the root in force)', async () => {
+        // In force, the tab's layout takes the position without a view; the root's, not drawn there, takes nothing.
+        expect(await run({ viewpoint: 'OD', tabKey: 'OD' })).toEqual({ OD: CLICK });
+    });
+
+    it('no viewpoint given: the root\'s is in force, as before (killed by reading absent as abstract syntax)', async () => {
+        expect(await run({ viewpoint: undefined, tabKey: 'CD' })).toEqual({ CD: CLICK });
     });
 });

@@ -631,6 +631,7 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  */
 async function layoutInstanceNode(
     m: WriteModules, get: DGet, instance: string, slots: number, until: number, placeAt?: InstancePlacement, growOnly = false,
+    viewpoint?: string | null,
 ): Promise<string | null> {
     const state: any = m.joiner.store.getState();
     const metaclass = get(instance)?.instanceof;
@@ -638,7 +639,11 @@ async function layoutInstanceNode(
     const lookup = state.idlookup;
     const readCtx = m.readCtx.makeReadCtx(lookup);
     const patches: Array<{ layoutKey: string; patch: { x?: number; y?: number; w?: number; h?: number; isResized?: boolean } }> = [];
-    for (const target of layoutTargets(lookup, state.viewpoint, m.layoutKey.getLayoutKeyOf(state))) {
+    // The layout in force is the one of the canvas the instantiation comes from (the tab's, R-LAY-19); absent, the root's.
+    const inForce = viewpoint === undefined
+        ? { vp: state.viewpoint, key: m.layoutKey.getLayoutKeyOf(state) }
+        : { vp: viewpoint, key: m.layoutKey.getLayoutKeyFor(state, viewpoint) };
+    for (const target of layoutTargets(lookup, inForce.vp, inForce.key)) {
         const signature = m.ir.computeIRSignature(state, target.vp);
         const index = signature ? m.ir.getIRIndex(state, signature, target.vp) : null;
         const compiled = index ? m.ir.resolveIRView(instance, metaclass, index, readCtx, lookup) : null;
@@ -768,13 +773,19 @@ function queued<T>(job: () => Promise<T>): Promise<T> {
  * Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment).
  * One at a time: a call waits for the one before it to close its undo group, also when it failed, and then opens its
  * own, so two quick clicks give two undo entries instead of two groups folded into one by nesting (P-2026-11-06-2225).
+ * `viewpoint` is the one in force in the canvas the call comes from (a tab's, P-2026-11-07-1620), `null` abstract
+ * syntax; absent, the root's (`state.viewpoint`).
  */
-export function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
-    return queued(() => instantiateNow(classifierId, record, placeAt));
+export function instantiate(
+    classifierId: string, record: OntoBinding, placeAt?: InstancePlacement, viewpoint?: string | null,
+): Promise<InstantiateResult> {
+    return queued(() => instantiateNow(classifierId, record, placeAt, viewpoint));
 }
 
 /** One instantiation of `instantiate`, its undo group open while it writes. */
-async function instantiateNow(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+async function instantiateNow(
+    classifierId: string, record: OntoBinding, placeAt?: InstancePlacement, viewpoint?: string | null,
+): Promise<InstantiateResult> {
     const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
     const plan = synthesisPlan(get, record, classifierId);
@@ -786,7 +797,7 @@ async function instantiateNow(classifierId: string, record: OntoBinding, placeAt
     history.beginUndoGroup();
     const until = Date.now() + INSTANTIATE_DEADLINE_MS;
     try {
-        await synthesize(modules, createInstance, get, plan, record, result, until, placeAt);
+        await synthesize(modules, createInstance, get, plan, record, result, until, placeAt, viewpoint);
     } finally {
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
         // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own. Or once
@@ -943,12 +954,12 @@ async function createSlots(
 /** The creates, the wait for their seeding and the node layout of `instantiate`, inside its undo group. */
 async function synthesize(
     m: WriteModules, createInstance: typeof import('./createAdapter').createInstance, get: DGet, plan: SynthesisPlan,
-    record: OntoBinding, result: InstantiateResult, until: number, placeAt?: InstancePlacement,
+    record: OntoBinding, result: InstantiateResult, until: number, placeAt?: InstancePlacement, viewpoint?: string | null,
 ): Promise<void> {
     const seeded: Seeded = [];
     const settle = async (slots: number) => {
         await waitSeeded(get, seeded, result, until);
-        const laid = await layoutInstanceNode(m, get, result.instance!, slots, until, placeAt);
+        const laid = await layoutInstanceNode(m, get, result.instance!, slots, until, placeAt, false, viewpoint);
         if (laid) result.problems.push(laid);
     };
 
