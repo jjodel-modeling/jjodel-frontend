@@ -923,6 +923,8 @@ export function haltMessage(reason: HaltReason, lookup: Lookup, features?: Actio
             return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is ${reason.input ? 'an input' : 'derived'} and cannot be assigned.`;
         case 'derived':
             return `Halted: derived '${reason.attr}' of ${elementName(lookup, reason.element)} failed: ${reason.detail.replace(/^JjelEvaluationError: /, '')}.`;
+        case 'unclassified': return `Halted: ${elementName(lookup, reason.element)} falls in no class of ${reason.viewpoint}.`;
+        case 'ambiguous': return `Halted: ${elementName(lookup, reason.element)} is in ${reason.classes.join(' and ')} of the non-overlapping ${reason.viewpoint}.`;
     }
 }
 
