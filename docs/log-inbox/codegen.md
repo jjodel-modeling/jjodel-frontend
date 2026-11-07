@@ -2684,3 +2684,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Prompt document name**: 2026-11-07 12:48
 
 **Ticket** (P-2026-11-07-1248, high): the trunk's `3f7f6f7f4` rewrote the add-only entry `docs/log-inbox/hw-notation.md` (heading `2026-11-05 — docs: closure of the blocked jjtl-method-failure-error merge`) with no `Log-Repair:` trailer, so every merge of the trunk into a branch fails `check:addonly` against its first parent. Fix on the trunk: a `KNOWN_REPAIRS` entry for `3f7f6f7f4` in `frontend/scripts/gates/check-addonly.ts`. Same lane: the `lane-run` trunk-into template names the pre-prompt sha as the reset target, so the reset would drop the prompt commit.
+
+## 2026-11-07 — merge: textual-687-comment-enter into alfonso-frontend-jjtl (P-2026-11-07-1330)
+**Prompt**: `claude_2026-11-07_1330_prompt_merge_textual-687-comment-enter.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `c9d3ba4e2`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest red at load ~40 (outline.test.ts timing), green alone at load ~4; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: #687 crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/ checked by the chat (comment kept, caret on a new line, no suggest widget)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1330/result.json`.
+**Prompt document name**: 2026-11-07 13:30
