@@ -2846,3 +2846,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe 20/20 PASS on 3622 (DemoESM, typed keys, Tab, style picker); crops 1-self-dot, 3-pascal (+accept), 4-outside (x3) in ~/.jjodel-lanes/P-2026-11-07-1622/, checked by the session
 **Notes**: Template completion takes optional CompletionOptions { builtins, selfClass }; absent, unchanged (tested). `.` filtered by pure `triggeredCompletions`: style triggers never open island candidates, `.` only those. Bench 2/2 killed (unmapped range, builtins kept). Gates: typecheck 0, build 0, codegen-lazy ALL GREEN, check:docs 0, vitest 3 import reds + 7 load reds (load avg ~75) green alone.
 **Prompt document name**: 2026-11-07 16:22
+
+## 2026-11-07 — merge: textual-f1d-complete into alfonso-frontend-jjtl (P-2026-11-07-1733)
+**Prompt**: `claude_2026-11-07_1733_prompt_merge_textual-f1d-complete.md`, a direct merge by `lane-run merge --direct`, no session: `textual-f1d-complete` at `a8b7c4b57` into `alfonso-frontend-jjtl`, merge base `e8d4c0f39`, 6 commits on the branch side.
+**Files touched**: merge `99657324e`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1622_prompt_textual_f1d_complete.md`, `frontend/src/codegen/textual/__tests__/completion.test.ts`, `frontend/src/codegen/textual/languageService.ts`, `frontend/src/codegen/textual/ui/textualMonaco.ts`, `frontend/src/codegen/ui/templateCompletion.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `99657324e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14953 tests in 561 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: F1d crops 1-self-dot, 1-self-dot-accept, 3-pascal-accept, 4-outside in ~/.jjodel-lanes/P-2026-11-07-1622/ checked by the chat
+**Notes**: Rollback tag `pre-textual-f1d-complete` on `9d80bf810` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1733/result.json`.
+**Prompt document name**: 2026-11-07 17:33
