@@ -111,3 +111,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat, L4.1 browser parity P-2026-11-07-0750, L2.3 roles dialog crops P-2026-11-07-1012; the rest has no UI path)
 **Notes**: One conflict, docs/log-inbox/dcn.md, by union (trunk whole, then the five branch entries). Tip moved by two docs commits of another chat (9053a07b8, 896362e52), accepted as first parent. Probes 77/77, control R-MT-24 absent. Gates: typecheck 0, vitest 14709 (14621 trunk + 88 branch, counted here: the dcn tree has no node_modules; known 3 red at import; a Chromium afterAll timed out under load, alone 18/18), hooks 967, build 0, check:docs 5/5, agents, scripts, addonly PASS.
 **Prompt document name**: 2026-11-07 11:23
+
+## 2026-11-07 — feat: the DCN compiler, resolved roles and model to a placeless net
+**Prompt**: DCN L4.2 (P-2026-11-07-1216): pure module `dcnCompile.ts` from the resolved dcn roles, a model read view and the R-OI binding to a CompiledNet with no places, one transition per invocation and per monitor contribution with opaque ids and a side table; σ seeded from the closure, dormant slots included; domains from range bounds; optional instance key on StateAttributeDecl; plus the L2.3 ticket (dialog under `dcn` shows the dcn group only).
+**Files touched**: a5bef0684 — `frontend/src/model/simulation/dcn/dcnCompile.ts` (new), `dcn/__tests__/dcnCompile.test.ts` (new), `netTypes.ts`; 839affc1a — `frontend/src/components/editor-v2/sim/simRolesDraft.ts`, `sim/__tests__/simRolesDraft.test.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 25/26 (survivor: precondition read on a monitor, which has none) and 3/3 with M16. Dialog hide rule changed locally in simRolesDraft.ts, not the shared list (validator and codec read it). All ticks on one event `dcn-tick` (R-SIM-122). Parameters, range bounds, literals passed as an extra `features` input. Generalization walk copied from bindingReader. String flagged without domain. Closure written by the chat from the handoff.
+**Prompt document name**: 2026-11-07 12:16

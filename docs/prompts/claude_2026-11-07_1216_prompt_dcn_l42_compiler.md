@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1216
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · a5bef0684, 839affc1a · bench 25/26 and 3/3 · no visual check owed (closure written by the chat C-2026-11-06-2159 from the handoff after the context ceiling)
 Lane: full (new nucleus module; one additive change to an exported type)
 Depends: R-DCN-2, R-DCN-3, R-DCN-6, R-DCN-10, R-DCN-11, R-DCN-13, R-DCN-14, R-DCN-15, R-DCN-17; L2.1 (featureSources), L2.3 (`dcnStcFromRoles`), L4.1 (`SimNucleus`); discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §3.2, §3.3, §6 (lane L4.2)
 Worktree: ~/jjodel-w-dcn-l42, branch dcn-l42, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
