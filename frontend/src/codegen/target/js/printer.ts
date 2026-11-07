@@ -754,6 +754,7 @@ function print(w: Walk, e: JjelExpression, scope: EvaluationContext): string {
         case 'FunctionCall':
         case 'WithDo':
         case 'ObjectLiteral':
+        case 'ClassificationTest':
             // Refused by the subset checker before the walk (E-CALL, E-WITH, E-VALUE).
             return step(`'${e.type}'`);
         default: {

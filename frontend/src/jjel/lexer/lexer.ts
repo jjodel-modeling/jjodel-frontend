@@ -116,6 +116,9 @@ export class JjelLexer {
                     } else {
                         this.error("':=' assigns, and only an action can assign: an expression cannot contain it. An action is written '<target>.[attribute] := <expression>'.");
                     }
+                } else if (this.match(':')) {
+                    // Qualified name of a classification test, self.in(V::D) (R-DCN-7)
+                    this.addToken(JjelTokenType.DOUBLE_COLON);
                 } else {
                     this.addToken(JjelTokenType.COLON);
                 }
