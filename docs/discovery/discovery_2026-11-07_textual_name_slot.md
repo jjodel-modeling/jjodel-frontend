@@ -52,3 +52,94 @@ it on the port corpus with controls, trace the write, place the cause in a layer
   (grep hits of `create instance of` with two lines of context)
 - `~/.jjodel-lanes/P-2026-11-07-0157/probe.mjs` (whole) and `probe.out.txt` (whole)
 - Decisions R-TXT-44, R-TXT-45, R-TXT-46, RC-17, RC-51 as injected in the prompt.
+
+## 4. Reproduction (measured)
+
+Probe `~/.jjodel-lanes/P-2026-11-07-0253/probe.mjs`, its setup copied from D3b (a new offline project, the port
+metamodel `portprobe` imported with `Module.name [1..1]` and `Port.name [0..1]`, the D3b record, `createModelFromText`
+with an empty script, the Text tab opened), run on HEAD `e47437874` through vite on port 3558 from this worktree. Logs:
+`.agent-logs/probe-0253-20261107-025636.log` (A-D), `probe-0253d-20261107-030434.log` (E),
+`probe-0253e-20261107-030626.log` (B3), all `DONE`, `page errors []`. Each step that is not a keystroke is a direct
+call, marked. Per object the probe reads `d` = `DObject.name`, `init` = `initialName`, `raw` = the D value of the `name`
+slot (`values`), `l` = the L proxy's `name`, `slot` = `$name.value`; conformance is `validateConformance(m1, mm)`.
+
+**A. The model from text** (the D3b text typed into the buffer by `executeEdits`, direct; the tab applied it,
+`Applied`). The script the apply ran, captured from `JjScriptEvents.EXECUTION_START`:
+
+```
+create instance of Module "cpu"
+create instance of Port "Port_1" in cpu.inputs
+set Port_1.name = "instr"
+create instance of Word "Word_1" in Port_1.type
+create instance of Port "Port_2" in cpu.inputs
+set Port_2.name = ""
+create instance of Bool "Bool_1" in Port_2.type
+create instance of Port "result" in cpu.outputs
+create instance of Word "Word_2" in result.type
+create instance of Conj "Conj_1" in result.driver
+create instance of Ref "Ref_1" in Conj_1.ops
+set Ref_1.name = "instr"
+create instance of Ref "ready" in Conj_1.ops
+set Word_1.width = 32
+set Word_2.width = 8
+set result.peer = Port_1
+```
+
+| object | handle | `d` | `init` | `raw` | `l` | `slot` |
+|---|---|---|---|---|---|---|
+| Module cpu | `cpu` | cpu | cpu | `[]` | cpu | cpu |
+| Port instr | `Port_1` | instr | Port_1 | `["instr"]` | instr | instr |
+| Port (nameless) | `Port_2` | `""` | Port_2 | `[""]` | `""` | `""` |
+| Port result | `result` | result | result | `[]` | result | result |
+
+Conformance: `missing_required_attr: Object "cpu" is missing required attribute "name"`, the only violation.
+
+The rule the table shows: **a name set by a `set h.name` line reaches the slot; a name carried only by the creation
+handle does not.** `result` and `ready` have the same empty slot as `cpu`; their class makes the name optional, so no
+check reports it.
+
+**B. The executor alone** (direct: `applyTextEdit(m1, { lines, handles: new Map() })` with hand-written plans, the same
+`applyAsOneStep` path).
+
+| step | lines | `d` | `init` | `raw` | conformance |
+|---|---|---|---|---|---|
+| B1 | `create instance of Module "alu"` | alu | alu | `[]` | missing `name` |
+| B2 | `create instance of Module "Module_77"`, `set Module_77.name = "fpu"` | fpu | Module_77 | `["fpu"]` | clean |
+| B3 | `create instance of Module "zz"`, `set zz.name = "zz"` | zz | zz | `["zz"]` | clean |
+
+B1 is the textual symptom without the textual layer: any JjScript run (the script console included) that names an
+object by its creation handle leaves the slot empty. B3 is the candidate fix's shape: a `set` on a handle equal to the
+name writes the slot and clears the violation.
+
+**C. The canvas and form paths** (direct calls).
+
+| step | call | `d` | `init` | `raw` | conformance |
+|---|---|---|---|---|---|
+| C1 | `DObject.new(Module, m1, DModel, undefined, true)`, what `canvasToJjom.syncCreateObject` does before the vertex | Module_0 | Module_0 | `[]` | missing `name` |
+| C2 | `createAdapter.createInstance(m1, 'Module', null, null, { name: 'gpu' })` | gpu | Module_1 | `["gpu"]` | clean |
+
+C1 is a control, not a reproduction of the reported bug: an object dropped on the v2 canvas carries only its auto-name
+and conformance flags it the same way. That is the R-TXT-45 reading of a never-written slot (it reads the auto-name),
+and it predates the textual layer. It is reported in §7 as a separate question, not as part of this cause.
+
+**D. A rename from the text** (`Module cpu` to `Module core` on line 1 by `executeEdits`, direct; `Applied`). The apply
+ran `set cpu.name = "core"`; the Module reads `d` core, `init` cpu, `raw ["core"]`, and its violation is gone. The
+renamed object heals; the others (`alu`, `Module_0`) keep theirs.
+
+**E. The XMI export** (direct: `XMIService.exportToXML(m1)` after D). The instance lines:
+
+```
+<Module xmi:id="…_USER_33" name="core">
+<inputs xsi:type="Port" xmi:id="…_USER_39" name="instr">
+<inputs xsi:type="Port" xmi:id="…_USER_49" name="">
+<outputs xsi:type="Port" xmi:id="…_USER_61" peer="…_USER_39">
+<ops xsi:type="Ref" xmi:id="…_USER_82" name="instr"/>
+<ops xsi:type="Ref" xmi:id="…_USER_87"/>
+<Module xmi:id="…_USER_93"/>
+<Module xmi:id="…_USER_99" name="fpu"/>
+<Module xmi:id="…_USER_105"/>
+<Module xmi:id="…_USER_109" name="gpu"/>
+```
+
+The Port `result`, the Ref `ready` and the Module `alu` are exported **without a name**: the defect is data loss on
+export, not only a conformance false positive. (In probe run e the B3 Module `zz` is exported `name="zz"`.)
