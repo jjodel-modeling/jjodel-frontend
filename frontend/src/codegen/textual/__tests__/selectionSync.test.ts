@@ -1,11 +1,11 @@
 /**
  * Lane E2a (P-2026-11-07-0746; R-TXT-54 E4, E5, E6): the pure half of text to canvas selection. The object at the caret
  * is the innermost carried span; the same id is not sent twice; only a click or an arrow key selects, not typing, not a
- * programmatic move.
+ * programmatic move; an element the canvas draws as an edge selects nothing.
  */
 
 import { describe, expect, it } from 'vitest';
-import { CARET_EXPLICIT, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
 import type { ObjectSpan } from '../printer';
 
 // `Family f { members: [ Member a { name = "x" } Member b ] }` as spans: a root, two children, a reference inside a.
@@ -103,5 +103,67 @@ describe('isUserCaretMove', () => {
         expect(isUserCaretMove({ source: 'model', reason: 1 })).toBe(false);
         expect(isUserCaretMove({ source: 'restoreState', reason: 0 })).toBe(false);
         expect(isUserCaretMove({ source: 'textual-paths', reason: 0 })).toBe(false);
+    });
+});
+
+describe('canvasNodeOf', () => {
+    it('gives the node of a node pick', () => {
+        expect(canvasNodeOf({ kind: 'node', nodeId: 'v1' })).toBe('v1');
+    });
+
+    it('gives nothing for an element drawn as an edge, nor its source vertex (E6)', () => {
+        expect(canvasNodeOf({ kind: 'edge', edgeId: 'e1', nodeId: 'v1' })).toBeNull();
+        expect(canvasNodeOf({ kind: 'edge', edgeId: 'e1', nodeId: null })).toBeNull();
+    });
+
+    it('gives nothing when the canvas draws the element not at all', () => {
+        expect(canvasNodeOf(null)).toBeNull();
+    });
+});
+
+describe('canvasVertexIds', () => {
+    // A model's graph g with three vertices, one an edge's neighbour; v3 holds a nested vertex v4. Another graph h, of
+    // another viewpoint, draws the same element e1 with its own vertex w1. Only v1 is mounted (on screen).
+    const lookup: Record<string, any> = {
+        g: { className: 'DGraph', subElements: ['v1', 'v2', 'x1', 'v3'] },
+        v1: { className: 'DVertex', graph: 'g', model: 'e1' },
+        v2: { className: 'DVertex', graph: 'g', model: 'e2' },
+        x1: { className: 'DEdge', graph: 'g', model: 'e9' },
+        v3: { className: 'DGraphVertex', graph: 'g', model: 'e3', subElements: ['v4'] },
+        v4: { className: 'DVoidVertex', graph: 'v3', model: 'e4' },
+        h: { className: 'DGraph', subElements: ['w1'] },
+        w1: { className: 'DVertex', graph: 'h', model: 'e1' },
+    };
+
+    it('gives the vertices of the graphs the mounted nodes belong to, unmounted ones too, the mounted first', () => {
+        expect(canvasVertexIds(lookup, ['v1'])).toEqual(['v1', 'v2', 'v3', 'v4']);
+    });
+
+    it('never gives a vertex of another graph, which would select nothing on this canvas', () => {
+        expect(canvasVertexIds(lookup, ['v1'])).not.toContain('w1');
+        expect(canvasVertexIds(lookup, ['w1'])).toEqual(['w1']);
+    });
+
+    it('walks into a mounted vertex too: its nested vertices are listed', () => {
+        expect(canvasVertexIds(lookup, ['v3'])).toEqual(['v3', 'v1', 'v2', 'v4']);
+    });
+
+    it('gives the mounted ids alone when their graph is unknown, and nothing with nothing mounted', () => {
+        expect(canvasVertexIds(lookup, ['unknown'])).toEqual(['unknown']);
+        expect(canvasVertexIds(lookup, [])).toEqual([]);
+    });
+
+    it('ends on a cycle of subElements, listing each vertex once', () => {
+        const cyclic: Record<string, any> = {
+            g: { className: 'DGraph', subElements: ['a'] },
+            a: { className: 'DGraphVertex', graph: 'g', subElements: ['b'] },
+            b: { className: 'DVertex', graph: 'a', subElements: ['a'] },
+        };
+        expect(canvasVertexIds(cyclic, ['a'])).toEqual(['a', 'b']);
+    });
+
+    it('lets pickOnCanvas-like lookups find an element whose node is off screen', () => {
+        const ids = canvasVertexIds(lookup, ['v1']);
+        expect(ids.find(id => lookup[id]?.model === 'e2')).toBe('v2');
     });
 });

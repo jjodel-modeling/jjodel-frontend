@@ -8,6 +8,7 @@
  * Pure: no React, no Monaco, no store.
  */
 
+import type { CanvasPick } from '../ui/codeOrigins';
 import type { ObjectSpan } from './printer';
 
 /** Monaco's `CursorChangeReason.Explicit`: a move the user made with the mouse or a cursor key, not the cursor shift of an edit. */
@@ -48,4 +49,37 @@ export function innermostSpanAt(spans: readonly ObjectSpan[], offset: number): O
 /** The id to send after `last`: `id` when it is an object other than the last one sent, else null (no repeat, §6.1). */
 export function nextSelected(last: string | null, id: string | null): string | null {
     return id !== null && id !== last ? id : null;
+}
+
+/**
+ * The node to select for a pick on the canvas: the element's vertex; null for an element the canvas draws as an edge,
+ * whose source vertex the generator tab selects but the text does not (nodes only, E6), and for one it does not draw.
+ */
+export function canvasNodeOf(pick: CanvasPick | null): string | null {
+    return pick?.kind === 'node' ? pick.nodeId : null;
+}
+
+/**
+ * The vertex ids a model's canvas draws, from the ids of its mounted nodes (`.react-flow__node[data-id]`): the canvas
+ * unmounts a node out of view (`onlyRenderVisibleElements`, editor-v2/onlyRenderVisible.ts), so the DOM alone misses the
+ * nodes a selection has to bring into view. The mounted nodes name their graphs; every vertex under those graphs
+ * (`subElements`, nested ones too) is on the canvas, the mounted ones first. A vertex of another graph (another
+ * viewpoint) is never given: `SELECT_NODE` with it would clear the canvas's selection and select nothing.
+ */
+export function canvasVertexIds(lookup: Readonly<Record<string, any>>, mounted: readonly string[]): string[] {
+    const out = [...mounted];
+    const listed = new Set<string>(mounted);
+    const seen = new Set<string>();
+    const walk = (ids: unknown): void => {
+        if (!Array.isArray(ids)) return;
+        for (const id of ids) {
+            if (typeof id !== 'string' || seen.has(id) || !lookup[id]) continue;
+            seen.add(id);
+            if (/Vertex$/.test(lookup[id].className ?? '') && !listed.has(id)) { listed.add(id); out.push(id); }
+            walk(lookup[id].subElements);
+        }
+    };
+    const graphs = new Set(mounted.map(id => lookup[id]?.graph).filter((g): g is string => typeof g === 'string'));
+    for (const g of graphs) walk(lookup[g]?.subElements);
+    return out;
 }
