@@ -53,3 +53,16 @@ Written 2026-11-07 at about 19:20 (Rome) by the chat, from the state of the Mac.
 - Write prompts straight into an AppleScript string (no double quotes or backslashes) rather than base64: half the tokens.
 - Crops: copy to a /tmp dir with an index.html, sips -Z 700, python3 http.server on 127.0.0.1:3199, built-in browser, one screenshot; crop full-page shots with sips -c before looking.
 - A checkpoint lives in the repo, never only as a chat attachment.
+
+## Update 2026-11-08 (00:20)
+
+On Alfonso's «decidi tu» (2026-11-08 00:02) the chat closed the three open points and merged D3c. All pushed.
+
+- check:docs green again: the multi-tab chat's 3.1.2 log entry had a free-text Corregge and a Causa outside the taxonomy; both set to the sentinel, the cause stays in the LIR the entry cites (d9187549d).
+- F1e merge closed by hand (e91177c3b): outcome partial, Regressions unknown, Causa (g), because its gate summary was lost to the Prompt-ID collision.
+- Ticket #720 on the harness front: lane-run merge gives the same Prompt-ID to two chats in the same minute (efd40eb55).
+- D3c merged (cae331a7c, closure 8e57a1aef, card #718 closed).
+
+Every lane of this round is now on the trunk: F1a, F1b, F1c, F1d, F1e, E2b, D3c. No lane running, no scheduled check left.
+
+Next, on Alfonso's go: F2 (tracing, TEXTUAL_REVEAL), T8b after checking T8a, the tickets D2d, C2f, #682, E3 low, and the three candidate tickets above.
