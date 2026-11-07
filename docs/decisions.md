@@ -7442,6 +7442,9 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-FA-13** (2026-11-06, ratified by Alfonso 2026-11-06 23:02, evidence: read, verified: none, reversible: trunk):
   a builtin that fails inside a JjTL expression (R-FA-11) names the rule and the source element in its error, as a
   failing method does under R-FA-12. Extends R-FA-11, which stays unchanged otherwise.
+- **R-FA-14** (2026-11-07, ratified by Alfonso 2026-11-07 11:21, evidence: read, verified: none, reversible: trunk):
+  a failed JjTL run (`success: false`) returns no target model: the executor leaves `targetModel` undefined, so no
+  caller can write a partial one; errors, warnings and trace are returned as before. Registered by P-2026-11-07-1125.
 - **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
   `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
   are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
