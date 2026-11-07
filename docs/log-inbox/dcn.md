@@ -139,3 +139,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-07 12:15
 
 **Ticket** (for L4.4, not blocking): the core keys an assignment by `element` and `attr` only, so a slot named like a declared state attribute of the same element would be applied to σ as that attribute, not halted `undeclared`. L4.4 has to read `slot` before the declaration lookup in `netStep.ts`.
+
+## 2026-11-07 — merge: dcn-l42 into alfonso-frontend-jjtl (P-2026-11-07-1308)
+**Prompt**: `claude_2026-11-07_1308_prompt_merge_dcn-l42.md`, lane full (merge): `dcn-l42` at `178c1c837` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `75f973840`: the 12 files of the branch (this inbox, the L3.4 and L4.2 prompts, `ast.ts`, `parser.ts`, `actionEvaluator.ts`, `netTypes.ts`, `dcnCompile.ts`, `simRolesDraft.ts` and three test files); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `75f973840`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 552 files, 14797 passed and 2 skipped as expected (tip 14762 + 35), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; the L4.2 dialog ticket is checked by simRolesDraft.test.ts; chat GO)
+**Notes**: Merge tree `b1469f16d` equal to the merge-tree measure; probes 5/5 once; no union resolution. Branch vitest count not run in `/Users/alfonso/jjodel-w-dcn-l42` (no node_modules there; writing forbidden): the 35 new tests counted at `178c1c837` (+1, +17, +17), matched on the merge. First hooks run killed (exit 144) beside the full suite, 967/967 alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 13:08
