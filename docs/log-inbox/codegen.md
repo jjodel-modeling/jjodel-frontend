@@ -2465,3 +2465,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato — chat, unattended: name-slot crop text-tab-cpu-no-warning.png in ~/.jjodel-lanes/P-2026-11-07-0344/ checked by the chat
 **Notes**: Rollback tag `pre-textual-name-slot` on `69c191631` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0443/result.json`.
 **Prompt document name**: 2026-11-07 04:43
+
+## 2026-11-07 — feat(codegen): D4, safe rename through the text (P-2026-11-07-0609)
+**Prompt**: `claude_2026-11-07_0515_prompt_textual_d4_rename.md` (row D4 of the step D report §8, R-TXT-53 D4: `renameEdits` with the reparse check, the Text tab's rename provider, gates, app check), stopped at the soft ceiling after items 1-3, and its continuation `claude_2026-11-07_0609_prompt_textual_d4_continuation.md` (app check with crops, docs); the app check found a defect, fixed with Alfonso's approval.
+**Files touched**: `frontend/src/codegen/textual/languageService.ts`, `ui/textualMonaco.ts`, `__tests__/languageService.test.ts` (`ec89f027f`, `63c4fffc6`, `e42169108`); this entry; the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `e42169108`: typecheck exit 0; `src/codegen/textual` 1109 passed, 2 skipped, 1 red: the `1,000 objects` timing test (104 ms, load ~14-24), green in the file alone (50/50), as in 0515; full suite, build and checks as in 0515 on `63c4fffc6`. Red first 1/1, mutation (editor without the model filter) killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: app check ALL PASS, crops 1-rename-box to 5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/, checked by the chat
+**Notes**: Monaco 0.52 only console.logs a provideRenameEdits rejectReason (rename.js:238): e42169108 shows it at the cursor via the message controller. Names inside JjEL strings and validation rules are not rewritten (step F). Extra refusals: empty name, `@"id"`, nothing renameable. Seen, not traced: a pageerror `Canceled` from restoreViewState (Delayer.cancel). Decisions: ~/.jjodel-lanes/P-2026-11-07-0515/handoff.md.
+**Prompt document name**: 2026-11-07 06:09

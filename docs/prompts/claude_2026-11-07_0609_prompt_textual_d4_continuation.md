@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0609
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · e42169108 · gates green · app check ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-07-0609/, checked by the chat · log entry in docs/log-inbox/codegen.md
 Lane: full (app check with crops; docs)
 Depends: P-2026-11-07-0515 (D4, stopped at the soft ceiling after items 1-3; code commits ec89f027f, 63c4fffc6), R-TXT-53
 Worktree: ~/jjodel-w-textd4, branch textual-d4-rename

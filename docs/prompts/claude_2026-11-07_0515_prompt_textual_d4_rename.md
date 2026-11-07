@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0515
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · ec89f027f, 63c4fffc6 · gates green; app check in P-2026-11-07-0609 · log entry in docs/log-inbox/codegen.md
 Lane: full (language service, the Monaco wiring, tests; app check)
 Depends: D2c (CompletionItemProvider, merged), D3b (CodeActionProvider, merged), R-TXT-53
 Worktree: ~/jjodel-w-textd4, branch textual-d4-rename
