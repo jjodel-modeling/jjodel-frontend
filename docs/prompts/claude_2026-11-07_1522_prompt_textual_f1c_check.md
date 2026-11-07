@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1522
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 5781ad1db (red), a2459b32b, c604c8e61 · gates green (vitest: 3 import reds baseline, 2 Chromium load reds green alone) · probe 21/21, crops in ~/.jjodel-lanes/P-2026-11-07-1522/ · log entry in docs/log-inbox/codegen.md
 Lane: full (pure check in jjelIslands, markers in the Text tab, tests; app check with crops)
 Depends: F1a and F1b (this branch starts from F1b's tip e5cc8bc3f, which contains F1a), R-TXT-55 (F3)
 Worktree: ~/jjodel-w-textf1c, branch textual-f1c-check (from e5cc8bc3f, own node_modules)

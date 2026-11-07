@@ -2723,3 +2723,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe ALL PASS on 3444 (DemoESM, real picker and typing); crops 1-clike, 2-pascal, 3-third-style, 4-lexer-error in ~/.jjodel-lanes/P-2026-11-07-1444/, checked by the session
 **Notes**: Roles: JjEL word keyword, name after `.`/`?.`/`.[` feature, other names name, literals by kind, operators none; quotes and Pascal join quotes string, `\n`/`#10` none. Bench 13/13 killed. Gates: typecheck 0, build 0, check:codegen-lazy ALL GREEN, vitest 3 import reds + 2 Chromium hook timeouts (irCollapsedRender, irSelectionRing) green alone 18/18.
 **Prompt document name**: 2026-11-07 14:44
+
+## 2026-11-07 — feat(codegen): F1c, JjEL syntax check inside the islands (P-2026-11-07-1522)
+**Prompt**: `claude_2026-11-07_1522_prompt_textual_f1c_check.md`, row F1c of the step F report, decision F3 (R-TXT-55): pure `checkIslands` with conformance's exemptions, Monaco warnings of their own owner, source `jjel`, never blocking the apply.
+**Files touched**: `5781ad1db` __tests__/jjelIslands.test.ts (red); `a2459b32b` jjelIslands.ts, __tests__/jjelIslands.test.ts; `c604c8e61` ui/TextualTab.tsx (marker lines and their import) (all under frontend/src/codegen/textual/); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe 21/21 PASS on 3522 (DemoESM, typed text and style picker); crops 1-valid, 2-error (+isolated, +hover), 3-pascal (+isolated), 4-apply in ~/.jjodel-lanes/P-2026-11-07-1522/, checked by the session
+**Notes**: Owner `textual-jjel`. An EOF error marks the last token. Bench 11/16 killed; survivors: re-lex actionMode (equivalent, measured), 3 defensive guards. Monaco merges the conformance warning with the jjel one on a line; the jjel squiggle alone measured with conformance markers hidden (probe-only). Gates: typecheck 0, build 0, check:codegen-lazy ALL GREEN, check:docs 5/5, vitest 3 import reds + 2 Chromium hook timeouts green alone 18/18.
+**Prompt document name**: 2026-11-07 15:22
