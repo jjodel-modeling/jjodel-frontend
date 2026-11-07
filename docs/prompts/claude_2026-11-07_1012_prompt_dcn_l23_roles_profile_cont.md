@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1012
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane dcn · f6b918db1 · bench 18/19 killed · verifica visiva passata 2026-11-07 (chat: crops dynamic_branch_full, kinds_branch_0 read; Petri dialog byte-identical to base)
 Lane: full (continuation of P-2026-11-07-0941, stopped at the context ceiling)
 Corregge: 2026-11-07 09:41 (stopped at the soft context ceiling with the code uncommitted, RC-51)
 Worktree: ~/jjodel-w-dcn-l23, branch dcn-l23, at the commit that adds this prompt on top of b02f337d7

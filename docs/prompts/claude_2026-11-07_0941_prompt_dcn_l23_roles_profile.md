@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0941
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · stopped at the context ceiling (RC-51), the code carried to f6b918db1 by P-2026-11-07-1012
 Lane: full (extends exported unions of the role catalog and the profiles; visible in the Simulation roles dialog)
 Depends: R-DCN-8, R-DCN-10, R-DCN-11, R-SIM-47..55; discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §3.2 and §6 (lane L2.3)
 Worktree: ~/jjodel-w-dcn-l23, branch dcn-l23, from dcn at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)

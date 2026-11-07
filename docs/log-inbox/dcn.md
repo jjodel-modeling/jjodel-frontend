@@ -57,3 +57,18 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat, 2026-11-07: browser parity with base on scene_3_DemoESM, 17 gestures identical, P-2026-11-07-0750)
 **Notes**: `nucleus` is optional: the existing suites build SimRun literals without it, so `nucleusOf` falls back to the Petri nucleus of `run.net`, cached per net. Switched also `inputAsks`'s `terminated`, on the path of Play and single step. Bench 12/12 killed. Gates: typecheck 0; sim 1560/1560; full run the known three plus an irSelectionRing Chromium hook timeout under load (5/5 alone); build 0. Probe sim-event-attrs-browser 3091 vs base 3092: same 4 PASS lines; no probe covers step back or the Clock.
 **Prompt document name**: 2026-11-07 07:01
+
+## 2026-11-07 — feat: the dcn role group and the system profile Dynamic classification
+**Prompt**: DCN L2.3 (P-2026-11-07-0941, stopped at the context ceiling; continued by P-2026-11-07-1012): role group `dcn` (11 roles), shape `dcn` with its closure, hidden groups per shape, profile «Dynamic classification», `dcnStcFromRoles`; fix the `roleSections` regression, gates, mutation bench, browser crops of the roles dialog.
+**Files touched**: f6b918db1 — `frontend/src/model/simulation/roleCatalog.ts`, `simProfiles.ts`, `profileCodec.ts`, `dcn/dcnRoles.ts` (new), `dcn/__tests__/dcnRoles.test.ts` (new), `__tests__/roleCatalog.test.ts`, `__tests__/simProfiles.test.ts`; `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `simRolesDraft.ts`, `__tests__/simLabels.test.ts`; `frontend/src/components/editor-v2/viewpoint/derive/notations.ts`, `viewpointDerivation.ts`; docs commit — `docs/log-inbox/dcn.md`, the Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 09:41
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe: Petri dialog byte-identical to b02f337d7; crops read by the chat 2026-11-07)
+**Notes**: Rule 19 deroga, 12 files: answer A, then simLabels.test.ts by the chat. Operation and Body are multi (R-SIM-90). Bench 18/19: M16 (net groups shown under dcn by roleSections) survives; its killing test belongs in simRolesDraft.test.ts, out of scope, and the crop covers it. Gates: typecheck 0, build 0, check:docs 5/5, full run at baseline (3 known files); 5 load-timing files rerun alone 207/207. Crops: ~/.jjodel-lanes/P-2026-11-07-1012/crops.
+**Prompt document name**: 2026-11-07 10:12
+
+**Ticket** (for the chat, none blocking): events are off in «Dynamic classification» because trigger depends on transition, which `dcn` lacks; nothing checks at binding time that `overlapping`/`complete` are Boolean; the panel's select (`PANEL_PROFILE_IDS`, `simRoleStatus.ts`) does not list the new profile; `bindProfile` runs the Petri branch on a dcn profile (harmless, dcn roles come out none); under `dcn` the dialog offers «+ on» for the general, events, data and output roles (crop `dynamic_branch_full.png`).
