@@ -10,6 +10,7 @@ import { analyzeText, completionsAt, renameEdits, renameLocation, SEMANTIC_MODIF
 import type { SemanticToken, TextAnalysis, TextRenameEdit, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
+import type { ParseOptions } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE, STYLE_CATALOG } from '../style';
 import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
@@ -448,6 +449,63 @@ describe('D2c: the completion provider of the Text tab (report §3.3 C4)', () =>
         const marked = 'Module cpu {\n  input instr : Word(32)\n  ⎸\n}';
         expect(suggestAt(g, PORT_MM, marked, { triggerKind: 1, triggerCharacter: ';' }).suggestions).toEqual([]);
         expect(suggestAt(g, PORT_MM, marked, { triggerKind: 1, triggerCharacter: '{' }).suggestions.length).toBeGreaterThan(0);
+    });
+
+    // Lane D4: the rename provider, here because the adapter registers once per module, on this fake Monaco.
+    describe('D4: the rename provider of the Text tab (report §5.2)', () => {
+        const rename = providers.get('registerRenameProvider');
+        const text = printOf(LIB);
+        /** Runs `f` on a model over `t` with a session over the library's grammar and `keep`. */
+        const withModel = <T,>(t: string, f: (model: Monaco.editor.ITextModel) => T, keep?: ParseOptions['keep']): T => {
+            const model = modelOf(t);
+            const session = openTextualSession(model, { base: () => ({ grammar: LIB.g, mm: LIB.mm }), keep: () => keep });
+            try { return f(model); } finally { session.dispose(); }
+        };
+        const rangeAt = (model: Monaco.editor.ITextModel, start: number, end: number): number[] => {
+            const a = model.getPositionAt(start);
+            const b = model.getPositionAt(end);
+            return [a.lineNumber, a.column, b.lineNumber, b.column];
+        };
+        const flatRange = (r: Monaco.IRange): number[] => [r.startLineNumber, r.startColumn, r.endLineNumber, r.endColumn];
+        const editsOf = (r: ReturnType<typeof renameEdits>): readonly TextRenameEdit[] => {
+            if ('refused' in r) throw new Error(`refused: ${r.refused}`);
+            return r.edits;
+        };
+
+        it('resolves the token at the cursor with the name to type, or the refusal as its reason', () => {
+            expect(rename?.resolveRenameLocation).toBeTypeOf('function');
+            const use = at(text, 'reader1', 1);
+            withModel(text, model => {
+                const loc = rename.resolveRenameLocation(model, model.getPositionAt(use + 2));
+                expect({ range: flatRange(loc.range), text: loc.text, rejectReason: loc.rejectReason }).toEqual({ range: rangeAt(model, use, use + 7), text: 'reader1', rejectReason: undefined });
+                expect(rename.resolveRenameLocation(model, model.getPositionAt(at(text, 'genre'))).rejectReason).toMatch(/^nothing to rename here/);
+            });
+            const ts = printOf(TS_PLAIN);
+            const model = modelOf(ts);
+            const session = openTextualSession(model, { base: () => ({ grammar: TS_PLAIN.g, mm: TS_PLAIN.mm }), keep: () => undefined });
+            expect(rename.resolveRenameLocation(model, model.getPositionAt(at(ts, 'State[0]'))).rejectReason).toBe('this object has no name: type one in the text');
+            session.dispose();
+        });
+
+        it("gives renameEdits as one workspace edit on the model, the session's carried tokens included; a refusal as its reason", () => {
+            withModel(text, model => {
+                const offset = at(text, 'Member reader1') + 7;
+                const out = rename.provideRenameEdits(model, model.getPositionAt(offset), 'patron');
+                expect(out.rejectReason).toBeUndefined();
+                expect(out.edits.map((e: Monaco.languages.IWorkspaceTextEdit) => ({ uri: e.resource, v: e.versionId, range: flatRange(e.textEdit.range), text: e.textEdit.text })))
+                    .toEqual(editsOf(renameEdits(text, offset, 'patron', LIB.g, LIB.mm)).map(e => ({ uri: model.uri, v: 1, range: rangeAt(model, e.start, e.end), text: e.text })));
+                const refused = rename.provideRenameEdits(model, model.getPositionAt(at(text, 'reader0')), 'reader1');
+                expect(refused.edits).toEqual([]);
+                expect(refused.rejectReason).toMatch(/is ambiguous/);
+            });
+            const k = at(text, 'reader1', 1);
+            const kept = text.slice(0, k) + 'reader9' + text.slice(k + 7);
+            const keep = [{ start: k, end: k + 7, text: 'reader9' }];
+            withModel(kept, model => {
+                expect(rename.provideRenameEdits(model, model.getPositionAt(at(kept, 'city')), 'metropolis').edits).toHaveLength(1);
+                expect(rename.provideRenameEdits(model, model.getPositionAt(at(kept, 'reader0')), 'reader9').rejectReason).toMatch(/changes what the reference/);
+            }, keep);
+        });
     });
 
 });
