@@ -2465,3 +2465,18 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato — chat, unattended: name-slot crop text-tab-cpu-no-warning.png in ~/.jjodel-lanes/P-2026-11-07-0344/ checked by the chat
 **Notes**: Rollback tag `pre-textual-name-slot` on `69c191631` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0443/result.json`.
 **Prompt document name**: 2026-11-07 04:43
+
+## 2026-11-07 — discovery: ticket #656, the identity slot of objects created by JjScript and on the canvas (P-2026-11-07-0720)
+**Prompt**: `claude_2026-11-07_0654_prompt_slot_identity_656_discovery.md` (session 47b95570, stopped at the context ceiling, handoff in `~/.jjodel-lanes/P-2026-11-07-0654/`) and its continuation `claude_2026-11-07_0720_prompt_slot_identity_656_continuation.md` (session ff21fbcc): Phase 1 of #656, the executor's slot write (await, defer, forced commit), canvas options (a)/(b)/(c), classification, Layer Impact Report, lane plan; HARD STOP after the report.
+**Files touched**: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` (new), this entry. Prototypes only in the temporary worktree `~/jjodel-w-slot656-proto` (removed; diff in `~/.jjodel-lanes/P-2026-11-07-0720/proto.diff`). No file under `frontend/src` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Partial: 0654 hit the context ceiling, 0720 finished it; the Status flips are not in this commit (the status-flip skill is user-invoked only). Forced commit correct on every check (S6a 10/10) but 16.8 s / 13.6 s for 50 creates vs 19.1 / 15.5 awaited, 6.2 s / 71 ms base; deferred write falsified. LIR is the final draft in the report §7, for Phase 2. Probe logs `.agent-logs/probe656-*.log`.
+**Prompt document name**: 2026-11-07 07:20
+
+**Ticket** (outside #656, recommended as its own): a canvas create never gets its own undo step — `reducer.ts:1280` merges every delta touching a vertex into the previous entry; measured `syncCreateObject` leaves `statehistory` at 33/33 and one Undo reverts the previous action while the object stays. Evidence: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` §9.
