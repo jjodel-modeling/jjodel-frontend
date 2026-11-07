@@ -997,6 +997,7 @@ export const TEXT_EDITOR_OPTIONS = {
     glyphMargin: false,
     lineDecorationsWidth: 14,
     'semanticHighlighting.enabled': true,
+    wordBasedSuggestions: 'off', // ticket #687: no document words in a comment when the language service offers none
 } as const;
 
 /** The Monaco adapter, loaded on the tab's mount (it imports `joiner`, which the bench cannot). */
