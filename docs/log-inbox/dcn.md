@@ -124,3 +124,18 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Bench 25/26 (survivor: precondition read on a monitor, which has none) and 3/3 with M16. Dialog hide rule changed locally in simRolesDraft.ts, not the shared list (validator and codec read it). All ticks on one event `dcn-tick` (R-SIM-122). Parameters, range bounds, literals passed as an extra `features` input. Generalization walk copied from bindingReader. String flagged without domain. Closure written by the chat from the handoff.
 **Prompt document name**: 2026-11-07 12:16
+
+## 2026-11-07 — feat: slot writes `self.battery := e` in a DCN action mode
+**Prompt**: DCN L3.4 (P-2026-11-07-1215): `parseAction(source, { dcn: true })` admits a member target as a new `SlotTarget` node, `JjelAction.target` widened to the union; `actionEvaluator.ts` returns a slot write as an assignment marked `slot: true`; the core unchanged (an `undeclared` halt until L4.4); tests first, mutation bench, one code commit.
+**Files touched**: 5d86470c9 — `frontend/src/jjel/types/ast.ts`, `frontend/src/jjel/parser/parser.ts`, `frontend/src/model/simulation/actionEvaluator.ts`, `frontend/src/model/simulation/__tests__/slotAction.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — every suite green but `irCollapsedRender.test.ts`, whose Chromium `afterAll` timed out in 2 of 6 runs on the branch (all 13 tests passing) and in 0 of 5 on the tip; nothing it imports changed
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: New node, not MemberAccess: `SlotTarget` carries `object` and `attribute`, the field names of `StateAccessExpr`, so the six readers outside jjel/ (printer, stcChecks, simBridge, simStateUsage) compile unchanged; none selects the mode. The marker type `ActionAssignment` lives in actionEvaluator.ts, since netTypes.ts was off limits. Bench 14/14 killed. Gates: typecheck 0, jjel+simulation 1394/1394, full run 546/550 (the known 3 + the flake above), build 0.
+**Prompt document name**: 2026-11-07 12:15
+
+**Ticket** (for L4.4, not blocking): the core keys an assignment by `element` and `attr` only, so a slot named like a declared state attribute of the same element would be applied to σ as that attribute, not halted `undeclared`. L4.4 has to read `slot` before the declaration lookup in `netStep.ts`.
