@@ -11,7 +11,9 @@ import { parseText } from '../parser';
 import type { TextParseError } from '../parser';
 import { printTextModel } from '../printer';
 import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
-import { portGrammar, PORT_MM } from './portCorpus';
+import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
+import type { MarkedViolation } from '../conformanceMarks';
+import { portGrammar, portObjects, PORT_MM, PORT_TEXT_CLIKE } from './portCorpus';
 import { libraryObjects, tolerantCases } from './tolerantCorpus';
 
 // The Monaco adapter's theme imports `joiner` (textualMonaco.ts header): the bench gives it empty rules.
@@ -132,5 +134,74 @@ describe('(1) the code action provider: D3a fixes as quick fixes (D6)', () => {
         const fixed = parseText(broken, LIB.g, { fixes: true }).errors;
         expect(actions.map(a => a.title)).toEqual(fixed.flatMap(e => (e.fix ?? []).map(f => f.title)));
         for (const a of actions) expect(a.diagnostics?.length).toBe(1);
+    });
+});
+
+describe('(2) conformance violations as marks on the carried spans (D8)', () => {
+    const g = portGrammar();
+    const printed = printTextModel(g, portObjects());
+    const text = printed.text;
+    const spans = printed.spans;
+    const tree = parseText(text, g).tree;
+    const v = (objectId: string, violationType: MarkedViolation['violationType'], metamodelElementName?: string, message = `${violationType} on ${objectId}`): MarkedViolation =>
+        ({ objectId, violationType, message, ...(metamodelElementName ? { metamodelElementName } : {}) });
+    const shown = (t: string, ms: ReturnType<typeof conformanceMarks>) => ms.map(m => t.slice(m.start, m.end));
+
+    it('the port corpus prints as expected, the spans carrying the model ids', () => {
+        expect(text).toBe(PORT_TEXT_CLIKE);
+        expect(spans.map(s => s.id)).toContain('p3');
+    });
+
+    it('an object violation: on the object\'s first line, a warning of source conformance with the violation\'s message', () => {
+        const ms = conformanceMarks([v('m', 'orphan_object', 'Module', 'Object "cpu" is not contained')], spans, text, tree);
+        expect(shown(text, ms)).toEqual(['Module cpu {']);
+        expect(ms[0]).toMatchObject({ severity: 'warning', source: CONFORMANCE_SOURCE, message: 'Object "cpu" is not contained', objectId: 'm' });
+        expect(CONFORMANCE_SOURCE).toBe('conformance');
+        // A class name in `metamodelElementName` is no feature, even where a feature has that name.
+        expect(shown(text, conformanceMarks([v('p1', 'abstract_instantiation', 'name')], spans, text, tree))).toEqual(['instr : Word(32)']);
+    });
+
+    it('a feature violation: on the item of that feature in the object, never on one of a contained object', () => {
+        const ms = conformanceMarks([
+            v('p3', 'multiplicity_below_min', 'driver'),
+            v('p1', 'reference_target_type_mismatch', 'type'),
+            v('m', 'invalid_name_format', 'name'),
+            v('p3', 'invalid_name_format', 'name'),
+        ], spans, text, tree);
+        expect(shown(text, ms)).toEqual(['cpu', 'Word(32)', 'result', '= instr & {} & and(ready)']);
+        expect(ms.map(m => m.feature)).toEqual(['name', 'type', 'name', 'driver']);
+    });
+
+    it('a feature the text does not write (a missing mandatory feature): on the object\'s first line', () => {
+        expect(shown(text, conformanceMarks([v('p2', 'missing_required_attr', 'name')], spans, text, tree))).toEqual([': Bool']);
+        expect(shown(text, conformanceMarks([v('m', 'missing_required_attr', 'nowhere')], spans, text, tree))).toEqual(['Module cpu {']);
+        // Without a tree (a broken text, say), a feature violation falls back the same way.
+        expect(shown(text, conformanceMarks([v('p3', 'multiplicity_below_min', 'driver')], spans, text))).toEqual(['output result : Word(8) = instr & {} & and(ready)'.slice('output '.length)]);
+    });
+
+    it('a violation whose object has no span (not printed, or the model itself): no mark; nor an empty span', () => {
+        expect(conformanceMarks([v('zz', 'orphan_object', 'Port')], spans, text, tree)).toEqual([]);
+        expect(conformanceMarks([v('m', 'orphan_object')], [{ id: 'm', start: 4, end: 4 }], text, tree)).toEqual([]);
+        expect(shown(text, conformanceMarks([v('zz', 'orphan_object'), v('p1', 'orphan_object')], spans, text, tree))).toEqual(['instr : Word(32)']);
+    });
+
+    it('no violations: no marks', () => {
+        expect(conformanceMarks([], spans, text, tree)).toEqual([]);
+    });
+
+    it('in text order, whatever the order of the violations', () => {
+        const ms = conformanceMarks([v('p3', 'orphan_object'), v('m', 'orphan_object'), v('p1', 'orphan_object')], spans, text, tree);
+        expect(ms.map(m => m.objectId)).toEqual(['m', 'p1', 'p3']);
+    });
+
+    it('across typing: on the carried spans, shifted with the text, the marks keep their words', () => {
+        const typed = `// a note\n${text.replace('input : Bool', 'input : Bool\n  input extra : Bool')}`;
+        const shift = (o: number): number => o + '// a note\n'.length + (o >= text.indexOf('input : Bool') + 'input : Bool'.length ? '\n  input extra : Bool'.length : 0);
+        const carried = spans.map(s => ({ ...s, start: shift(s.start), end: shift(s.end) }));
+        const all = [v('m', 'orphan_object'), v('p3', 'multiplicity_below_min', 'driver'), v('p2', 'missing_required_attr', 'name')];
+        expect(shown(typed, conformanceMarks(all, carried, typed, parseText(typed, g).tree))).toEqual(shown(text, conformanceMarks(all, spans, text, tree)));
+        // A span the edit pushed past the end of the text is cut at it.
+        const cut = typed.slice(0, typed.length - 1);
+        expect(conformanceMarks([v('m', 'orphan_object')], carried, cut).every(m => m.end <= cut.length)).toBe(true);
     });
 });
