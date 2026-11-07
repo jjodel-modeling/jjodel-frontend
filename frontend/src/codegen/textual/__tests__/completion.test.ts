@@ -243,6 +243,46 @@ describe('D2b: the candidates at the seven cursors of the probe (report §3.2), 
     });
 });
 
+describe('ticket #687: no candidate inside a comment or a string, so Enter breaks the line', () => {
+    const g = portGrammar();
+    const at = (marked: string): string[] => offeredAt(g, PORT_MM, marked).shown;
+    /** An empty body's items and its close (no `=`: no item before it). */
+    const BODY = ['keyword input', 'keyword output', 'keyword }'];
+
+    it('inside a line comment and at its end, before a line break or the end of the text', () => {
+        expect(at('Module cpu {} // end st⎸ate\n')).toEqual([]);
+        expect(at('Module cpu {} // end state⎸\n')).toEqual([]);
+        expect(at('Module cpu {} // end state⎸')).toEqual([]);
+        expect(at('Module cpu {\n  // the ⎸inputs\n  input : Bool\n}')).toEqual([]);
+        expect(at('Module cpu {\n  input : Bool // a flag⎸\n}')).toEqual([]);
+    });
+
+    it('inside a block comment, closed or not', () => {
+        expect(at('Module cpu {\n  /* the ⎸inputs */\n}')).toEqual([]);
+        expect(at('Module cpu {\n  /* the inputs⎸')).toEqual([]);
+    });
+
+    it('inside a string', () => {
+        expect(at('Module "cp⎸u" {}')).toEqual([]);
+        expect(at('Module "⎸" {}')).toEqual([]);
+    });
+
+    it('the comment markers of the pascal style', () => {
+        const gp = portGrammar(PORT_PASCAL);
+        expect(offeredAt(gp, PORT_MM, 'Module cpu begin end; -- end state⎸\n').shown).toEqual([]);
+        expect(offeredAt(gp, PORT_MM, 'Module cpu begin\n  (* the ⎸inputs *)\nend;').shown).toEqual([]);
+    });
+
+    it('unchanged elsewhere: before a comment, after it, on the next line, around a string', () => {
+        expect(at('Module cpu {\n  ⎸// the inputs\n}')).toEqual(BODY);
+        expect(at('Module cpu {\n  /* the inputs */ ⎸\n}')).toEqual(BODY);
+        expect(at('Module cpu {\n  // the inputs\n  ⎸\n}')).toEqual(BODY);
+        expect(at('Module cpu {} // end state\n⎸')).toEqual(['keyword Module']);
+        expect(at('Module ⎸"cpu" {}')).toEqual(at('Module ⎸cpu {}'));
+        expect(at('Module "cpu" ⎸')).toEqual(['keyword {', 'keyword {}']);
+    });
+});
+
 describe('D2b and D10: the tokens of step C as keywords', () => {
     const gb = portGrammar(portWith({ C_Module: { blockOpen: ['is'], blockClose: ['end', 'module'], prefix: ['begin'] } } as never, {}, PORT_CLIKE));
     const at = (marked: string): string[] => offeredAt(gb, PORT_MM, marked).shown;
