@@ -42,10 +42,10 @@
 
 import { CLOCK_PERIOD_DEFAULT, isClockPeriod } from '../../../model/simulation/boardCodec';
 import type { BoardDevice } from '../../../model/simulation/boardCodec';
-import { structuralInputs } from '../../../model/simulation/netStep';
 import type { CompiledNet } from '../../../model/simulation/netTypes';
 import { panelInputs, runStatus } from './simBridge';
 import type { SimRun } from './simRunState';
+import { nucleusOf } from './simNucleus';
 
 /**
  * Why a clock went off: by hand, Reset, no run, the board edited, the panel collapsed, the run's end, or a step that
@@ -88,7 +88,7 @@ export function autoClocks(devices: readonly BoardDevice[]): AutoClock[] {
  * run is Running. Its guards are not read, so a tick they refuse is pressed and is a discard, as a hand press is.
  */
 export function clockEnables(run: SimRun, event: string): boolean {
-    return panelInputs(runStatus(run), structuralInputs(run.net, run.config.state)).events.has(event);
+    return panelInputs(runStatus(run), nucleusOf(run).structuralInputs(run.config.state)).events.has(event);
 }
 
 /** What the clocks read and call; the panel passes the store's run and its own press. */
