@@ -2872,3 +2872,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — unattended, probe `~/.jjodel-lanes/P-2026-11-07-1635/probe.mjs` (run2.log, 24/24, real canvas and text gestures, DOM and Monaco state); crops 1-click, 2-multi, 2b-clear, 3-after-apply, 3b-after-reprint, 4-no-loop in the same folder, to Alfonso.
 **Notes**: Reveal on the last span in selection order (the node just clicked, §5.3, §8.2), not the first. A one-element canvas selection resets E2a's last-sent id (`lastSelectedOf`), so a caret in a node clicked on the canvas does not reselect it. Mutation: dropping the repaint fails only 3b (app undo reprint); the apply alone keeps the highlight by Monaco's tracking. A tab opened over an existing selection shows no highlight until the next change (the event fires on change only).
 **Prompt document name**: 2026-11-07 16:35
+
+## 2026-11-07 — merge: textual-e2b-highlight into alfonso-frontend-jjtl (P-2026-11-07-1821)
+**Prompt**: `claude_2026-11-07_1821_prompt_merge_textual-e2b-highlight.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e2b-highlight` at `62f8ca670` into `alfonso-frontend-jjtl`, merge base `c0ee2cc00`, 4 commits on the branch side.
+**Files touched**: merge `e13181617`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1635_prompt_textual_e2b_highlight.md`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e13181617` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14963 tests in 561 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E2b crops 1-click, 2-multi, 3-after-apply, 4-no-loop in ~/.jjodel-lanes/P-2026-11-07-1635/ checked by the chat
+**Notes**: Rollback tag `pre-textual-e2b-highlight` on `63b99779b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1821/result.json`.
+**Prompt document name**: 2026-11-07 18:21

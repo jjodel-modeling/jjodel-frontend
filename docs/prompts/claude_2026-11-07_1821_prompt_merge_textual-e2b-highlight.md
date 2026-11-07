@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1821
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-e2b-highlight launched by chat C-2026-11-03-1037)
 Lane: full (merge; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane merge · e13181617 · verifica visiva passata 2026-11-07 (E2b crops 1-click, 2-multi, 3-after-apply, 4-no-loop in ~/.jjodel-lanes/P-2026-11-07-1635/ checked by the chat)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-1821 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
