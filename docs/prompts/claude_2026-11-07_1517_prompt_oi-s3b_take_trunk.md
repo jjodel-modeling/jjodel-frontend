@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1517
 Chat: C-2026-10-25-2159
 Request: none (rendered by lane-run, no chat URL known for C-2026-10-25-2159)
 Lane: full (merge of the trunk into the branch; 1 conflict: `frontend/src/redux/reducer/__tests__/undoGroup.test.ts` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · merge cbc392c69 (undoGroup.test.ts union, gates green; check:addonly red, inherited from trunk 3f7f6f7f4, declared) · log entry in docs/log-inbox/instance-of.md with P-2026-11-07-1620
 
 Worktree: `/Users/alfonso/jjodel-w-oi-s3b`, branch `oi-s3b`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-oi-s3b`, branch `oi-s3b`, `git log -1` is the commit that adds this file (its parent `e193ad04a`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-1517 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

@@ -225,3 +225,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non eseguito (Playwright gestures only, no real trackpad)
 **Notes**: Typecheck 0, build 0. S2: [0,1] 22/22; [0,1,2] 21/22, S2-1m red alone (viewport x +3, no menu). S3a default 8/8; undo-inline-edit 33/33. Throwaway: left and middle drag pan, right drag pans only with [0,1,2]; wheel no change and ctrl+wheel zoom to k 2 on both. The first fixed-build throwaway started at load 23.6, above the gate; rerun gated (11.4), same result. No probe or test right-drags. Detail: ~/.jjodel-lanes/P-2026-11-07-1235/closing.md
 **Prompt document name**: 2026-11-07 12:35
+
+## 2026-11-07 — fix: instance-of on the multi-tab trunk, per-tab producer and placement (P-2026-11-07-1620)
+**Prompt**: P-2026-11-07-1517 (`oi-s3b` takes the trunk at 3.2.0, merge `cbc392c69`) and P-2026-11-07-1620: `InstantiationProblemSync` clears through `acquireProducerMount`; `runInstantiate` places under the tab's layout; on the RC-21 answer (A) `instantiate()` takes the tab's viewpoint for `layoutTargets`, absent the root's
+**Files touched**: merge `cbc392c69` (1517); `aad8e74bb`: `EditorV2.tsx` (`runInstantiate` only), `hooks/instantiate.ts`, `hooks/__tests__/instantiate.test.ts`, `problems/InstantiationProblemSync.tsx`, `problems/__tests__/instantiationProducerMounts.test.ts` (new); this commit: this entry, the Status lines of 1517 and 1620
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (hooks/instantiate.ts and its test, added to DOVE by the RC-21 answer (A))
+**Layer Impact Report**: produced
+**Smoke visivo**: non eseguito (onto-s2, onto-s3a default, onto-s3b uml-s3b owed: 1-min load 22.9 to 78.5 from 16:59 to 17:19, gate 20, lane window closed)
+**Notes**: 1517: cbc392c69 gates green (typecheck, vitest 14,912 passed, hooks 967, build, check:docs); check:addonly red, inherited from trunk 3f7f6f7f4, which rewrote the hw-notation.md entry of 2026-11-05 without a Log-Repair: trailer; declared, ticket below. 1620: typecheck 0, build 0, problems+instantiate+undoGroup 187/187; bench 4 mutants red, the root key in runInstantiate out of unit reach. Two tabs on one model wait for L6: unit tests only. Detail: ~/.jjodel-lanes/P-2026-11-07-1620/bench.txt
+**Prompt document name**: 2026-11-07 16:20
+
+**Ticket** (proposed, for the owner of `docs/log-inbox/hw-notation.md`, medium): trunk commit `3f7f6f7f4` rewrites that inbox's entry of 2026-11-05 with no `Log-Repair:` trailer, so `check:addonly` fails on every merge that takes the trunk past it as second parent (`cbc392c69` here). Fix on the trunk: a `Log-Repair:` trailer on a follow-up commit, or a `KNOWN_REPAIRS` entry in `check-addonly.ts`.
+
+**Ticket** (proposed, for the multi-tab front, medium): no probe under `frontend/scripts/probe/` covers the problem producers across tabs (grep for multi-tab, two tabs, `acquireProducerMount`, `ACTIVE_TAB`: exit 1; control: the three onto probes found). The two-tab probes live in `~/.jjodel-lanes/` (`P-2026-11-07-1352/two-tab.mjs`) on two models. Owed with L6: two tabs on one model, close one, the other keeps its badges (four producers); instantiate from a tab whose viewpoint is not the root's.
+
+**Ticket** (proposed, low): a canvas beside a Script tab (`DockManager.openBeside`) never receives `ACTIVE_TAB` (`Dock.handleLayoutChange` reads `dockbox.children[0]` only), so its viewpoint can differ from the root's on today's trunk; inferred from code, not measured. The probe for the root-key mutant of `runInstantiate` can stage it there. The three onto probes are owed on `aad8e74bb`.

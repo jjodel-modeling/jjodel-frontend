@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1620
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (`editor-v2/problems/` is in the critical-zone table of CLAUDE.md 3.1; two small code changes)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · code aad8e74bb (option (A), RC-21: instantiate.ts and its test added to DOVE) · unit tests only, two tabs on one model before L6 not reachable · log entry in docs/log-inbox/instance-of.md
 Request: none (follows P-2026-11-07-1517, Alfonso away from the decision under /lane auto; chat's choice, see below)
 Depends: P-2026-11-07-1517
 Corregge: —
