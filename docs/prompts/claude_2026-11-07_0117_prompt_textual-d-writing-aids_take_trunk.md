@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0117
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · direct merge a4b4d551f · vitest reds by load (languageService budget, tolerant (v) and (x), irCollapsedRender, irSelectionRing; 121/121 alone), resolved 01:51 · closed by hand: lane-run go refuses a blocked merge
 
 Worktree: `/Users/alfonso/jjodel-w-textd`, branch `textual-d-writing-aids`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-textd`, branch `textual-d-writing-aids`, `git log -1` is the commit that adds this file (its parent `8cf70e2ec`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-0117 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

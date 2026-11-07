@@ -2350,3 +2350,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Parser only; `printer.ts` imported (`textNaming`), unchanged. Literals included in (3), and ambiguous names in (2) as their paths. Not covered: a path segment with the class or feature name in place of its keyword (§4.3 row), and path fixes when an orphan precedes a root of the same class. Mutation bench of six mutants, all killed: `99cb12a30` message.
 **Prompt document name**: 2026-11-06 23:28
+
+## 2026-11-07 — merge: textual-d-writing-aids takes alfonso-frontend-jjtl (P-2026-11-07-0117)
+**Prompt**: `claude_2026-11-07_0117_prompt_textual-d-writing-aids_take_trunk.md`, a direct merge by `lane-run merge --trunk-into --direct`, no session: the trunk into the step D branch before D3b (D1 changed `ui/TextualTab.tsx`).
+**Files touched**: merge `a4b4d551f`, union of `docs/log-inbox/codegen.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Five vitest files red at load 104 (timing and browser-close checks), 121/121 alone at load 3; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the branch takes the trunk
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0117/result.json`.
+**Prompt document name**: 2026-11-07 01:17
