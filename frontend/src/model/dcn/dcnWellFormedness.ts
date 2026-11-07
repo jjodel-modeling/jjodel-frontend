@@ -10,7 +10,8 @@
  *
  * - W1: an invariant, a precondition, an operation body or a monitor of D reads, on `self`, only a visible feature,
  *   or an attribute of another dynamic class D' of the closure of C when the same expression holds the guard
- *   `self.in(V'::D')`. In an action the expression is its value (and the receiver of its target).
+ *   `self.in(V'::D')`. In an action the expression is its value (and the receiver of its target). A read of an end
+ *   owned by an association that has another end typed by a class of the closure of C says so (R-DCN-24).
  * - W2: an expression of V that tests a class of V', on any receiver, is an edge V -> V', V' every viewpoint of
  *   the model so named; each viewpoint on a cycle, a self-loop included (spec §5), is an error.
  * - W3: an operation of D redefines at most one operation, an operation of the closure of C, with the same name
@@ -53,6 +54,8 @@ export interface DcnWellFormednessInput {
     readonly binding: OntoBinding;
     readonly view: DcnReadView;
     readonly features?: DcnFeatures;
+    /** `Association.ownedEnds`: with it, W1 names a read of an end the association owns (R-DCN-24). */
+    readonly associationEnds?: string;
 }
 
 /** Members of every DCN handle besides its slots (`dcnHandles.ts`). */
@@ -182,6 +185,17 @@ export function checkDcnWellFormedness(input: DcnWellFormednessInput): DcnDiagno
     const diag = (rule: DcnRule, element: string, message: string, related: readonly string[] = []) =>
         out.push({ rule, element, message, severity: 'error', related });
     const operationsOf = (owner: string) => (stc.operation ?? []).flatMap(r => view.referenceTargets(owner, r));
+    /** The association that owns an end named `n` and has another end typed by a class of `closure` (R-DCN-24). */
+    const associationOf = (n: string, closure: readonly string[]): string | undefined => {
+        const ends = input.associationEnds;
+        if (ends === undefined) return undefined;
+        const typeOf = (e: string) => (binding.featureType !== undefined ? view.referenceTargets(e, binding.featureType)[0] : undefined);
+        return view.objects().find(a => {
+            const owned = view.referenceTargets(a, ends);
+            return owned.some(e => view.nameOf(e) === n
+                && owned.some(o => o !== e && closure.includes(typeOf(o) ?? '')));
+        });
+    };
 
     // ── the class level: static classes, their viewpoints and dynamic classes ──
     const statics = new Map<string, StaticClass>();
@@ -297,9 +311,12 @@ export function checkDcnWellFormedness(input: DcnWellFormednessInput): DcnDiagno
                 if (reported.has(key)) continue;
                 reported.add(key);
                 const h = holders[0];
+                const a = h === undefined ? associationOf(n, owner.closure) : undefined;
                 diag('W1', site.element, h !== undefined
                     ? `${site.what} reads ${n}, an attribute of ${h.name} (viewpoint ${h.viewpoint.name}), with no guard self.in(${h.viewpoint.name}::${h.name}) in the same expression.`
-                    : `${site.what} reads ${n}, which is no feature of ${owner.name} or of ${dc.name}.`);
+                    : a !== undefined
+                        ? `${n} is owned by the association ${nameOf(a)}, so it is not navigable from self: own it on ${owner.name} (R-DCN-24)`
+                        : `${site.what} reads ${n}, which is no feature of ${owner.name} or of ${dc.name}.`);
             }
             const from = edges.get(dc.viewpoint.id) ?? new Set<string>();
             edges.set(dc.viewpoint.id, from);
