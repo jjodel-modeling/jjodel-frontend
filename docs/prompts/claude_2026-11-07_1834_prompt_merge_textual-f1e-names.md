@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1834
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-f1e-names launched by chat C-2026-11-03-1037)
 Lane: full (merge; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · direct merge adf6c9629 · gate results lost to a Prompt-ID collision (the oi-s3b merge of another chat took P-2026-11-07-1834 in the same minute, e5add4d95) · closed by hand on 2026-11-08
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-1834 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

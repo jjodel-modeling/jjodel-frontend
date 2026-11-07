@@ -2900,3 +2900,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Prompt document name**: 2026-11-07 17:36
 
 **Ticket** (F1c wiring, measured in the probe): every reprint, the style switch included, calls `setMarkers(null)` (TextualTab.tsx:1391), so a printed text carries no jjel warning until it is edited: a stale `self.<f>` after a rename (report §9 R4) is not shown on open. Not fixed here (outside marker lines); a lane of its own.
+
+## 2026-11-07 — merge: textual-f1e-names into alfonso-frontend-jjtl (P-2026-11-07-1834)
+**Prompt**: `claude_2026-11-07_1834_prompt_merge_textual-f1e-names.md`, a direct merge by `lane-run merge --direct`, no session: F1e (`self.<f>` name check, P-2026-11-07-1736) into the trunk.
+**Files touched**: merge `adf6c9629`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown. The merge commit landed; its gate summary was overwritten when the instance-of chat launched its oi-s3b merge in the same minute under the same Prompt-ID (`e5add4d95`, lane folder `~/.jjodel-lanes/P-2026-11-07-1834/` now holds that merge). Evidence after the fact: `src/codegen/textual` on the trunk 1272 passed, 1 failed (`tolerant.test.ts` timing bound under load), 2 skipped; check:docs 5/5 after d9187549d.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (F1e crops 1-known, 2-unknown, 3-pascal in ~/.jjodel-lanes/P-2026-11-07-1736/, checked by the chat)
+**Notes**: Closed by hand by the chat on Alfonso's go (2026-11-08 00:02). The collision is a harness defect: `lane-run merge` takes the current minute as Prompt-ID without checking other chats.
+**Prompt document name**: 2026-11-07 18:34
