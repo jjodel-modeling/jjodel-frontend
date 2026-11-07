@@ -7,13 +7,21 @@
  * the expected set into the words to write, each with its kind and the range it replaces.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Ticket #687: the Text tab's editor options are read from TextualTab.tsx, whose imports reach the store and Monaco;
+// they are mocked as textualTab.test.ts mocks them. The pure modules below import none of them.
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
 import type { TextCompletion } from '../languageService';
 import { analyzeText, completionsAt } from '../languageService';
 import type { ExpectedItem, TextParseResult } from '../parser';
 import { parseText } from '../parser';
 import { printTextModel, textNaming } from '../printer';
+import { TEXT_EDITOR_OPTIONS } from '../ui/TextualTab';
 import { BOOL_CLIKE, BOOL_PRINTS, boolGrammar, boolSheet } from './boolCorpus';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { portGrammar, portObjects, portWith, PORT_CLIKE, PORT_MM, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
@@ -280,6 +288,12 @@ describe('ticket #687: no candidate inside a comment or a string, so Enter break
         expect(at('Module cpu {} // end state\n⎸')).toEqual(['keyword Module']);
         expect(at('Module ⎸"cpu" {}')).toEqual(at('Module ⎸cpu {}'));
         expect(at('Module "cpu" ⎸')).toEqual(['keyword {', 'keyword {}']);
+    });
+
+    // Measured in the app (probe of P-2026-11-07-1145): with this provider silent, Monaco's word-based suggestions
+    // (the document's words, `State`, `nextState`) opened in the comment and Enter accepted one.
+    it("the Text tab's editor turns Monaco's word-based suggestions off", () => {
+        expect((TEXT_EDITOR_OPTIONS as Record<string, unknown>).wordBasedSuggestions).toBe('off');
     });
 });
 
