@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1617
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-f1c-check launched by chat C-2026-11-03-1037)
 Lane: full (merge; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane merge · e59d6025e · verifica visiva passata 2026-11-07 (F1b crops 1-clike, 2-pascal, 3-third-style, 4-lexer-error in ~/.jjodel-lanes/P-2026-11-07-1444/ and F1c crops 1-valid, 2-error-hover, 2-error-isolated, 3-pascal-isolated, 4-apply in ~/.jjodel-lanes/P-2026-11-07-1522/ checked by the chat)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-1617 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

@@ -2820,3 +2820,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe 21/21 PASS on 3522 (DemoESM, typed text and style picker); crops 1-valid, 2-error (+isolated, +hover), 3-pascal (+isolated), 4-apply in ~/.jjodel-lanes/P-2026-11-07-1522/, checked by the session
 **Notes**: Owner `textual-jjel`. An EOF error marks the last token. Bench 11/16 killed; survivors: re-lex actionMode (equivalent, measured), 3 defensive guards. Monaco merges the conformance warning with the jjel one on a line; the jjel squiggle alone measured with conformance markers hidden (probe-only). Gates: typecheck 0, build 0, check:codegen-lazy ALL GREEN, check:docs 5/5, vitest 3 import reds + 2 Chromium hook timeouts green alone 18/18.
 **Prompt document name**: 2026-11-07 15:22
+
+## 2026-11-07 — merge: textual-f1c-check into alfonso-frontend-jjtl (P-2026-11-07-1617)
+**Prompt**: `claude_2026-11-07_1617_prompt_merge_textual-f1c-check.md`, a direct merge by `lane-run merge --direct`, no session: `textual-f1c-check` at `e8d4c0f39` into `alfonso-frontend-jjtl`, merge base `6ce76bca7`, 10 commits on the branch side.
+**Files touched**: merge `e59d6025e`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1444_prompt_textual_f1b_highlight.md`, `docs/prompts/claude_2026-11-07_1522_prompt_textual_f1c_check.md`, `frontend/src/codegen/textual/__tests__/jjelIslands.test.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts`, `frontend/src/codegen/textual/jjelIslands.ts`, `frontend/src/codegen/textual/languageService.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e59d6025e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14934 tests in 560 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: F1b crops 1-clike, 2-pascal, 3-third-style, 4-lexer-error in ~/.jjodel-lanes/P-2026-11-07-1444/ and F1c crops 1-valid, 2-error-hover, 2-error-isolated, 3-pascal-isolated, 4-apply in ~/.jjodel-lanes/P-2026-11-07-1522/ checked by the chat
+**Notes**: Rollback tag `pre-textual-f1c-check` on `24dd48824` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1617/result.json`.
+**Prompt document name**: 2026-11-07 16:17
