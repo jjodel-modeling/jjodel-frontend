@@ -184,3 +184,16 @@ active log is not touched by this lane.
 **Ticket** (for a cleanup lane, not blocking): `generalizationClosure` now has copies in `dcnCompile.ts` and `dcnHandles.ts`; export it once from `bindingReader.ts`.
 
 **Ticket** (stale comment, not blocking): `actionEvaluator.ts` still says a slot write reaching `netStep.ts` "halts `undeclared` (lane L4.4)"; under the DCN nucleus slot writes are applied (dcnStep.ts), and the comment should say so. Not touched here (out of scope).
+
+## 2026-11-07 — merge: dcn-l44 into alfonso-frontend-jjtl (P-2026-11-07-1545)
+**Prompt**: `claude_2026-11-07_1545_prompt_merge_dcn-l44.md`, lane full (merge): `dcn-l44` at `eaac8a39c` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `601b46ceb`: the 14 files of the branch (this inbox, the L4.3 and L4.4 prompts, `dcnHandles.ts`, `dcnStep.ts`, `netTypes.ts`, `subsetChecker.ts`, `guardEvaluator.ts`, `guardContext.ts`, `boardOutputs.ts`, `simBridge.ts` and two test files); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `601b46ceb`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 560 files, 14905 as expected (tip 14871 + 34), 3 files red at import (the known `window` three), plus load reds (tolerant, laneBoard, irCollapsedRender) green alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; the two halt lines are covered by tests; chat GO)
+**Notes**: Merge tree `85656ba5a` equal to the merge-tree measure; probes 12/12 once, control R-MT-25 absent; no union resolution. Load average ~150 during the full runs; the tip itself showed the same kind of load reds (outline, tolerant, two Chromium launches). Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44` (no node_modules; writing forbidden): 34 new tests counted at `eaac8a39c` (18 + 16), matched on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 15:45
