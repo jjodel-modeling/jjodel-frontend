@@ -41,7 +41,7 @@ one of two ways:
 {
   "name": "Person",
   "package": "people",              // optional — the owning package name
-  "metamodel": {                    // present ONLY for cross-metamodel elements
+  "metamodel": {                    // present for cross-metamodel elements, and on every Object's `class`
     "id": "Pointer9_...",
     "name": "PeopleMM",
     "nsURI": "http://example.org/people"
@@ -49,9 +49,17 @@ one of two ways:
 }
 ```
 
-The presence of the `metamodel` field is the signal that the referenced element
+In a metamodel definition (super-types, attribute and reference types), the
+presence of the `metamodel` field is the signal that the referenced element
 lives in **another metamodel**. When it is absent, the classifier belongs to the
 current document.
+
+The `class` of a model **Object** is the exception: it always carries
+`metamodel`, including when the class belongs to the document's own metamodel.
+An object can appear in more than one document (in its owner's `objects` and as
+a snapshot in another model's `externalObjects`), and it serializes identically
+in all of them. Resolve `class.metamodel.id` against the document's `metamodel`
+first, then against `externalMetamodels`.
 
 ### Cross-metamodel elements (embedded / self-contained)
 
@@ -250,7 +258,10 @@ A full metamodel definition embedded because it is referenced from another one.
 {
   "id": "Pointer60_x",              // internal object id; targets of $ref resolve against these
   "name": "The Hobbit",             // optional
-  "class": { "name": "Book" },      // ClassifierRef (metamodel present if the class is cross-metamodel)
+  "class": {                        // ClassifierRef, always qualified with its metamodel
+    "name": "Book", "package": "library",
+    "metamodel": { "id": "Pointer3_a", "name": "LibraryMM", "nsURI": "http://example.org/library" }
+  },
   "attributes": {                   // optional
     "title": "The Hobbit",          // single value unwrapped; multi-valued → array
     "genre": "FICTION"              // enum values are emitted as the literal name
@@ -259,7 +270,7 @@ A full metamodel definition embedded because it is referenced from another one.
     "author": [ { "$ref": "Pointer60_y" } ]
   },
   "children": {                     // optional — containment references, nested inline
-    "chapters": [ { "id": "Pointer60_z", "class": { "name": "Chapter" }, "attributes": { "n": 1 } } ]
+    "chapters": [ { "id": "Pointer60_z", "class": { "name": "Chapter", "package": "library", "metamodel": { /* as above */ } }, "attributes": { "n": 1 } } ]
   }
 }
 ```
@@ -290,6 +301,10 @@ are needed.
   entries in a `children` array.
 - Metamodels discovered through the classes of external objects are embedded
   under `externalMetamodels`, including their transitive dependencies.
+- An object in `externalObjects` is serialized exactly as in the `objects` of
+  its owning model's own export, nested `children` included: same ids, values
+  and fully qualified `class`. A consumer can compare a snapshot with its owner
+  by deep equality.
 
 For example, `book` in `myLibrary` references `author` in another model using
 the same metamodel. The model export includes:
@@ -303,14 +318,14 @@ the same metamodel. The model export includes:
   "objects": [
     {
       "id": "book",
-      "class": { "name": "Book", "package": "library" },
+      "class": { "name": "Book", "package": "library", "metamodel": { "id": "library-mm", "name": "LibraryMM", "nsURI": "…" } },
       "references": { "author": [ { "$ref": "author" } ] }
     }
   ],
   "externalObjects": [
     {
       "id": "author",
-      "class": { "name": "Person", "package": "library" },
+      "class": { "name": "Person", "package": "library", "metamodel": { "id": "library-mm", "name": "LibraryMM", "nsURI": "…" } },
       "attributes": { "fullName": "J. R. R. Tolkien" },
       "references": { "books": [ { "$ref": "book" } ] }
     }
@@ -451,3 +466,8 @@ Correlate a definition with its inventory entry / graph node by matching `id`:
 Consumers should treat unknown optional fields leniently and branch on `format`.
 `externalObjects` is an additive optional field in model documents; consumers
 resolving `$ref` must search it and its nested `children` as well as `objects`.
+From 2026-11-04 (#207) an Object's `class` always carries `metamodel`; before,
+it carried it only for a class outside the document's metamodel, so the same
+object differed between its owner's `objects` and another model's
+`externalObjects`. A consumer that resolves `class.metamodel.id` against both
+`metamodel` and `externalMetamodels` reads either form.

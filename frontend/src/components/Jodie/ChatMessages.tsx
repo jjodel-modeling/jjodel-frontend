@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {AI, ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, JjodieScope} from '../../types/jodie';
+import {ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, JjodieScope} from './types';
+import { providerVisual } from '../common/providerVisuals';
 import { formatAmbiguousCandidates } from '../../jjel/evaluator/context';
 import { MarkdownMessage } from './MarkdownMessage';
 import { JjelValueInspector, detectKind } from './JjelValueInspector';
@@ -82,7 +83,7 @@ function getInitials(name: string): string {
 
 function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError, newestScriptCard = false }: { message: ChatMessage; onJjScriptExecute?: (commands: string[], scope?: JjodieScope) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void; newestScriptCard?: boolean }): JSX.Element {
     const isUser = message.role === 'user';
-    const providerInfo = message.provider ? AI[message.provider] : null;
+    const providerInfo = providerVisual(message.provider) ?? null;
     const displayName = message.userName || 'You';
     const isJjScript = !!message.jjscriptResult;
     const jjScriptSuccess = message.jjscriptResult?.success ?? true;
@@ -246,7 +247,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                             className="jodie-message-provider"
                             style={{ color: providerInfo.color }}
                         >
-                            {providerInfo.name}
+                            {message.provider}
                         </span>
                     )}
                     {isJjScript && (

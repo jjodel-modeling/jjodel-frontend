@@ -40,6 +40,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 ### Changed
 - The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
 - Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
+- Breaking for OCL/JjEL expressions: the runtime names `AI`, `AIConfig` and `JodieConfig` are no longer registered, so an expression that names them stops evaluating (R-AI-1). The AI provider layer is `src/services/ai` (one class per SDK family, a registry, the settings and catalog stores), and the frontend no longer calls the AI proxy Worker (#196).
 
 ### Fixed
 - Large models: References lists are built only when the section is open, model names without a full scan, the canvas re-transforms only the vertices that changed, the intrinsic size of a node is measured once per content.
@@ -49,6 +50,14 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - The Templates page keeps Advanced mode when you reach it from inside the app.
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
+
+## [3.1.2] - 2026-11-07
+
+The production build of `staging`, on top of 3.1.1. Projects keep format 2.230.
+
+### Fixed
+
+- Switching between two viewpoints that store different layouts moves the nodes to the positions saved for the new viewpoint. Since 3.1.0 the nodes stayed where the previous viewpoint had them until the page was reloaded.
 
 ## [3.1.1] - 2026-11-02
 

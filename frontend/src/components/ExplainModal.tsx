@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { JodieConfig, AIConfig, AI, AIProvider } from '../types/jodie';
+import { registry } from '../services/ai';
+import { preferredModelId, preferredProviderId } from './common/ProviderModelSelector';
 import { JjodelEvents } from '../events/registry';
 import './ExplainModal.scss';
 
@@ -23,133 +24,21 @@ Explain what this element represents in the context of this metamodel, its curre
 Be concise (3-5 sentences). Use simple, clear language suitable for students learning Model-Driven Engineering.`;
 }
 
-/** Parse SSE stream from Anthropic API and yield text deltas */
-async function* streamClaude(apiKey: string, model: string, prompt: string, signal: AbortSignal) {
-    const response = await fetch(AI.Claude.endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: 1024,
-            stream: true,
-            messages: [{ role: 'user', content: prompt }],
-        }),
-        signal,
-    });
-
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`API error ${response.status}: ${err}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') return;
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                    yield parsed.delta.text;
-                }
-            } catch { /* skip non-JSON lines */ }
-        }
-    }
-}
-
-/** Parse SSE stream from OpenAI-compatible APIs */
-async function* streamOpenAI(endpoint: string, apiKey: string, model: string, prompt: string, signal: AbortSignal) {
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: 1024,
-            stream: true,
-            messages: [{ role: 'user', content: prompt }],
-        }),
-        signal,
-    });
-
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`API error ${response.status}: ${err}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') return;
-            try {
-                const parsed = JSON.parse(data);
-                const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) yield delta;
-            } catch { /* skip */ }
-        }
-    }
-}
-
 async function* streamExplain(prompt: string, signal: AbortSignal) {
-    // Resolve per-feature provider for 'explain'. Falls back to first-enabled via getPreferred.
-    const providerId = AIConfig.getPreferred('explain');
-    const config = AIConfig.get(providerId);
+    // Resolve per-feature provider for 'explain'. Falls back to the first enabled provider.
+    const provider = registry.get(preferredProviderId('explain'));
 
-    if (!config?.apiKey && providerId !== AIProvider.Ollama) {
+    if (!provider.enabled()) {
         throw new Error('No AI provider configured. Please add an API key in Settings.');
     }
 
-    // Prefer per-feature model when set; otherwise fall back to provider's legacy AIConfig.model.
-    const modelToUse = AIConfig.getPreferredModel('explain') ?? config!.model;
-
-    const llm = AI[providerId];
-    switch (providerId) {
-        case AIProvider.Claude:
-            yield* streamClaude(config!.apiKey, modelToUse, prompt, signal);
-            break;
-        case AIProvider.GPT:
-        case AIProvider.DeepSeek:
-        case AIProvider.Mistral:
-        case AIProvider.Groq:
-            yield* streamOpenAI(llm.endpoint, config!.apiKey, modelToUse, prompt, signal);
-            break;
-        default:
-            throw new Error(`Streaming not supported for provider "${providerId}". Configure Claude or OpenAI in Settings.`);
-    }
+    // Every provider streams; the per-feature model when set, otherwise the provider's own.
+    yield* provider.chatStream({
+        history: [{ role: 'user', content: prompt }],
+        model: preferredModelId('explain'),
+        maxOutputTokens: 1024,
+        signal,
+    });
 }
 
 const ExplainModal: React.FC = () => {
@@ -203,7 +92,8 @@ const ExplainModal: React.FC = () => {
                     }
                 }
             } catch (err: any) {
-                if (err.name !== 'AbortError') {
+                // A closed modal aborts the request; the SDKs name that error differently.
+                if (!controller.signal.aborted) {
                     setError(err.message ?? 'Unknown error');
                 }
             } finally {
