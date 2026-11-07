@@ -2725,3 +2725,33 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: E3 crops 1-opened-beside, 2-no-canvas, 3-caret-selects in ~/.jjodel-lanes/P-2026-11-07-1208/ checked by the chat
 **Notes**: Rollback tag `pre-textual-e3-beside` on `945db7ab8` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1353/result.json`.
 **Prompt document name**: 2026-11-07 13:53
+
+## 2026-11-07 — discovery: ticket #656, the identity slot of objects created by JjScript and on the canvas (P-2026-11-07-0720)
+**Prompt**: `claude_2026-11-07_0654_prompt_slot_identity_656_discovery.md` (session 47b95570, stopped at the context ceiling, handoff in `~/.jjodel-lanes/P-2026-11-07-0654/`) and its continuation `claude_2026-11-07_0720_prompt_slot_identity_656_continuation.md` (session ff21fbcc): Phase 1 of #656, the executor's slot write (await, defer, forced commit), canvas options (a)/(b)/(c), classification, Layer Impact Report, lane plan; HARD STOP after the report.
+**Files touched**: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` (new), this entry. Prototypes only in the temporary worktree `~/jjodel-w-slot656-proto` (removed; diff in `~/.jjodel-lanes/P-2026-11-07-0720/proto.diff`). No file under `frontend/src` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Partial: 0654 hit the context ceiling, 0720 finished it; the Status flips are not in this commit (the status-flip skill is user-invoked only). Forced commit correct on every check (S6a 10/10) but 16.8 s / 13.6 s for 50 creates vs 19.1 / 15.5 awaited, 6.2 s / 71 ms base; deferred write falsified. LIR is the final draft in the report §7, for Phase 2. Probe logs `.agent-logs/probe656-*.log`.
+**Prompt document name**: 2026-11-07 07:20
+
+**Ticket** (outside #656, recommended as its own): a canvas create never gets its own undo step — `reducer.ts:1280` merges every delta touching a vertex into the previous entry; measured `syncCreateObject` leaves `statehistory` at 33/33 and one Undo reverts the previous action while the object stays. Evidence: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` §9.
+
+## 2026-11-07 — fix(codegen): #656 lane L2, CHECK 2 and the XMI export read a never-written name slot (P-2026-11-07-1230)
+**Prompt**: `claude_2026-11-07_1230_prompt_slot_identity_656_l2_read.md`: lane L2 of #656 (R-TXT-58, option (b)): CHECK 2 and the XMI export read a never-written identity slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`); a slot written `[""]` stays nameless (R-TXT-45). Tests red first, gates, app check with real gestures.
+**Files touched**: `frontend/src/model/conformance/__tests__/ConformanceValidator.test.ts`, `frontend/src/services/export/__tests__/xmi-export-identity-slot.test.ts` (new) in d2baf819c (red); `frontend/src/model/conformance/ConformanceValidator.ts`, `frontend/src/services/export/XMIService.ts` in cfef82da2; this entry; the Status lines of the 1230 and 1003 prompts.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 02:53 (#656 CHECK 2 and the XMI export on a never-written identity slot)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe agente 12/12, crops in ~/.jjodel-lanes/P-2026-11-07-1230/; verifica visiva della chat pendente)
+**Notes**: Causa: both read the raw slot while Properties reads the get_values fallback. Core reading not exported, mirrored inline in each file (no core change). Red on HEAD 3+6, bench 6/6 killed. Gates: tsc 0, vitest 14541 + 3 baseline import reds (2 Chromium hook timeouts in run 1, green in run 2), build 0, codegen-lazy 0. No Problems panel exists (ValidationPill.tsx:27): crops use the node problem dot and overlay.
+**Prompt document name**: 2026-11-07 12:30
+
+**Ticket** (observed, outside L2, unchanged by it): an old object (`data.name` old1, `initialName` Module_1, slot `[]`) shows `old1` in the tree but exports `name="Module_1"`, since the export follows `get_values` while `get_name` returns `data.name` (report §4 O). A nameless object shows a truncated id in the tree while the status bar still reads `conforms to portprobe`. The dropped `Module_0` node renders no `name` row, the console-created `x1` does. Crops 2-4.
