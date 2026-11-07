@@ -5107,7 +5107,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 snapGrid={[16, 16]}
                 multiSelectionKeyCode="Shift"
                 selectionMode={SelectionMode.Partial}
-                panOnDrag={[0, 1, 2]}
+                panOnDrag={[0, 1]}
                 zoomOnScroll={false}
                 panOnScroll={false}
                 panOnScrollMode={PanOnScrollMode.Free}
