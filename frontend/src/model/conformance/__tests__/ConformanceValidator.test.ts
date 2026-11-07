@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { validateConformance } from '../ConformanceValidator';
+import { encodeRoleValues } from '../../simulation/roleCatalog';
+import { encodeProfile } from '../../simulation/profileCodec';
+import { systemProfile } from '../../simulation/simProfiles';
 
 // ------------------------------------------------------------------
 // Fixtures. validateConformance is a pure function that only performs
@@ -870,5 +873,63 @@ describe('CHECK 3 — Expression and Action', () => {
 
     it('control: EString keeps accepting the same text', () => {
         expect(flagged({ id: 'Pointer_ESTRING', name: 'EString' }, 'a +')).toBe(false);
+    });
+});
+
+// ==================================================================
+// CHECK 3 — DCN bodies in the DCN action mode (R-DCN-12), P-2026-11-08-0010.
+// The metamodel's bag binds the dcn roles under the dynamic-classification profile: an Action
+// attribute bound to the `body` role is parsed with `parseAction(text, { dcn: true })`. Every other
+// Action attribute, and every metamodel that binds no dcn role, as before.
+// ==================================================================
+describe('CHECK 3 — DCN bodies in the DCN action mode', () => {
+    const ACTION = { id: 'Pointer_ACTION', name: 'Action', className: 'DClass' };
+    const DCN_BAG = {
+        simProfile: encodeProfile(systemProfile('dynamicClassification')!),
+        simStaticClass: 'C_Static',
+        simViewpoints: 'R_viewpoints',
+        simDynamicClasses: 'R_classes',
+        simInvariant: 'A_invariant',
+        simOperation: encodeRoleValues(['R_ownedOperations']),
+        simBody: encodeRoleValues(['A_body', 'A_monBody']),
+    };
+    function withBody(attrId: string, value: unknown, bag: AnyObj | undefined) {
+        const a = attr({ id: attrId, name: 'body', type: ACTION, upperBound: -1 });
+        const C = klass({ id: 'C', name: 'Operation', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'rampUp', instanceof: C, features: [val(attrId, { __raw: { values: [value] } })] });
+        const model: AnyObj = { id: 'M', name: 'Model', objects: [o] };
+        const metamodel: AnyObj = { id: 'MM', name: 'MM', classes: [C], __raw: bag ? { _state: bag } : {} };
+        return validateConformance(model as any, metamodel as any);
+    }
+    const flagged = (attrId: string, value: unknown, bag: AnyObj | undefined) =>
+        types(withBody(attrId, value, bag)).includes('type_mismatch');
+
+    it('a DCN body bound to the body role is not a violation (operation and monitor)', () => {
+        expect(flagged('A_body', 'self.power := 0', DCN_BAG)).toBe(false);
+        expect(flagged('A_monBody', 'self.battery := self.battery - 1', DCN_BAG)).toBe(false);
+    });
+
+    it('the same text on a metamodel with no dcn role keeps its warning', () => {
+        expect(flagged('A_body', 'self.power := 0', undefined)).toBe(true);
+        expect(flagged('A_body', 'self.power := 0', {})).toBe(true);
+    });
+
+    it('an Action attribute not bound to the body role keeps the ordinary mode', () => {
+        expect(flagged('A_other', 'self.power := 0', DCN_BAG)).toBe(true);
+    });
+
+    it('the dcn roles off by profile: the ordinary mode, as runBag reads the bag', () => {
+        const { simProfile, ...custom } = DCN_BAG;
+        expect(flagged('A_body', 'self.power := 0', custom)).toBe(true);
+    });
+
+    it('the closure unmet: no dcn mode', () => {
+        const { simInvariant, ...partial } = DCN_BAG;
+        expect(flagged('A_body', 'self.power := 0', partial)).toBe(true);
+    });
+
+    it('a malformed DCN body is still a type_mismatch', () => {
+        expect(flagged('A_body', 'self.power := ', DCN_BAG)).toBe(true);
+        expect(flagged('A_body', 'self.[power] := 0 1', DCN_BAG)).toBe(true);
     });
 });

@@ -458,3 +458,64 @@ describe('dcnWellFormedness: ranges (R-DCN-13), blank invariants (R-DCN-16)', ()
         expect(mutated(inv('Flying', 'self.plugged >'))).toEqual([]);
     });
 });
+
+// ── W1 on association-owned ends (R-DCN-24) ──────────────────────────────────
+
+/**
+ * The export shape of the drone before R-DCN-24 (P-2026-11-08-0010): `ownedSensors` is not owned by
+ * WeatherAssessmentUnit but by the association `WAUSensors`, whose other end `wau` is typed by it.
+ * `otherEndType` retypes `wau`, to move the association away from the reader's class.
+ */
+function associationOwned(otherEndType = 'WeatherAssessmentUnit') {
+    return (m: Model) => {
+        const owned = m.WeatherAssessmentUnit.refs!['Class.ownedAttributes'];
+        owned.splice(owned.indexOf('p_WAU_ownedSensors'), 1);
+        delete m.p_WAU_ownedSensors;
+        m.end_wau = { meta: 'Property', name: 'wau', refs: { 'TypedElement.type': [otherEndType], 'Property.association': ['WAUSensors'] } };
+        m.end_ownedSensors = { meta: 'Property', name: 'ownedSensors', refs: { 'TypedElement.type': ['Sensor'], 'Property.association': ['WAUSensors'] } };
+        m.WAUSensors = { meta: 'Association', name: 'WAUSensors', refs: { 'Association.ownedEnds': ['end_wau', 'end_ownedSensors'] } };
+        m.s_wau1_sensors.refs!['Slot.definingFeature'] = ['end_ownedSensors'];
+    };
+}
+
+const ENDS = 'Association.ownedEnds';
+const checkEnds = (m: Model, ends: { associationEnds?: string } = { associationEnds: ENDS }): DcnDiagnostic[] =>
+    checkDcnWellFormedness({ stc: STC, binding: BINDING, view: viewOf(m), features: FEATURES, ...ends });
+const owned = (...edits: Array<(m: Model) => void>) => { const m = cleanDrone(); for (const e of edits) e(m); return m; };
+const R24 = 'ownedSensors is owned by the association WAUSensors, so it is not navigable from self: own it on WeatherAssessmentUnit (R-DCN-24)';
+
+describe('dcnWellFormedness: W1 on association-owned ends (R-DCN-24)', () => {
+    it('the drone export shape: W1 on Safe, Moderate and Adverse, each with the R-DCN-24 message (mutant: the association lookup dropped)', () => {
+        const ds = checkEnds(owned(associationOwned()));
+        expect(rows(ds)).toEqual(['W1 Adverse', 'W1 Moderate', 'W1 Safe']);
+        for (const dc of ['Safe', 'Moderate', 'Adverse']) expect(messageOf(ds, 'W1', dc)).toBe(R24);
+    });
+
+    it('the end owned by its class reads clean, the association kept (mutant: every association end reported)', () => {
+        const m = owned(associationOwned());
+        m.WAUSensors.refs!['Association.ownedEnds'] = ['end_wau'];
+        m.WeatherAssessmentUnit.refs!['Class.ownedAttributes'].push('end_ownedSensors');
+        expect(checkEnds(m)).toEqual([]);
+    });
+
+    it('no association-ends feature given: the ordinary W1 message (mutant: the input ignored)', () => {
+        const ds = checkEnds(owned(associationOwned()), {});
+        expect(messageOf(ds, 'W1', 'Safe')).toBe('The invariant of Safe reads ownedSensors, which is no feature of WeatherAssessmentUnit or of Safe.');
+    });
+
+    it('an association not typed toward the reader\'s class: the ordinary message (mutant: the other end\'s type not tested)', () => {
+        const ds = checkEnds(owned(associationOwned('Drone')));
+        expect(messageOf(ds, 'W1', 'Safe')).toBe('The invariant of Safe reads ownedSensors, which is no feature of WeatherAssessmentUnit or of Safe.');
+    });
+
+    it('the read end itself typed by the reader\'s class is not the other end: the ordinary message (mutant: the same end admitted)', () => {
+        const m = owned(associationOwned('Sensor'));
+        m.end_ownedSensors.refs!['TypedElement.type'] = ['WeatherAssessmentUnit'];
+        expect(messageOf(checkEnds(m), 'W1', 'Safe')).toBe('The invariant of Safe reads ownedSensors, which is no feature of WeatherAssessmentUnit or of Safe.');
+    });
+
+    it('an end of another name: the ordinary message (mutant: the name not matched)', () => {
+        const ds = checkEnds(owned(associationOwned(), inv('Safe', 'self.sensors.last.speed < 10')));
+        expect(messageOf(ds, 'W1', 'Safe')).toBe('The invariant of Safe reads sensors, which is no feature of WeatherAssessmentUnit or of Safe.');
+    });
+});

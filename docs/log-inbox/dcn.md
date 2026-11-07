@@ -277,3 +277,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat C-2026-11-06-2159, crops of P-2026-11-07-1900; unattended, Alfonso in the morning digest)
 **Notes**: Zero conflicts, staged tree equal to merge-tree 966386ac6; five inbox probes once each. The branch tree has no node_modules, so its vitest could not run there without writing in it: the 30 new tests were counted on the two new test files (7 + 23, no .each), and the merged run matched. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536), already red on the base, untouched here, accepted by the chat.
 **Prompt document name**: 2026-11-07 19:53
+
+## 2026-11-08 — fix: conformance parses DCN bodies in DCN mode; W1 names association-owned ends
+**Prompt**: `claude_2026-11-08_0010_prompt_dcn_conformance_body_mode.md`, lane full: (1) conformance parses the Action attributes bound to the dcn `body` role in the DCN action mode when the metamodel binds the dcn roles; (2) the W1 message for an end owned by an association (R-DCN-24); tests first, mutation bench, gates.
+**Files touched**: 9e5452556 — `frontend/src/model/conformance/ConformanceValidator.ts`, `conformance/__tests__/ConformanceValidator.test.ts`, `frontend/src/model/dcn/dcnWellFormedness.ts`, `dcn/__tests__/dcnWellFormedness.test.ts`, `frontend/src/components/editor-v2/problems/dcnToProblems.ts` (one line); docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deroga to the four-file HARD STOP, granted by Alfonso in the lane: dcnToProblems.ts fifth file, the one line in dcnInputOf passing `Association.ownedEnds` (the checker has no other way to reach it). Bench 10 mutants, 9 killed; the dropped producer line survives (no dcnToProblems test in scope). Gates: typecheck 0, targeted 1935/1935, build 0. Full run: the 3 known import reds plus the 1000 ms wall-clock guard of tolerant.test.ts under load (1134 ms), 64/64 alone.
+**Prompt document name**: 2026-11-08 00:10
