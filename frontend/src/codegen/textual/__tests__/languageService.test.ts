@@ -12,7 +12,11 @@ import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
 import type { ParseOptions } from '../parser';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE, STYLE_CATALOG } from '../style';
+import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG } from '../style';
+import type { NotationStyle } from '../style';
+import { deriveBaseGrammar } from '../baseGrammar';
+import { deriveConcreteGrammar } from '../concreteGrammar';
+import type { TextObject } from '../metamodel';
 import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
 import { GARAGE, grammarOf } from './corpus';
 import { portGrammar, PORT_MM } from './portCorpus';
@@ -632,4 +636,101 @@ describe('D4: safe rename (report §5, decision D4)', () => {
         const q = at(quoted, '"reader one" {}');
         expect(renameLocation(quoted, q + 2, LIB.g, LIB.mm)).toEqual({ start: q, end: q + '"reader one"'.length, name: 'reader one' });
     });
+});
+
+// ---- F1b: JjEL highlighted inside its islands (P-2026-11-07-1444; R-TXT-55 F2, report §4.3, §9 R2 and R3) ------------
+
+describe('JjEL sub-tokens inside the islands', () => {
+    const MM: TextMetamodel = {
+        classes: [
+            { name: 'Machine', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'transitions', type: 'Transition', containment: true, many: true }] },
+            {
+                name: 'Transition',
+                attributes: [
+                    { name: 'name', type: 'EString' },
+                    { name: 'guard', type: 'Expression', jjel: 'expression' },
+                    { name: 'effect', type: 'Action', jjel: 'action' },
+                    { name: 'note', type: 'EString' },
+                ],
+            },
+        ],
+        enumerations: [],
+    };
+    const OBJECTS: TextObject[] = [
+        { id: 'm', cls: 'Machine', slots: { name: 'turnstile', transitions: ['tp', 'tc', 'tx', 'ty'] } },
+        { id: 'tp', cls: 'Transition', slots: { name: 'tp', guard: 'model.[paid]', effect: 'model.[coins] := model.[coins] + 1', note: 'self.x > 0' } },
+        { id: 'tc', cls: 'Transition', slots: { name: 'tc', guard: `self.label == "go" or self.tag == 'it'`, effect: "x := 1\ny := 'a'", note: null } },
+        // A lexer error (`:=` in an expression) and a parse error the lexer accepts (`>` with nothing after it).
+        { id: 'tx', cls: 'Transition', slots: { name: 'tx', guard: 'self.count := 1', effect: null, note: null } },
+        { id: 'ty', cls: 'Transition', slots: { name: 'ty', guard: 'self.count >', effect: null, note: null } },
+    ];
+    const analysed = (style: NotationStyle, mm: TextMetamodel = MM) => {
+        const g = deriveConcreteGrammar(deriveBaseGrammar(mm), style);
+        const text = printTextModel(g, OBJECTS).text;
+        const parsed = parseText(text, g);
+        expect(parsed.errors).toEqual([]);
+        return { text, a: analyzeText(text, parsed, g, mm) };
+    };
+    /** The tokens inside the string written `raw`, as `word:role`. */
+    const inside = (text: string, a: TextAnalysis, raw: string): string[] => {
+        const s = at(text, raw);
+        return show(text, a.tokens.filter(t => t.start >= s && t.end <= s + raw.length));
+    };
+
+    it('c-like: an expression and an action coloured inside their quotes, the quotes kept string (dies on the splice dropped, on the quotes dropped)', () => {
+        const { text, a } = analysed(CLIKE_STYLE);
+        expect(inside(text, a, '"model.[paid]"')).toEqual(['":string', 'model:name', 'paid:feature', '":string']);
+        expect(inside(text, a, '"model.[coins] := model.[coins] + 1"')).toEqual(['":string', 'model:name', 'coins:feature', 'model:name', 'coins:feature', '1:number', '":string']);
+    });
+
+    it("pascal: the same values, quoted with `'` (dies on the action lexed as an expression)", () => {
+        const { text, a } = analysed(PASCAL_STYLE);
+        expect(inside(text, a, "'model.[paid]'")).toEqual(["':string", 'model:name', 'paid:feature', "':string"]);
+        expect(inside(text, a, "'model.[coins] := model.[coins] + 1'")).toEqual(["':string", 'model:name', 'coins:feature', 'model:name', 'coins:feature', '1:number', "':string"]);
+    });
+
+    it('c-like: a JjEL string across `\\"` is one token; a word of JjEL is a keyword, a name after `.` a feature (dies on the end read from the next start, on the navigation test dropped)', () => {
+        const { text, a } = analysed(CLIKE_STYLE);
+        expect(inside(text, a, `"self.label == \\"go\\" or self.tag == 'it'"`)).toEqual([
+            '":string', 'self:name', 'label:feature', '\\"go\\":string', 'or:keyword', 'self:name', 'tag:feature', "'it':string", '":string',
+        ]);
+    });
+
+    it("pascal: a JjEL string across `''` is one token, the join's quotes strings around `#10`, which is the line break (dies on a delimiter dropped, on a join inside a token)", () => {
+        const { text, a } = analysed(PASCAL_STYLE);
+        expect(inside(text, a, `'self.label == "go" or self.tag == ''it'''`)).toEqual([
+            "':string", 'self:name', 'label:feature', '"go":string', 'or:keyword', 'self:name', 'tag:feature', "''it'':string", "':string",
+        ]);
+        expect(inside(text, a, "'x := 1'#10'y := ''a'''")).toEqual(["':string", 'x:name', '1:number', "':string", "':string", 'y:name', "''a'':string", "':string"]);
+    });
+
+    it('c-like: `\\n` is the line break between two assignments, no token of its own (dies on an escape read as a delimiter)', () => {
+        const { text, a } = analysed(CLIKE_STYLE);
+        expect(inside(text, a, `"x := 1\\ny := 'a'"`)).toEqual(['":string', 'x:name', '1:number', 'y:name', "'a':string", '":string']);
+    });
+
+    for (const style of [CLIKE_STYLE, PASCAL_STYLE]) {
+        it(`${style.id}: a lexer error leaves the island one string; a parse error the lexer accepts does not (dies on the fallback dropped, on a fallback on parse errors)`, () => {
+            const { text, a } = analysed(style);
+            const q = style.string.quote;
+            expect(inside(text, a, `${q}self.count := 1${q}`)).toEqual([`${q}self.count := 1${q}:string`]);
+            expect(inside(text, a, `${q}self.count >${q}`)).toEqual([`${q}:string`, 'self:name', 'count:feature', `${q}:string`]);
+        });
+
+        it(`${style.id}: a string that is not JjEL stays one string, and no attribute is JjEL without the flag (dies on EString read as JjEL)`, () => {
+            const { text, a } = analysed(style);
+            const q = style.string.quote;
+            expect(inside(text, a, `${q}self.x > 0${q}`)).toEqual([`${q}self.x > 0${q}:string`]);
+            const plain: TextMetamodel = { ...MM, classes: MM.classes.map(c => ({ ...c, attributes: c.attributes?.map(({ jjel: _j, ...x }) => x) })) };
+            const p = analysed(style, plain);
+            expect(inside(p.text, p.a, `${q}model.[paid]${q}`)).toEqual([`${q}model.[paid]${q}:string`]);
+        });
+
+        it(`${style.id}: the tokens stay in text order and disjoint, and encode (dies on the sub-tokens left unsorted)`, () => {
+            const { text, a } = analysed(style);
+            for (let i = 1; i < a.tokens.length; i++) expect(a.tokens[i - 1].end).toBeLessThanOrEqual(a.tokens[i].start);
+            expect(a.tokens.every(t => t.start < t.end && t.end <= text.length)).toBe(true);
+            expect(a.encodedTokens().length).toBe(a.tokens.length * 5);
+        });
+    }
 });
