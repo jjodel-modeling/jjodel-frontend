@@ -366,7 +366,14 @@ export type HaltReason =
     /** A semantic derived attribute of `element` failed on σ′ (R-SIM-73). */
     | { readonly kind: 'derived'; readonly element: string; readonly attr: string; readonly detail: string }
     /** An action of `site` assigned a derived attribute (R-SIM-75), or an input (`input`, R-SIM-88). */
-    | { readonly kind: 'read-only'; readonly site: ActionSite; readonly element: string; readonly attr: string; readonly input?: true };
+    | { readonly kind: 'read-only'; readonly site: ActionSite; readonly element: string; readonly attr: string; readonly input?: true }
+    /**
+     * DCN (spec §6, R-DCN-2): after the step the instance `element` falls in no class of the complete viewpoint
+     * `viewpoint`, a name; `detail` when an invariant of the viewpoint gave no verdict.
+     */
+    | { readonly kind: 'unclassified'; readonly element: string; readonly viewpoint: string; readonly detail?: string }
+    /** DCN (spec §6): after the step `element` falls in every class of `classes`, two or more, of the non-overlapping `viewpoint`. */
+    | { readonly kind: 'ambiguous'; readonly element: string; readonly viewpoint: string; readonly classes: readonly string[] };
 
 /**
  * The outcome of a step. `halted` leaves σ as it was and consumes the event;

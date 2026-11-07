@@ -17,9 +17,16 @@ vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
 import type { TextCompletion } from '../languageService';
-import { analyzeText, completionsAt } from '../languageService';
+import { analyzeText, completionsAt, ISLAND_TRIGGER, triggeredCompletions } from '../languageService';
 import type { ExpectedItem, TextParseResult } from '../parser';
-import { parseText } from '../parser';
+import { parseText, tokenizeText } from '../parser';
+import type { TextMetamodel } from '../metamodel';
+import { deriveBaseGrammar } from '../baseGrammar';
+import { deriveConcreteGrammar } from '../concreteGrammar';
+import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
+import type { NotationStyle } from '../style';
+import { completionsAt as templateCompletionsAt } from '../../ui/templateCompletion';
+import type { TemplateCompletionContext } from '../../ui/templateCompletion';
 import { printTextModel, textNaming } from '../printer';
 import { TEXT_EDITOR_OPTIONS } from '../ui/TextualTab';
 import { BOOL_CLIKE, BOOL_PRINTS, boolGrammar, boolSheet } from './boolCorpus';
@@ -416,4 +423,148 @@ describe('D2a, CLAUDE.md §5: the cursor changes nothing but the expected set', 
         }
         expect(compared).toBeGreaterThan(1000);
     }, 120_000);
+});
+
+// ---- F1d: completion inside a JjEL island (P-2026-11-07-1622; R-TXT-55 F4, report §4.3) ---------------------------
+
+const ISLAND_MM: TextMetamodel = {
+    classes: [
+        { name: 'Net', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'transitions', type: 'Transition', containment: true, many: true }] },
+        { name: 'Element', attributes: [{ name: 'label', type: 'EString' }] },
+        {
+            name: 'Transition',
+            supers: ['Element'],
+            attributes: [
+                { name: 'name', type: 'EString' },
+                { name: 'count', type: 'EInt' },
+                { name: 'guard', type: 'Expression', jjel: 'expression' },
+                { name: 'effect', type: 'Action', jjel: 'action' },
+                { name: 'note', type: 'EString' },
+            ],
+            references: [{ name: 'next', type: 'Transition' }],
+        },
+    ],
+    enumerations: [],
+};
+/** The owner's features as `self.` offers them: its own, then the inherited ones. */
+const OWNER_FEATURES = ['name', 'count', 'guard', 'effect', 'note', 'next', 'label'];
+
+/**
+ * A transition printed in `style`, its values holding the cursor `⎸` (the printer escapes the value around it), then the
+ * candidates at the cursor with the text they replace.
+ */
+const islandAt = (style: NotationStyle, slots: { guard?: string; effect?: string; note?: string }): { all: TextCompletion[]; text: string; at: number; replaced: string[] } => {
+    const g = deriveConcreteGrammar(deriveBaseGrammar(ISLAND_MM), style);
+    const printed = printTextModel(g, [
+        { id: 'n', cls: 'Net', slots: { name: 'N', transitions: ['t'] } },
+        { id: 't', cls: 'Transition', slots: { name: 'fire', count: 1, guard: slots.guard ?? null, effect: slots.effect ?? null, note: slots.note ?? null } },
+    ]).text;
+    const at = printed.indexOf(CUT);
+    if (at < 0) throw new Error('no cursor in the text');
+    const text = printed.replace(CUT, '');
+    const all = completionsAt(text, at, g, ISLAND_MM);
+    return { all, text, at, replaced: [...new Set(all.map(c => text.slice(c.start, c.end)))] };
+};
+
+describe('F1d: inside a JjEL island, the template completion with `self` bound to the owner', () => {
+    it('after `self.` in an Expression island: the owner\'s features, inherited ones included, and no `stc` nor `target`', () => {
+        const { all, at } = islandAt(CLIKE_STYLE, { guard: `self.count > 0 and self.${CUT}` });
+        expect(all.map(c => c.label)).toEqual(OWNER_FEATURES);
+        expect(all.every(c => c.jjel === 'feature')).toBe(true);
+        expect(all.every(c => c.start === at && c.end === at)).toBe(true);
+        expect(all.find(c => c.label === 'label')!.doc).toEqual(['`Element.label: EString`']);
+    });
+
+    it('after `self.` in an Action island, the same features', () => {
+        expect(islandAt(PASCAL_STYLE, { effect: `count := self.${CUT}` }).all.map(c => c.label)).toEqual(OWNER_FEATURES);
+    });
+
+    it('outside a navigation: `self` and the classes, never `stc` nor `target`; after them, nothing', () => {
+        const { all } = islandAt(CLIKE_STYLE, { guard: `self.count > ${CUT}` });
+        expect(all.map(c => `${c.jjel} ${c.label}`)).toEqual(['variable self', 'class Net', 'class Element', 'class Transition']);
+        expect(islandAt(CLIKE_STYLE, { guard: `stc.${CUT}` }).all).toEqual([]);
+        expect(islandAt(CLIKE_STYLE, { guard: `target.${CUT}` }).all).toEqual([]);
+        expect(islandAt(CLIKE_STYLE, { guard: `self.next.${CUT}` }).all).toEqual([]);
+    });
+
+    it('c-like: after `\\"` and `\\\\`, the range is the word as written (dies on value offsets taken as text offsets)', () => {
+        const r = islandAt(CLIKE_STYLE, { guard: `self.label == "q" and self.note == "a\\\\b" and self.co${CUT}` });
+        expect(r.text).toContain('\\"q\\"');
+        expect(r.all.map(c => c.label)).toEqual(OWNER_FEATURES);
+        expect(r.replaced).toEqual(['co']);
+        expect(r.all[0].start).toBe(r.at - 2);
+        // The cursor inside the word: the whole word.
+        expect(islandAt(CLIKE_STYLE, { guard: `self.label == "q" and self.co${CUT}unt` }).replaced).toEqual(['count']);
+    });
+
+    it("pascal: after a doubled `''` and a joined `#10`, the range is the word as written", () => {
+        const r = islandAt(PASCAL_STYLE, { effect: `label := 'it''s'\ncount := self.co${CUT}` });
+        expect(r.text).toContain("''it''''s''");
+        expect(r.text).toContain('#10');
+        expect(r.replaced).toEqual(['co']);
+        expect(r.all[0].start).toBe(r.at - 2);
+    });
+
+    it('outside an island nothing changes: an EString value offers nothing, and no candidate of the notation is a JjEL one', () => {
+        expect(islandAt(CLIKE_STYLE, { note: `self.${CUT}` }).all).toEqual([]);
+        const { text } = islandAt(CLIKE_STYLE, { guard: `self.count > 0${CUT}` });
+        const g = deriveConcreteGrammar(deriveBaseGrammar(ISLAND_MM), CLIKE_STYLE);
+        const strings = tokenizeText(text, g).tokens.filter(t => t.k === 'STR');
+        let outside = 0;
+        for (let at = 0; at <= text.length; at++) {
+            if (strings.some(t => t.start < at && at < t.end)) continue;
+            expect(completionsAt(text, at, g, ISLAND_MM).some(c => c.jjel !== undefined), `offset ${at}`).toBe(false);
+            outside++;
+        }
+        expect(outside).toBeGreaterThan(50);
+    });
+});
+
+describe('F1d: the template completion keeps its default behaviour', () => {
+    const ctx: TemplateCompletionContext = { classes: new Map(), templates: [], params: ['x'], paramClasses: new Map() };
+
+    it('without options, as before: `stc` and `target` offered, nothing after `self.`', () => {
+        const labels = templateCompletionsAt(ctx, 'x', 1, 'expression')!.map(c => c.label);
+        expect(labels).toEqual(['x', 'stc', 'target']);
+        expect(templateCompletionsAt(ctx, 'x', 1, 'expression', {})).toEqual(templateCompletionsAt(ctx, 'x', 1, 'expression'));
+        expect(templateCompletionsAt(ctx, 'self.', 5, 'expression')).toBeNull();
+        expect(templateCompletionsAt(ctx, 'stc.', 4, 'expression')!.map(c => c.label)).toContain('trigger');
+    });
+
+    it('with `builtins: false`, no `stc` nor `target`, and nothing after them', () => {
+        expect(templateCompletionsAt(ctx, 'x', 1, 'expression', { builtins: false })!.map(c => c.label)).toEqual(['x']);
+        expect(templateCompletionsAt(ctx, 'stc.', 4, 'expression', { builtins: false })).toBeNull();
+    });
+});
+
+describe('F1d: `.` asks for completion inside an island only', () => {
+    /** C-like's own triggers, as textualMonaco.ts `styleTriggers` derives them. */
+    const CLIKE_TRIGGERS = ['{', '}', '[', ',', ']'];
+
+    it('`.` is no trigger of a catalog style', () => {
+        for (const s of [CLIKE_STYLE, PASCAL_STYLE]) {
+            const punct = [...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close];
+            expect(punct.some(t => t.endsWith(ISLAND_TRIGGER)), s.id).toBe(false);
+        }
+    });
+
+    it('typed in an island, `.` opens the island\'s candidates; a style trigger there opens nothing', () => {
+        const { all } = islandAt(CLIKE_STYLE, { guard: `self.${CUT}` });
+        expect(triggeredCompletions(all, ISLAND_TRIGGER, CLIKE_TRIGGERS).map(c => c.label)).toEqual(OWNER_FEATURES);
+        expect(triggeredCompletions(all, ',', CLIKE_TRIGGERS)).toEqual([]);
+    });
+
+    it('typed outside an island, `.` opens nothing at any offset, and a style trigger what it opened before', () => {
+        const { text } = islandAt(CLIKE_STYLE, { guard: `self.count > 0${CUT}` });
+        const g = deriveConcreteGrammar(deriveBaseGrammar(ISLAND_MM), CLIKE_STYLE);
+        let offered = 0;
+        for (let at = 0; at <= text.length; at++) {
+            const all = completionsAt(text, at, g, ISLAND_MM);
+            if (all.some(c => c.jjel)) continue;
+            offered += all.length;
+            expect(triggeredCompletions(all, ISLAND_TRIGGER, CLIKE_TRIGGERS), `offset ${at}`).toEqual([]);
+            expect(triggeredCompletions(all, '{', CLIKE_TRIGGERS), `offset ${at}`).toEqual(all);
+        }
+        expect(offered).toBeGreaterThan(50);
+    });
 });

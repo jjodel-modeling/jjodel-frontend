@@ -14,19 +14,25 @@
  * (R-TXT-21 (8)). Identity across versions (`displayMatch`) is not computed here: it is quadratic (finding F4), and no
  * query of B1 needs a model id.
  *
- * Completion (D2b, `completionsAt`) is a query of its own: it parses the text again with the cursor (D2a). So is rename
+ * Completion (D2b, `completionsAt`) is a query of its own: it parses the text again with the cursor (D2a); inside a JjEL
+ * island it asks the template completion instead (F1d, R-TXT-55 F4). So is rename
  * (D4, `renameLocation`, `renameEdits`): it parses the text, then the text its edits make, and refuses what changes.
  */
 
 import type { ConcreteGrammar } from './concreteGrammar';
 import { applyCase } from './concreteGrammar';
 import type { TextAttribute, TextClass, TextEnumeration, TextFeature, TextMetamodel, TextReference } from './metamodel';
-import { isOuterRef } from './metamodel';
+import { classAncestors, isOuterRef } from './metamodel';
 import type { ItemNode, ListNode, ObjectNode, ParsedRef, ParseOptions, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
 import { commentsOf, isApplicableParse, parseText, tokenizeText } from './parser';
 import type { TextNaming } from './printer';
 import { pathKeyword, textNaming } from './printer';
 import { featureTable } from './textMatch';
+import type { IslandToken, JjelIsland } from './jjelIslands';
+import { islandDelimiters, islandRange, islandTokens, jjelIslands } from './jjelIslands';
+import { JjelTokenType } from '../../jjel/types';
+import { completionsAt as templateCompletionsAt } from '../ui/templateCompletion';
+import type { ClassInfo, CompletionKind, FeatureInfo, TemplateCompletionContext } from '../ui/templateCompletion';
 
 /** What a token is for highlighting. `feature` is a feature's keyword, `keyword` any other word of the notation. */
 export type SemanticRole = 'type' | 'feature' | 'keyword' | 'name' | 'string' | 'number' | 'value' | 'literal' | 'reference' | 'comment';
@@ -105,6 +111,8 @@ export interface TextCompletion extends TextRange {
     readonly kind: 'keyword' | 'literal' | 'reference';
     /** A literal's hover, as `hoverAt` gives it: Markdown paragraphs. */
     readonly doc?: readonly string[];
+    /** Set on a candidate inside a JjEL island (F1d), what the template completion offers it as; `kind` is then `reference`. */
+    readonly jjel?: CompletionKind;
 }
 
 /** The unknown-container group's name (R-TXT-36). */
@@ -150,6 +158,26 @@ function bounds(f: TextFeature, decl: TextAttribute | TextReference | undefined)
     if (decl?.lower === undefined && decl?.upper === undefined) return f.many ? 'many-valued' : 'single-valued';
     const upper = decl.upper ?? (f.many ? -1 : 1);
     return code(`[${decl.lower ?? 0}..${upper < 0 ? '*' : upper}]`);
+}
+
+const JJEL_KEYWORDS = new Set<JjelTokenType>([
+    JjelTokenType.IF, JjelTokenType.THEN, JjelTokenType.ELSE, JjelTokenType.AND, JjelTokenType.OR, JjelTokenType.NOT,
+    JjelTokenType.IS, JjelTokenType.FORALL, JjelTokenType.EXISTS, JjelTokenType.IN, JjelTokenType.SUCH, JjelTokenType.THAT,
+    JjelTokenType.IMPLIES, JjelTokenType.WITH, JjelTokenType.DO, JjelTokenType.BOOLEAN, JjelTokenType.NULL,
+]);
+const JJEL_NAVIGATION = new Set<JjelTokenType>([JjelTokenType.DOT, JjelTokenType.QUESTION_DOT, JjelTokenType.DOT_LBRACKET]);
+
+/**
+ * The role of a JjEL token inside an island, from the legend the notation already has: a word of JjEL is a `keyword`,
+ * a name after `.`, `?.` or `.[` a `feature`, any other name a `name`; literals by kind. Operators and punctuation have
+ * no role, as the notation's own punctuation has none.
+ */
+function jjelRole(t: IslandToken): SemanticRole | undefined {
+    if (JJEL_KEYWORDS.has(t.type)) return 'keyword';
+    if (t.type === JjelTokenType.IDENTIFIER || t.type === JjelTokenType.DOLLAR_IDENT) return t.after && JJEL_NAVIGATION.has(t.after) ? 'feature' : 'name';
+    if (t.type === JjelTokenType.NUMBER) return 'number';
+    if (t.type === JjelTokenType.STRING) return 'string';
+    return undefined;
 }
 
 /**
@@ -268,6 +296,29 @@ export function analyzeText(text: string, parsed: TextParseResult, grammar: Conc
 
     const tree = parsed.tree;
     if (tree) walk(tree, null, null, top, null, null);
+
+    // F1b (R-TXT-55 F2): a JjEL value's string token gives way to the JjEL lexer's tokens, its quotes kept `string`.
+    const islands = jjelIslands(parsed, mm, grammar.style);
+    if (islands.length) {
+        const sub = new Map<number, SemanticToken[]>();
+        for (const island of islands) {
+            const lexed = islandTokens(island);
+            if (!lexed) continue;
+            const parts: SemanticToken[] = [];
+            for (const t of lexed) {
+                const role = jjelRole(t);
+                if (role && t.end > t.start) parts.push({ start: t.start, end: t.end, role, modifiers: [] });
+            }
+            // A join's quotes inside a JjEL string (`'a'#10'b'` under Pascal) belong to that string's token.
+            for (const d of islandDelimiters(island)) {
+                if (!lexed.some(t => t.start < d.end && d.start < t.end)) parts.push({ ...d, role: 'string', modifiers: [] });
+            }
+            sub.set(island.start, parts.sort((x, y) => x.start - y.start));
+        }
+        const spliced = tokens.flatMap(t => (t.role === 'string' && sub.get(t.start)) || [t]);
+        tokens.length = 0;
+        tokens.push(...spliced);
+    }
 
     // The comments, merged into the tokens in text order; a run of own-line comments folds.
     const comments = tree ? commentsOf(tree, grammar) : [];
@@ -562,6 +613,48 @@ function insideTrivia(tokens: readonly SyntaxToken[], offset: number, comments: 
 }
 
 /**
+ * The classes of `mm` as the template completion reads them (F1d): own features first, then the inherited ones, nearest
+ * ancestor first, a name once; a containment is a reference.
+ */
+function templateClasses(mm: TextMetamodel): Map<string, ClassInfo> {
+    const out = new Map<string, ClassInfo>();
+    for (const c of mm.classes) {
+        if (out.has(c.name)) continue;
+        const features: FeatureInfo[] = [];
+        const taken = new Set<string>();
+        for (const k of [c, ...classAncestors(mm, c).reverse()]) {
+            for (const [f, kind] of [...(k.attributes ?? []).map(a => [a, 'attribute'] as const), ...(k.references ?? []).map(r => [r, 'reference'] as const)]) {
+                if (taken.has(f.name)) continue;
+                taken.add(f.name);
+                features.push({ name: f.name, kind, type: f.type, owner: k.name });
+            }
+        }
+        out.set(c.name, { name: c.name, features });
+    }
+    return out;
+}
+
+/**
+ * F1d (R-TXT-55 F4, report §4.3): the candidates at `offset` inside the island, from the template completion with `self`
+ * bound to the owner's class and neither `stc` nor `target`. The cursor and the replaced word go through the island's map:
+ * the range is the word as the string writes it, its escapes included.
+ */
+function islandCompletions(island: JjelIsland, offset: number, ownerCls: string | undefined, mm: TextMetamodel): TextCompletion[] {
+    // The value offset of the cursor: the characters written wholly before it.
+    let k = 0;
+    while (k < island.ends.length && island.ends[k] <= offset) k++;
+    const { value } = island;
+    let ws = k;
+    while (ws > 0 && /\w/.test(value[ws - 1])) ws--;
+    let we = k;
+    while (we < value.length && /\w/.test(value[we])) we++;
+    const range: TextRange = ws < we ? islandRange(island, ws, we) : { start: offset, end: offset };
+    const ctx: TemplateCompletionContext = { classes: templateClasses(mm), templates: [], params: [], paramClasses: new Map() };
+    const items = templateCompletionsAt(ctx, value, k, 'expression', { builtins: false, ...(ownerCls ? { selfClass: ownerCls } : {}) }) ?? [];
+    return items.map(c => ({ label: c.label, kind: 'reference', jjel: c.kind, ...range, ...(c.kind === 'feature' ? { doc: [code(c.detail)] } : {}) }));
+}
+
+/**
  * The outline of `text` as `parsed` read it: the objects in text order, nested as the text nests them. An `item` that
  * holds a keyword token itself and contains objects is a group node labelled with that keyword, so a grouped containment
  * gives two levels and an inline one, printing no keyword, none (R-TXT-39 (1)). Unnamed objects are labelled by rule C4'.
@@ -576,8 +669,14 @@ function insideTrivia(tokens: readonly SyntaxToken[], offset: number, comments: 
  */
 export function completionsAt(text: string, offset: number, grammar: ConcreteGrammar, mm: TextMetamodel): TextCompletion[] {
     const tokens = tokenizeText(text, grammar).tokens;
-    // Ticket #687: nothing is offered inside a comment or a string, so Enter at a comment's end breaks the line.
-    if (insideTrivia(tokens, offset, grammar.style.comments) || tokens.some(t => t.k === 'STR' && t.start < offset && offset < t.end)) return [];
+    // Ticket #687: nothing is offered inside a comment or a string, so Enter at a comment's end breaks the line; but inside
+    // a JjEL island, what JjEL may write there (F1d).
+    if (insideTrivia(tokens, offset, grammar.style.comments)) return [];
+    if (tokens.some(t => t.k === 'STR' && t.start < offset && offset < t.end)) {
+        const whole = parseText(text, grammar);
+        const island = jjelIslands(whole, mm, grammar.style).find(i => i.start < offset && offset < i.end);
+        return island ? islandCompletions(island, offset, whole.objects.find(o => o.id === island.owner)?.cls, mm) : [];
+    }
     const word = tokens.find(t => t.k === 'ID' && t.start < offset && offset <= t.end);
     const range: TextRange = word ? { start: word.start, end: word.end } : { start: offset, end: offset };
     const parsed = parseText(text, grammar, { cursor: range.start });
@@ -613,6 +712,19 @@ export function completionsAt(text: string, offset: number, grammar: ConcreteGra
         }
     }
     return out;
+}
+
+/** The character that asks for completion inside a JjEL island (F1d): JjEL's navigation, no style's trigger. */
+export const ISLAND_TRIGGER = '.';
+
+/**
+ * F1d: what a typed trigger character opens, from the candidates at the cursor. A trigger of the style opens the
+ * notation's candidates, as before, never an island's; `.` opens an island's only, so in a path or a number, outside a
+ * string, it opens nothing; any other character nothing.
+ */
+export function triggeredCompletions(all: readonly TextCompletion[], ch: string, styleTriggers: readonly string[]): TextCompletion[] {
+    if (styleTriggers.includes(ch)) return all.filter(c => c.jjel === undefined);
+    return ch === ISLAND_TRIGGER ? all.filter(c => c.jjel !== undefined) : [];
 }
 
 export function textOutline(text: string, parsed: TextParseResult, grammar: ConcreteGrammar): TextOutline {

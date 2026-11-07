@@ -6,6 +6,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-07 — probe: a hook sets the session title (P-2026-11-07-1830)
+**Prompt**: probe whether `SessionStart` / `UserPromptSubmit` hooks can set the Claude Code session title for a lane (startup, resume, file-driven); fast lane, measure only, chat `C-2026-11-07-1824`
+**Files touched**: `docs/discovery/discovery_2026-11-07_session_title_hook_probe.md`, `docs/log-inbox/harness.md`; probe files outside the repo in `/tmp/title-probe/`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: claude 2.1.314: the hook title is stored (custom-title + agent-name in the session JSONL) at startup and resume, in `-p` and in the lane-run form; file-driven works. Sidebar display unverified, Alfonso's check. Details in the discovery report.
+**Prompt document name**: 2026-11-07 18:30
 
 ## 2026-10-13 — chore(harness): the typecheck baseline is zero in the norms and the merge templates, RC-48 (P-2026-10-12-2002)
 **Prompt**: `claude_2026-10-12_2002_prompt_typecheck_zero_s3_gate_at_zero.md`, full lane (more than 3 files; governance files), one phase, director Juri (chat `C-2026-10-12-1955`), lane 3/3 of `chain-P-2026-10-12-2000` in the worktree `jjodel-tc0` on `fix/typecheck-baseline-zero`, started by `lane-run start` after the chain stopped on slice 2's question: the baseline stops being a number, five edits of text the prompt quotes, one regeneration, the decision row RC-48.
@@ -1028,3 +1040,14 @@ Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead
 Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
 **Priority**: low
 **Found in**: P-2026-11-02-0723
+
+## 2026-11-08 — ticket: lane-run merge gives the same Prompt-ID to two chats in the same minute
+**Ticket**: Two chats launched `lane-run merge --direct` in the same minute (18:34 on 2026-11-07) and both merges got Prompt-ID P-2026-11-07-1834: textual-f1e-names (chat C-2026-11-03-1037, merge adf6c9629) and oi-s3b (instance-of chat, merge e5add4d95). The two prompt files were committed one after the other (02abdd3ff, 8eda5e601) and lane-run accepted both.
+
+Effect: the lane folder ~/.jjodel-lanes/P-2026-11-07-1834/ was taken by the second merge. The first merge's gate summary (result.json, vitest logs) was overwritten, `lane-run status` reported the other merge's outcome (blocked), and the first merge had to be closed by hand without its gate record (e91177c3b).
+
+Expected: `lane-run merge` refuses, or moves to the next free minute, when docs/prompts/ or ~/.jjodel-lanes/ already holds the Prompt-ID, as `lane-run start` does for a taken folder.
+
+Workaround until fixed: before acting on a merge result, read the merge commit's subject, not only the lane folder.
+**Priority**: medium
+**Found in**: P-2026-11-07-1834

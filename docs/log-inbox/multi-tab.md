@@ -198,6 +198,20 @@ active log is not touched by this lane.
 **Notes**: Second run ALL PASS 24/24: models 19 and 28 objects, two exclusive viewpoints, V1-V4, in-tab switch and back, Office kept its viewpoint, re-import counts and 12 positions (record and DOM). First run: 2 script bugs, fixed in the 1439 copy of `build.mjs`: record collector matched DObject on a `model` field it lacks (12 nulls), export check searched the lz-compressed `state`. Colour is by subclass, not DeviceKind (stated in the md).
 **Prompt document name**: 2026-11-07 14:39
 
+## 2026-11-07 — release: 3.1.2, the layout-key fix on the 3.1.1 base (P-2026-11-07-1536)
+
+**Prompt**: `claude_2026-11-07_1536_prompt_layout_key_patch_check_312p.md`, lane full (measurement only): app check of the layout-key fix on `release/3.1.2-patch` (3.1.1 `e080ab534` plus four cherry-picks and the release commit `ea287b0f0`), before the PR.
+**Files touched**: this entry and the 1536 prompt file with its Status; no source change on the trunk. Release branch `release/3.1.2-patch`, PR #210 into `dotnet-backend-integration`, merged by Alfonso as `ec4f2543e`, tag `3.1.2` on `ec4f2543e` (a first tag on `e080ab534`, before the merge, was deleted and redone).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Branch: layout probe 3/3 at every step in three runs, container probe 0 failures, 0 page errors. Base 3.1.1: the same probe shows the regression (A→B 0/3), so it sees the bug. Gates by hand on `ea287b0f0`: `tsc --noEmit` exit 0, the six sync test files 105/105, `vite build` exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (measurement; the fix's LIR is the one above)
+**Smoke visivo**: passato (Alfonso 2026-11-07 17:38 «i crop vanno bene»: `crop_2_B.png`, `crop_3_A.png`, `crop_5_A_reload.png` in `~/.jjodel-lanes/P-2026-11-07-1536/crops-1536/`)
+**Notes**: `release/3.1.2-patch` lacks the 3.1.1 welcome-key seed in `states.ts`; the probes set it themselves, only the branch's smoke seeds are affected. The `staging` CHANGELOG entry `[3.1.2]` was reworded to describe this patch (`4f567dd45`). The merge started the branch's Docker and Azure test-jjodel workflows; the tag starts none. R-MT-23 still names `origin/staging` and a PR to `main`: the release followed Alfonso's 15:32 choice (PR #209 closed, fix-only 3.1.2 from 3.1.1).
+**Prompt document name**: 2026-11-07 15:36
+
 ## 2026-11-07 — feat: IR resolution follows the tab's viewpoint (multi-tab L5)
 **Prompt**: `claude_2026-11-07_1516_prompt_multi_tab_l5_ir_resolution.md`, lane full (critical zone): IR hooks, `IRForm`, the metaclass palette and the Symbol Editor opener take the tab's viewpoint id; cut at the AM-8 ceiling and closed by P-2026-11-07-1730 (remaining gates, app check, crops).
 **Files touched**: `a87146a64` the LIR; `7b3cf6d2a` `irTabViewpoint.test.ts`, `metaclassPalette.test.ts`, red; `f2ddead3d` Option A, seven source files: `irResolve.ts`, `useIRContainment.ts`, `IRForm.tsx`, `metaclassPalette.ts`, `SymbolEditorModal.tsx`, `EditorV2.tsx`, `ObjectNode.tsx`, and the React stubs of `irPresentation.test.ts` and `irSimActive.test.ts` (`useContext: () => null`, no assertion changed); 1730: LIR §7, this entry, two Status lines.

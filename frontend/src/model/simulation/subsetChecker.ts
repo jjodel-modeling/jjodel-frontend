@@ -101,6 +101,16 @@ const LOOSE = new Set(['IfThenElse', 'ForAll', 'Exists', 'WithDo', 'NullCoalesce
 interface Walk {
     readonly out: SubsetDiagnostic[];
     readonly source?: string;
+    readonly dcn?: boolean;
+}
+
+/**
+ * The mode of the checker. `dcn`: the DCN nucleus's guards and outputs
+ * (R-DCN-7), where `x.in(V::D)` is a classification test answered by the
+ * nucleus and exported as a DEFINE (spec §9); outside it the test is E-CALL.
+ */
+export interface SubsetOptions {
+    readonly dcn?: boolean;
 }
 
 function report(w: Walk, code: SubsetCode, message: string, at: JjelExpression): void {
@@ -393,7 +403,7 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             plain(e.object);
             return;
         case 'ClassificationTest':
-            report(w, 'E-CALL', `\`in(${e.viewpoint}::${e.dynamicClass})\` tests a dynamic class, and a classification has no translation here (R-DCN-7).`, e);
+            if (!w.dcn) report(w, 'E-CALL', `\`in(${e.viewpoint}::${e.dynamicClass})\` tests a dynamic class, and a classification has no translation here (R-DCN-7).`, e);
             plain(e.object);
             return;
         default: {
@@ -405,10 +415,11 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
 
 /**
  * The diagnostics of a parsed guard, in the order of a pre-order walk. `source`,
- * when given, lets the rewrite of E-EAGER quote the author's text.
+ * when given, lets the rewrite of E-EAGER quote the author's text; `options.dcn`
+ * accepts `x.in(V::D)` (`SubsetOptions`).
  */
-export function checkGuardSubset(expr: JjelExpression, source?: string): SubsetDiagnostic[] {
-    const w: Walk = { out: [], source };
+export function checkGuardSubset(expr: JjelExpression, source?: string, options?: SubsetOptions): SubsetDiagnostic[] {
+    const w: Walk = { out: [], source, dcn: options?.dcn === true };
     // A forall over several variables is `(forall x in A : …).flatten()` (R-FA-6): a collection as well.
     if (expr.type === 'ForAll' || (expr.type === 'MethodCall' && expr.method === 'flatten' && expr.args.length === 0 && expr.object.type === 'ForAll')) {
         report(w, 'E-FORALL', '`forall` returns a collection, never a verdict: write `coll.all(x => …)` or `exists x in coll | …`.', expr);

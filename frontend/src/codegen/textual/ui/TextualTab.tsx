@@ -34,9 +34,9 @@ import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGramma
 import { JjodelEvents } from '../../../events/registry';
 import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
-import { classFeatures } from '../metamodel';
+import { classFeatures, jjelOf } from '../metamodel';
 import { readNewModel } from '../modelLines';
-import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
+import { conformanceMarks, CONFORMANCE_SOURCE, ruleMarks } from '../conformanceMarks';
 import type { MarkedViolation } from '../conformanceMarks';
 import { commentsOf, isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
@@ -44,7 +44,9 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { reprintChanged } from '../textReprint';
-import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
+import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
+import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
@@ -58,6 +60,8 @@ import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotati
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
+import { checkIslands, jjelIslands } from '../jjelIslands';
+import type { JjelDiagnostic } from '../jjelIslands';
 import type { NewModelReading } from '../modelLines';
 import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
 import type { ConfirmRow } from './TextConfirmPanel';
@@ -164,7 +168,7 @@ export function textInputOf(globals: Readonly<Record<string, any>>, lookup?: Rea
             name: nameOf(c),
             isAbstract: !!c.isAbstract || !!c.isInterface,
             supers: list(c.superTypes).map(nameOf),
-            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a), ...boundsOf(a), ...withDoc(a) })),
+            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a), ...boundsOf(a), ...withDoc(a), ...jjelOf(lookup?.[a?.id]?.type) })),
             references: list(c.references).map(r => ({
                 name: nameOf(r),
                 type: String(r.type ?? ''),
@@ -1027,6 +1031,12 @@ const EDIT_MARKER_OWNER = 'textual-edit';
 /** D3b: the owner of the conformance markers, apart from the edit's, so a pause's parse never clears them (D8). */
 const CONFORMANCE_MARKER_OWNER = 'textual-conformance';
 
+/** D3c (D9): the owner of the validation-rule markers, apart from the edit's and the conformance's; the apply never reads them. */
+const VALIDATION_MARKER_OWNER = 'textual-validation';
+
+/** F1c (R-TXT-55 F3): the owner of the JjEL errors of the islands, warnings the apply never reads. */
+const JJEL_MARKER_OWNER = 'textual-jjel';
+
 /** The conformance hook, loaded on the tab's mount (model/conformance/useConformance imports `joiner`, which the bench cannot). */
 type ConformanceHook = typeof import('../../../model/conformance/useConformance')['useConformance'];
 
@@ -1215,13 +1225,16 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {} });
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void; canvas: (elementIds: readonly string[]) => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {}, canvas: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
     // E2a (R-TXT-54): a caret the user moved selects its object on the canvas after a short wait; the last id it selected.
     const caretPause = useMemo(() => pauseOf(CARET_SELECT_DELAY_MS, () => handlers.current.caret()), []);
     useEffect(() => () => caretPause.cancel(), [caretPause]);
     const canvasSelectedRef = useRef<string | null>(null);
+    // E2b (R-TXT-54 E1): the elements selected on the canvas, highlighted on their spans by a collection of their own.
+    const canvasIdsRef = useRef<readonly string[]>([]);
+    const canvasHighlightRef = useRef<ReturnType<MonacoEditor['createDecorationsCollection']> | null>(null);
 
     const setDecorations = (spans: readonly ObjectSpan[]): void => {
         const editor = editorRef.current;
@@ -1239,6 +1252,35 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
         setConformanceMarkers();
+        setRuleMarkers();
+        paintCanvasSelection(false);
+    };
+
+    /**
+     * E2b (R-TXT-54 E1, E8; discovery §5.3): the canvas's selection highlighted on the carried spans, set again each time
+     * the spans are (a reprint, an application, a splice). `reveal` scrolls to the span of the element just clicked, the
+     * last in selection order: a scroll only, so the caret and the focus stay the user's and no cursor event fires (§6.1).
+     */
+    const paintCanvasSelection = (reveal: boolean): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        const highlight = canvasHighlightRef.current;
+        if (!editor || !monaco || !m || !highlight) return;
+        const ranges = selectedSpans(carriedSpans(), canvasIdsRef.current).map(s => {
+            const from = m.getPositionAt(s.start);
+            const to = m.getPositionAt(s.end);
+            return new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column);
+        });
+        highlight.set(ranges.map(range => ({
+            range,
+            options: {
+                className: 'textual-tab__canvas-selected',
+                stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+                overviewRuler: { color: { id: 'editorOverviewRuler.selectionHighlightForeground' }, position: monaco.editor.OverviewRulerLane.Center },
+            },
+        })));
+        if (reveal && ranges.length) editor.revealRangeInCenterIfOutsideViewport(ranges[ranges.length - 1], monaco.editor.ScrollType.Smooth);
     };
 
     /**
@@ -1264,6 +1306,33 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             };
         }));
     };
+
+    /**
+     * D3c (D9): the problems the last validation run wrote in the registry for this model, as warnings on the carried
+     * spans, set again with the spans and on each change of the registry. The producer is not reactive: none before a run.
+     */
+    const setRuleMarkers = (): void => {
+        const monaco = monacoRef.current;
+        const m = editorRef.current?.getModel();
+        if (!monaco || !m) return;
+        const text = m.getValue();
+        const reading = sessionRef.current?.current();
+        const tree = reading && reading.text === text ? reading.parsed.tree : undefined;
+        const spans = carriedSpans();
+        monaco.editor.setModelMarkers(m, VALIDATION_MARKER_OWNER, ruleMarks(spans.flatMap(s => getNodeProblemsSnapshot(s.id)), modelId, spans, text, tree).map(r => {
+            const from = m.getPositionAt(r.start);
+            const to = m.getPositionAt(r.end);
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: r.source,
+                ...(r.rule ? { code: r.rule } : {}),
+                message: r.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+    };
+    useEffect(() => subscribeProblems(() => setRuleMarkers()), [modelId]);
 
     const onViolations = (vs: readonly MarkedViolation[]): void => {
         violationsRef.current = vs;
@@ -1326,8 +1395,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setRefDecorations(back.refs);
     };
 
-    /** The parse's errors, and the misplaced outer references (T7 (5)), as markers. */
-    const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = []): void => {
+    /** The parse's errors, and the misplaced outer references (T7 (5)), as markers; F1c: the islands' JjEL errors, as warnings. */
+    const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = [], jjel: readonly JjelDiagnostic[] = []): void => {
         const monaco = monacoRef.current;
         const m = editorRef.current?.getModel();
         if (!monaco || !m) return;
@@ -1339,6 +1408,17 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                 // Step A: a reference error after a syntax error may follow from it, and is a warning.
                 severity: 'secondary' in e && e.secondary ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error,
                 message: e.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+        monaco.editor.setModelMarkers(m, JJEL_MARKER_OWNER, jjel.map(d => {
+            const from = m.getPositionAt(Math.min(d.start, length));
+            const to = m.getPositionAt(Math.min(Math.max(d.end, d.start + 1), length));
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: 'jjel',
+                message: d.message,
                 startLineNumber: from.lineNumber, startColumn: from.column,
                 endLineNumber: to.lineNumber, endColumn: to.column,
             };
@@ -1489,7 +1569,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
         const carried = carriedSpans();
         const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse);
-        setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
+        setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : [], checkIslands(jjelIslands(parsed, r.base.mm, r.base.grammar.style)));
         const read: GuardRead = { grammar: r.base.grammar, text, parsed, carried };
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones. D1: an object
         // commented out keeps its span, so the next pause still finds it inside the comment.
@@ -1621,7 +1701,22 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             if (applyingRef.current || rewritingRef.current) { caretPause.poke(); return; }
             selectAt(m.getOffsetAt(p), false);
         },
+        // E2b (§5.1, §6.1): the canvas's selection, its echo of a caret move included, which marks the caret's own object.
+        canvas: elementIds => {
+            canvasIdsRef.current = elementIds;
+            canvasSelectedRef.current = lastSelectedOf(elementIds);
+            paintCanvasSelection(true);
+        },
     };
+
+    useEffect(() => {
+        const onSelection = (e: Event): void => {
+            const detail = (e as CustomEvent<CanvasSelectionDetail>).detail;
+            if (detail?.modelId === modelId && Array.isArray(detail.elementIds)) handlers.current.canvas(detail.elementIds);
+        };
+        window.addEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
+        return () => window.removeEventListener(JjodelEvents.CANVAS_SELECTION_CHANGED, onSelection);
+    }, [modelId]);
 
     const onConfirm = (): void => {
         const editor = editorRef.current;
@@ -1650,6 +1745,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const onMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        canvasHighlightRef.current = editor.createDecorationsCollection();
         const m = editor.getModel();
         if (ui && m) {
             const session = ui.openTextualSession(m, { base: () => readRef.current.base, keep: () => carriedRefs() });

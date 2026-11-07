@@ -1368,3 +1368,29 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Two red cases in `jjtlSourceValues.test.ts`, outside `jjtl/`: its helper read `targetModel` of a failed run, which R-FA-14 removes. The lane ran only the JjTL and JjEL suites and missed them. Fixed on the trunk by `40b586823` (16/16 green). `lane-run go` refuses a blocked merge, so this closure is by hand.
 **Prompt document name**: 2026-11-07 11:52
+
+## 2026-11-07 — fix(jjtl): a helper parameter shadows a helper of the same name (P-2026-11-06-2226)
+**Prompt**: P-2026-11-06-2226: a helper parameter named like another helper read as that helper, silently; failing test first, fix by lexical scoping or a parse-time error, SPEC §3.4 note.
+**Files touched**: `frontend/src/jjel/evaluator/context.ts`, `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/helper-param-shadow.test.ts` (db2c1be10); `frontend/src/jjtl/SPEC.md` (9410651fd); this entry and the prompt's `Status:` line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0; full suite 14911 passed, only the three known import-red files and one Chromium layout test that changes per run and passes alone; build not run
+**Out-of-scope changes**: yes — `jjel/evaluator/context.ts`, not named in DOVE: one optional field `shadowedBuiltins` and its propagation in `child()`
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI change, no app probe by the prompt)
+**Notes**: Chose shadowing over a parse error: the prompt's first option, and a clash the language can resolve is not worth forbidding. First try reordered JjEL globally (bindings before builtins): it broke guardEvaluator.test.ts:125, which pins builtins first on plain JjEL, so the shadowing is scoped to helper parameters. Red 6/6 before. Bench: four mutations, all killed (see the commit).
+**Prompt document name**: 2026-11-06 22:26
+
+## 2026-11-07 — merge: jjtl-helper-param-shadow into alfonso-frontend-jjtl (P-2026-11-07-1643)
+**Prompt**: `claude_2026-11-07_1643_prompt_merge_jjtl-helper-param-shadow.md`, a merge session from `lane-run merge`: `jjtl-helper-param-shadow` at `0dcc8fd80` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `24dd48824`, 3 commits on the branch side.
+**Files touched**: merge `ff4450aaa`: 7 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-06_2226_prompt_jjtl_helper_param_shadowing.md`, `frontend/src/jjel/evaluator/context.ts`, `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/helper-param-shadow.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ff4450aaa`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 14942 tests in 561 files (trunk 14934 + branch 8), 0 failed, 2 skipped, 3 red at import, 2 Chromium files red under load and green alone (18/18); hooks 967; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO: executor and JjEL evaluator change only, no UI path)
+**Notes**: Zero conflicts, no union; merge-tree `7c9e5921e` equal to the staged tree. Probes 4/4 once. Trunk-tip vitest first ran beside the hook suite and showed 6 load reds (timeouts, budgets), all green alone (311/311). check:docs counts 5 checks, not the 4 the prompt states. Build 10m 15s under load average ~45. Lane board unchanged, not restarted.
+**Prompt document name**: 2026-11-07 16:43

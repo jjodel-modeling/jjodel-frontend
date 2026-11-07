@@ -57,3 +57,193 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-20-2330
 **Detail**: frontend/scripts/probe/uml-class-object-fixture.ts
+
+## 2026-10-21 — fix: S2 closure, cascade clamp, acceptance probe and assets (P-2026-10-21-0635)
+**Prompt**: close S2 after P-2026-10-21-0100 hit the context ceiling: clamp the instance cascade to the viewport, rerun the probe on 3087 with a check on the last cascade item, refresh the screenshots, build and check:docs, stop for the GO, then this entry with two tickets.
+**Files touched**: `frontend/src/components/editor-v2/ContextMenu.tsx` (09f63ce6c); `frontend/scripts/probe/onto-s2-instantiate.ts`, `docs/discovery/assets/onto-s2/` onto-s2-cascade-light.png, onto-s2-new-instance-light.png, onto-s2-measures.json (4f1e07953); `docs/log-inbox/instance-of.md` (this entry)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-21 01:00 P-2026-10-21-0100, continuation of claude_2026-10-21_0040_prompt_onto_s2_instantiate.md
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (six files, all in the DOVE list: ContextMenu.tsx, the probe, three assets, this inbox)
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (cascade pass: Book, Library, Magazine, Member inside the viewport; new-instance node fail: header `name : Class` unreadable and two of four slot rows visible for book1 and member1, ticket below)
+**Notes**: Probe 13/13 PASS, exit 0, page errors []; new S2-1v: vh 900, last item 859..887, unclamped bottom 916. Typecheck 0; vitest editor-v2 3786/3786; build exit 0 (warning: joiner dynamically imported by instantiate.ts and statically elsewhere, no split). Carries 4b156d003 of P-2026-10-21-0100, never logged; its decision (click placement dropped for undo) is in the handoff. Second cause: (c), the node size of a new root. Viewed by C-2026-10-20-1835 (RC-23).
+**Prompt document name**: 2026-10-21 06:35
+
+## 2026-10-21 — ticket: a new instance's node is clipped, name and type unreadable
+**Ticket**: BLOCKS the merge of oi-s2. A node created for a new instance (pane cascade or class-node «New instance») keeps the Step 2bis default size 280x60, so the header `name : Class` is unreadable and only two of four slot rows show (book1: isbn, genre; member1: name, active). The object diagram must show the instance name and type: size the node from its rows. The sizing lives in `viewpoint/layout`, outside the S2 lane.
+**Priority**: high
+**Found in**: P-2026-10-21-0635
+**Detail**: docs/discovery/assets/onto-s2/onto-s2-new-instance-light.png
+
+## 2026-10-21 — ticket: place a new instance at the click without breaking undo
+**Ticket**: the creation menu does not place the new instance at the right click: calling `createVertexForObject` right after `createInstance` added 0 undo entries and Cmd+Z then reverted earlier unrelated edits (the binding write included), so P-2026-10-21-0100 dropped it and the vertex comes from `useJjomSync` Step 2bis, far below the diagram (book1 at 890,9650; member1 at 470,10250). Place it at the click through a layout write path that keeps one undo entry (under `viewpoint/layout`, or S2u).
+**Priority**: medium
+**Found in**: P-2026-10-21-0100
+**Detail**: docs/discovery/assets/onto-s2/onto-s2-measures.json
+
+## 2026-10-21 — fix: size a new instance's node from its rows, ticket (b) closed (P-2026-10-21-0725)
+**Prompt**: commit the uncommitted fix of P-2026-10-21-0655 (context ceiling), measure S2-3m against a baseline at 4f1e07953, try gap S2-5 in instantiate.ts only, build, stop for the GO, then this entry.
+**Files touched**: `frontend/src/components/editor-v2/hooks/instantiate.ts`, `hooks/__tests__/instantiate.test.ts` (c1a005725); `frontend/scripts/probe/onto-s2-instantiate.ts` (b3e6aacee); `docs/discovery/assets/onto-s2/` three assets (f39138504); `docs/log-inbox/instance-of.md` (this entry)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-21 06:55 P-2026-10-21-0655, whose session reached the context ceiling with the fix uncommitted
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — chat, unattended, 1/1 (new-instance screenshot: book1 : Book four rows, member1 : Member two)
+**Notes**: Closes ticket (b) for the object-diagram creation paths: nodes 280x138 and 280x102, probe 16/16. Undo S2-3: 1 entry, 1 press in 3/3 runs (was 2 presses, the first empty). S2-3m unchanged over six runs, fix and baseline: +2, +1, 2 presses. Typecheck 0, instantiate.test.ts 15/15, build 0. Probe and assets split in two commits (P13 guard). S2-5 not done: hard stop on the 60-minute limit, ticket (c) below. Detail: ~/.jjodel-lanes/P-2026-10-21-0725/handoff.md.
+**Prompt document name**: 2026-10-21 07:25
+
+## 2026-10-21 — ticket: a new instance made from the class diagram keeps 280x60 in the object diagram
+**Ticket**: ticket (c), does not block the merge of oi-s2. «New instance» on a class node in the class diagram leaves the instance's node at 280x60 in the object diagram: the view in force hides the instance, so instantiate.ts sizes nothing. WIP (not committed): size it in every exclusive viewpoint that draws it, in instantiate.ts only, plus probe check S2-5o. In its one run S2-3 regressed to 2 presses (cause not measured; suspect the second viewpoint's index build delaying the write past the merge window), and S2-5o read no node: it needs zoom-to-fit after the switch.
+**Priority**: medium
+**Found in**: P-2026-10-21-0725
+**Detail**: ~/.jjodel-lanes/P-2026-10-21-0725/s2-5-wip.diff
+
+## 2026-10-21 — fix: S2u one undo entry per instantiation, tickets (a) and (c) closed (P-2026-10-21-1219)
+**Prompt**: close S2u after P-2026-10-21-1121 stopped: revert 13966af7a, explain the second Cmd+Z press, three acceptance runs, undo-inline-edit on the branch and on 9bfc0cc78, build, stop for the GO, then this entry.
+**Files touched**: S2u lanes 1016/1041/1121, never logged: reducer.ts, undoGroup.test.ts (55f3bd556); instantiate.ts, instantiate.test.ts (f62d6edb0, 940bc6e55, efe348885); probe (09b06ba24); reducer.ts, undoGroup.test.ts (13966af7a, reverted in 765b9f94f). This lane: probe onto-s2-instantiate.ts (951feff3e, 3d5b3fd8a); docs/discovery/assets/onto-s2/ three assets (a38d2fc4e); this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 11:21 P-2026-10-21-1121, whose session stopped with S2-4u fixed and the second press unexplained
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (seven files in this lane, all in the DOVE list: reducer.ts and undoGroup.test.ts by the revert, the probe, three assets, this inbox)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat C-2026-10-20-1835, RC-23 (book1 : Book four rows, member1 : Member two rows)
+**Notes**: Closes (a) (S2-2p within 4 px) and (c) (S2-5o) in 3/3 runs, 21/21. Second press: the probe's pane click, whose deselect lands a DEdge.pointedBy entry ~300 ms later; with it +1 entry, 2 presses; without 0 entries, 1 press. Probe now focuses and waits for the store idle. 13966af7a reverted: it did not remove the press. undo-inline-edit 33/33 here and on 9bfc0cc78, identical. Build 0, typecheck 0, 182 tests. Detail: ~/.jjodel-lanes/P-2026-10-21-1219/.
+**Prompt document name**: 2026-10-21 12:19
+
+**Ticket** (note, no action): mutant M8 of the 55f3bd556 bench, a legacy push that keeps the group tail, survives: equivalent with one sender, because the tail entry is back on top only after an undo, which clears it.
+
+## 2026-10-21 — ticket: undo outside a group merges shallow and leaves idlookup orphans
+**Ticket**: the legacy undo merge (`U.tsx:903`) is shallow: a later delta's `idlookup` patch is dropped from the merged entry, so one Cmd+Z removes an object and leaves its children or vertex in `idlookup` (measured T2 of the S2u discovery). S2u gives exact contents to group entries only. A case: the `DEdge.pointedBy` sync write that a pane click's deselect triggers lands ~300 ms later as an entry of its own, so create, then pane click, then Cmd+Z costs an extra press with no visible effect.
+**Priority**: medium
+**Found in**: P-2026-10-21-0947
+**Detail**: docs/discovery/discovery_2026-10-21_onto_s2u_undo_group.md
+
+## 2026-10-21 — fix: S3a acceptance probe, regression, assets, closing (P-2026-10-21-1636)
+**Prompt**: items 4 to 8 of the P-2026-10-21-1600 handoff: the probe onto-s3a-slot-problems.ts (S3-0..S3-7) with M4, regression of undo-inline-edit and onto-s2-instantiate, three assets, this entry, delete the two throwaways.
+**Files touched**: S3a lanes 1600/1635, never logged: problems/registry.ts, NodeProblemOverlay.tsx, instantiationToProblems.ts (new), InstantiationProblemSync.tsx (new), problems/__tests__/instantiationToProblems.test.ts (new), EditorV2.tsx, hooks/instantiate.ts, hooks/__tests__/instantiate.test.ts (8b79e63ff). This lane: probe onto-s3a-slot-problems.ts (bb99637b4); docs/discovery/assets/onto-s3a/ three crops and onto-s3a-measures.json, this inbox (docs commit)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 16:00 P-2026-10-21-1600, stopped by the context-ceiling hook (AM-8) during step 3, before any gate
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (six files in this lane, all in the DOVE list: the probe, four assets, this inbox; NodeProblemOverlay.tsx mutated for M4 and reverted; the two gitignored throwaways deleted as asked)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — three crops read by the session (badge, overlay with Sync slots, five rows); the visual GO stays the chat's (P8)
+**Notes**: Probe run 8: 8/8, load 5.20/8.13. undo-inline-edit 33/33 (8.38/8.85), onto-s2-instantiate 21/21 (8.34/32.81), both unchanged. Bench, 32 tests: M1 1 red, M2 2, M3 2; M4 S3-3 red. valueKindFor stays private. S3-2 adds pages by createInstance (no Add attribute gesture). S3-6 duplicate entry ~350 ms after its definingFeature lands, ~1350 ms from the call. Gates of 1635: typecheck 0, 10/10 + 22/22, build 0. Detail: ~/.jjodel-lanes/P-2026-10-21-1636/closing.md
+**Prompt document name**: 2026-10-21 16:36
+
+## 2026-10-21 — ticket: an orphan slot's row shows its value with no feature name
+**Ticket**: after its Property is deleted, dune's isbn slot renders as the row ` = 978-0441013593`: no feature name and nothing marking it orphan; only the node's badge and the overlay say «Orphan slot». S3b is where orphan rows are drawn.
+**Priority**: low
+**Found in**: P-2026-10-21-1636
+**Detail**: docs/discovery/assets/onto-s3a/onto-s3a-badge-light.png
+
+## 2026-10-21 — ticket: an undo entry with nothing created after a problem-dot click
+**Ticket**: under M4 (the overlay's run branch dropped) the user's undo stack grew 4 → 5 between the click on dune's problem dot, then on «Sync slots», and the end of a 6 s wait, with no object created. Origin not measured; a click-born write such as the pointedBy sync of the shallow-merge ticket is the candidate. In the unmutated flow such a write would join the open «Sync slots» group.
+**Priority**: low
+**Found in**: P-2026-10-21-1636
+**Detail**: ~/.jjodel-lanes/P-2026-10-21-1636/closing.md
+
+## 2026-10-25 — fix: S3b ghost and orphan rows, probe, regression, assets (P-2026-10-25-2220)
+**Prompt**: S3b Phase 2 closure over P-2026-10-21-1955 (stopped at step 3, nothing committed), P-2026-10-25-2205 (code) and this lane: re-export the library after decision 2, the probe onto-s3b-ghost-rows.ts S3b-0..S3b-5 with M4, regression of S2, S3a and undo-inline-edit on the new export, four crops, this entry.
+**Files touched**: 2205 (f454b12b7): hooks/instantiate.ts, hooks/__tests__/instantiate.test.ts, viewpoint/ir/IRNodeContent.tsx, IRRow.tsx, irStyle.ts, scripts/probe/uml-class-object-fixture.ts. This lane: scripts/probe/onto-s3b-ghost-rows.ts (cd69c6243); docs/discovery/assets/onto-s3b/ four crops and onto-s3b-measures.json, this inbox, the Status line of the 2205 prompt (docs commit). Outside the repo: ~/jjodel-demo-exports/uml-s3b/uml-class-object.jjodel
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 19:56 P-2026-10-21-1956, never launched, replaced by this lane
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (twelve files over the two lanes, all in their DOVE lists; IRNodeContent.tsx mutated for M4 and reverted)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — four crops read by the session (ghost row, typing, pages = 300, orphan row); the visual GO stays the chat's (P8)
+**Notes**: Probe run 4: 6/6, load 2.51/1.78 (run 1 4/6: undo counted from before the double-click, see ticket). M4: S3b-4 red only. onto-s2 21/21, onto-s3a 8/8, undo-inline-edit 33/33, all on the new export. Bench of 2205, 30 tests: M1 6 red, M2 1, M3 1. Gates of 2205: typecheck 0, 30/30, ir and nodes 1455/1455, build 0. Decision 2: instance boxes 300x84..138 manual before, 200x80 unresized now. Detail: ~/.jjodel-lanes/P-2026-10-25-2220/closing.md
+**Prompt document name**: 2026-10-25 22:20
+
+**Ticket** (decision 2, measured): the old export carried five manual instance boxes (cityLib, dune, history, nature, alice: 300 wide, 84 to 138 high, isResized true); the new one carries none (all ten 200x80, isResized false), and the rendered box hugs its rows: dune 200x135.5 with four rows, 200x153.7 with the ghost row, which sits inside it and is hit-tested. S2 on the new export measures book1 200x136 and member1 200x99, where it measured 280x138; no S2 check asserted the old size. The orphan row now carries the marker and the tooltip but still no feature name (D7), so the ticket of 2026-10-21 on the nameless orphan row is half closed. The native `title` tooltip is not painted in a headless screenshot: the orphan crop shows the marker, the tooltip text is in onto-s3b-measures.json.
+
+## 2026-10-25 — ticket: opening a ghost row's editor adds an undo entry with nothing created
+**Ticket**: the double-click on dune's ghost value moves the user's undo stack 3 → 4 with no idlookup key created, before any text is typed; Enter then adds the materialization's one entry (4 → 5) and one Cmd+Z removes it (5 → 4), so the double-click's entry needs a second Cmd+Z with no visible effect. Same family as the shallow-merge ticket (a click-born selection write landing as an entry of its own); onto-s3b-ghost-rows.ts counts S3b-2's +1 from the open editor and records both lengths.
+**Priority**: low
+**Found in**: P-2026-10-25-2220
+**Detail**: docs/discovery/assets/onto-s3b/onto-s3b-measures.json
+
+## 2026-10-25 — ticket: a ghost row's feature name is cut while its value is typed
+**Ticket**: with the editor open, the ghost row of dune's pages reads `pa… = [300]`: the input takes the row's width and the feature name is ellipsized, so the user types without seeing which feature. Measured at 200 px of node width.
+**Priority**: low
+**Found in**: P-2026-10-25-2220
+**Detail**: docs/discovery/assets/onto-s3b/onto-s3b-typing-light.png
+
+## 2026-11-06 — fix: undo groups reconciled with option (c), L1..L2 closed (P-2026-11-06-2257)
+**Prompt**: close the undo-groups chain of option (c) (discovery P-2026-11-06-2105, L1 merge P-2026-11-06-2150, L1b deadline and queue P-2026-11-06-2225): five cross-front probes on oi-s2u, each failure rerun on the trunk, this entry, Status flips of 2150 and 2225
+**Files touched**: docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md (5b1e2fe41, branch oi-undo-discovery); L1: reducer.ts, undoGroup.test.ts, EditorV2.tsx, instantiate.ts (merge 197ae1fd1); L1b: instantiate.ts, instantiate.test.ts (809d85ce1, 9baae8d88); chat: scripts/smoke/states.ts (19abb1356, trunk 54f38d163); L2: this inbox, the Status lines of the prompts 2150 and 2225
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (states.ts, 19abb1356: the chat's welcome-key fix between L1b's two probe runs, in no lane's DOVE list; ten files across the chain, every other one in its lane's list)
+**Layer Impact Report**: produced (discovery §6, 5b1e2fe41, before L1's diff; L1 cited it)
+**Smoke visivo**: non applicabile
+**Notes**: Gates: typecheck 0, build 0, vitest 58/58 + 40/40 (L1), 60/60 (L1b). Bench: T1 survives, equivalent with one user, accepted; T2, T3, Q1, D1 killed. onto-s2 21/21, S2-3b1 lateSync 0. Probes at 87cf9a392: undo-inline-edit 33/33, s4c 11/11, rf2 15/15, udo exit 0 (no entry from a pane click); new-model-instantiate exit 1, identical on the trunk: not a regression. Load 4.4-113. Detail: ~/.jjodel-lanes/P-2026-11-06-2257/closing.md
+**Prompt document name**: 2026-11-06 22:57
+
+**Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup clicks the Models «+ New» and never presses «Create model», so `model: null`, every path misses and the `vp-*` setup crashes on a disabled viewpoint trigger. Same result on the trunk at ad6da074b.
+
+**Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, which `scripts/smoke/states.ts` seeds since 19abb1356 (trunk 54f38d163): on a fresh browser the 3.1.1 WelcomeModal can swallow its first click. Same on the trunk; verified by grep, probe not run.
+
+## 2026-11-07 — fix: undo groups L3..L5 on oi-s3a and oi-s3b, chain closed (P-2026-11-07-0155)
+**Prompt**: close the undo-groups chain of option (c) on oi-s3b: L3 merge oi-s2u into oi-s3a (P-2026-11-06-2340), the S3-4 extra-entry diagnosis (P-2026-11-07-0005), the overlay click fix (P-2026-11-07-0040), L4 merge oi-s3a into oi-s3b (P-2026-11-07-0110), L5 probe setup for the visible-only canvas, the R-OI-14/15 wording, this entry, the Status flips of 2340, 0005, 0040, 0110
+**Files touched**: L3: instantiate.ts, instantiate.test.ts, this inbox (merge 6b52b905d); 0005: onto-s3a-slot-problems.ts, onto-s2-instantiate.ts (ccb3abd2b); 0040: NodeProblemOverlay.tsx, NodeProblemOverlay.test.ts (72ad1753d), docs/discovery/discovery_2026-11-07_onto_s3_4_extra_undo_entry.md (f7d46e0c9); L4: instantiate.ts, instantiate.test.ts, this inbox (merge f04faba02); L5: onto-s3b-ghost-rows.ts, onto-s3a-slot-problems.ts (23e741a97); docs/decisions.md (R-OI-14, R-OI-15), this inbox, the four Status lines (this docs commit)
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-06 23:40 (its S3-4 FAIL, remedied by 0005 and 0040; L5's step remedies the setup abort measured by 0005 and L4)
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no (twelve files across the chain, each in its lane's DOVE list; the merges bring the other side's files unchanged, as their DOVE allows)
+**Layer Impact Report**: not-required (no §3.2 file in L3..L5; option (c)'s report is the reconcile discovery §6, 5b1e2fe41)
+**Smoke visivo**: non applicabile
+**Notes**: Gates: L3 typecheck 0, vitest 64/64, build 0; 0040 test 6/6 (4 red before), typecheck 0, build 0; L4 typecheck 0, vitest 79/79, build 0. Benches: 0040 each overlay stop killed by its test; 0110 the queue bypass killed by G1 only. L5 probes (1-min load): S3b uml-s3b 6/6 (15.9→12.1), S3a uml-s3b 8/8 (12.5→22.4), S3a default 8/8 (17.5→16.9); S3-4 undo [4,5,4]. Second cause (c): the probes took every node as mounted. Detail: ~/.jjodel-lanes/P-2026-11-07-0155/closing.md
+**Prompt document name**: 2026-11-07 01:55
+
+**Ticket** (proposed, low): Enter or Space on a focused button of the problem overlay still bubbles its keydown to the node wrapper's `onKeyDown`, which calls `handleNodeClick` on the selection keys (React Flow `index.mjs:2177-2183`). Whether that writes `isSelected` to the D-layer, and so an undo entry, is not measured (`docs/discovery/discovery_2026-11-07_onto_s3_4_extra_undo_entry.md` §6).
+
+**Ticket** (proposed, trunk-side, low): the trunk's `NodeProblemOverlay.tsx` (59947fc70, :174, :181) stops only mousedown at its root, so a click on one of its actions bubbles to `onNodeClick` and writes the node's selection; with no «Sync slots» there, that is one empty undo step. Read, not measured. A cherry-pick of `72ad1753d` without the «Sync slots» test case would close it (same discovery §3.4, §8 question 2).
+
+**Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup never presses «Create model», so `model: null` and the `vp-*` setup crashes on a disabled viewpoint trigger.
+
+**Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, so on a fresh browser the 3.1.1 WelcomeModal can swallow its first click.
+
+## 2026-11-07 — fix: the right button opens the pane menu, no pan (P-2026-11-07-1235)
+**Prompt**: on a trackpad a moving two-finger click on the empty canvas panned and opened no pane menu (R-OI-10); set `panOnDrag={[0, 1]}` in `EditorV2.tsx`, add probe check S2-1m with a red/green bench, regression S3a and undo-inline-edit, a throwaway drag measurement, decision row R-OI-17
+**Files touched**: frontend/src/components/editor-v2/EditorV2.tsx (af1230b5d); frontend/scripts/probe/onto-s2-instantiate.ts (5cba3621c); docs/decisions.md (R-OI-17), docs/log-inbox/instance-of.md (this docs commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (one ReactFlow prop; no §3.2 file, no D-layer write path)
+**Smoke visivo**: non eseguito (Playwright gestures only, no real trackpad)
+**Notes**: Typecheck 0, build 0. S2: [0,1] 22/22; [0,1,2] 21/22, S2-1m red alone (viewport x +3, no menu). S3a default 8/8; undo-inline-edit 33/33. Throwaway: left and middle drag pan, right drag pans only with [0,1,2]; wheel no change and ctrl+wheel zoom to k 2 on both. The first fixed-build throwaway started at load 23.6, above the gate; rerun gated (11.4), same result. No probe or test right-drags. Detail: ~/.jjodel-lanes/P-2026-11-07-1235/closing.md
+**Prompt document name**: 2026-11-07 12:35
+
+## 2026-11-07 — fix: instance-of on the multi-tab trunk, per-tab producer and placement (P-2026-11-07-1620)
+**Prompt**: P-2026-11-07-1517 (`oi-s3b` takes the trunk at 3.2.0, merge `cbc392c69`) and P-2026-11-07-1620: `InstantiationProblemSync` clears through `acquireProducerMount`; `runInstantiate` places under the tab's layout; on the RC-21 answer (A) `instantiate()` takes the tab's viewpoint for `layoutTargets`, absent the root's
+**Files touched**: merge `cbc392c69` (1517); `aad8e74bb`: `EditorV2.tsx` (`runInstantiate` only), `hooks/instantiate.ts`, `hooks/__tests__/instantiate.test.ts`, `problems/InstantiationProblemSync.tsx`, `problems/__tests__/instantiationProducerMounts.test.ts` (new); this commit: this entry, the Status lines of 1517 and 1620
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (hooks/instantiate.ts and its test, added to DOVE by the RC-21 answer (A))
+**Layer Impact Report**: produced
+**Smoke visivo**: non eseguito (onto-s2, onto-s3a default, onto-s3b uml-s3b owed: 1-min load 22.9 to 78.5 from 16:59 to 17:19, gate 20, lane window closed)
+**Notes**: 1517: cbc392c69 gates green (typecheck, vitest 14,912 passed, hooks 967, build, check:docs); check:addonly red, inherited from trunk 3f7f6f7f4, which rewrote the hw-notation.md entry of 2026-11-05 without a Log-Repair: trailer; declared, ticket below. 1620: typecheck 0, build 0, problems+instantiate+undoGroup 187/187; bench 4 mutants red, the root key in runInstantiate out of unit reach. Two tabs on one model wait for L6: unit tests only. Detail: ~/.jjodel-lanes/P-2026-11-07-1620/bench.txt
+**Prompt document name**: 2026-11-07 16:20
+
+**Ticket** (proposed, for the owner of `docs/log-inbox/hw-notation.md`, medium): trunk commit `3f7f6f7f4` rewrites that inbox's entry of 2026-11-05 with no `Log-Repair:` trailer, so `check:addonly` fails on every merge that takes the trunk past it as second parent (`cbc392c69` here). Fix on the trunk: a `Log-Repair:` trailer on a follow-up commit, or a `KNOWN_REPAIRS` entry in `check-addonly.ts`.
+
+**Ticket** (proposed, for the multi-tab front, medium): no probe under `frontend/scripts/probe/` covers the problem producers across tabs (grep for multi-tab, two tabs, `acquireProducerMount`, `ACTIVE_TAB`: exit 1; control: the three onto probes found). The two-tab probes live in `~/.jjodel-lanes/` (`P-2026-11-07-1352/two-tab.mjs`) on two models. Owed with L6: two tabs on one model, close one, the other keeps its badges (four producers); instantiate from a tab whose viewpoint is not the root's.
+
+**Ticket** (proposed, low): a canvas beside a Script tab (`DockManager.openBeside`) never receives `ACTIVE_TAB` (`Dock.handleLayoutChange` reads `dockbox.children[0]` only), so its viewpoint can differ from the root's on today's trunk; inferred from code, not measured. The probe for the root-key mutant of `runInstantiate` can stage it there. The three onto probes are owed on `aad8e74bb`.
+
+
+**Probe results** (chat, 2026-11-07 18:04, on `4b665664a`, owed by P-2026-11-07-1620 which stopped at the context ceiling): onto-s2-instantiate 22/22 (S2-1m included), onto-s3a-slot-problems 8/8 (default export), onto-s3b-ghost-rows 6/6 (uml-s3b); 1-minute load 20.2 to 15.0; logs in `~/.jjodel-lanes/P-2026-11-07-1620/`.

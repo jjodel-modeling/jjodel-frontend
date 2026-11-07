@@ -9,7 +9,7 @@
  * highlight classes stay in ObjectNode.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { useSelector } from 'react-redux';
 import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
@@ -109,6 +109,7 @@ const SEL_BAND_STROKE_WIDTH = 6;
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
+import { instanceFlight, instanceRows, materializeSlot, subscribeInstanceFlights, type InstanceRows } from '../../hooks/instantiate';
 import { resolveTextStyle } from './irCompile';
 
 /**
@@ -360,6 +361,40 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
         () => compiled.fieldCompartments.find(fc => fc.source === 'children'),
         [compiled],
     );
+
+    // S3b (R-OI-3): the binding's ghost rows (a feature with no slot) after the children rows, and the orphan mark of a
+    // slot whose feature is gone or out of the closure. A run in flight on the instance (`instanceFlight`) is read too:
+    // its end is no store change, so the node subscribes to it. Empty with no children compartment or no binding.
+    const readFlight = () => instanceFlight(objectId);
+    const flight = useSyncExternalStore(subscribeInstanceFlights, readFlight, readFlight);
+    const instanceRowsSig = useSelector((state: any) => {
+        if (!compiled.fieldCompartments.some(fc => fc.source === 'children')) return '';
+        const lookup = state.idlookup;
+        const found = instanceRows(id => lookup?.[id], objectId, flight);
+        if (!found || (found.ghosts.length === 0 && found.hidden.length === 0 && Object.keys(found.orphans).length === 0)) return '';
+        return JSON.stringify(found);
+    });
+    const bindingRows = useMemo(() => (instanceRowsSig ? JSON.parse(instanceRowsSig) as InstanceRows : null), [instanceRowsSig]);
+    const shownChildIds = useMemo(
+        () => (bindingRows && bindingRows.hidden.length > 0 ? rowChildIds.filter(id => !bindingRows.hidden.includes(id)) : rowChildIds),
+        [rowChildIds, bindingRows],
+    );
+    // The ghost row's editor (D4): the slot-mode gesture. A ref, not the state, says which ghost is open: Enter commits
+    // and the blur of the input that goes away after it must not materialize a second slot.
+    const [editingGhost, setEditingGhost] = useState<string | null>(null);
+    const editingGhostRef = useRef<string | null>(null);
+    const openGhost = useCallback((feature: string | null) => {
+        editingGhostRef.current = feature;
+        setEditingGhost(feature);
+        if (feature !== null) setEditValue('');
+    }, []);
+    const commitGhostEdit = useCallback(() => {
+        const feature = editingGhostRef.current;
+        openGhost(null);
+        if (feature === null || editValue.trim() === '') return;
+        U.isProjectModified = true;
+        void materializeSlot(objectId, feature, editValue);
+    }, [editValue, objectId, openGhost]);
 
     // Both commits also fire on blur, so entering edit and leaving without typing
     // reaches them with an unchanged value. The dirty flag is therefore gated on a
@@ -757,7 +792,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     // rendered by its own resolved row view (IRRow). The slot-mode path
                     // below (attributes/references) is untouched — the two row semantics
                     // stay separate.
-                    if (fc !== firstChildrenCompartment || rowChildIds.length === 0) return null;
+                    const ghosts = bindingRows?.ghosts ?? [];
+                    if (fc !== firstChildrenCompartment || (shownChildIds.length === 0 && ghosts.length === 0)) return null;
                     return (
                         <div
                             key={fc.id}
@@ -768,8 +804,40 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             // row view can still override it inline on its own .ir-row.
                             style={{ ...overText(resolveTextStyle(fc.rowStyle, readCtx, objectId)), ...(fc.separator ? separatorColorStyle : undefined) }}
                         >
-                            {rowChildIds.map(childId => (
-                                <IRRow key={childId} childObjectId={childId} />
+                            {shownChildIds.map(childId => (
+                                <IRRow key={childId} childObjectId={childId} orphan={bindingRows?.orphans[childId]} />
+                            ))}
+                            {/* S3b ghost rows (D2): a fixed format, `<name> = ` and the value cell; no row view can run
+                                on an object that does not exist. */}
+                            {ghosts.map(g => (
+                                <div
+                                    key={`ghost:${g.feature}`}
+                                    className={`ir-row ir-row--ghost${g.text !== null ? ' ir-row--materializing' : ''}`}
+                                    data-feature={g.feature}
+                                >
+                                    <span>{g.name}</span>
+                                    <span>{' = '}</span>
+                                    {editingGhost === g.feature && g.text === null ? (
+                                        <input
+                                            className="ir-row__input"
+                                            autoFocus
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onBlur={commitGhostEdit}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') commitGhostEdit();
+                                                else if (e.key === 'Escape') openGhost(null);
+                                            }}
+                                        />
+                                    ) : (
+                                        <span
+                                            className={g.text === null ? 'ir-row__value--editable' : undefined}
+                                            onDoubleClick={g.text === null ? () => openGhost(g.feature) : undefined}
+                                        >
+                                            {g.text ?? ''}
+                                        </span>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     );

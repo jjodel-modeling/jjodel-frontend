@@ -110,6 +110,8 @@ Static checks, reported in the problems registry.
 - **W4** Operation bodies and monitors assign only features visible in their class.
 - **W5** Exclusivity (non-overlapping viewpoint) and completeness (complete viewpoint) of the invariants. Decided
   by enumeration or by the model checker when all read attributes are finite; otherwise checked at run time.
+- **W6** Write ownership (R-DCN-23): two viewpoints never write the same property, and a static operation writes only
+  properties no viewpoint writes. Deduced from the write targets of operation, redefinition and monitor bodies.
 
 W5 is not theoretical. The drone model of the chapter violates both properties: `Empty` overlaps `Charging` by
 design, so `Mode` must be overlapping; distance 50, speed 0, battery 40 falls in no class of `Mode`. `Alert` has
@@ -131,7 +133,7 @@ Steps:
 
 Composition of contributions from different viewpoints (redefinitions of the same F, monitors of one tick):
 
-- **Interleave** (default, R-DCN-4): each contribution is a transition labelled with its viewpoint; the order
+- **Interleave** (default, R-DCN-4 as amended by R-DCN-22): each contribution of a viewpoint to a tick is a transition labelled with its viewpoint, and an invocation is always one transition with its active redefinitions; the order
   goes through the existing "Choices: Ask | Random" policy. This is the cross-viewpoint transition system of the
   SoSyM paper (Definition 3).
 - **Sync**: all contributions in one parallel assignment read on the previous state; two contributions writing

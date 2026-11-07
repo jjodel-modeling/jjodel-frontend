@@ -20,7 +20,7 @@ import { jjscriptThemeRules } from '../../../jjscript/editor/jjscriptLanguage';
 import { jjtlTheme } from '../../../jjtl/editor/jjtlTheme';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { formatText, formatTextRange, minimalEdit } from '../format';
-import { analyzeText, completionsAt, renameEdits, renameLocation, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
+import { analyzeText, completionsAt, ISLAND_TRIGGER, renameEdits, renameLocation, SEMANTIC_MODIFIERS, SEMANTIC_ROLES, triggeredCompletions } from '../languageService';
 import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
@@ -43,8 +43,11 @@ const styleTriggers = (s: NotationStyle): string[] => [...new Set(
     [...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close]
         .filter(t => t && !/\w/.test(t.slice(-1))).map(t => t.slice(-1)),
 )];
-/** Monaco takes its trigger characters once, so the catalog's together; a request reads its own style's (`styleTriggers`). */
-const CATALOG_TRIGGERS = [...new Set(Object.values(STYLE_CATALOG).flatMap(styleTriggers))];
+/**
+ * Monaco takes its trigger characters once, so the catalog's together, and `.` for a JjEL island (F1d); a request reads its
+ * own style's (`styleTriggers`, `triggeredCompletions`).
+ */
+const CATALOG_TRIGGERS = [...new Set([...Object.values(STYLE_CATALOG).flatMap(styleTriggers), ISLAND_TRIGGER])];
 
 /** The colours of the design tokens: slate base, cyan accents (styles/tokens). */
 const SLATE_900 = '0f172a';
@@ -294,19 +297,24 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
         literal: monaco.languages.CompletionItemKind.EnumMember,
         reference: monaco.languages.CompletionItemKind.Reference,
     };
+    // F1d: a JjEL island's candidates by what the template completion offers them as, its own provider's kinds.
+    const K = monaco.languages.CompletionItemKind;
+    const jjelKindOf: Record<NonNullable<TextCompletion['jjel']>, Monaco.languages.CompletionItemKind> = {
+        class: K.Class, template: K.Function, variable: K.Variable, feature: K.Field, member: K.Property, function: K.Method,
+    };
     monaco.languages.registerCompletionItemProvider(TEXTUAL_LANGUAGE_ID, {
         triggerCharacters: CATALOG_TRIGGERS,
         provideCompletionItems: (model, position, context) => {
             const r = readingOf(model);
             if (!r?.mm) return { suggestions: [] };
-            if (context.triggerKind === monaco.languages.CompletionTriggerKind.TriggerCharacter
-                && !styleTriggers(r.grammar.style).includes(context.triggerCharacter ?? '')) return { suggestions: [] };
-            const all = completionsAt(r.text, model.getOffsetAt(position), r.grammar, r.mm);
+            const typed = context.triggerKind === monaco.languages.CompletionTriggerKind.TriggerCharacter;
+            const found = completionsAt(r.text, model.getOffsetAt(position), r.grammar, r.mm);
+            const all = typed ? triggeredCompletions(found, context.triggerCharacter ?? '', styleTriggers(r.grammar.style)) : found;
             const width = String(all.length).length;
             return {
                 suggestions: all.map((c, i) => ({
                     label: c.label,
-                    kind: kindOf[c.kind],
+                    kind: c.jjel ? jjelKindOf[c.jjel] : kindOf[c.kind],
                     insertText: c.label,
                     range: rangeOf(model, c),
                     sortText: String(i).padStart(width, '0'),

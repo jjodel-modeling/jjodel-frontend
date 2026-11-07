@@ -6628,24 +6628,42 @@ P-2026-10-20-1835.
   record is `object` are judged; links wait for S4. Detection costs 3.9 ms at 200 instances (vitest, under load).
   Discovery P-2026-10-21-1405 (`docs/discovery/discovery_2026-10-21_onto_s3a_slot_problems.md`), question 3.
 - **R-OI-14** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
-  **«Sync slots» works on one instance, inside one S2u undo group**, appends the missing slots with their default
+  **«Sync slots» works on one instance, inside one undo group**, appends the missing slots with their default
   values, grows the node box and never shrinks it; a model-wide variant is not built now (200 instances do not fit the
-  10 s group cap). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation (R-OI-9).
-  Discovery P-2026-10-21-1405, questions 2 and 4.
+  one deadline of a call). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation
+  (R-OI-9). Discovery P-2026-10-21-1405, questions 2 and 4. Amended 2026-11-07 (P-2026-11-07-0155), wording only: the
+  group is the trunk's nested `beginUndoGroup()` / `endUndoGroup()` (R-PLG-5, R-JTG-14), with the exact merge of late
+  writes after the outermost end (option (c), `docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md` on
+  `oi-undo-discovery`), no longer the S2u group with its id and its 10 s cap; `instantiate.ts` gives each
+  instantiation, sync or materialization one 8 s deadline (`INSTANTIATE_DEADLINE_MS`) and runs instantiation, «Sync
+  slots» and ghost-row materialization through one queue.
 - **R-OI-15** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
   **Ghost and orphan rows (S3b).** A closure feature with no slot is a ghost row `<name> = ` in the instance's node,
-  drawn from the binding with no store write; typing a value materializes one Slot and one value in one S2u group
+  drawn from the binding with no store write; typing a value materializes one Slot and one value in one undo group
   (empty text writes nothing). Text that does not parse for the feature's type is written as a String value, so the
   write is not refused (R-VAL-4) and S3a reports the value type. An orphan row keeps its value and carries a generic
   marker (the lost feature's name cannot be recovered). The missing-slot problem stays beside the ghost row. Editing
   real slot rows on the canvas is a later slice. Discovery P-2026-10-21-1910
-  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4.
+  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4. Amended 2026-11-07
+  (P-2026-11-07-0155), wording only: the group is the trunk's nested `beginUndoGroup()` / `endUndoGroup()` (R-PLG-5,
+  R-JTG-14), with the exact merge of late writes after the outermost end (option (c),
+  `docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md` on `oi-undo-discovery`), no longer the S2u
+  group; the materialization has one deadline and waits in `instantiate.ts`'s one queue behind any instantiation or
+  «Sync slots», so it never shares an undo entry with one.
 - **R-OI-16** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
   **An instance node's box hugs its rows; «a manual resize wins» is not changed.** The UML client's instance view
   authors no `defaultSize`, so S2 writes no manual box and ghost rows are never clipped; for a view that does author
   a fixed size, S2, «Sync slots» and materialization grow the box grow-only inside their own group. Replaces option
   (d) of the S3b report (a sizing lane changing «a manual resize wins» in `nodeSizing.ts` and `jjomTransformers.ts`),
   which would change the sizing of every resized node outside this front. Question 2.
+- **R-OI-17** (2026-11-07, decided by the chat `C-2026-10-25-2159` on Alfonso's delegation «decidi tu», 2026-11-07
+  12:32, evidence: measured, verified: probe, reversible: branch).
+  **The right button of the editor-v2 canvas opens menus and does not pan: `panOnDrag={[0, 1]}`.** With the right
+  button in `panOnDrag`, `@xyflow/system` 0.0.76 calls `onPaneContextMenu` only when no pan event ran between press
+  and release, so a two-finger click that moves on a trackpad panned and opened no pane menu (R-OI-10). Pan stays on
+  the left and middle buttons; wheel and pinch are not read through `panOnDrag`'s buttons. Measured (P-2026-11-07-1235):
+  probe S2-1m, a right click moving 3 px, red with `[0, 1, 2]` and green with `[0, 1]`. Rejected: a movement threshold
+  around xyflow's handler (more code, fragile against xyflow updates).
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
@@ -7712,6 +7730,28 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
 - **R-DCN-21** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
   **Lane order follows the plan of the discovery §6, not the slice numbers**: the languages concern (L3.1) and the
   parse of `self.in` (L3.2) come before W1..W4 (L2.4). Spec §10 keeps its numbering. Q13.
+- **R-DCN-22** (2026-11-07, ratified by Alfonso 2026-11-07 16:46 «procedi in lane auto» on the chat's proposal, evidence: measured, verified: none, reversible: trunk).
+  **An invocation is one step, under every policy: the static operation and every redefinition of an active dynamic
+  class run together, as one parallel assignment read on the previous σ.** Amends R-DCN-4: Interleave orders the
+  contributions of different viewpoints to a tick (monitors) and distinct invocations; it never splits an operation
+  from its own redefinitions. Measured by P-2026-11-07-1455: splitting `land()` of the drone from its redefinition in
+  Flying left `speed 0, distance 5`, in no class of Mode, and halted the run `unclassified` on a correct model.
+- **R-DCN-23** (2026-11-07, ratified by Alfonso 2026-11-07 16:46, proposed by him at 16:14, evidence: read, verified: none, reversible: trunk).
+  **Write ownership (W6): two viewpoints never write the same property, and a static operation writes only properties
+  no viewpoint writes.** Every viewpoint reads every property; only writes are owned. It is the attribute-level form
+  of the frame condition of the SoSyM paper, Definition 3 (a transition of Vi changes only the i-th component). It is
+  a well-formedness error deduced from the write targets of the bodies (operations, redefinitions, monitors), with no
+  ownership declared in the metamodel, checked with W1..W4 in lane L2.4. Under W6 a step can never produce a double
+  assignment across viewpoints, so Sync is always defined and Interleave differs from Sync only through read-write
+  dependencies between viewpoints.
+- **R-DCN-24** (2026-11-08, decided by the chat C-2026-11-06-2159 on Alfonso's «decidi tu» of 2026-11-08 00:04, evidence: read, verified: none, reversible: trunk).
+  **In a DCN model a navigable association end is owned by its class.** An end owned by the association
+  (`Association.ownedEnds`) is not navigable from `self`, as in the UML 2.5 convention where navigability goes with
+  class ownership; DCN expressions reach linked instances only through class-owned ends (`Class.ownedAttributes` with
+  `Property.association` set). W1 reports a read of an association-owned end with a message saying so and how to fix
+  it; the handles of L4.3 stay as they are. The drone fixture moves `ownedSensors` and `WAU` to their classes. Reverse
+  navigation through association-owned ends is not added: it would need backward references the binding cannot
+  express (`featureSources` follows forward references only). Found by P-2026-11-07-1825 (F3).
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 
@@ -7797,6 +7837,14 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
   one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
   The tag and any deploy stay with Alfonso.
+- **R-MT-24** (2026-11-07, ratified by Alfonso 2026-11-07 15:22 «mettilo nelle decisioni», evidence: read, verified: none, reversible: trunk).
+  **The model context menu of R-MT-9 also offers «Open beside ▸ <viewpoint>»**, which opens the second tab on that model,
+  with the chosen viewpoint, in a panel to the right of the current editor. It reuses `DockManager.openBeside`
+  (`abstract/DockManager.tsx:204`, today called only by `ScriptTab.tsx:239`) and its preconditions (horizontal dockbox,
+  nothing maximized, no consumer-mode metamodel). Lands with L6, beside «Open in new tab ▸ <viewpoint>». Open for the L6
+  prompt: `openBeside` addresses the tab by `modelId`, so it must accept the id of a second tab on the same model; what
+  happens when it returns false (fall back to a new tab or disable the item) is the lane's recommendation. Known limit,
+  unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
 
 ## Superate
 

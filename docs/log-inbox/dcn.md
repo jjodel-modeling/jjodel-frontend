@@ -152,3 +152,128 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no UI path; the L4.2 dialog ticket is checked by simRolesDraft.test.ts; chat GO)
 **Notes**: Merge tree `b1469f16d` equal to the merge-tree measure; probes 5/5 once; no union resolution. Branch vitest count not run in `/Users/alfonso/jjodel-w-dcn-l42` (no node_modules there; writing forbidden): the 35 new tests counted at `178c1c837` (+1, +17, +17), matched on the merge. First hooks run killed (exit 144) beside the full suite, 967/967 alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 13:08
+
+## 2026-11-07 — feat: σ-backed handles for DCN instances, the classification accessor bound
+**Prompt**: DCN L4.3 (P-2026-11-07-1410): a pure module building per σ a handle per instance (own, inherited, dormant slots from σ; links to the linked handles; name and classifier), `isIn` over the invariants memoized per (instance, class), unknown names and W2 cycles throwing; an optional DCN binding on `buildGuardContext` and `evaluateOutput`; tests first, mutation bench, one code commit.
+**Files touched**: dfcd795c3 — `frontend/src/model/simulation/dcn/dcnHandles.ts` (new), `dcn/__tests__/dcnHandles.test.ts` (new), `guardContext.ts`, `boardOutputs.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 23/24 killed; M11 (memo removed) survives, unobservable through any output. Gates: typecheck 0, sim+JjEL+sim-UI 68 files/2236 green, full run 5 red files: the known three plus two Chromium afterAll timeouts under load, 18/18 green alone; build 0. Links read from the model (spec §6, fixed), upper bound via `options.upper`. `generalizationClosure` duplicated (not exported by dcnCompile.ts).
+**Prompt document name**: 2026-11-07 14:10
+
+**Ticket** (for L4.4, not blocking): the Petri guard checker rejects `.in(V::D)` with E-CALL (`subsetChecker.ts`), so `compileGuard` and `compileOutput` refuse every DCN guard or watch that tests a class; the DCN guard compiler must parse without that check (the test's `dcnGuard`) or the checker must gain a DCN mode.
+
+## 2026-11-07 — feat: the DCN step, a SimNucleus over the placeless net
+**Prompt**: DCN L4.4 (P-2026-11-07-1432, stopped at the context ceiling; continued by P-2026-11-07-1455 from its handoff): `dcnNucleus` on the shared step with class-test guards, redefinition expansion, Interleave (SoSyM Definition 3) and Sync, slot marker before lookup, then domain, unclassified, ambiguous halts; subset checker DCN mode for guards and outputs; tests first, bench.
+**Files touched**: f5b80a816 — `dcn/dcnStep.ts` (new), `dcn/__tests__/dcnStep.test.ts` (new), `netTypes.ts`, `subsetChecker.ts`, `guardEvaluator.ts`, `boardOutputs.ts`, `components/editor-v2/sim/simBridge.ts`; docs commit — `docs/log-inbox/dcn.md`, Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 14:32
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deroga: 7 code files, not 6; the seventh is simBridge.ts, two `case` lines in `haltMessage` only (Alfonso, second turn of 1432). netStep.ts, netCompile.ts, simRunState.ts untouched. Bench 16/16 killed. Gates: typecheck 0, sim+JjEL+sim-UI 69 files/2253 green, full run 551/554 files with only the known three red, build 0.
+**Prompt document name**: 2026-11-07 14:55
+
+**Ticket** (for a cleanup lane, not blocking): `generalizationClosure` now has copies in `dcnCompile.ts` and `dcnHandles.ts`; export it once from `bindingReader.ts`.
+
+**Ticket** (stale comment, not blocking): `actionEvaluator.ts` still says a slot write reaching `netStep.ts` "halts `undeclared` (lane L4.4)"; under the DCN nucleus slot writes are applied (dcnStep.ts), and the comment should say so. Not touched here (out of scope).
+
+## 2026-11-07 — merge: dcn-l44 into alfonso-frontend-jjtl (P-2026-11-07-1545)
+**Prompt**: `claude_2026-11-07_1545_prompt_merge_dcn-l44.md`, lane full (merge): `dcn-l44` at `eaac8a39c` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `601b46ceb`: the 14 files of the branch (this inbox, the L4.3 and L4.4 prompts, `dcnHandles.ts`, `dcnStep.ts`, `netTypes.ts`, `subsetChecker.ts`, `guardEvaluator.ts`, `guardContext.ts`, `boardOutputs.ts`, `simBridge.ts` and two test files); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `601b46ceb`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 560 files, 14905 as expected (tip 14871 + 34), 3 files red at import (the known `window` three), plus load reds (tolerant, laneBoard, irCollapsedRender) green alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; the two halt lines are covered by tests; chat GO)
+**Notes**: Merge tree `85656ba5a` equal to the merge-tree measure; probes 12/12 once, control R-MT-25 absent; no union resolution. Load average ~150 during the full runs; the tip itself showed the same kind of load reds (outline, tolerant, two Chromium launches). Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44` (no node_modules; writing forbidden): 34 new tests counted at `eaac8a39c` (18 + 16), matched on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 15:45
+
+## 2026-11-07 — feat: an invocation is one step under Interleave too (R-DCN-22)
+**Prompt**: `claude_2026-11-07_1650_prompt_dcn_l44b_atomic_invocation.md`, lane full: under Interleave an invocation offers one candidate, the static operation and every redefinition of an active dynamic class fused into one parallel assignment on the previous σ; two writes of one slot halt double-assignment (R-SIM-17).
+**Files touched**: `2b28fc242`: `dcnStep.ts`, `__tests__/dcnStep.test.ts`; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck exit 0 (0 `error TS`); dcn 60/60; simulation suites 55 files, 1658 passed; full vitest 557 passed, 3 red at import (the known `window` three), 14934 passed, 2 skipped; build exit 0 (chunk-size warning only).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (nucleus not wired into the run; prompt: no visual check owed)
+**Notes**: The W5-gap test is replaced by «land() under Interleave runs with its redefinition in one step», the Sync case kept as its own test, a double-assignment test added. Bench in the commit: 4 of 5 mutants killed; the survivor (singleton shortcut to netStep removed) is equivalent, kept so the non-invocation path stays as in L4.4. A redefinition selected alone is inadmissible.
+**Prompt document name**: 2026-11-07 16:50
+
+## 2026-11-07 — merge: dcn-l44b into alfonso-frontend-jjtl (P-2026-11-07-1756)
+**Prompt**: `claude_2026-11-07_1756_prompt_merge_dcn-l44b.md`, lane full (merge): `dcn-l44b` at `2cb5cca14` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `ced5a3d13`: the 6 files of the branch (`docs/decisions.md`, this inbox, the L4.4b prompt, the DCN spec, `dcnStep.ts`, `__tests__/dcnStep.test.ts`); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ced5a3d13`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 561 files, 14955 as expected (tip 14953 + 2), 0 failed, 3 files red at import (the known `window` three).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; nucleus only, covered by tests; chat GO)
+**Notes**: Trunk tip moved to `44ecca1f1` (docs only, another chat) after the prompt; accepted as first parent. Probes 6/6 once, control R-DCN-24 absent; no union resolution. Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44b` (no node_modules; writing forbidden): 2 new tests counted at `2cb5cca14` (16 to 18), matched on the merge. Tip run had one laneRun.test.ts timeout under load, green alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 17:56
+
+## 2026-11-07 — feat: DCN well-formedness W1..W4, W6 as node problems of kind dcn
+**Prompt**: DCN L2.4 (P-2026-11-07-1825, stopped at the context ceiling; continued by P-2026-11-07-1900): pure module of W1..W4, W6, R-DCN-13, R-DCN-16 on the drone, the `dcn` problems producer and its sync, tests, mutation bench, gates, browser probe with Drone crops.
+**Files touched**: eb96cbb10 — `frontend/src/model/dcn/dcnWellFormedness.ts` (new), `dcn/__tests__/dcnWellFormedness.test.ts` (new); `frontend/src/components/editor-v2/problems/registry.ts`, `dcnToProblems.ts` (new), `DcnProblemSync.tsx` (new), `__tests__/dcnToProblems.test.ts` (new); `frontend/src/components/editor-v2/EditorV2.tsx`; LIR 12019b986; docs commit — this entry and the Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 18:25
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (crops ~/.jjodel-lanes/P-2026-11-07-1900/crops read by the chat 2026-11-07: W6 of the probe-made `reset` in its overlay, Drone clean)
+**Notes**: Module written before its test (prompt: tests first). One test fixed: a guard on a same-viewpoint class is also the W2 self-loop, the test reads W1 alone. The bag needs `simProfile` «Dynamic classification», else `runBag` turns the dcn roles off. Bench 33/33 killed. Gates: typecheck 0, targeted 1796/1796, full run at baseline (3 known files), build 0, check:docs. Probe 9/9 PASS; the export gives only the 3 Alert W1 below. Second ceiling stop, at the probe.
+**Prompt document name**: 2026-11-07 19:00
+
+## 2026-11-07 — ticket: the conformance validator parses DCN bodies outside the DCN action mode
+**Ticket**: The conformance validator parses `Operation.body` and `Monitor.body` without the DCN action mode, so every DCN body such as `self.power := 0` gets a `type_mismatch` warning. When the metamodel binds the dcn roles it must parse them in DCN mode (`parseAction(text, { dcn: true })`, as `dcnWellFormedness.ts` does).
+**Priority**: medium
+**Found in**: P-2026-11-07-1900
+
+## 2026-11-07 — ticket: a W1 guard on a class of the same viewpoint always raises a W2 self-loop
+**Ticket**: Under the self-loop rule of W2 (spec §5, P-2026-11-07-1825), `self.in(V::D')` in an expression of a class of V is an edge V -> V, so the W1 guard on a same-viewpoint class (Flying reading `plugged` of Charging) always gives W2; the guard only works across viewpoints. W2 edges also come from bodies and monitors, not only invariants. Spec §5 to settle.
+**Priority**: medium
+**Found in**: P-2026-11-07-1900
+
+## 2026-11-07 — ticket: W1 on the Alert invariants of the drone export, association ends not reachable from self
+**Ticket**: On `dcn-drone.jjodel` the invariants of Safe, Moderate and Adverse read `self.ownedSensors`, an association end owned by the association, not a feature of WeatherAssessmentUnit: three W1 errors (measured by the L2.4 probe). For L2.5/L4.5: make association ends reachable from `self`, or change the export.
+**Priority**: medium
+**Found in**: P-2026-11-07-1825
+
+## 2026-11-07 — merge: alfonso-frontend-jjtl into dcn-l24 (P-2026-11-07-1945)
+**Prompt**: `claude_2026-11-07_1945_prompt_dcn_l24_take_trunk.md`, lane full (merge, RC-14): the trunk into `dcn-l24` before the branch merges into it; `registry.ts` resolved by union, both sides of `EditorV2.tsx` kept, gates, merge commit, this entry.
+**Files touched**: merge `ea08a0f8b` (trunk `03bc50239`): the conflict resolution in `frontend/src/components/editor-v2/problems/registry.ts`; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), targeted 72 files 1883/1883, full vitest 15030 passed and 2 skipped, build exit 0, check:docs 4/5 (B below).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (resolution adds no behaviour; the crops of P-2026-11-07-1900 stand)
+**Notes**: One conflict, registry.ts, by union: 'instantiation' then 'dcn', the dcn paragraph renumbered the eighth. EditorV2.tsx and the inboxes merged clean. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after. Full run: the 3 known import reds plus 32 in bashGuard.test.ts, caused by MERGE_HEAD during the merge; 160/160 after the commit. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536, prose in Corregge, Causa), identical to the trunk's.
+**Prompt document name**: 2026-11-07 19:45
+
+## 2026-11-07 — merge: dcn-l24 into alfonso-frontend-jjtl (P-2026-11-07-1953)
+**Prompt**: `claude_2026-11-07_1953_prompt_merge_dcn-l24.md`, lane full (merge, RC-14): `dcn-l24` at `fa3559653` into the trunk, one `--no-ff` merge commit of the explicit sha, gates, then this entry and the Status flip after the GO.
+**Files touched**: merge `6a2c07153` (base `03bc50239`, trunk tip `6e92c6ebf`): the 12 files of the branch, no resolution; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: check:addonly PASS, typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 564 passed files, 15062 passed and 2 skipped (expected 15032 + 30), hooks 21 files 967/967, build exit 0, check:agents green, check:scripts PASS, check:docs 4/5 (B below).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat C-2026-11-06-2159, crops of P-2026-11-07-1900; unattended, Alfonso in the morning digest)
+**Notes**: Zero conflicts, staged tree equal to merge-tree 966386ac6; five inbox probes once each. The branch tree has no node_modules, so its vitest could not run there without writing in it: the 30 new tests were counted on the two new test files (7 + 23, no .each), and the merged run matched. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536), already red on the base, untouched here, accepted by the chat.
+**Prompt document name**: 2026-11-07 19:53

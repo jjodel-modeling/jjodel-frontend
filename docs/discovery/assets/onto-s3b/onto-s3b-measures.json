@@ -1,0 +1,279 @@
+{
+  "url": "http://localhost:3091",
+  "at": "2026-10-25T21:38:09.735Z",
+  "file": "/Users/alfonso/jjodel-demo-exports/uml-s3b/uml-class-object.jjodel",
+  "ids": {
+    "model": "Pointer1792964313293_USER_140",
+    "mm": "Pointer1792964313231_USER_4",
+    "book": "Pointer1792964313317_USER_218",
+    "isbn": "Pointer1792964313319_USER_225",
+    "dune": "Pointer1792964313386_USER_433",
+    "isbnSlot": "Pointer1792964313394_USER_456",
+    "integer": "Pointer1792964313297_USER_152",
+    "vertices": [
+      "Pointer1792964313387_USER_437"
+    ]
+  },
+  "vertex": "Pointer1792964313387_USER_437",
+  "inView": {
+    "x": 540.7623291015625,
+    "y": 407.46722412109375,
+    "w": 200,
+    "h": 135.53125,
+    "rows": [
+      {
+        "text": "title = Dune",
+        "ghost": false,
+        "orphan": false,
+        "marker": false,
+        "title": null,
+        "feature": null,
+        "box": {
+          "x": 551,
+          "y": 464,
+          "w": 180,
+          "h": 18
+        },
+        "inside": true,
+        "hit": true
+      },
+      {
+        "text": "year = 1965",
+        "ghost": false,
+        "orphan": false,
+        "marker": false,
+        "title": null,
+        "feature": null,
+        "box": {
+          "x": 551,
+          "y": 482,
+          "w": 180,
+          "h": 18
+        },
+        "inside": true,
+        "hit": true
+      },
+      {
+        "text": "isbn = 978-0441013593",
+        "ghost": false,
+        "orphan": false,
+        "marker": false,
+        "title": null,
+        "feature": null,
+        "box": {
+          "x": 551,
+          "y": 501,
+          "w": 180,
+          "h": 18
+        },
+        "inside": true,
+        "hit": true
+      },
+      {
+        "text": "genre = fiction",
+        "ghost": false,
+        "orphan": false,
+        "marker": false,
+        "title": null,
+        "feature": null,
+        "box": {
+          "x": 551,
+          "y": 519,
+          "w": 180,
+          "h": 18
+        },
+        "inside": true,
+        "hit": true
+      }
+    ]
+  },
+  "s0": {
+    "before0": {
+      "ghost": 0,
+      "orphan": 0
+    },
+    "after0": {
+      "ghost": 0,
+      "orphan": 0
+    },
+    "node": {
+      "w": 200,
+      "h": 135.53125,
+      "rows": [
+        "title = Dune",
+        "year = 1965",
+        "isbn = 978-0441013593",
+        "genre = fiction"
+      ]
+    }
+  },
+  "s1": {
+    "pages": {
+      "ok": true,
+      "id": "Pointer1792964344979_USER_944"
+    },
+    "ghostMs": 384,
+    "node": {
+      "x": 540.7623291015625,
+      "y": 407.46722412109375,
+      "w": 200,
+      "h": 153.71875
+    },
+    "ghost": {
+      "text": "pages =",
+      "ghost": true,
+      "orphan": false,
+      "marker": false,
+      "title": null,
+      "feature": "Pointer1792964344979_USER_944",
+      "box": {
+        "x": 551,
+        "y": 537,
+        "w": 180,
+        "h": 18
+      },
+      "inside": true,
+      "hit": true
+    },
+    "rows": [
+      [
+        "title = Dune",
+        true,
+        true
+      ],
+      [
+        "year = 1965",
+        true,
+        true
+      ],
+      [
+        "isbn = 978-0441013593",
+        true,
+        true
+      ],
+      [
+        "genre = fiction",
+        true,
+        true
+      ],
+      [
+        "pages =",
+        true,
+        true
+      ]
+    ]
+  },
+  "s2": {
+    "hasCell": true,
+    "typed": true,
+    "landedMs": 1222,
+    "created": [
+      {
+        "id": "Pointer1792964349359_USER_958",
+        "meta": "Slot",
+        "value": null
+      },
+      {
+        "id": "Pointer1792964349593_USER_964",
+        "meta": "LiteralInteger",
+        "value": [
+          300
+        ]
+      }
+    ],
+    "deleted": [],
+    "undo": [
+      3,
+      5
+    ],
+    "samples": 40,
+    "badSamples": [],
+    "undoAtEdit": 4,
+    "rows": [
+      [
+        "title = Dune",
+        true
+      ],
+      [
+        "year = 1965",
+        true
+      ],
+      [
+        "isbn = 978-0441013593",
+        true
+      ],
+      [
+        "genre = fiction",
+        true
+      ],
+      [
+        "pages = 300",
+        true
+      ]
+    ],
+    "node": {
+      "w": 200,
+      "h": 153.71875
+    }
+  },
+  "s3": {
+    "undo": [
+      3,
+      4,
+      5,
+      4
+    ],
+    "stillThere": [],
+    "extra": [],
+    "missing": [],
+    "ghost": "pages ="
+  },
+  "s4": {
+    "orphanMs": 468,
+    "isbnRow": {
+      "text": "! = 978-0441013593",
+      "ghost": false,
+      "orphan": true,
+      "marker": true,
+      "title": "Its feature is gone",
+      "feature": null,
+      "box": {
+        "x": 551,
+        "y": 501,
+        "w": 180,
+        "h": 18
+      },
+      "inside": true,
+      "hit": true
+    },
+    "rows": [
+      [
+        "title = Dune",
+        false,
+        null
+      ],
+      [
+        "year = 1965",
+        false,
+        null
+      ],
+      [
+        "! = 978-0441013593",
+        true,
+        "Its feature is gone"
+      ],
+      [
+        "genre = fiction",
+        false,
+        null
+      ],
+      [
+        "pages =",
+        false,
+        null
+      ]
+    ]
+  },
+  "pass": 6,
+  "fail": 0
+}

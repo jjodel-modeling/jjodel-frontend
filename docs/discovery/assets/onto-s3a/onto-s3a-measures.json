@@ -1,0 +1,131 @@
+{
+  "url": "http://localhost:3088",
+  "at": "2026-10-21T16:09:50.545Z",
+  "file": "/Users/alfonso/jjodel-demo-exports/uml/uml-class-object.jjodel",
+  "ids": {
+    "model": "Pointer1792599025410_USER_140",
+    "mm": "Pointer1792599025334_USER_4",
+    "book": "Pointer1792599025443_USER_218",
+    "isbn": "Pointer1792599025446_USER_225",
+    "title": "Pointer1792599025431_USER_190",
+    "year": "Pointer1792599025435_USER_201",
+    "dune": "Pointer1792599025535_USER_433",
+    "isbnSlot": "Pointer1792599025545_USER_456",
+    "yearSlot": "Pointer1792599025542_USER_447",
+    "integer": "Pointer1792599025415_USER_152",
+    "vertices": [
+      "Pointer1792599025537_USER_437"
+    ]
+  },
+  "vertex": "Pointer1792599025537_USER_437",
+  "inView": {
+    "x": 490.862060546875,
+    "y": 406.21551513671875,
+    "w": 300,
+    "h": 138,
+    "rows": [
+      {
+        "text": "title = Dune",
+        "top": 57,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "year = 1965",
+        "top": 75,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "isbn = 978-0441013593",
+        "top": 93,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "genre = fiction",
+        "top": 111,
+        "h": 18,
+        "inside": true
+      }
+    ],
+    "dot": 0
+  },
+  "s33": {
+    "landedMs": 2532,
+    "created": [
+      "Pointer1792599061547_USER_964",
+      "Pointer1792599061548_USER_965",
+      "Pointer1792599061548_USER_966",
+      "Pointer1792599061548_USER_968",
+      "Pointer1792599061860_USER_969",
+      "Pointer1792599061999_USER_970",
+      "Pointer1792599062000_USER_971",
+      "Pointer1792599062000_USER_972",
+      "Pointer1792599062000_USER_973",
+      "Pointer1792599062002_USER_975",
+      "Pointer1792599062235_USER_976",
+      "Pointer1792599062550_USER_977"
+    ],
+    "undo": {
+      "before": 4,
+      "after": 5
+    },
+    "rows": [
+      {
+        "text": "title = Dune",
+        "top": 57,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "year = 1965",
+        "top": 75,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "= 978-0441013593",
+        "top": 93,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "genre = fiction",
+        "top": 111,
+        "h": 18,
+        "inside": true
+      },
+      {
+        "text": "pages = 320",
+        "top": 130,
+        "h": 18,
+        "inside": true
+      }
+    ]
+  },
+  "s35menu": {
+    "chain": [
+      "div.context-menu-backdrop",
+      "body.",
+      "html."
+    ],
+    "menus": 13,
+    "items": [
+      "Sync slots",
+      "Add Slot (slots)",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "Up",
+      "Down",
+      "Reset size",
+      "Disable auto-sizing",
+      "Help",
+      "Explain this",
+      "Edit view · View for InstanceSpecification"
+    ]
+  },
+  "pass": 8,
+  "fail": 0
+}

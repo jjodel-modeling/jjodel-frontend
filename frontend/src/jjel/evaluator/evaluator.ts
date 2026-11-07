@@ -377,6 +377,11 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateIdentifier(expr: IdentifierExpr, ctx: EvaluationContext): JjelValue {
+        // A shadowing binding (a JjTL helper parameter) wins over the builtin
+        if (ctx.shadowedBuiltins?.has(expr.name) && ctx.has(expr.name)) {
+            return ctx.get(expr.name)!;
+        }
+
         // Check for builtins first
         if (ctx.hasBuiltin(expr.name)) {
             return ctx.getBuiltin(expr.name)!;
@@ -907,17 +912,20 @@ export class JjelEvaluator {
      * Evaluate a standalone function call: name(args).
      * Resolves `name` first as a registered builtin, then as a bound function
      * value in the context. Throws if nothing callable is bound under that name.
+     * A name in `ctx.shadowedBuiltins` bound to a function is called before the
+     * builtin; bound to a value, it does not hide the builtin.
      */
     private evaluateFunctionCall(expr: FunctionCallExpr, ctx: EvaluationContext): JjelValue {
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
 
+        const bound = ctx.has(expr.name) ? ctx.get(expr.name) : undefined;
+        const callable = bound !== undefined && bound !== null && isJjelFunction(bound);
+        if (callable && ctx.shadowedBuiltins?.has(expr.name)) return bound.call(args, ctx);
+
         const builtin = ctx.getBuiltin(expr.name);
         if (builtin) return builtin.call(args, ctx);
 
-        const bound = ctx.has(expr.name) ? ctx.get(expr.name) : undefined;
-        if (bound !== undefined && bound !== null && isJjelFunction(bound)) {
-            return bound.call(args, ctx);
-        }
+        if (callable) return bound.call(args, ctx);
 
         throw new JjelEvaluationError(
             `Function '${expr.name}' is not defined`,
