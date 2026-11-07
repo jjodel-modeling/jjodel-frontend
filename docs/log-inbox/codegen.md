@@ -2504,3 +2504,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: scenario 2 by canvas gestures, 11/11 PASS, crops 1-4 in `~/.jjodel-lanes/P-2026-11-07-0510/`, checked by the chat (comments kept after rename and delete)
 **Notes**: Behaviour change: after a comment-only edit Cmd/Ctrl+Z is the app's undo, as after an application. The probe shows the docked Text panel with a probe-only CSS rule (PinnableDock hides it); no product change, placement is lane E3. Object count via `allSubObjects.length` (10, then 9). Handoff: `~/.jjodel-lanes/P-2026-11-07-0346/handoff.md`.
 **Prompt document name**: 2026-11-07 05:10
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0607)
+**Prompt**: `claude_2026-11-07_0607_prompt_textual-e1-reprint_take_trunk.md`, rendered by `lane-run merge --trunk-into`: the trunk `alfonso-frontend-jjtl` at `4ad2bf5fc` into `textual-e1-reprint` at `a75356f55`, one merge commit, `--no-ff` (RC-14), merge base `a28b49cc8`.
+**Files touched**: merge `c8a3be5f3` (31 files from the trunk side; union of `docs/log-inbox/codegen.md`, auto-merge of `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c8a3be5f3`: typecheck 0; typecheck:scripts 0; vitest 540 files, 14553 passed, 2 skipped, red the 3 baseline import files plus `outline.test.ts` (10 ms timing) and `irSelectionRing.test.ts` (afterAll browser close) at load 72, both green alone; hooks 967 = trunk; build 0; check:docs A..E PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E1b crops in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat on this tree
+**Notes**: Expectation: trunk tip 539 files, 14526 passed, plus `textReprint.test.ts` 28 = 14554; the one missing pass is the outline timing red. Union, trunk first then branch, add-only against both parents (39 and 102 lines). Step 5: D3b conformance and E1b splice regions of TextualTab.tsx disjoint, no duplicate declaration.
+**Prompt document name**: 2026-11-07 06:07

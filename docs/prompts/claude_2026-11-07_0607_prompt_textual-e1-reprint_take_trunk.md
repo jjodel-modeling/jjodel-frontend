@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0607
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane textual-e1-reprint · c8a3be5f3 · verifica visiva passata 2026-11-07 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-texte1`, branch `textual-e1-reprint`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-texte1`, branch `textual-e1-reprint`, `git log -1` is the commit that adds this file (its parent `a75356f55`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-0607 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
