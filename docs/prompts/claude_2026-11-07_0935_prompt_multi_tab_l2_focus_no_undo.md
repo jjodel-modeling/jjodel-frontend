@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0935
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 9b9e9b103 8ab8077be d16f662ac 1acbbdf99 · app check 3 runs, V3 +0 undo per focus, V1 V2 R-MT-18 one tab = 0457 · scope expansion approved (reducer, action, lastViewpoint) · non fuso: hard-stop, visual check due
 Lane: full (L2 files; tests; app check with the 0457 probe; not critical zone)
 Depends: P-2026-11-07-0440 (code a99ea2482), P-2026-11-07-0457 (closure e0a19596d, V3 measured: +1 undo entry per focus write), R-MT-15, R-MT-20
 Worktree: ~/jjodel-w-mtl2, branch multi-tab-l2, at this prompt's commit (node_modules by the P14 symlink, removed at the end)

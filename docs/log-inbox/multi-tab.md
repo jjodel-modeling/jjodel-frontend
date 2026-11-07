@@ -68,3 +68,18 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (P-2026-11-07-0457, 3 runs per tree: V1, V2, R-MT-18 3/3; V3 +1 undo step per focus write; one tab equal to base 52/52; LIR addendum)
 **Notes**: Red 7/26, green 26/26. Gates: typecheck 0, build 0, vitest 7 files red: the 3 baseline imports, plus languageService, tolerant (timing), laneBoard (port 4700 held by the live board) and irSelectionRing under load, all green rerun alone. App check owed to the continuation lane: LIR §5 V1-V3 are visible with two model tabs (focus restores the tab's viewpoint, an undo step).
 **Prompt document name**: 2026-11-07 04:40
+
+## 2026-11-07 — fix: the viewpoint write on tab focus adds no undo entry (multi-tab L2)
+**Prompt**: lane L2 of multi-tab (P-2026-11-07-0935, R-MT-20): the focus write adds no undo entry, a picker change keeps its own; scope expanded on approval (Alfonso 10:06) to reducer.ts, action.ts, lastViewpoint.ts
+**Files touched**: undoGroup.test.ts, editorSwitchViewpointPrefs.test.ts, lastViewpointNoUndo.test.ts (9b9e9b103); EditorSwitch.tsx, action.ts, reducer.ts, lastViewpoint.ts (8ab8077be); undoGroup.test.ts (d16f662ac); reducer.ts (1acbbdf99)
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 04:40
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (0457 probe copies, 3 runs: V3 +0 undo per focus, control +0; V1, V2, R-MT-18, one tab identical to 0457 run 1)
+**Notes**: (1) Focus -> activateViewpoint -> SetFieldAction + SetRootFieldAction; fire() queues them in the open 300 ms batch; _reducer pushes the CompositeAction delta. Limit: noUndo is read on the dispatched action, or on a CompositeAction whose every action has it; a mixed batch keeps its entry. The planned one-line check missed the batch (app V3 still +1, Causa (c) second); widened at the same line, red d16f662ac. Gates: typecheck 0, build 0, vitest 3 baseline + 4 timing green alone.
+**Prompt document name**: 2026-11-07 09:35
+
+**Ticket** (P-2026-11-07-0935): out of scope, approved: reducer.ts (core), action.ts, lastViewpoint.ts; 7 code and test files, above the five of rule 19. The reducer clause on CompositeAction goes beyond the approved one-line check on the dispatched action: same line, same effect, reported for ratification. The undoGroup harness CompositeAction mock became a class. A dev server reloaded on reducer.ts made the probe time out at B's picker twice (with and without the clause); a fresh server passed 3/3.
