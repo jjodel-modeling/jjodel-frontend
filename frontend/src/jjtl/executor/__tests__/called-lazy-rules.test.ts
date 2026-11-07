@@ -45,6 +45,20 @@ const TARGET = {
     ],
 };
 
+/**
+ * TARGET with pointers for left and right: a second use of one target is no second claim,
+ * so the run succeeds and returns its model. A failed run returns none (R-FA-14,
+ * P-2026-11-07-1125): the cases that count targets of a second claim count them here.
+ */
+const pointsTo = (name: string, type: string) => ({ name, composition: false, type: { name: type } });
+const POINTER_ADD_TARGET = {
+    classes: [
+        cls('Add', [], [pointsTo('left', 'Add'), pointsTo('right', 'Add')]),
+        cls('Const', ['value']),
+        cls('Ref', ['name']),
+    ],
+};
+
 function parseJjtl(body: string, withSource: boolean): TransformationAST {
     const text = 'transformation Lower\nfrom Expr\nto Tgt\n\n' + body.trim();
     const { tokens, errors: lexErrors } = new JjtlLexer(text).tokenize();
@@ -118,16 +132,23 @@ rule mkAdd(a) -> Add {
 Main m = mkAdd(m.expr)
 `;
 
+    const sameArgument = [
+        el('m1', 'Main', { expr: ref('a1') }),
+        el('a1', 'Add', { left: ref('c1'), right: ref('c1'), _containerId: 'm1' }),
+        el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+    ];
+
     it('returns the target of a unique called rule for a second call with the same argument: placed twice, a second claim', async () => {
-        const result = await run(UNIQUE_CALLS, [
-            el('m1', 'Main', { expr: ref('a1') }),
-            el('a1', 'Add', { left: ref('c1'), right: ref('c1'), _containerId: 'm1' }),
-            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
-        ]);
-        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        const result = await run(UNIQUE_CALLS, sameArgument);
         const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
         expect(conflicts).toHaveLength(1);
         expect(conflicts[0]).toMatch(/is claimed by Add .*\.left .* and by Add .*\.right/);
+    });
+
+    it('returns the target of a unique called rule for a second call with the same argument: one target', async () => {
+        const result = await execute(parseJjtl(UNIQUE_CALLS, withSource), sameArgument, POINTER_ADD_TARGET);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
     });
 
     it('creates a fresh target of a unique called rule for different arguments', async () => {
@@ -152,8 +173,7 @@ Main m = mkAdd(m.expr)
         expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
     });
 
-    it('holds the value of a let bound to a called rule: two uses, one target (#515)', async () => {
-        const result = await run(`
+    const LET_CALL = `
 rule mkConst(c) -> Const {
     value := c.value
 }
@@ -164,12 +184,21 @@ Add a -> Add {
         right := $c
     }
 }
-`, [
-            el('a1', 'Add', { left: ref('c1'), right: ref('c1') }),
-            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
-        ]);
-        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+`;
+    const letSource = [
+        el('a1', 'Add', { left: ref('c1'), right: ref('c1') }),
+        el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+    ];
+
+    it('holds the value of a let bound to a called rule: two uses, one target (#515)', async () => {
+        const result = await run(LET_CALL, letSource);
         expect(result.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
+    });
+
+    it('holds the value of a let bound to a called rule: two uses as pointers, one target (#515)', async () => {
+        const result = await execute(parseJjtl(LET_CALL, withSource), letSource, POINTER_ADD_TARGET);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
     });
 
     it('stops a recursion with no progress at the depth limit, naming the stack', async () => {
@@ -349,24 +378,31 @@ describe.each([
         expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
     });
 
+    const UNIQUE_LAZY = ENV_RULES.replace('lazy Const -> Const', 'unique lazy Const -> Const');
+    const sameBinding = [
+        el('m1', 'Main', { expr: ref('b1') }),
+        bind('b1', 'a1', ['bd1'], 'm1'),
+        add('a1', 'vx', 'vx2', 'b1'),
+        v('vx', 'x', 'a1'),
+        v('vx2', 'x', 'a1'),
+        binding('bd1', 'x', 'c5', 'b1'),
+        k('c5', 5, 'bd1'),
+    ];
+
     it('creates a unique lazy target once per environment: a second placement is a second claim', async () => {
-        const result = await run(ENV_RULES.replace('lazy Const -> Const', 'unique lazy Const -> Const'), [
-            el('m1', 'Main', { expr: ref('b1') }),
-            bind('b1', 'a1', ['bd1'], 'm1'),
-            add('a1', 'vx', 'vx2', 'b1'),
-            v('vx', 'x', 'a1'),
-            v('vx2', 'x', 'a1'),
-            binding('bd1', 'x', 'c5', 'b1'),
-            k('c5', 5, 'bd1'),
-        ]);
-        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        const result = await run(UNIQUE_LAZY, sameBinding);
         const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
         expect(conflicts).toHaveLength(1);
         expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.right/);
     });
 
-    it('holds the value of a let bound to envLookup: one lowering for two uses, placed twice, a second claim (#515)', async () => {
-        const result = await run(`
+    it('creates a unique lazy target once per environment: two pointers, one target', async () => {
+        const result = await execute(parseJjtl(UNIQUE_LAZY, withSource), sameBinding, POINTER_ADD_TARGET);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+    });
+
+    const LET_LOOKUP = `
 rule twice(e, env: Env) -> Add {
     let $x = envLookup("x") in {
         left := $x
@@ -379,12 +415,21 @@ lazy Const -> Const {
 }
 
 Main m = twice(m.expr, extendEnv(["x"], [m.expr]))
-`, [
-            el('m1', 'Main', { expr: ref('c5') }),
-            k('c5', 5, 'm1'),
-        ]);
-        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+`;
+    const lookupSource = [
+        el('m1', 'Main', { expr: ref('c5') }),
+        k('c5', 5, 'm1'),
+    ];
+
+    it('holds the value of a let bound to envLookup: one lowering for two uses, placed twice, a second claim (#515)', async () => {
+        const result = await run(LET_LOOKUP, lookupSource);
         expect(result.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
+    });
+
+    it('holds the value of a let bound to envLookup: one lowering for two uses as pointers (#515)', async () => {
+        const result = await execute(parseJjtl(LET_LOOKUP, withSource), lookupSource, POINTER_ADD_TARGET);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
     });
 
     it('creates a unique called rule\'s target once per environment, not once per argument', async () => {
@@ -405,8 +450,10 @@ Main m = twice(m.expr, extendEnv(["x"], [m.expr]))
         expect(different.errors).toEqual([]);
         expect(different.targetModel!.instances.get('Ref')).toHaveLength(2);
         const equal = await run(text, source('c5'));
-        expect(equal.targetModel!.instances.get('Ref')).toHaveLength(1);
         expect(equal.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
+        const equalPointers = await execute(parseJjtl(text, withSource), source('c5'), POINTER_ADD_TARGET);
+        expect(equalPointers.errors).toEqual([]);
+        expect(equalPointers.targetModel!.instances.get('Ref')).toHaveLength(1);
     });
 
     it('selects the one lazy rule whose guard holds', async () => {
@@ -565,6 +612,12 @@ describe.each([
         expect(conflicts).toHaveLength(2);
         expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.left/);
         expect(conflicts[1]).toMatch(/Const '?.*'? is claimed by Add .*\.right .* and by Add .*\.right/);
+    });
+
+    it('resolves the matched descendants of a bound value through the trace: two pointers, no claim', async () => {
+        const rules = ENV_RULES.replace('lazy Const -> Const', 'Const -> Const');
+        const result = await execute(parseJjtl(rules, withSource), boundTree, POINTER_ADD_TARGET);
+        expect(result.errors).toEqual([]);
         // The bound Add itself is lowered afresh, once per placement.
         expect(result.targetModel!.instances.get('Add')).toHaveLength(3);
         expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
@@ -697,6 +750,5 @@ Main m = m.expr
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]).toMatch(/^Failed to lower Main 'm1' by rule '.*': No lazy rule applies to Const 'c1'/);
         expect(result.errors[0]).toMatch(/\n  at .* on Main 'm1'/);
-        expect(result.targetModel!.roots.map(term)).toEqual(['Const(9)']);
     });
 });

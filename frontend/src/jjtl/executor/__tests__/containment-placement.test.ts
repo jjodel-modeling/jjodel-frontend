@@ -219,7 +219,7 @@ describe.each([
     ['legacy parser (no source)', false],
     ['JjEL parser (source)', true],
 ] as const)('containment errors — %s', (_label, withSource) => {
-    it('reports a second claim naming both containers and places the target once', async () => {
+    it('reports a second claim naming both containers and returns no target model', async () => {
         const source = [
             el('p1', 'B', { items: [], things: [ref('q1')] }),
             el('p2', 'B', { items: [], things: [ref('q1')] }),
@@ -229,11 +229,9 @@ describe.each([
         expect(result.success).toBe(false);
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]).toMatch(/Containment conflict: Item 'q1' is claimed by Box 'p1'\.things .* and by Box 'p2'\.things/);
-        const [p1, p2] = result.targetModel!.instances.get('Box')!;
-        const q1 = result.targetModel!.instances.get('Item')![0];
-        expect(p1.things).toEqual([q1]);
-        expect(p2.things).toEqual([]);
-        expect(result.targetModel!.roots).toEqual([p1, p2]);
+        // A failed run returns no target model (R-FA-14): where the second claim left the
+        // target is no longer observable through the result.
+        expect(result.targetModel).toBeUndefined();
     });
 
     it('reports a containment cycle naming the elements on it', async () => {

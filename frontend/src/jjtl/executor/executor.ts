@@ -764,9 +764,12 @@ export class JjtlExecutor {
             //     invertiblePercentage: traceStats.invertiblePercentage + '%',
             // });
 
+            // A failed run returns no target model, so no caller can write a
+            // partial one (R-FA-14).
+            const success = this.errors.length === 0;
             return {
-                success: this.errors.length === 0,
-                targetModel,
+                success,
+                targetModel: success ? targetModel : undefined,
                 trace: this.context.trace,
                 traceModel,
                 errors: this.errors,
