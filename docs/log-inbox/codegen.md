@@ -2926,3 +2926,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato
 **Notes**: R3 measured: the entry's `nodeId` is the DObject id the spans carry; the vertex entry matches no span. A model change after a run (an apply) makes it stale and withdraws its entries (R-VAL-18), so the marker goes until the next Validate. No viewpoint on the entry: source `validation`, code the rule name. App check 15/15 ALL PASS, crops 1-before-run..5-rerun in ~/.jjodel-lanes/P-2026-11-07-1838/.
 **Prompt document name**: 2026-11-07 18:38
+
+## 2026-11-08 — merge: textual-d3c-rules into alfonso-frontend-jjtl (P-2026-11-08-0004)
+**Prompt**: `claude_2026-11-08_0004_prompt_merge_textual-d3c-rules.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d3c-rules` at `8e5e473f0` into `alfonso-frontend-jjtl`, merge base `f5fc80aaf`, 4 commits on the branch side.
+**Files touched**: merge `cae331a7c`: 5 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1838_prompt_textual_d3c_rules.md`, `frontend/src/codegen/textual/__tests__/conformanceMarks.test.ts`, `frontend/src/codegen/textual/conformanceMarks.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `cae331a7c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15072 tests in 567 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D3c crops 1-before-run, 2-after-run, 3-after-typing, 4-apply in ~/.jjodel-lanes/P-2026-11-07-1838/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d3c-rules` on `efd40eb55` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0004/result.json`.
+**Prompt document name**: 2026-11-08 00:04
