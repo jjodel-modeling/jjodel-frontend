@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0833
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane multi-tab-l4b · fd90572de (tests red), 65e74534d (fix) · verifica visiva non dovuta in questa corsia: raggiungibile da L6 · non fuso: hard-stop
 Lane: full (`problems/` subtree, CLAUDE.md §3.1; not critical zone)
 Depends: docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §4.2 and §7 row L4b; R-MT-1..19
 Worktree: ~/jjodel-w-mtl4b, branch multi-tab-l4b, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)
