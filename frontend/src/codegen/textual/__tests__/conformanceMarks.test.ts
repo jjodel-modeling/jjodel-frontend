@@ -1,7 +1,8 @@
 /**
  * Step D lane D3b (P-2026-11-07-0157; docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §4, decisions D6
  * and D8): the quick fixes the Text tab offers on a parse error marker, from D3a's `fix`, and the conformance violations
- * mapped to the carried spans of their object and feature.
+ * mapped to the carried spans of their object and feature. Lane D3c (P-2026-11-07-1838, decision D9): the problems a run
+ * of the user's validation rules wrote in the registry, mapped the same way.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -11,8 +12,8 @@ import { parseText } from '../parser';
 import type { TextParseError } from '../parser';
 import { printTextModel } from '../printer';
 import { openTextualSession, registerTextualMonaco, TEXTUAL_LANGUAGE_ID } from '../ui/textualMonaco';
-import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
-import type { MarkedViolation } from '../conformanceMarks';
+import { conformanceMarks, CONFORMANCE_SOURCE, ruleMarks, VALIDATION_SOURCE } from '../conformanceMarks';
+import type { MarkedViolation, RuleProblem } from '../conformanceMarks';
 import { portGrammar, portObjects, PORT_MM, PORT_TEXT_CLIKE } from './portCorpus';
 import { libraryObjects, tolerantCases } from './tolerantCorpus';
 
@@ -203,5 +204,56 @@ describe('(2) conformance violations as marks on the carried spans (D8)', () => 
         // A span the edit pushed past the end of the text is cut at it.
         const cut = typed.slice(0, typed.length - 1);
         expect(conformanceMarks([v('m', 'orphan_object')], carried, cut).every(m => m.end <= cut.length)).toBe(true);
+    });
+});
+
+describe('(3) user validation-rule problems as marks on the carried spans (D9)', () => {
+    const g = portGrammar();
+    const printed = printTextModel(g, portObjects());
+    const text = printed.text;
+    const spans = printed.spans;
+    const tree = parseText(text, g).tree;
+    const OWNER = 'model-1';
+    /** A registry entry as `publishValidationProblems` writes it (validationToProblems.ts:100-110). */
+    const p = (nodeId: string, more: Partial<RuleProblem> = {}): RuleProblem =>
+        ({ nodeId, kind: 'validation', title: 'positiveWidth', description: `width of ${nodeId} must be positive`, ownerModelId: OWNER, ...more });
+    const shown = (t: string, ms: ReturnType<typeof ruleMarks>) => ms.map(m => t.slice(m.start, m.end));
+
+    it('a rule problem on an object: on its first line, a warning of source validation with the rule\'s message and name', () => {
+        const ms = ruleMarks([p('m')], OWNER, spans, text, tree);
+        expect(shown(text, ms)).toEqual(['Module cpu {']);
+        expect(ms[0]).toMatchObject({ severity: 'warning', source: VALIDATION_SOURCE, message: 'width of m must be positive', rule: 'positiveWidth', objectId: 'm' });
+        expect(VALIDATION_SOURCE).toBe('validation');
+    });
+
+    it('a rule problem naming a feature: on the item of that feature in the object', () => {
+        const ms = ruleMarks([p('p3', { feature: 'driver' }), p('p1', { feature: 'type' })], OWNER, spans, text, tree);
+        expect(shown(text, ms)).toEqual(['Word(32)', '= instr & {} & and(ready)']);
+        expect(ms.map(m => m.feature)).toEqual(['type', 'driver']);
+    });
+
+    it('a rule problem for an object with no span (or the vertex entry of the double anchoring): no mark', () => {
+        expect(ruleMarks([p('zz'), p('vertex-of-m')], OWNER, spans, text, tree)).toEqual([]);
+        expect(shown(text, ruleMarks([p('zz'), p('p1')], OWNER, spans, text, tree))).toEqual(['instr : Word(32)']);
+    });
+
+    it('a rule problem of another model, or owned by none: no mark', () => {
+        expect(ruleMarks([p('m', { ownerModelId: 'model-2' }), p('p1', { ownerModelId: undefined })], OWNER, spans, text, tree)).toEqual([]);
+    });
+
+    it('only the validation kind, and not an entry the last run resolved (a new run replaces them)', () => {
+        expect(ruleMarks([p('m', { kind: 'conformance' }), p('p1', { kind: 'duplicate-name' })], OWNER, spans, text, tree)).toEqual([]);
+        expect(shown(text, ruleMarks([p('m', { resolvedAt: 1 }), p('p1')], OWNER, spans, text, tree))).toEqual(['instr : Word(32)']);
+    });
+
+    it('no rule title: the message stands alone, the mark names no rule', () => {
+        expect(ruleMarks([p('m', { title: '' })], OWNER, spans, text, tree)[0].rule).toBeUndefined();
+    });
+
+    it('across typing: on the carried spans, shifted with the text, the marks keep their words', () => {
+        const typed = `// one\n// two\n${text}`;
+        const carried = spans.map(s => ({ ...s, start: s.start + '// one\n// two\n'.length, end: s.end + '// one\n// two\n'.length }));
+        const all = [p('m'), p('p3', { feature: 'driver' })];
+        expect(shown(typed, ruleMarks(all, OWNER, carried, typed, parseText(typed, g).tree))).toEqual(shown(text, ruleMarks(all, OWNER, spans, text, tree)));
     });
 });

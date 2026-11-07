@@ -6,14 +6,22 @@
  * of the model, not of the text.
  *
  * Pure: the violations are read by the tab (model/conformance/useConformance), not here.
+ *
+ * Lane D3c (P-2026-11-07-1838, decision D9): the problems a run of the user's validation rules wrote in the problems
+ * registry (problems/validationToProblems.ts) are placed the same way. Their `nodeId` is the instance's model id, the
+ * one the spans carry; the vertex entry of the double anchoring matches no span. The tab reads the registry, not here.
  */
 
 import type { ConformanceViolation } from '../../model/conformance/ConformanceTypes';
+import type { NodeProblem } from '../../components/editor-v2/problems/registry';
 import type { ObjectNode, SyntaxNode, TextNode } from './parser';
 import type { ObjectSpan } from './printer';
 
 /** The marker source of the conformance marks, beside the parse's (decision D8). */
 export const CONFORMANCE_SOURCE = 'conformance' as const;
+
+/** D3c: the marker source of the validation-rule marks; the registry's entry names no viewpoint (decision D9). */
+export const VALIDATION_SOURCE = 'validation' as const;
 
 export type MarkedViolation = Pick<ConformanceViolation, 'objectId' | 'violationType' | 'message' | 'metamodelElementName'>;
 
@@ -62,26 +70,68 @@ function featureIn(o: ObjectNode, feature: string): SyntaxNode | undefined {
     return walk(o);
 }
 
+/** Where a mark of `objectId` goes: the item of `feature` in the object when the text writes one, else the object's first line. */
+type Placed = { readonly start: number; readonly end: number; readonly feature?: string };
+function place(objectId: string, feature: string | undefined, byId: ReadonlyMap<string, ObjectSpan>, text: string, tree?: TextNode): Placed | undefined {
+    const s = byId.get(objectId);
+    if (!s) return undefined;
+    const end = Math.min(s.end, text.length);
+    if (end <= s.start) return undefined;
+    const o = feature && tree ? objectIn(tree, { ...s, end }) : undefined;
+    const item = o && feature ? featureIn(o, feature) : undefined;
+    if (item && feature) return { start: item.start, end: item.end, feature };
+    const nl = text.indexOf('\n', s.start);
+    const head = text.slice(s.start, nl < 0 ? end : Math.min(nl, end)).trimEnd();
+    return head.length ? { start: s.start, end: s.start + head.length } : undefined;
+}
+
+/** In text order, equal starts in input order. */
+const inTextOrder = <M extends { readonly start: number }>(ms: readonly M[]): M[] =>
+    ms.map((m, i) => [m, i] as const).sort((a, b) => a[0].start - b[0].start || a[1] - b[1]).map(([m]) => m);
+
 /** The marks of `violations` on `text`, by the spans carried there; `tree`, the parse of `text`, places the feature ones. */
 export function conformanceMarks(violations: readonly MarkedViolation[], spans: readonly ObjectSpan[], text: string, tree?: TextNode): ConformanceMark[] {
     const byId = new Map(spans.map(s => [s.id, s]));
     const out: ConformanceMark[] = [];
     for (const v of violations) {
-        const s = byId.get(v.objectId);
-        if (!s) continue;
-        const end = Math.min(s.end, text.length);
-        if (end <= s.start) continue;
-        const base = { message: v.message, severity: 'warning' as const, source: CONFORMANCE_SOURCE, objectId: v.objectId };
         const feature = v.metamodelElementName && !CLASS_NAMED.has(v.violationType) ? v.metamodelElementName : undefined;
-        const o = feature && tree ? objectIn(tree, { ...s, end }) : undefined;
-        const item = o && feature ? featureIn(o, feature) : undefined;
-        if (item && feature) {
-            out.push({ ...base, start: item.start, end: item.end, feature });
-            continue;
-        }
-        const nl = text.indexOf('\n', s.start);
-        const head = text.slice(s.start, nl < 0 ? end : Math.min(nl, end)).trimEnd();
-        if (head.length) out.push({ ...base, start: s.start, end: s.start + head.length });
+        const at = place(v.objectId, feature, byId, text, tree);
+        if (at) out.push({ message: v.message, severity: 'warning', source: CONFORMANCE_SOURCE, objectId: v.objectId, ...at });
     }
-    return out.map((m, i) => [m, i] as const).sort((a, b) => a[0].start - b[0].start || a[1] - b[1]).map(([m]) => m);
+    return inTextOrder(out);
+}
+
+/**
+ * D3c: a registry entry as the tab reads it. `feature` is not written by today's producer (a rule names its class, not a
+ * feature: model/validation/validationEvaluator.ts `Violation`), so every rule mark sits on the object's first line until
+ * one does.
+ */
+export type RuleProblem = Pick<NodeProblem, 'nodeId' | 'kind' | 'title' | 'description' | 'ownerModelId' | 'resolvedAt'> & { readonly feature?: string };
+
+/** D3c: a validation-rule mark at `[start, end)` of the text. */
+export interface RuleMark {
+    readonly start: number;
+    readonly end: number;
+    readonly message: string;
+    readonly severity: 'warning';
+    readonly source: typeof VALIDATION_SOURCE;
+    readonly objectId: string;
+    /** The rule's name (the entry's title), absent when the rule has none. */
+    readonly rule?: string;
+    readonly feature?: string;
+}
+
+/**
+ * D3c (D9): the marks of the registry entries a validation run of `ownerModelId` wrote, on the spans carried in `text`.
+ * Only the validation kind, only that model's, and not an entry the last run resolved: a new run replaces them.
+ */
+export function ruleMarks(problems: readonly RuleProblem[], ownerModelId: string, spans: readonly ObjectSpan[], text: string, tree?: TextNode): RuleMark[] {
+    const byId = new Map(spans.map(s => [s.id, s]));
+    const out: RuleMark[] = [];
+    for (const p of problems) {
+        if (p.kind !== 'validation' || p.ownerModelId !== ownerModelId || p.resolvedAt !== undefined) continue;
+        const at = place(p.nodeId, p.feature, byId, text, tree);
+        if (at) out.push({ message: p.description, severity: 'warning', source: VALIDATION_SOURCE, objectId: p.nodeId, ...(p.title ? { rule: p.title } : {}), ...at });
+    }
+    return inTextOrder(out);
 }
