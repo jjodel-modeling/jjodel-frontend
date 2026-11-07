@@ -298,6 +298,9 @@ export class Action extends RuntimeAccessibleClass {
     subType?: string; //?
     private stack?: string[];
     skipCollaborative?: boolean;
+    // Not a user edit: _reducer skips the undo history bookkeeping for it (R-MT-20). Read on the dispatched
+    // action only, so it has no effect on an action batched inside a TRANSACTION.
+    noUndo?: boolean;
     protected constructor(field: string, value: any, subType?: string, skipCollaborative: boolean = false) {
         super();
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
