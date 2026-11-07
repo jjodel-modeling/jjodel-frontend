@@ -21,15 +21,15 @@ it on the port corpus with controls, trace the write, place the cause in a layer
 
 - H1. The textual apply writes the name somewhere other than the identity slot (a `name` property, not the `name`
   attribute's value). **Holds, partly**: the textual layer writes nothing at all for these objects; the name comes from
-  the JjScript `create instance of C "h"` handle, which reaches `DObject.name` and `initialName` but not the slot (§4).
+  the JjScript `create instance of C "h"` handle, which reaches `DObject.name` and `initialName` but not the slot (§5.1, §5.2).
 - H2. The name is visible because a reader falls back from the empty slot to a derived name. **Holds**: `get_name`
-  yields to `data.name` and `get_values` to `initialName` over a never-written slot (§4.4).
+  yields to `data.name` and `get_values` to `initialName` over a never-written slot (§5.4).
 - H3. The cause is in the core (LModel / DObject / the apply transaction). **Falsified**: each core piece behaves as its
   own comments declare; the defect is the textual layer's assumption that the creation handle names the object, which
-  the JjScript executor does not honour for the slot (§5).
+  the JjScript executor does not honour for the slot (§6).
 - H4. Only the Module is affected. **Falsified**: every object whose handle equals its name has an empty slot (`cpu`,
   the Port `result`, the Ref `ready`); only `Module.name [1..1]` makes conformance say so. The XMI export drops all three
-  names (§3, E).
+  names (§4 A, E).
 
 ## 3. Files read (full paths)
 
@@ -120,7 +120,7 @@ name writes the slot and clears the violation.
 
 C1 is a control, not a reproduction of the reported bug: an object dropped on the v2 canvas carries only its auto-name
 and conformance flags it the same way. That is the R-TXT-45 reading of a never-written slot (it reads the auto-name),
-and it predates the textual layer. It is reported in §7 as a separate question, not as part of this cause.
+and it predates the textual layer. It is reported in §9 as a separate question, not as part of this cause.
 
 **D. A rename from the text** (`Module cpu` to `Module core` on line 1 by `executeEdits`, direct; `Applied`). The apply
 ran `set cpu.name = "core"`; the Module reads `d` core, `init` cpu, `raw ["core"]`, and its violation is gone. The
@@ -280,3 +280,73 @@ Smoke-test scenarios potentially affected:
   - undo of a script run: one step removes the objects and their slot writes
   - Text tab apply: no duplicate write once option A is also in (an idempotent same-value set)
 ```
+
+## 7. Lane plan for the fix (option A, four files)
+
+Files: `frontend/src/codegen/textual/textDiff.ts`, `frontend/src/codegen/textual/modelLines.ts`,
+`frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/__tests__/modelLines.test.ts`.
+No §3.1 file, no §3.2 trigger, no Layer Impact Report.
+
+1. **Red first.** In `textDiff.test.ts`, an edit that adds `Module cpu {}` to the port corpus yields
+   `['create instance of Module "cpu"', 'set cpu.name = "cpu"']`; in `modelLines.test.ts`, a text whose object is named
+   by a unique identifier yields `set top.name = "top"` among the attribute lines. Both red on HEAD.
+2. **The change.** `textDiff.ts:549` drops `&& name !== h`; `modelLines.ts:141` drops the `if (o.slots[f.name] !== h)`
+   guard. The comment above each says why: the creation handle names `DObject.name` and `initialName`, not the identity
+   slot, which conformance and the XMI export read raw (this report, §5).
+3. **The pinned lines that move.** Measured by that mutation in a temporary worktree of HEAD (removed after), suite
+   `src/codegen/textual`: five assertion tests go red and are the ones to update, each gaining the `set h.name` line:
+   - `modelLines.test.ts` › «an object named by a unique identifier is created under its name; parents before
+     children, then attributes, then references»
+   - `modelLines.test.ts` › «homonyms, names that are not identifiers, reserved or literal words and class names get
+     generated handles, then their name»
+   - `textDiff.test.ts` › «an object added, and one deleted with the reference to it» (`:290`)
+   - `textDiff.test.ts` › «nested: a container added with its contents, and one deleted with its contents in one line»
+     (`:302`)
+   - `textDiff.test.ts` › «into a created container while the old one is deleted: taken out first, put in after the
+     creation (mutant: no detach)» (`:603`)
+
+   Two timing tests also failed in both mutant runs: `languageService.test.ts` › «1,000 objects: a parse and the
+   analysis within the 50 ms budget» (`parse 77.5 ms, analysis 18.3 ms: expected 95.77… to be less than 50`) and, in the
+   second run only, `outline.test.ts` › «1,000 objects: the outline within 10 ms». They time the parser and the outline,
+   which the mutation does not touch; the HEAD suite passed whole (26 files, 1076 passed, 2 skipped,
+   `.agent-logs/base-0253-20261107-031057.log`) and `languageService.test.ts` alone passed on HEAD. Read as machine
+   load (two vite servers and other lanes running), not as an effect of the change; the lane reruns them alone before
+   calling them so. Logs: `mut-0253-20261107-030906.log`, `mut2-0253-*.log`.
+4. **Gates.** `npm run typecheck`, `npm run build`, `npm run test` on `src/codegen/textual` through the quiet runner.
+5. **App check.** This lane's probe rerun: A reads `raw ["cpu"]`, `["result"]`, Ref `["ready"]`, conformance clean, and
+   E exports `name="result"` and the Ref `name="ready"`. B1 stays as it is (option B's business).
+
+## 8. Decisions
+
+- **N1. Where the fix goes.** A: the textual layer always writes the name it means (§7). B: `create instance of C "h"`
+  binds the slot in the executor. A and B. **Recommended: A now; B as a ticket of its own**, since it changes what every
+  JjScript script and the console do, needs the Layer Impact Report of §6.1 and a deferred write inside the undo step.
+- **N2. Where the `set h.name` line sits.** Right after the create in `textDiff` (as the `name !== h` branch already
+  does) and in the attribute group in `modelLines` (as that file already does). **Recommended: keep each file's place**,
+  only the guard goes.
+- **N3. Objects already created from text with an empty slot.** Migrate them, repair them on the next apply, or leave
+  them. **Recommended: leave them** (as R-TXT-46 D8 for saved empty slots): a rename from the text heals one (§4 D), and
+  a repair on apply would write a model change for a text the user did not edit.
+- **N4. The written name is not «the app named it».** The new line writes the name the text gives, so it is not listed in
+  `TextEditPlan.named` and causes no reprint or `Applied · the app named …` status (R-TXT-44). **Recommended: as said.**
+- **N5. The canvas control (C1).** An object dropped on the v2 canvas has an empty slot and only its auto-name;
+  conformance flags a `[1..1]` name on it and the export omits it. **Recommended: not in this lane; a ticket** asking
+  whether an auto-named object counts as named for CHECK 2 and for the export, since that is R-TXT-45's reading of a
+  never-written slot and the core's call.
+
+## 9. Risks and open questions
+
+Risks:
+- Apply time of large texts: one more line per named created object, each `set` waiting for its created handle
+  (`hasReadyInstance`). Not measured on a large corpus here; the lane times a 1,000-object create before and after.
+- The 1,000-object timing tests are load-sensitive (§7.3): a red there must be rerun alone before it is read.
+- Option A leaves the script console producing slotless named objects (B1) until N1's ticket lands.
+
+Open questions:
+1. N1: option A now and B as a ticket, or B in the same lane?
+2. N3: leave the existing empty slots, or repair them on the next apply?
+3. N5: open the ticket on auto-named canvas objects and CHECK 2 / the export?
+4. Does any other textual writer name objects by handle (the outline, D2c's completion inserts)? The two generators
+   read here are the only `create instance of` emitters found by `command grep -rn "create instance of"` under
+   `frontend/src/codegen/textual` outside the tests (`textDiff.ts:543`, `modelLines.ts:134`); the positive control is
+   that same search returning both.
