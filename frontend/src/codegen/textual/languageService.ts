@@ -714,6 +714,19 @@ export function completionsAt(text: string, offset: number, grammar: ConcreteGra
     return out;
 }
 
+/** The character that asks for completion inside a JjEL island (F1d): JjEL's navigation, no style's trigger. */
+export const ISLAND_TRIGGER = '.';
+
+/**
+ * F1d: what a typed trigger character opens, from the candidates at the cursor. A trigger of the style opens the
+ * notation's candidates, as before, never an island's; `.` opens an island's only, so in a path or a number, outside a
+ * string, it opens nothing; any other character nothing.
+ */
+export function triggeredCompletions(all: readonly TextCompletion[], ch: string, styleTriggers: readonly string[]): TextCompletion[] {
+    if (styleTriggers.includes(ch)) return all.filter(c => c.jjel === undefined);
+    return ch === ISLAND_TRIGGER ? all.filter(c => c.jjel !== undefined) : [];
+}
+
 export function textOutline(text: string, parsed: TextParseResult, grammar: ConcreteGrammar): TextOutline {
     const byId = new Map(parsed.objects.map(o => [o.id, o]));
     const top: MutableOutline[] = [];
