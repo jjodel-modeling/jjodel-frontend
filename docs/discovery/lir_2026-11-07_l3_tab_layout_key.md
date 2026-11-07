@@ -100,3 +100,55 @@ are the current code. The cascade cap with one canvas has one instance, so its c
 - IR content-sized node (a Petri place) settles in two writes; a ping-pong still yields at three.
 
 Uncertain about propagation: only §0, raised as a question.
+
+## 6. Addendum: app check (P-2026-11-07-1352)
+
+Tree `~/jjodel-w-mtl3` at `b33b17377` (code `0002f1ae4`), dev server 3352 started by `lane-run probe`, one per run,
+stopped by it. Probes copied into `~/.jjodel-lanes/P-2026-11-07-1352/`, originals untouched; JSON, logs, summaries
+and crops there. Every probe run 0 page errors. Load (1-min) before each run below 40 (one wait, from 81.6).
+
+**Single tab, no regression.** Layout probe of 0628 (the P-2026-11-07-1008 copy, welcome-key seed included),
+`LS_RUNS=3`: 3/3 at every step, every run, at +4 s and +10 s; 18/18 table rows yes / yes / yes; exit 0.
+
+| Step | r1 / r2 / r3, +4 s and +10 s |
+|---|---|
+| 1 A baseline, 2 A->B, 3 B->A, 4 reload on B, 5 after reload B->A, 6 rename Alpha | 3/3 each |
+
+Container probe, one run: 5 checks PASS, 0 failures (12 node boxes identical c0 vs c2; 0 hulls, vacuous on this
+fixture as in 0431, 0555, 1008).
+
+**Two tabs on two models, scene L3** (the 0457 probe extended). Tab A on model `demoESM` with V = `DemoESM / Generic`,
+tab B on `esmB` with W = `ProbeW`, both exclusive. Three objects created in B by `syncCreateObject` (State, Initial,
+Terminal). V and W records written by real drags in each tab, and they differ for every node measured (setup check).
+Focus by a click on the app bar tab. Both panes read at +4 s and +10 s after each step: the DOM translate of the three
+dragged nodes against `layoutByViewpoint[tab key]`.
+
+| Step | Pane A (key V) | Pane B (key W) | Runs |
+|---|---|---|---|
+| 1 focus A | 3/3, own key | 3/3, own key | r1..r4, +4 s and +10 s |
+| 2 focus B (root becomes W) | 3/3, own key | 3/3, own key | r1..r4, +4 s and +10 s |
+| 3 focus A again | 3/3, own key | 3/3, own key | r1..r4, +4 s and +10 s |
+| 4 after a drag in B | 3/3, own key | 3/3, own key | r1..r4, +4 s and +10 s |
+
+32 of 32 reads per pane: the DOM shows the record of the tab's own key, never the other one. Records (r2..r4,
+identical): A V `48,192 / 464,192 / 896,192`, W `48,400 / 464,400 / 896,400`; B V `128,224 / 416,224 / 720,224`,
+W `256,176 / 560,176 / 864,176`. Drag in B (+70, +50 px, the State node): W `256,176 -> 320,224`, V `128,224`
+unchanged; the other two B vertices and the three A vertices unchanged under every key. Same in r1.
+
+Runs: r1 with every 0457 scene first (V1, V3, V2, R-MT-18, ONE, then L3); r2..r4 setup and L3 only. A first r2
+failed its setup check (A: 2 of 3 nodes with distinct V and W records): the scene's +150 px drag of A's first
+node under W landed it on the second node of the row, so the second drag grabbed the first node again. Probe
+fixture defect: A's W drag made vertical (0, +260), r2 rerun; the failed JSON kept as `run-l3-2-overlap.json`.
+r1 ran before the change, with A's W records from the ONE scene and the +150 px drags.
+
+**0457 scenes, once (r1).** Every step line of V1, V3, V2 and R-MT-18 (picker label of each pane, root, project
+field, saved preferences, active tab, B's viewport) is identical to 0457 head run 1. Undo on focus: +0, +0 with the
+two tabs on VP1 and ProbeW (0457: +1, +1); control +0, +0 as before. This is L2's no-undo-on-focus fix, on the
+trunk since 0457. ONE scene: 10/10 under ProbeW, 6/6 under VP1 (0457: 9/10 and 4/6, before the layout-key fix).
+
+**Observation, not L3's scope.** Pane A, kept on V, draws 6 nodes while A is focused and 10 while B is focused (root W),
+in every run. The four extra nodes stand at V's resolved positions (10/10 against the resolver under V). The node set
+follows the root viewpoint, which is IR resolution on the root (§3, L5 territory); positions follow the tab key.
+
+**Crops** (light theme, r1 at +10 s): `crop_l3_focus_B.png`, `crop_l3_focus_A.png`, `crop_l3_after_drag_B.png`,
+and `crop_2_B.png` (single tab, ProbeA -> ProbeB). Not committed. Alfonso's visual check is due.

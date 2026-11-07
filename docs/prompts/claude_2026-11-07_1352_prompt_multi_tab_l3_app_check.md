@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1352
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · no source change · single tab 3/3 every step x3, container 0 failures, two tabs L3 32/32 reads per pane at the tab's own key x4, drag in B under W only, 0457 V1/V2/V3/R-MT-18 unchanged · LIR §6 · hard-stop: visual check due · non fuso
 Lane: full (measurement and closure of a critical-zone lane; no source change)
 Depends: P-2026-11-07-1249 (LIR d9424764a, tests 4678327cc, code 1015af5e1 and 0002f1ae4)
 Worktree: ~/jjodel-w-mtl3, branch multi-tab-l3, at this prompt's commit (node_modules by the P14 symlink, removed at the end)

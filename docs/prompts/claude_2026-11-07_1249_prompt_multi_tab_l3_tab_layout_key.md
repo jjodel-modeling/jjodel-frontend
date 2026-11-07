@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1249
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · d9424764a (LIR), 4678327cc (tests red), 1015af5e1, 0002f1ae4 · scope expansion approved (EditorV2.tsx:610, seven test mocks) · app check P-2026-11-07-1352 (LIR §6), visual check due · non fuso
 Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23 for L3, launched with --critical-zone-goahead P-2026-11-07-1249)
 Depends: L2 on the trunk (P-2026-11-07-1210: `getLayoutKeyFor`, `viewpointId` on `EditorContext`), the layout-key fix on the trunk (da2af3bf7, 8328662df), docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §3.3, §3.5, §7 row L3
 Worktree: ~/jjodel-w-mtl3, branch multi-tab-l3, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)
