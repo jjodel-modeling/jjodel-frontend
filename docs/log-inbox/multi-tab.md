@@ -107,3 +107,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (reachable from L6)
 **Notes**: Counted per producer AND model: one editor releases its producers in sequence, a shared count would never reach zero on the first. Uniqueness has no unmount cleanup, unchanged. The three effects now key on [modelid] (Conformance was []), so an in-place model switch clears the old model at its last release. The last conformance instance also clears entries owned by the model it did not write. Mutation bench in `65e74534d`: 4 mutations, all killed.
 **Prompt document name**: 2026-11-07 08:33
+
+## 2026-11-07 — merge: multi-tab-l4b into alfonso-frontend-jjtl (P-2026-11-07-0853)
+**Prompt**: `claude_2026-11-07_0853_prompt_merge_multi-tab-l4b.md`, lane full (merge): `multi-tab-l4b` at `a9d626afe` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `ee9d7dbba`: the 7 files of the branch (this inbox, the L4b prompt, `problems/registry.ts`, `ConformanceProblemSync.tsx`, `SimCheckProblemSync.tsx`, `ValidationFreshnessSync.tsx`, `producerMounts.test.ts`); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates on `ee9d7dbba`: typecheck and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 542 files, 14593 tests as expected (tip 14586 + 7), 0 failed, 4 files red: the 3 known `window` imports and `irCollapsedRender` (Chromium close hook timeout), red on the tip too, green alone. The two-tab path has no app check before L6.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (two tabs on one model are reachable only from L6; chat GO on 7 unit tests and a mutation bench of 4 mutants)
+**Notes**: Merge tree `1447dede4` equal to the merge-tree measure; probe 1/1 once. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtl4b` (no node_modules there; writing forbidden): the 7 new tests taken from the branch entry and confirmed 7/7 on the merge. Trunk tip also had an `elementWaiterScope` timing red, green alone. Status reads "non applicabile", not the template's "passata", per the GO. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 08:53
