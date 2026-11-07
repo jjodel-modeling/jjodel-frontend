@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0110
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (merge of the core lane's branches; no core file is edited here)
-Status: da eseguire
+Status: eseguito
 Request: none (Alfonso: «ok», 2026-11-06 21:45, to option (c) and its lane plan)
 Depends: P-2026-11-07-0040
 Corregge: —

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0005
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: discovery (read-only on product code; one probe setup fix)
-Status: da eseguire
+Status: eseguito
 Request: none (adopts the Recommended answer of P-2026-11-06-2340, RC-21, Alfonso away under /lane auto)
 Depends: P-2026-11-06-2340
 Corregge: —

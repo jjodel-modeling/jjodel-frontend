@@ -191,3 +191,24 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup clicks the Models «+ New» and never presses «Create model», so `model: null`, every path misses and the `vp-*` setup crashes on a disabled viewpoint trigger. Same result on the trunk at ad6da074b.
 
 **Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, which `scripts/smoke/states.ts` seeds since 19abb1356 (trunk 54f38d163): on a fresh browser the 3.1.1 WelcomeModal can swallow its first click. Same on the trunk; verified by grep, probe not run.
+
+## 2026-11-07 — fix: undo groups L3..L5 on oi-s3a and oi-s3b, chain closed (P-2026-11-07-0155)
+**Prompt**: close the undo-groups chain of option (c) on oi-s3b: L3 merge oi-s2u into oi-s3a (P-2026-11-06-2340), the S3-4 extra-entry diagnosis (P-2026-11-07-0005), the overlay click fix (P-2026-11-07-0040), L4 merge oi-s3a into oi-s3b (P-2026-11-07-0110), L5 probe setup for the visible-only canvas, the R-OI-14/15 wording, this entry, the Status flips of 2340, 0005, 0040, 0110
+**Files touched**: L3: instantiate.ts, instantiate.test.ts, this inbox (merge 6b52b905d); 0005: onto-s3a-slot-problems.ts, onto-s2-instantiate.ts (ccb3abd2b); 0040: NodeProblemOverlay.tsx, NodeProblemOverlay.test.ts (72ad1753d), docs/discovery/discovery_2026-11-07_onto_s3_4_extra_undo_entry.md (f7d46e0c9); L4: instantiate.ts, instantiate.test.ts, this inbox (merge f04faba02); L5: onto-s3b-ghost-rows.ts, onto-s3a-slot-problems.ts (23e741a97); docs/decisions.md (R-OI-14, R-OI-15), this inbox, the four Status lines (this docs commit)
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-06 23:40 (its S3-4 FAIL, remedied by 0005 and 0040; L5's step remedies the setup abort measured by 0005 and L4)
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no (twelve files across the chain, each in its lane's DOVE list; the merges bring the other side's files unchanged, as their DOVE allows)
+**Layer Impact Report**: not-required (no §3.2 file in L3..L5; option (c)'s report is the reconcile discovery §6, 5b1e2fe41)
+**Smoke visivo**: non applicabile
+**Notes**: Gates: L3 typecheck 0, vitest 64/64, build 0; 0040 test 6/6 (4 red before), typecheck 0, build 0; L4 typecheck 0, vitest 79/79, build 0. Benches: 0040 each overlay stop killed by its test; 0110 the queue bypass killed by G1 only. L5 probes (1-min load): S3b uml-s3b 6/6 (15.9→12.1), S3a uml-s3b 8/8 (12.5→22.4), S3a default 8/8 (17.5→16.9); S3-4 undo [4,5,4]. Second cause (c): the probes took every node as mounted. Detail: ~/.jjodel-lanes/P-2026-11-07-0155/closing.md
+**Prompt document name**: 2026-11-07 01:55
+
+**Ticket** (proposed, low): Enter or Space on a focused button of the problem overlay still bubbles its keydown to the node wrapper's `onKeyDown`, which calls `handleNodeClick` on the selection keys (React Flow `index.mjs:2177-2183`). Whether that writes `isSelected` to the D-layer, and so an undo entry, is not measured (`docs/discovery/discovery_2026-11-07_onto_s3_4_extra_undo_entry.md` §6).
+
+**Ticket** (proposed, trunk-side, low): the trunk's `NodeProblemOverlay.tsx` (59947fc70, :174, :181) stops only mousedown at its root, so a click on one of its actions bubbles to `onNodeClick` and writes the node's selection; with no «Sync slots» there, that is one empty undo step. Read, not measured. A cherry-pick of `72ad1753d` without the «Sync slots» test case would close it (same discovery §3.4, §8 question 2).
+
+**Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup never presses «Create model», so `model: null` and the `vp-*` setup crashes on a disabled viewpoint trigger.
+
+**Ticket** (proposed, trunk-side, low, still open from P-2026-11-06-2257): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, so on a fresh browser the 3.1.1 WelcomeModal can swallow its first click.

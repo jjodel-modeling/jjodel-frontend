@@ -6628,18 +6628,28 @@ P-2026-10-20-1835.
   record is `object` are judged; links wait for S4. Detection costs 3.9 ms at 200 instances (vitest, under load).
   Discovery P-2026-10-21-1405 (`docs/discovery/discovery_2026-10-21_onto_s3a_slot_problems.md`), question 3.
 - **R-OI-14** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
-  **«Sync slots» works on one instance, inside one S2u undo group**, appends the missing slots with their default
+  **«Sync slots» works on one instance, inside one undo group**, appends the missing slots with their default
   values, grows the node box and never shrinks it; a model-wide variant is not built now (200 instances do not fit the
-  10 s group cap). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation (R-OI-9).
-  Discovery P-2026-10-21-1405, questions 2 and 4.
+  one deadline of a call). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation
+  (R-OI-9). Discovery P-2026-10-21-1405, questions 2 and 4. Amended 2026-11-07 (P-2026-11-07-0155), wording only: the
+  group is the trunk's nested `beginUndoGroup()` / `endUndoGroup()` (R-PLG-5, R-JTG-14), with the exact merge of late
+  writes after the outermost end (option (c), `docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md` on
+  `oi-undo-discovery`), no longer the S2u group with its id and its 10 s cap; `instantiate.ts` gives each
+  instantiation, sync or materialization one 8 s deadline (`INSTANTIATE_DEADLINE_MS`) and runs instantiation, «Sync
+  slots» and ghost-row materialization through one queue.
 - **R-OI-15** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
   **Ghost and orphan rows (S3b).** A closure feature with no slot is a ghost row `<name> = ` in the instance's node,
-  drawn from the binding with no store write; typing a value materializes one Slot and one value in one S2u group
+  drawn from the binding with no store write; typing a value materializes one Slot and one value in one undo group
   (empty text writes nothing). Text that does not parse for the feature's type is written as a String value, so the
   write is not refused (R-VAL-4) and S3a reports the value type. An orphan row keeps its value and carries a generic
   marker (the lost feature's name cannot be recovered). The missing-slot problem stays beside the ghost row. Editing
   real slot rows on the canvas is a later slice. Discovery P-2026-10-21-1910
-  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4.
+  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4. Amended 2026-11-07
+  (P-2026-11-07-0155), wording only: the group is the trunk's nested `beginUndoGroup()` / `endUndoGroup()` (R-PLG-5,
+  R-JTG-14), with the exact merge of late writes after the outermost end (option (c),
+  `docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md` on `oi-undo-discovery`), no longer the S2u
+  group; the materialization has one deadline and waits in `instantiate.ts`'s one queue behind any instantiation or
+  «Sync slots», so it never shares an undo entry with one.
 - **R-OI-16** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
   **An instance node's box hugs its rows; «a manual resize wins» is not changed.** The UML client's instance view
   authors no `defaultSize`, so S2 writes no manual box and ghost rows are never clipped; for a view that does author

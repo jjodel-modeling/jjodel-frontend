@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-0040
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (`editor-v2/problems/` is in the critical-zone table of CLAUDE.md 3.1: short Layer Impact Report first)
-Status: da eseguire
+Status: eseguito
 Request: none (adopts the recommendation of P-2026-11-07-0005, RC-21, Alfonso away under /lane auto)
 Depends: P-2026-11-07-0005
 Corregge: P-2026-11-07-0005 (stopped at the context ceiling before its report; this lane writes it)
