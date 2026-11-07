@@ -2621,3 +2621,10 @@ Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Repor
 **Smoke visivo**: passato — chat, unattended: undo fix crops 1-format-undo-after-pause, 2-spaces-undo-after-pause, 3-scenario2-after-rename in ~/.jjodel-lanes/P-2026-11-07-0912/ checked by the chat
 **Notes**: Rollback tag `pre-textual-undo-agreement-P-2026-11-07-1103` on `e71c6abdc` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1103/result.json`.
 **Prompt document name**: 2026-11-07 11:03
+
+## 2026-11-07 — ticket: Text tab: Enter at the end of a comment accepts a completion (// end stateState)
+**Ticket**: Seen by P-2026-11-07-0912 (undo fix lane) during its scenario-2 probe run, reported in its log entry as a Ticket paragraph, cause not measured: in the Text tab, typing `// end state` at the end of a line and then Enter gave `// end stateState` on one line, with no newline inserted, as if the Enter accepted a completion item (`State`) instead of breaking the line.
+
+To measure first: whether the suggest widget is open inside a comment (completion should not trigger inside `//` comments), and whether Enter accepts a suggestion there. Files likely involved: `codegen/textual/ui/textualMonaco.ts` (CompletionItemProvider, D2c), `codegen/textual/languageService.ts` (`completionsAt`).
+**Priority**: high
+**Found in**: P-2026-11-07-0912
