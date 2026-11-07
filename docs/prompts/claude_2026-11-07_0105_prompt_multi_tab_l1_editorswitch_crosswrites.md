@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0105
 Chat: C-2026-11-06-2333
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane fast · d9949895c · verifica visiva della chat passata 2026-11-07 (RC-23, crops of P-2026-11-07-0105; scenes 1, 2, 3a, 4 FAIL on base, PASS after; 3b known gap, abstract syntax saved as '' not restored, deferred to L2); GO di Alfonso 2026-11-07 01:15 («GO»)
 Lane: fast (two files, no critical zone; app check with crops)
 Depends: R-MT-16, docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §1.1, §2.3, §7 row L1
 Worktree: ~/jjodel-w-mtl1, branch multi-tab-l1, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)
