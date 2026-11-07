@@ -15,6 +15,8 @@ import { classFeatures } from './metamodel';
 import type { JjelMode, TextFeature, TextMetamodel } from './metamodel';
 import type { SyntaxElement, SyntaxToken, TextParseResult } from './parser';
 import type { NotationStyle } from './style';
+import { tokenize } from '../../jjel/lexer';
+import type { JjelTokenType } from '../../jjel/types';
 
 export interface JjelIsland {
     /** The parsed object the value belongs to (`TextParseResult.objects`). */
@@ -89,6 +91,47 @@ export function islandOffset(island: JjelIsland, k: number): number {
 export function islandRange(island: JjelIsland, from: number, to: number): { start: number; end: number } {
     if (to <= from) { const at = islandOffset(island, from); return { start: at, end: at }; }
     return { start: islandOffset(island, from), end: island.ends[Math.min(to, island.ends.length) - 1] };
+}
+
+/** A token of an island's value as the JjEL lexer reads it, placed in the text; `after` the type of the token before it. */
+export interface IslandToken {
+    readonly start: number;
+    readonly end: number;
+    readonly type: JjelTokenType;
+    readonly after?: JjelTokenType;
+}
+
+/**
+ * The tokens of an island's value (lane F1b, R-TXT-55 F2), in text order, each through the map so that it covers whole
+ * escapes; an action lexes `:=`. Null when the lexer refuses the value (report §9 R2): the island is then one string.
+ */
+export function islandTokens(island: JjelIsland): IslandToken[] | null {
+    const { tokens, errors } = tokenize(island.value, { actionMode: island.mode === 'action' });
+    if (errors.length) return null;
+    const out: IslandToken[] = [];
+    let after: JjelTokenType | undefined;
+    for (const t of tokens) {
+        if (t.end <= t.start) continue;
+        const r = islandRange(island, t.start, t.end);
+        out.push({ start: r.start, end: r.end, type: t.type, ...(after ? { after } : {}) });
+        after = t.type;
+    }
+    return out;
+}
+
+/**
+ * The places of the island's text no character of the value is written at: the quotes, and under `double` the quotes
+ * and `#` of a join. What is left is the value's own text, its escapes included.
+ */
+export function islandDelimiters(island: JjelIsland): { start: number; end: number }[] {
+    const out: { start: number; end: number }[] = [];
+    let at = island.start;
+    for (let k = 0; k < island.map.length; k++) {
+        if (island.map[k] > at) out.push({ start: at, end: island.map[k] });
+        at = Math.max(at, island.ends[k]);
+    }
+    if (island.end > at) out.push({ start: at, end: island.end });
+    return out;
 }
 
 /**
