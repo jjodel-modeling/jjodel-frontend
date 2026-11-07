@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-07-1643
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane merge · ff4450aaa · verifica visiva non applicabile 2026-11-07 (chat GO: executor and JjEL evaluator change only, no UI path; covered by helper-param-shadow.test.ts, 8 tests, and the post-merge gates on ff4450aaa)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-07-1643 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
