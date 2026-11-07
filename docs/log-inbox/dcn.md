@@ -210,3 +210,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (nucleus not wired into the run; prompt: no visual check owed)
 **Notes**: The W5-gap test is replaced by «land() under Interleave runs with its redefinition in one step», the Sync case kept as its own test, a double-assignment test added. Bench in the commit: 4 of 5 mutants killed; the survivor (singleton shortcut to netStep removed) is equivalent, kept so the non-invocation path stays as in L4.4. A redefinition selected alone is inadmissible.
 **Prompt document name**: 2026-11-07 16:50
+
+## 2026-11-07 — merge: dcn-l44b into alfonso-frontend-jjtl (P-2026-11-07-1756)
+**Prompt**: `claude_2026-11-07_1756_prompt_merge_dcn-l44b.md`, lane full (merge): `dcn-l44b` at `2cb5cca14` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `ced5a3d13`: the 6 files of the branch (`docs/decisions.md`, this inbox, the L4.4b prompt, the DCN spec, `dcnStep.ts`, `__tests__/dcnStep.test.ts`); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ced5a3d13`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 561 files, 14955 as expected (tip 14953 + 2), 0 failed, 3 files red at import (the known `window` three).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; nucleus only, covered by tests; chat GO)
+**Notes**: Trunk tip moved to `44ecca1f1` (docs only, another chat) after the prompt; accepted as first parent. Probes 6/6 once, control R-DCN-24 absent; no union resolution. Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44b` (no node_modules; writing forbidden): 2 new tests counted at `2cb5cca14` (16 to 18), matched on the merge. Tip run had one laneRun.test.ts timeout under load, green alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 17:56
