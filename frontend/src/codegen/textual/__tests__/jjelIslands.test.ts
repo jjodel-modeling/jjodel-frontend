@@ -15,7 +15,7 @@ vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab
 import { textInputOf } from '../ui/TextualTab';
 import { classFeatures, jjelOf } from '../metamodel';
 import type { TextMetamodel, TextObject } from '../metamodel';
-import { islandOffset, islandRange, jjelIslands, valueMap } from '../jjelIslands';
+import { checkIslands, islandOffset, islandRange, jjelIslands, valueMap } from '../jjelIslands';
 import type { JjelIsland } from '../jjelIslands';
 import { deriveBaseGrammar } from '../baseGrammar';
 import { deriveConcreteGrammar } from '../concreteGrammar';
@@ -210,5 +210,91 @@ describe('a JjEL token through the map, an escape at its boundary (R3)', () => {
         expect(w).toContain("''it''");
         expect(w.some(s => s.includes("'#") || s.includes("#10'"))).toBe(false);
         expect(writtenTokens(text, islands[2])).toEqual(['n', '==', '"q"']);
+    });
+});
+
+// ---- Checking (lane F1c, P-2026-11-07-1522; R-TXT-55 F3, report §4.3, R2) -------------------------------------------
+
+/** One transition with the given guard and effect, printed and parsed in the style, its islands checked. */
+const checkedIn = (style: NotationStyle, guard: string | null, effect: string | null = null) => {
+    const g = deriveConcreteGrammar(deriveBaseGrammar(NET_MM), style);
+    const text = printTextModel(g, [
+        { id: 'n', cls: 'Net', slots: { name: 'N', transitions: ['t'] } },
+        // A malformed EString is not JjEL: never checked.
+        { id: 't', cls: 'Transition', slots: { name: 'fire', guard, effect, note: 'self.x >' } },
+    ]).text;
+    const parsed = parseText(text, g);
+    expect(parsed.errors).toEqual([]);
+    return { text, found: checkIslands(jjelIslands(parsed, NET_MM, style)) };
+};
+
+/** Each diagnostic as the text it covers, the text right after its start, and its message. */
+const placed = (text: string, found: ReturnType<typeof checkIslands>, ahead = 3) =>
+    found.map(d => [text.slice(d.start, d.end), text.slice(d.start, d.start + ahead), d.message]);
+
+/** An island built from a raw string token at 0, the way jjelIslands builds it. */
+const islandOf = (raw: string, mode: JjelIsland['mode'], style: NotationStyle = CLIKE_STYLE): JjelIsland => {
+    const { value, map, ends } = valueMap(raw, 0, style.string);
+    return { owner: 'o', feature: 'f', mode, start: 0, end: raw.length, value, map, ends };
+};
+
+// A JjEL `"` under C-like and a JjEL `'` under Pascal before the error: both shift the text against the value.
+const BAD_GUARD = `self.a == "go" and self.b == 'it' > > 1`;
+
+describe('checkIslands: a JjEL error of an island, placed on the offending token', () => {
+    for (const style of [CLIKE_STYLE, PASCAL_STYLE, INDENT_STYLE]) {
+        it(`${style.id}: a valid expression and action give nothing, an EString is not checked (dies on the entry points swapped)`, () => {
+            expect(checkedIn(style, 'self.count > 0 and self.label == "go"', 'self.[count] := self.count + 1').found).toEqual([]);
+        });
+
+        it(`${style.id}: an error after an escape lands on the second \`>\` (dies on the map skipped, on the column read from 0, on the end one past the offset)`, () => {
+            const { text, found } = checkedIn(style, `${BAD_GUARD} + 22`);
+            expect(placed(text, found, 4)).toEqual([['>', '> 1 ', 'Expected expression']]);
+        });
+
+        it(`${style.id}: an error on the second line of a value, after \`\\n\` or \`#10\` (dies on the line not converted)`, () => {
+            const { text, found } = checkedIn(style, 'self.a ==\n  > 2');
+            expect(placed(text, found)).toEqual([['>', '> 2', 'Expected expression']]);
+        });
+
+        it(`${style.id}: an action error lands on its token, the action lexed with \`:=\` (dies on the re-lex without actionMode)`, () => {
+            const { text, found } = checkedIn(style, null, 'count := count + 1');
+            expect(placed(text, found)).toEqual([[':=', ':= ', "The target of an action must end in '.[attribute]'"]]);
+        });
+    }
+
+    it('an error at the end of the value marks its last token (dies on the empty EOF token kept)', () => {
+        const { text, found } = checkedIn(CLIKE_STYLE, 'self.count >');
+        expect(placed(text, found, 2)).toEqual([['>', '>"', 'Expected expression']]);
+        const action = checkedIn(PASCAL_STYLE, null, 'self.[count] := ');
+        expect(placed(action.text, action.found, 2)).toEqual([[':=', ':=', 'Expected expression']]);
+    });
+
+    it('a lexer error is one diagnostic per island, on the character the lexer refused (R2; dies on one per lexer error)', () => {
+        const { text, found } = checkedIn(CLIKE_STYLE, 'self.x # # 1');
+        expect(placed(text, found)).toEqual([['#', '# #', 'Unexpected character: #']]);
+    });
+
+    it('an unterminated JjEL string covers the string as written, its escaped quote included (dies on the map skipped)', () => {
+        const c = checkedIn(CLIKE_STYLE, 'self.a == "abc');
+        expect(placed(c.text, c.found)).toEqual([['\\"abc', '\\"a', 'Unterminated string']]);
+        const p = checkedIn(PASCAL_STYLE, "self.a == 'abc");
+        expect(placed(p.text, p.found)).toEqual([["''abc", "''a", 'Unterminated string']]);
+    });
+
+    it('one diagnostic per malformed island, in island order', () => {
+        const { text, found } = checkedIn(CLIKE_STYLE, 'self.count >', 'self.[a] := #');
+        expect(placed(text, found, 1)).toEqual([['>', '>', 'Expected expression'], ['#', '#', 'Unexpected character: #']]);
+    });
+
+    it("conformance's exemptions: blank is absent, `else` a well-formed Expression only (dies on either exemption dropped, on `else` exempt as an action)", () => {
+        for (const mode of ['expression', 'action'] as const) {
+            expect(checkIslands([islandOf('""', mode), islandOf('"   "', mode), islandOf('"\\n"', mode)])).toEqual([]);
+        }
+        expect(checkIslands([islandOf('"else"', 'expression')])).toEqual([]);
+        // ` else` is not the literal: conformance compares the value as it is.
+        expect(checkIslands([islandOf('" else"', 'expression')]).length).toBe(1);
+        const action = checkIslands([islandOf('"else"', 'action')]);
+        expect(action.map(d => [d.start, d.end])).toEqual([[1, 5]]);
     });
 });
