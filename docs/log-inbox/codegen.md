@@ -2556,3 +2556,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: D4 crops 1-rename-box..5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/ checked by the chat (rename box, references renamed, refusals shown at the cursor)
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0717/result.json`.
 **Prompt document name**: 2026-11-07 07:17
+
+## 2026-11-07 — feat(codegen): E2a, text to canvas selection (P-2026-11-07-0746, P-2026-11-07-0840)
+**Prompt**: `claude_2026-11-07_0746_prompt_textual_e2a_select.md` (stopped at the RC-51 soft ceiling after item 1) and its continuation `claude_2026-11-07_0840_prompt_textual_e2a_continuation.md`: a click or cursor key in the Text tab, or an outline click, selects the caret's object on the canvas and in Properties (R-TXT-54 E2, E4-E7).
+**Files touched**: `frontend/src/codegen/textual/selectionSync.ts`, `__tests__/selectionSync.test.ts` (`ef8c76e3c`, `5ca6ac98a`), `ui/TextualTab.tsx` (`5ca6ac98a`); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest: the 3 baseline import reds plus `tolerant.test.ts` timing guard (1056 ms > 1000 under full-suite load), green alone (64/64).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: app check run7 27/27 and the crop 2 retake 3/3 (`probe2.mjs`), crops 1-6 and `2-after-two-arrowdown.png` in ~/.jjodel-lanes/P-2026-11-07-0746/ viewed by the session; GO pending
+**Notes**: Two findings the discovery did not foresee, both fixed in DOVE: the canvas unmounts nodes out of view, so `canvasVertexIds` walks the graphs of the mounted nodes; rc-dock keeps an inactive tab mounted, aria-hidden, visibility hidden, with a non-zero box (contra §6.4), now refused. `_lastSelected` is a transient root key outside the sync: see the §7.2 draft of discovery_2026-11-06_textual_e_sync.md. Bench 7/7 and 6/6 in the commits.
+**Prompt document name**: 2026-11-07 08:40
