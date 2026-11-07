@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1145
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · c9c34c610 · gates green · app check ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-07-1145/, checked by the session · log entry in docs/log-inbox/codegen.md
 Lane: full (root cause, fix, tests; app check)
 Depends: D2c (CompletionItemProvider), D5 (branch textual-d5-format, merging now); ticket https://github.com/jjodel-modeling/jjodel-lanes/issues/687
 Worktree: ~/jjodel-w-text687, branch textual-687-comment-enter (from textual-d5-format, so D5 is in; merges after D5)

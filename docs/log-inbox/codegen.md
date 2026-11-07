@@ -2571,3 +2571,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Prompt document name**: 2026-11-07 07:47
 
 **Ticket** (P-2026-11-07-0841, medium): after the pause, Cmd+Z following any meaning-free edit (Format, typed spaces, a comment) is the app's undo, not the editor's: `unchangedAgreement` (TextualTab.tsx:1493-1494, E1b) makes the text the agreement, the R-TXT-26 key (:1602-1606) routes Cmd+Z to UndoAction, which undoes the previous store step. Measured: Format, pause "No change", Cmd+Z: 4 Ports to 0, buffer "", canUndo false (crop 5-undo); two typed spaces do the same (diag mode C). Redo does not bring it back. Fix lives in TextualTab.tsx, outside D5. Probe: ~/.jjodel-lanes/P-2026-11-07-0841/diag-undo.mjs, MODE=B|C|D.
+
+## 2026-11-07 — fix(codegen): #687, Enter at a comment's end breaks the line (P-2026-11-07-1145)
+**Prompt**: `claude_2026-11-07_1145_prompt_textual_687_comment_enter.md` (ticket #687, lane full): `// end state` then Enter accepted a completion (`stateState`); cause by real gestures, smallest fix, tests red first, app check. TextualTab.tsx approved by the chat for the one option line.
+**Files touched**: `__tests__/completion.test.ts` in 77eb3b725 and 0ff891055 (red); `languageService.ts` in 6822a9f21; `ui/TextualTab.tsx` in c9c34c610 (one line); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-06 22:13 (D2c), ticket #687
+**Causa**: (c)
+**Regressions**: no. Typecheck and build exit 0, check:codegen-lazy ALL GREEN, check:docs 5/5; completion.test.ts 39/39; full vitest 3 baseline import reds only (a first run's 2 Chromium hook timeouts green alone)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe ALL PASS on 3687 (comment kept, caret on line 29, no widget; control `Ev` offers Event); crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/, checked by the session
+**Notes**: Two layers. completionsAt (languageService.ts:550) gave the next token's keywords at an offset in a comment's trivia; now none in a comment or a string. Silent, Monaco fell back to word-based items (State, nextState): the language has no tokenizer, so its no-suggestions-in-comments default never applies; wordBasedSuggestions 'off' in TEXT_EDITOR_OPTIONS. completion.test.ts mocks TextualTab's store and Monaco imports.
+**Prompt document name**: 2026-11-07 11:45
