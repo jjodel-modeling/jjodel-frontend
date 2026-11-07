@@ -15,6 +15,9 @@ import { classFeatures } from './metamodel';
 import type { JjelMode, TextFeature, TextMetamodel } from './metamodel';
 import type { SyntaxElement, SyntaxToken, TextParseResult } from './parser';
 import type { NotationStyle } from './style';
+import { tokenize } from '../../jjel/lexer';
+import { parseAction, parseExpressionStrict } from '../../jjel/parser';
+import type { JjelTokenType } from '../../jjel/types';
 
 export interface JjelIsland {
     /** The parsed object the value belongs to (`TextParseResult.objects`). */
@@ -91,6 +94,47 @@ export function islandRange(island: JjelIsland, from: number, to: number): { sta
     return { start: islandOffset(island, from), end: island.ends[Math.min(to, island.ends.length) - 1] };
 }
 
+/** A token of an island's value as the JjEL lexer reads it, placed in the text; `after` the type of the token before it. */
+export interface IslandToken {
+    readonly start: number;
+    readonly end: number;
+    readonly type: JjelTokenType;
+    readonly after?: JjelTokenType;
+}
+
+/**
+ * The tokens of an island's value (lane F1b, R-TXT-55 F2), in text order, each through the map so that it covers whole
+ * escapes; an action lexes `:=`. Null when the lexer refuses the value (report §9 R2): the island is then one string.
+ */
+export function islandTokens(island: JjelIsland): IslandToken[] | null {
+    const { tokens, errors } = tokenize(island.value, { actionMode: island.mode === 'action' });
+    if (errors.length) return null;
+    const out: IslandToken[] = [];
+    let after: JjelTokenType | undefined;
+    for (const t of tokens) {
+        if (t.end <= t.start) continue;
+        const r = islandRange(island, t.start, t.end);
+        out.push({ start: r.start, end: r.end, type: t.type, ...(after ? { after } : {}) });
+        after = t.type;
+    }
+    return out;
+}
+
+/**
+ * The places of the island's text no character of the value is written at: the quotes, and under `double` the quotes
+ * and `#` of a join. What is left is the value's own text, its escapes included.
+ */
+export function islandDelimiters(island: JjelIsland): { start: number; end: number }[] {
+    const out: { start: number; end: number }[] = [];
+    let at = island.start;
+    for (let k = 0; k < island.map.length; k++) {
+        if (island.map[k] > at) out.push({ start: at, end: island.map[k] });
+        at = Math.max(at, island.ends[k]);
+    }
+    if (island.end > at) out.push({ start: at, end: island.end });
+    return out;
+}
+
 /**
  * Every JjEL value of a parsed text, in text order: the string tokens of the items whose feature, on the class of the
  * object they belong to, is an attribute with `jjel` set. Tokens the parser skipped (an error node) are not values.
@@ -125,5 +169,55 @@ export function jjelIslands(parsed: TextParseResult, mm: TextMetamodel, style: N
         for (const c of n.children) walk(c, owner, next);
     };
     walk(parsed.tree, null, undefined);
+    return out;
+}
+
+/** A JjEL error of an island, placed in the text (lane F1c, R-TXT-55 F3): the offending token's range and the parser's message. */
+export interface JjelDiagnostic {
+    readonly start: number;
+    readonly end: number;
+    readonly message: string;
+}
+
+/** The value offset of a JjEL line and column, both from 1, through the value's own lines; clamped to the value. */
+function valueOffset(value: string, line: number, column: number): number {
+    let at = 0;
+    for (let l = 1; l < line; l++) {
+        const nl = value.indexOf('\n', at);
+        if (nl < 0) break;
+        at = nl + 1;
+    }
+    return Math.min(Math.max(at + column - 1, 0), value.length);
+}
+
+/**
+ * The JjEL errors of the islands (lane F1c, R-TXT-55 F3, report §4.3): each value parsed as conformance parses it
+ * (`ConformanceValidator.ts`, R-SIM-44), with its exemptions, a blank value and the literal `else` of an Expression.
+ * One diagnostic per island (report §9 R2): the parser stops at its first error, and a lexer error comes back as the
+ * parse's. The parser gives a line and a column, no end: the end is the offending token's, re-lexed as the entry point
+ * lexes; an error at the end of the value marks its last token, the end of input having no width.
+ */
+export function checkIslands(islands: readonly JjelIsland[]): JjelDiagnostic[] {
+    const out: JjelDiagnostic[] = [];
+    for (const island of islands) {
+        const { value, mode } = island;
+        if (value.trim() === '' || (mode === 'expression' && value === 'else')) continue;
+        let parsed: boolean;
+        let errors: readonly { line: number; column: number; message: string }[];
+        if (mode === 'expression') {
+            const r = parseExpressionStrict(value);
+            parsed = r.expression !== null; errors = r.errors;
+        } else {
+            const r = parseAction(value);
+            parsed = r.action !== null; errors = r.errors;
+        }
+        if (parsed && errors.length === 0) continue;
+        const e = errors[0];
+        if (!e) { out.push({ ...islandRange(island, 0, value.length), message: `Not a well-formed ${mode}` }); continue; }
+        const at = valueOffset(value, e.line, e.column);
+        const tokens = tokenize(value, { actionMode: mode === 'action' }).tokens.filter(t => t.end > t.start);
+        const t = tokens.find(k => k.start <= at && at < k.end) ?? tokens[tokens.length - 1];
+        out.push({ ...(t ? islandRange(island, t.start, t.end) : islandRange(island, at, at)), message: e.message });
+    }
     return out;
 }

@@ -27,6 +27,9 @@ import { commentsOf, isApplicableParse, parseText, tokenizeText } from './parser
 import type { TextNaming } from './printer';
 import { pathKeyword, textNaming } from './printer';
 import { featureTable } from './textMatch';
+import type { IslandToken } from './jjelIslands';
+import { islandDelimiters, islandTokens, jjelIslands } from './jjelIslands';
+import { JjelTokenType } from '../../jjel/types';
 
 /** What a token is for highlighting. `feature` is a feature's keyword, `keyword` any other word of the notation. */
 export type SemanticRole = 'type' | 'feature' | 'keyword' | 'name' | 'string' | 'number' | 'value' | 'literal' | 'reference' | 'comment';
@@ -152,6 +155,26 @@ function bounds(f: TextFeature, decl: TextAttribute | TextReference | undefined)
     return code(`[${decl.lower ?? 0}..${upper < 0 ? '*' : upper}]`);
 }
 
+const JJEL_KEYWORDS = new Set<JjelTokenType>([
+    JjelTokenType.IF, JjelTokenType.THEN, JjelTokenType.ELSE, JjelTokenType.AND, JjelTokenType.OR, JjelTokenType.NOT,
+    JjelTokenType.IS, JjelTokenType.FORALL, JjelTokenType.EXISTS, JjelTokenType.IN, JjelTokenType.SUCH, JjelTokenType.THAT,
+    JjelTokenType.IMPLIES, JjelTokenType.WITH, JjelTokenType.DO, JjelTokenType.BOOLEAN, JjelTokenType.NULL,
+]);
+const JJEL_NAVIGATION = new Set<JjelTokenType>([JjelTokenType.DOT, JjelTokenType.QUESTION_DOT, JjelTokenType.DOT_LBRACKET]);
+
+/**
+ * The role of a JjEL token inside an island, from the legend the notation already has: a word of JjEL is a `keyword`,
+ * a name after `.`, `?.` or `.[` a `feature`, any other name a `name`; literals by kind. Operators and punctuation have
+ * no role, as the notation's own punctuation has none.
+ */
+function jjelRole(t: IslandToken): SemanticRole | undefined {
+    if (JJEL_KEYWORDS.has(t.type)) return 'keyword';
+    if (t.type === JjelTokenType.IDENTIFIER || t.type === JjelTokenType.DOLLAR_IDENT) return t.after && JJEL_NAVIGATION.has(t.after) ? 'feature' : 'name';
+    if (t.type === JjelTokenType.NUMBER) return 'number';
+    if (t.type === JjelTokenType.STRING) return 'string';
+    return undefined;
+}
+
 /**
  * The analysis of `text` as `parsed` read it with `grammar`, against the metamodel `mm`. The parse must carry its tree
  * (every `parseText` result does); without one the analysis is empty.
@@ -268,6 +291,29 @@ export function analyzeText(text: string, parsed: TextParseResult, grammar: Conc
 
     const tree = parsed.tree;
     if (tree) walk(tree, null, null, top, null, null);
+
+    // F1b (R-TXT-55 F2): a JjEL value's string token gives way to the JjEL lexer's tokens, its quotes kept `string`.
+    const islands = jjelIslands(parsed, mm, grammar.style);
+    if (islands.length) {
+        const sub = new Map<number, SemanticToken[]>();
+        for (const island of islands) {
+            const lexed = islandTokens(island);
+            if (!lexed) continue;
+            const parts: SemanticToken[] = [];
+            for (const t of lexed) {
+                const role = jjelRole(t);
+                if (role && t.end > t.start) parts.push({ start: t.start, end: t.end, role, modifiers: [] });
+            }
+            // A join's quotes inside a JjEL string (`'a'#10'b'` under Pascal) belong to that string's token.
+            for (const d of islandDelimiters(island)) {
+                if (!lexed.some(t => t.start < d.end && d.start < t.end)) parts.push({ ...d, role: 'string', modifiers: [] });
+            }
+            sub.set(island.start, parts.sort((x, y) => x.start - y.start));
+        }
+        const spliced = tokens.flatMap(t => (t.role === 'string' && sub.get(t.start)) || [t]);
+        tokens.length = 0;
+        tokens.push(...spliced);
+    }
 
     // The comments, merged into the tokens in text order; a run of own-line comments folds.
     const comments = tree ? commentsOf(tree, grammar) : [];

@@ -58,6 +58,8 @@ import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotati
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
+import { checkIslands, jjelIslands } from '../jjelIslands';
+import type { JjelDiagnostic } from '../jjelIslands';
 import type { NewModelReading } from '../modelLines';
 import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
 import type { ConfirmRow } from './TextConfirmPanel';
@@ -1027,6 +1029,9 @@ const EDIT_MARKER_OWNER = 'textual-edit';
 /** D3b: the owner of the conformance markers, apart from the edit's, so a pause's parse never clears them (D8). */
 const CONFORMANCE_MARKER_OWNER = 'textual-conformance';
 
+/** F1c (R-TXT-55 F3): the owner of the JjEL errors of the islands, warnings the apply never reads. */
+const JJEL_MARKER_OWNER = 'textual-jjel';
+
 /** The conformance hook, loaded on the tab's mount (model/conformance/useConformance imports `joiner`, which the bench cannot). */
 type ConformanceHook = typeof import('../../../model/conformance/useConformance')['useConformance'];
 
@@ -1326,8 +1331,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setRefDecorations(back.refs);
     };
 
-    /** The parse's errors, and the misplaced outer references (T7 (5)), as markers. */
-    const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = []): void => {
+    /** The parse's errors, and the misplaced outer references (T7 (5)), as markers; F1c: the islands' JjEL errors, as warnings. */
+    const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = [], jjel: readonly JjelDiagnostic[] = []): void => {
         const monaco = monacoRef.current;
         const m = editorRef.current?.getModel();
         if (!monaco || !m) return;
@@ -1339,6 +1344,17 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                 // Step A: a reference error after a syntax error may follow from it, and is a warning.
                 severity: 'secondary' in e && e.secondary ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error,
                 message: e.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+        monaco.editor.setModelMarkers(m, JJEL_MARKER_OWNER, jjel.map(d => {
+            const from = m.getPositionAt(Math.min(d.start, length));
+            const to = m.getPositionAt(Math.min(Math.max(d.end, d.start + 1), length));
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: 'jjel',
+                message: d.message,
                 startLineNumber: from.lineNumber, startColumn: from.column,
                 endLineNumber: to.lineNumber, endColumn: to.column,
             };
@@ -1489,7 +1505,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
         const carried = carriedSpans();
         const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse);
-        setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
+        setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : [], checkIslands(jjelIslands(parsed, r.base.mm, r.base.grammar.style)));
         const read: GuardRead = { grammar: r.base.grammar, text, parsed, carried };
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones. D1: an object
         // commented out keeps its span, so the next pause still finds it inside the comment.
