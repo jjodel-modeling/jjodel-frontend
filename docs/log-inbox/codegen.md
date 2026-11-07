@@ -2582,3 +2582,14 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: E2a crops 1-6 and 2-after-two-arrowdown in ~/.jjodel-lanes/P-2026-11-07-0746/ checked by the chat (caret selects its node, typing selects nothing, outline click, Properties follows)
 **Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0927/result.json`.
 **Prompt document name**: 2026-11-07 09:27
+
+## 2026-11-07 — ticket: A canvas create gets no undo step of its own (reducer.ts:1280 vertex merge)
+**Ticket**: An object dropped on the v2 canvas never gets an undo step of its own. Measured by P-2026-11-07-0654 (docs/discovery/discovery_2026-11-07_slot_identity_656.md §9, on branch slot-identity-656): after `syncCreateObject` the state history keeps the same length (undoDelta 0), and one Undo reverts the user's previous action while the new object stays.
+
+Cause (read): `reducer.ts:1280` merges every delta that touches a vertex (`delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs`) into the previous undo entry. The drop of a new object creates a vertex, so its creation folds into whatever came before.
+
+Expected: a delta that creates a DObject is not merged by the vertex rule; one Undo removes the dropped object (and its vertex), and nothing else.
+
+Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Report.
+**Priority**: medium
+**Found in**: P-2026-11-07-0654
