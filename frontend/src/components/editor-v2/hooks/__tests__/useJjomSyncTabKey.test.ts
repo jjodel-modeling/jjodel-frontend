@@ -189,6 +189,15 @@ describe('useJjomSync: the tab layout key', () => {
         expect(positions()).toEqual({ 'v-o0': { x: 0, y: 0 }, 'v-o1': { x: 0, y: 0 } });
     });
 
+    it('a tab on a decorative viewpoint under an exclusive root: abstract syntax, not the root record', () => {
+        // What EditorV2 hands over from L2 when its tab differs from the root (EditorV2.tsx, the useJjomSync call).
+        openModel('A');
+        redux.state.idlookup.D = { id: 'D', isExclusiveView: false };
+        settle('D');
+        expect(positions()).toEqual({ 'v-o0': { x: 0, y: 0 }, 'v-o1': { x: 0, y: 0 } });
+        expect(new Set(transformKeys)).toEqual(new Set(['__abstract__']));
+    });
+
     it('with no tab the root key is read and followed: the hook of one tab, unchanged', () => {
         openModel('A');
         settle();
