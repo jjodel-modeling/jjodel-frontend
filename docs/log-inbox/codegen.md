@@ -2643,3 +2643,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Prompt document name**: 2026-11-07 07:47
 
 **Ticket** (P-2026-11-07-0841, medium): after the pause, Cmd+Z following any meaning-free edit (Format, typed spaces, a comment) is the app's undo, not the editor's: `unchangedAgreement` (TextualTab.tsx:1493-1494, E1b) makes the text the agreement, the R-TXT-26 key (:1602-1606) routes Cmd+Z to UndoAction, which undoes the previous store step. Measured: Format, pause "No change", Cmd+Z: 4 Ports to 0, buffer "", canUndo false (crop 5-undo); two typed spaces do the same (diag mode C). Redo does not bring it back. Fix lives in TextualTab.tsx, outside D5. Probe: ~/.jjodel-lanes/P-2026-11-07-0841/diag-undo.mjs, MODE=B|C|D.
+
+## 2026-11-07 — merge: textual-d5-format into alfonso-frontend-jjtl (P-2026-11-07-1141)
+**Prompt**: `claude_2026-11-07_1141_prompt_merge_textual-d5-format.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d5-format` at `b6bbe612e` into `alfonso-frontend-jjtl`, merge base `db79d40ff`, 5 commits on the branch side.
+**Files touched**: merge `938b5fe1f`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0747_prompt_textual_d5_format.md`, `docs/prompts/claude_2026-11-07_0841_prompt_textual_d5_continuation.md`, `frontend/src/codegen/textual/__tests__/format.test.ts`, `frontend/src/codegen/textual/format.ts`, `frontend/src/codegen/textual/ui/textualMonaco.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `938b5fe1f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14729 tests in 548 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D5 crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/ and 5-undo in ~/.jjodel-lanes/P-2026-11-07-0841/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d5-format` on `376a2273e` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1141/result.json`.
+**Prompt document name**: 2026-11-07 11:41
