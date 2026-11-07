@@ -40,7 +40,7 @@ import type { JjelExpression } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { describeType, firstAbsence } from '../jjelTriState';
 import { toJjelStateAccess } from './guardContext';
-import type { SimSnapshot } from './guardContext';
+import type { SimDcnBinding, SimSnapshot } from './guardContext';
 import { stateAccess } from './netStep';
 import { checkGuardSubset } from './subsetChecker';
 import type { CompiledNet, SimState, SimValue } from './netTypes';
@@ -204,12 +204,27 @@ function isSimValue(value: JjelValue): value is SimValue {
     return typeof value === 'boolean' || typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value));
 }
 
+/**
+ * `dcn`, when given, is the DCN nucleus's binding over the same σ as `state`
+ * (dcn/dcnHandles.ts): the instances are bound by name to its σ-backed
+ * handles, `.in(V::D)` is its accessor, and `self` is the handle of the
+ * instance `dcn.self` when that is given (a watch per instance, spec §7), the
+ * model root otherwise. Without it nothing changes.
+ */
 export function evaluateOutput(
     output: CompiledOutput, snapshot: SimSnapshot, net: Pick<CompiledNet, 'modelId' | 'places'>, state: SimState,
+    dcn?: { readonly binding: SimDcnBinding; readonly self?: string },
 ): OutputReading {
     if (output.defect !== null || output.expr === null) return { kind: 'defect', detail: output.defect?.detail ?? 'no expression' };
-    const ctx = snapshot.base.child({ self: snapshot.model, event: null, model: snapshot.model });
+    let self: JjelValue = snapshot.model;
+    if (dcn?.self !== undefined) {
+        const handle = dcn.binding.selfOf(dcn.self);
+        if (handle === undefined) return { kind: 'defect', detail: `'${dcn.self}' is no instance of the DCN run` };
+        self = handle;
+    }
+    const ctx = snapshot.base.child(dcn ? { ...dcn.binding.named, self, event: null, model: snapshot.model } : { self, event: null, model: snapshot.model });
     ctx.stateAccess = toJjelStateAccess(stateAccess(state, net.modelId), net.places);
+    if (dcn) ctx.classification = dcn.binding.classification;
     let out: { value: JjelValue; warnings: JjelWarning[] };
     try {
         out = EVALUATOR.evaluateWithDiagnostics(output.expr, ctx);
