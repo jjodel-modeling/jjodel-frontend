@@ -2338,6 +2338,32 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Rollback tag `pre-textual-e-sync` on `9a5a63048` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0017/result.json`.
 **Prompt document name**: 2026-11-07 00:17
 
+## 2026-11-07 — docs: step F discovery, embedded JjEL and tracing (P-2026-11-06-2357)
+**Prompt**: `claude_2026-11-06_2357_prompt_textual_f_discovery.md`: step F of the textual IDE plan, read only: where JjEL lives in a textual model, highlighting, checking and completion inside the string, generated line to model line, what T8 is, critical zone, lane plan with F1..Fn.
+**Files touched**: `afd1b3138`..`ee0ba5a0f` (8 commits): `docs/discovery/discovery_2026-11-07_textual_f_jjel_tracing.md`; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe `probe_jjel.ts` (lane folder): JjEL values round-trip in c-like, Pascal and indent, one raw index per value char, JjEL error positions mapped to document offsets. Origins per fragment and click-to-canvas already ship in the generator tab; the Text tab lacks an entry point. T8 = re-import of an exported file (textual_viewpoint report :812). Lanes F1a-F1e, F2, T8a-T8d; F1-F12 to ratify. Hard stop.
+**Prompt document name**: 2026-11-06 23:57
+
+## 2026-11-07 — merge: textual-f-jjel-tracing into alfonso-frontend-jjtl (P-2026-11-07-0116)
+**Prompt**: `claude_2026-11-07_0116_prompt_merge_textual-f-jjel-tracing.md`, a direct merge by `lane-run merge --direct`, no session: the step F discovery branch into `alfonso-frontend-jjtl`.
+**Files touched**: merge `07d20a2f5` (the F discovery report, its prompt and log entry); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. One vitest red at load 104 (`elementWaiterScope`, a timing check), 6/6 alone at load 3; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — docs only (step F discovery)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0116/result.json`.
+**Prompt document name**: 2026-11-07 01:16
+
 ## 2026-11-07 — feat(codegen): E1a, T10's splice keeps typed text (P-2026-11-07-0048)
 **Prompt**: `claude_2026-11-07_0048_prompt_textual_e1a_reprint.md`, row E1a of the step E report: a pure `reprintChanged` that keeps each object's typed text when its own print is unchanged, recursing into children, null when it cannot splice safely; tests first, mutation bench on rules 1, 2 and 4.
 **Files touched**: `d795d9533`: frontend/src/codegen/textual/textReprint.ts (new), frontend/src/codegen/textual/__tests__/textReprint.test.ts (new); uncommitted: this entry, the prompt's Status.

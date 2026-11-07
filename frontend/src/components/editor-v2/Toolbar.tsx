@@ -27,6 +27,7 @@ import {
 import { useCodegenEnabled } from '../../codegen/setting';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { saveViewpointPreference } from '../abstract/tabs/EditorSwitch';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
@@ -383,6 +384,10 @@ function Toolbar({
             return;
         }
         activateViewpoint(vpId || null);
+        // The pick is this model's preference and no other's: the mounted EditorSwitch of every
+        // open tab sees the root change, so the write lives here, with the picker (R-MT-16).
+        // isMetamodel stays out of the deps: it is fixed for a given modelId.
+        if (modelId && !isMetamodel) saveViewpointPreference(modelId, vpId || null);
     }, [modelId]);
 
     // ── The picker itself: a custom listbox, no longer a <select> (NAV2) ──
