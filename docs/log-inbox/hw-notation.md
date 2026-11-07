@@ -1350,3 +1350,9 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile (no UI change, no app probe by the prompt)
 **Notes**: Red 2/4 before. Callers: ProjectEditor.tsx:1606 returns first, JjtlDevelopmentEnv.tsx:361 and jjodelConverter.ts:358 read on success only. Moved to pointer variants, called-lazy-rules.test.ts at e73016a49: 127, 171, 362, 386, 408, 569-570. Dropped, no successful variant: called-lazy-rules.test.ts:700 (roots), containment-placement.test.ts:232-236 (placed once, roots). Bench: unique off x2, let unrealized, all killed.
 **Prompt document name**: 2026-11-07 11:25
+
+## 2026-11-07 — docs: closure of the blocked jjtl-failed-run-no-target merge
+**Prompt**: P-2026-11-07-1152, direct merge of `jjtl-failed-run-no-target` (R-FA-14), landed as `354ba3cdd`, reported blocked by the vitest gate.
+**File toccati**: the merge prompt's `Status:` line, this entry
+**Esito**: ✅ completato
+**Note**: Two red cases in `jjtlSourceValues.test.ts`, outside `jjtl/`: its helper read `targetModel` of a failed run, which R-FA-14 removes. The lane ran only the JjTL and JjEL suites and missed them. Fixed on the trunk by `40b586823` (16/16 green). `lane-run go` refuses a blocked merge, so this closure is by hand.
