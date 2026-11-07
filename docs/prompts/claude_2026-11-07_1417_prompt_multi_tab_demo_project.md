@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1417
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · no code commit (closed by P-2026-11-07-1439 after the context ceiling) · app check ALL PASS (24/24), crops in ~/.jjodel-lanes/P-2026-11-07-1439/, checked by the session · log entry in docs/log-inbox/multi-tab.md
 Lane: full (builds a demo project through the running app; no source change)
 Depends: L2 on the trunk (P-2026-11-07-1210), the layout-key fix (da2af3bf7)
 Worktree: ~/jjodel-w-mtdemo, branch multi-tab-demo, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

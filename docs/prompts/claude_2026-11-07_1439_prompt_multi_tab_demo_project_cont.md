@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1439
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · no code commit (demo project in ~/Downloads, prompt commit f26580161) · app check ALL PASS (24/24), crops in ~/.jjodel-lanes/P-2026-11-07-1439/, checked by the session · log entry in docs/log-inbox/multi-tab.md
 Lane: full (builds a demo project through the running app; no source change)
 Depends: P-2026-11-07-1417 and its handoff ~/.jjodel-lanes/P-2026-11-07-1417/handoff.md
 Worktree: ~/jjodel-w-mtdemo, branch multi-tab-demo, at this prompt's commit (node_modules symlink already in place; remove it at the end)

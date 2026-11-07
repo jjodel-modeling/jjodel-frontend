@@ -185,3 +185,15 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO on the P-2026-11-07-1352 app check of the same code: two tabs on two models at their own viewpoints 4/4, a drag in B writes under its tab key only, single tab 3/3, container 0 failures, 0457 scenes unchanged)
 **Notes**: Tip moved during the gates by another chat's docs-only `df5788565` (codegen inbox, 1418 Status), accepted as trunk; probes 14/14 re-run on the merged tree, R-TXT-59 absent. Branch vitest not run in `/Users/alfonso/jjodel-w-mtl3` (no node_modules; writing forbidden): 27 new tests counted at `17e21bac6`. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 14:38
+## 2026-11-07 — demo: Smart building multi-tab project, built through the app, exported and delivered
+**Prompt**: `claude_2026-11-07_1439_prompt_multi_tab_demo_project_cont.md`, continuation of P-2026-11-07-1417 after its context ceiling: run `build.mjs` end to end, check two tabs and the in-tab switch, Download Project, re-import in a fresh profile, deliver to `~/Downloads/`.
+**Files touched**: this entry and the Status of the 1417 and 1439 prompt files; no source change. Outside the tree: `~/Downloads/jjodel-multitab-demo.{jjodel,md}` and two crops; scripts and outputs in `~/.jjodel-lanes/P-2026-11-07-1439/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops of Apartment on Floor plan, Office on Control wiring and Apartment switched to Control wiring, checked by the session)
+**Notes**: Second run ALL PASS 24/24: models 19 and 28 objects, two exclusive viewpoints, V1-V4, in-tab switch and back, Office kept its viewpoint, re-import counts and 12 positions (record and DOM). First run: 2 script bugs, fixed in the 1439 copy of `build.mjs`: record collector matched DObject on a `model` field it lacks (12 nulls), export check searched the lz-compressed `state`. Colour is by subclass, not DeviceKind (stated in the md).
+**Prompt document name**: 2026-11-07 14:39
