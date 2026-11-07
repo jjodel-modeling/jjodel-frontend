@@ -247,7 +247,7 @@ describe('checkIslands: a JjEL error of an island, placed on the offending token
             expect(checkedIn(style, 'self.count > 0 and self.label == "go"', 'self.[count] := self.count + 1').found).toEqual([]);
         });
 
-        it(`${style.id}: an error after an escape lands on the second \`>\` (dies on the map skipped, on the column read from 0, on the end one past the offset)`, () => {
+        it(`${style.id}: an error after an escape lands on the second \`>\` (dies on the map skipped, on the column read from 0)`, () => {
             const { text, found } = checkedIn(style, `${BAD_GUARD} + 22`);
             expect(placed(text, found, 4)).toEqual([['>', '> 1 ', 'Expected expression']]);
         });
@@ -257,7 +257,7 @@ describe('checkIslands: a JjEL error of an island, placed on the offending token
             expect(placed(text, found)).toEqual([['>', '> 2', 'Expected expression']]);
         });
 
-        it(`${style.id}: an action error lands on its token, the action lexed with \`:=\` (dies on the re-lex without actionMode)`, () => {
+        it(`${style.id}: an action error lands on its token, \`:=\` whole (dies on the action parsed as an expression, on the end one past the offset)`, () => {
             const { text, found } = checkedIn(style, null, 'count := count + 1');
             expect(placed(text, found)).toEqual([[':=', ':= ', "The target of an action must end in '.[attribute]'"]]);
         });
@@ -270,7 +270,7 @@ describe('checkIslands: a JjEL error of an island, placed on the offending token
         expect(placed(action.text, action.found, 2)).toEqual([[':=', ':=', 'Expected expression']]);
     });
 
-    it('a lexer error is one diagnostic per island, on the character the lexer refused (R2; dies on one per lexer error)', () => {
+    it('a lexer error is one diagnostic per island, on the character the lexer refused (R2; dies on the column read from 0, on the last error read for the first)', () => {
         const { text, found } = checkedIn(CLIKE_STYLE, 'self.x # # 1');
         expect(placed(text, found)).toEqual([['#', '# #', 'Unexpected character: #']]);
     });
