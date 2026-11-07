@@ -356,6 +356,9 @@ export class JjelEvaluator {
                 return this.evaluateObjectLiteral(expr, evalCtx);
             case 'StateAccess':
                 return this.evaluateStateAccess(expr, evalCtx);
+            case 'ClassificationTest':
+                // The accessor is lane L3.3 (R-DCN-7): until then the tri-state reports `exception`.
+                throw new JjelEvaluationError(`${expr.viewpoint}::${expr.dynamicClass}: classification is not bound here`, expr);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }

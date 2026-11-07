@@ -48,6 +48,7 @@ import {
     IndexAccessExpr,
     ObjectLiteralExpr,
     StateAccessExpr,
+    ClassificationTestExpr,
     JjelActionParserResult,
     ASTLocation,
     BinaryOperator,
@@ -67,6 +68,9 @@ const MEMBER_NAME_TYPES: ReadonlySet<JjelTokenType> = new Set<JjelTokenType>([
     JjelTokenType.IDENTIFIER,
     ...Object.values(JJEL_KEYWORDS).filter(t => !LITERAL_KEYWORD_TYPES.has(t)),
 ]);
+
+/** `::` has one place in JjEL (R-DCN-7); a `::` the parser meets anywhere else is this error. */
+const DOUBLE_COLON_PLACE = "'::' is allowed only in a classification test, written '<object>.in(V::D)': one viewpoint, '::', one dynamic class, nothing else in the parentheses.";
 
 /**
  * `interpolation` builds `InterpolatedStringExpr` from the tokens of an
@@ -419,6 +423,7 @@ export class JjelParser {
     /**
      * postfix = primary (
      *     . memberName (( argList ))?
+     *   | . IN ( IDENTIFIER :: IDENTIFIER )
      *   | ?. memberName (( argList ))?
      *   | .[ IDENTIFIER ]
      *   | [ expression ]
@@ -431,7 +436,21 @@ export class JjelParser {
             if (this.match(JjelTokenType.DOT)) {
                 const propToken = this.consumeMemberName("Expected property name after '.'");
 
-                if (this.match(JjelTokenType.LPAREN)) {
+                if (propToken.type === JjelTokenType.IN && this.isQualifiedNameArgument()) {
+                    // Classification test: expr.in(V::D) (R-DCN-7)
+                    this.consume(JjelTokenType.LPAREN, "Expected '('");
+                    const viewpoint = this.advance();
+                    this.advance();
+                    const dynamicClass = this.advance();
+                    this.consume(JjelTokenType.RPAREN, "Expected ')' after the dynamic class");
+                    expr = {
+                        type: 'ClassificationTest',
+                        object: expr,
+                        viewpoint: viewpoint.value,
+                        dynamicClass: dynamicClass.value,
+                        location: this.makeLocation(this.getStartToken(expr), this.previous()),
+                    } as ClassificationTestExpr;
+                } else if (this.match(JjelTokenType.LPAREN)) {
                     // Method call
                     const args = this.argumentList();
                     this.consume(JjelTokenType.RPAREN, "Expected ')' after arguments");
@@ -494,12 +513,24 @@ export class JjelParser {
                     index,
                     location: this.makeLocation(this.getStartToken(expr), this.previous()),
                 } as IndexAccessExpr;
+            } else if (this.check(JjelTokenType.DOUBLE_COLON)) {
+                throw this.error(this.peek(), DOUBLE_COLON_PLACE);
             } else {
                 break;
             }
         }
 
         return expr;
+    }
+
+    /** At `( IDENTIFIER :: IDENTIFIER )`, the only argument list that makes `in` a classification test. */
+    private isQualifiedNameArgument(): boolean {
+        const at = (k: number) => this.tokens[this.current + k]?.type;
+        return at(0) === JjelTokenType.LPAREN
+            && at(1) === JjelTokenType.IDENTIFIER
+            && at(2) === JjelTokenType.DOUBLE_COLON
+            && at(3) === JjelTokenType.IDENTIFIER
+            && at(4) === JjelTokenType.RPAREN;
     }
 
     /**
@@ -621,6 +652,7 @@ export class JjelParser {
             } as IdentifierExpr;
         }
 
+        if (this.check(JjelTokenType.DOUBLE_COLON)) throw this.error(this.peek(), DOUBLE_COLON_PLACE);
         throw this.error(this.peek(), "Expected expression");
     }
 
