@@ -1380,6 +1380,9 @@ export class JjtlExecutor {
      */
     private createHelperFunction(helper: HelperAST): JjelFunction {
         const paramNames = helper.parameters.map(p => p.name);
+        // Inside the body the parameters shadow helpers and builtins of the same name
+        // (SPEC §3.4); a helper called from here sees its own parameters only
+        const shadowed: ReadonlySet<string> = new Set(paramNames);
 
         return createFunction(paramNames, (args: JjelValue[], ctx: EvaluationContext) => {
             // Create child context with parameter bindings
@@ -1389,6 +1392,7 @@ export class JjtlExecutor {
             });
 
             const childCtx = ctx.child(bindings);
+            childCtx.shadowedBuiltins = shadowed;
             return this.evaluateExpression(helper.body, childCtx);
         });
     }
@@ -2966,7 +2970,11 @@ export class JjtlExecutor {
             const fc = expr as FunctionCallAST;
             if (fc.callee.type === 'Identifier') {
                 const fnName = (fc.callee as IdentifierAST).name;
-                const builtin = ctx.getBuiltin(fnName);
+                // A helper parameter that holds a function shadows a helper or
+                // builtin of the same name; one that holds a value does not (SPEC §3.4)
+                const shadow = ctx.shadowedBuiltins?.has(fnName) ? ctx.get(fnName) : undefined;
+                const shadowed = !!shadow && typeof shadow === 'object' && '__jjelFunction' in shadow;
+                const builtin = shadowed ? undefined : ctx.getBuiltin(fnName);
                 if (builtin) {
                     try {
                         const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));

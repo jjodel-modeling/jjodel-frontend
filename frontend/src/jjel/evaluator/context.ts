@@ -383,6 +383,13 @@ export class EvaluationContext {
      */
     ambiguousInstances?: Map<string, AmbiguousInstanceInfo>;
     /**
+     * Names whose scope binding wins over a builtin of the same name: a JjTL
+     * helper's parameters inside its body (P-2026-11-06-2226). Read as a value,
+     * the binding wins; called, it wins only when it holds a function.
+     * `undefined`: builtins first, as everywhere else. Inherited by children.
+     */
+    shadowedBuiltins?: ReadonlySet<string>;
+    /**
      * The state `x.[a]` reads (R-SIM-43). `undefined`: no state here, and
      * `.[a]` throws. Inherited by children, like `diagnostics`.
      */
@@ -487,6 +494,8 @@ export class EvaluationContext {
         child.diagnostics = this.diagnostics;
         // Propagate the ambiguity map so warnings fire inside forall/lambda scopes.
         child.ambiguousInstances = this.ambiguousInstances;
+        // Propagate the shadowed names so lambdas in a helper body see the parameters.
+        child.shadowedBuiltins = this.shadowedBuiltins;
         // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
         child.stateAccess = this.stateAccess;
         // Propagate the classification hook so `.in(V::D)` answers inside forall/lambda scopes.
