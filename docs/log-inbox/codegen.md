@@ -2669,3 +2669,18 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe ALL PASS on 3687 (comment kept, caret on line 29, no widget; control `Ev` offers Event); crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/, checked by the session
 **Notes**: Two layers. completionsAt (languageService.ts:550) gave the next token's keywords at an offset in a comment's trivia; now none in a comment or a string. Silent, Monaco fell back to word-based items (State, nextState): the language has no tokenizer, so its no-suggestions-in-comments default never applies; wordBasedSuggestions 'off' in TEXT_EDITOR_OPTIONS. completion.test.ts mocks TextualTab's store and Monaco imports.
 **Prompt document name**: 2026-11-07 11:45
+
+## 2026-11-07 — merge: textual-687-comment-enter takes alfonso-frontend-jjtl (P-2026-11-07-1248)
+**Prompt**: `claude_2026-11-07_1248_prompt_textual-687-comment-enter_take_trunk.md`, trunk-into by `lane-run merge --trunk-into`: `alfonso-frontend-jjtl` at `7e44b15ae` into `textual-687-comment-enter`, one `--no-ff` merge commit before the branch's own merge (RC-14), merge base `b6bbe612e`, 96 commits on the trunk side.
+**Files touched**: merge `cc917a087`: `docs/log-inbox/codegen.md` resolved by union (trunk's entry, then the branch's), the trunk's 99 files auto-merged, `ui/TextualTab.tsx` on both sides; this commit: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. Gates on `cc917a087`: typecheck 0 errors; typecheck:scripts exit 0; vitest 14768 passed in 550 files, the trunk's 14762 plus the branch's 6, 3 red at import; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly FAIL, see Notes.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #687 crop 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/ checked by the chat
+**Notes**: check:addonly red on cc917a087: hw-notation.md:1307 (2026-11-05 closure of the blocked jjtl-method-failure-error merge) was rewritten by the trunk's 3f7f6f7f4, which has no Log-Repair trailer. It is inherited, not from the union. The step 7 reset was denied by the harness, and its target 0781ed96e would drop 4ea6bc699; the merge stays, by the chat's GO. Second cause (a). Trunk tip moved to 9d3a79c22, docs only. 29 probes once, control R-MT-24 absent.
+**Prompt document name**: 2026-11-07 12:48
+
+**Ticket** (P-2026-11-07-1248, high): the trunk's `3f7f6f7f4` rewrote the add-only entry `docs/log-inbox/hw-notation.md` (heading `2026-11-05 — docs: closure of the blocked jjtl-method-failure-error merge`) with no `Log-Repair:` trailer, so every merge of the trunk into a branch fails `check:addonly` against its first parent. Fix on the trunk: a `KNOWN_REPAIRS` entry for `3f7f6f7f4` in `frontend/scripts/gates/check-addonly.ts`. Same lane: the `lane-run` trunk-into template names the pre-prompt sha as the reset target, so the reset would drop the prompt commit.
