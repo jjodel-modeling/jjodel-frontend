@@ -657,12 +657,14 @@ describe('JjEL sub-tokens inside the islands', () => {
         enumerations: [],
     };
     const OBJECTS: TextObject[] = [
-        { id: 'm', cls: 'Machine', slots: { name: 'turnstile', transitions: ['tp', 'tc', 'tx', 'ty'] } },
+        { id: 'm', cls: 'Machine', slots: { name: 'turnstile', transitions: ['tp', 'tc', 'tx', 'ty', 'tz'] } },
         { id: 'tp', cls: 'Transition', slots: { name: 'tp', guard: 'model.[paid]', effect: 'model.[coins] := model.[coins] + 1', note: 'self.x > 0' } },
         { id: 'tc', cls: 'Transition', slots: { name: 'tc', guard: `self.label == "go" or self.tag == 'it'`, effect: "x := 1\ny := 'a'", note: null } },
         // A lexer error (`:=` in an expression) and a parse error the lexer accepts (`>` with nothing after it).
         { id: 'tx', cls: 'Transition', slots: { name: 'tx', guard: 'self.count := 1', effect: null, note: null } },
         { id: 'ty', cls: 'Transition', slots: { name: 'ty', guard: 'self.count >', effect: null, note: null } },
+        // A line break inside a JjEL string: under Pascal the join's quotes fall inside that string's token.
+        { id: 'tz', cls: 'Transition', slots: { name: 'tz', guard: null, effect: "s := 'a\nb'", note: null } },
     ];
     const analysed = (style: NotationStyle, mm: TextMetamodel = MM) => {
         const g = deriveConcreteGrammar(deriveBaseGrammar(mm), style);
@@ -689,19 +691,24 @@ describe('JjEL sub-tokens inside the islands', () => {
         expect(inside(text, a, "'model.[coins] := model.[coins] + 1'")).toEqual(["':string", 'model:name', 'coins:feature', 'model:name', 'coins:feature', '1:number', "':string"]);
     });
 
-    it('c-like: a JjEL string across `\\"` is one token; a word of JjEL is a keyword, a name after `.` a feature (dies on the end read from the next start, on the navigation test dropped)', () => {
+    it('c-like: a JjEL string across `\\"` is one token; a word of JjEL is a keyword, a name after `.` a feature (dies on the keyword role dropped, on the navigation test dropped)', () => {
         const { text, a } = analysed(CLIKE_STYLE);
         expect(inside(text, a, `"self.label == \\"go\\" or self.tag == 'it'"`)).toEqual([
             '":string', 'self:name', 'label:feature', '\\"go\\":string', 'or:keyword', 'self:name', 'tag:feature', "'it':string", '":string',
         ]);
     });
 
-    it("pascal: a JjEL string across `''` is one token, the join's quotes strings around `#10`, which is the line break (dies on a delimiter dropped, on a join inside a token)", () => {
+    it("pascal: a JjEL string across `''` is one token, the join's quotes strings around `#10`, which is the line break (dies on the end read from the next start, on a delimiter dropped)", () => {
         const { text, a } = analysed(PASCAL_STYLE);
         expect(inside(text, a, `'self.label == "go" or self.tag == ''it'''`)).toEqual([
             "':string", 'self:name', 'label:feature', '"go":string', 'or:keyword', 'self:name', 'tag:feature', "''it'':string", "':string",
         ]);
         expect(inside(text, a, "'x := 1'#10'y := ''a'''")).toEqual(["':string", 'x:name', '1:number', "':string", "':string", 'y:name', "''a'':string", "':string"]);
+    });
+
+    it("pascal: a join inside a JjEL string is that string's, no delimiter over it (dies on the overlap guard dropped)", () => {
+        const { text, a } = analysed(PASCAL_STYLE);
+        expect(inside(text, a, "'s := ''a'#10'b'''")).toEqual(["':string", 's:name', "''a'#10'b'':string", "':string"]);
     });
 
     it('c-like: `\\n` is the line break between two assignments, no token of its own (dies on an escape read as a delimiter)', () => {
