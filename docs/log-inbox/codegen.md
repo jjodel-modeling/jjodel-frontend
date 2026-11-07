@@ -2859,3 +2859,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: F1d crops 1-self-dot, 1-self-dot-accept, 3-pascal-accept, 4-outside in ~/.jjodel-lanes/P-2026-11-07-1622/ checked by the chat
 **Notes**: Rollback tag `pre-textual-f1d-complete` on `9d80bf810` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1733/result.json`.
 **Prompt document name**: 2026-11-07 17:33
+
+## 2026-11-07 — feat(codegen): E2b, canvas selection highlighted in the Text tab (P-2026-11-07-1635)
+**Prompt**: `claude_2026-11-07_1635_prompt_textual_e2b_highlight.md`, row E2b of discovery_2026-11-06_textual_e_sync §9.1 (R-TXT-54 E1, E8): the `CANVAS_SELECTION_CHANGED` listener, a highlight collection on the selected objects' spans, reveal without caret or focus, the highlight kept across reprint, apply and splice, no ping-pong (§6.1).
+**Files touched**: `codegen/textual/selectionSync.ts`, `__tests__/selectionSync.test.ts` (8f4fd2338); `ui/TextualTab.tsx`, `ui/TextualTab.scss` (dae6ba6c1)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck 0 errors; vitest 14940 passed, 2 skipped, 3 baseline import reds; build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — unattended, probe `~/.jjodel-lanes/P-2026-11-07-1635/probe.mjs` (run2.log, 24/24, real canvas and text gestures, DOM and Monaco state); crops 1-click, 2-multi, 2b-clear, 3-after-apply, 3b-after-reprint, 4-no-loop in the same folder, to Alfonso.
+**Notes**: Reveal on the last span in selection order (the node just clicked, §5.3, §8.2), not the first. A one-element canvas selection resets E2a's last-sent id (`lastSelectedOf`), so a caret in a node clicked on the canvas does not reselect it. Mutation: dropping the repaint fails only 3b (app undo reprint); the apply alone keeps the highlight by Monaco's tracking. A tab opened over an existing selection shows no highlight until the next change (the event fires on change only).
+**Prompt document name**: 2026-11-07 16:35
