@@ -230,3 +230,16 @@ active log is not touched by this lane.
 **Priority**: medium
 **Found in**: P-2026-11-07-1516
 **Detail**: docs/discovery/lir_2026-11-07_l5_ir_resolution_tab_viewpoint.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l5 (P-2026-11-08-0012)
+**Prompt**: `claude_2026-11-08_0012_prompt_multi-tab-l5_take_trunk.md`, lane full (trunk into branch, RC-14): the trunk `alfonso-frontend-jjtl` at `5c15e491e` into `multi-tab-l5`, one `--no-ff` merge commit of the explicit sha, merge base `4834b0edb`, 161 trunk commits, 1 conflict measured.
+**Files touched**: merge `f2b5d1934`: the 126 files of the trunk side; union resolution of `docs/log-inbox/multi-tab.md` (the trunk's 3.1.2 entry, then the branch's L5 entry and ticket, verbatim); `EditorV2.tsx` auto-merged; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f2b5d1934`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:scripts and check:addonly PASS, hooks 967/967; vitest 568 files, 15088 passed and 2 skipped as expected (trunk tip 15070 + 18), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the gates and the clean reading of the auto-merged EditorV2.tsx; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 18:58, stands)
+**Notes**: Probes 48/48 once, R-MT-25 absent; union removes 0 lines vs either parent. EditorV2.tsx read whole (5423 lines) by an explorer subagent: disjoint regions, no duplicate. No node_modules here: temporary symlink to ~/jjodel/frontend/node_modules for the gates, removed after (P14). Trunk moved during the gates to docs-only `819c700b5`; the merge stays on `5c15e491e`.
+**Prompt document name**: 2026-11-08 00:12
