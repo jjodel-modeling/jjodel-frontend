@@ -362,6 +362,25 @@ describe('a write flagged noUndo adds no undo entry (R-MT-20)', () => {
         expect(s.viewpoint).toBe('vpB');
     });
 
+    // Measured in the app (P-2026-11-07-0935 (4)): the focus write lands while the 300 ms batch is open, so
+    // it reaches the reducer as one CompositeAction whose actions carry the flag and which does not.
+    it('a batch made only of flagged writes adds no entry and leaves the entry below unmerged', () => {
+        let s = withOneEdit();
+        const belowBefore = JSON.stringify(history()[0]);
+        s = dispatch(s, batch('focus', [noUndo(set('O1', 'activeViewpoint', 'vpB')), noUndo(setRoot('viewpoint', 'vpB'))]));
+        expect(s.viewpoint).toBe('vpB');
+        expect(history().length).toBe(1);
+        expect(JSON.stringify(history()[0])).toBe(belowBefore);
+    });
+
+    it('a batch that mixes a flagged write with a user edit keeps its entry', () => {
+        let s = withOneEdit();
+        s = dispatch(s, batch('mixed', [noUndo(setRoot('viewpoint', 'vpB')), set('O1', 'name', 'gate')]));
+        expect(history().length).toBe(2);
+        s = dispatch(s, undoAction());
+        expect(s.idlookup.O1.name).toBe('door');
+    });
+
     it('a picker write without the flag still adds exactly one entry, and its undo restores the viewpoint', () => {
         let s = withOneEdit();
         s = viewpointWrite(s, 'vpB', false, 1000);
