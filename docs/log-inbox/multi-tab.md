@@ -203,8 +203,8 @@ active log is not touched by this lane.
 **Prompt**: `claude_2026-11-07_1536_prompt_layout_key_patch_check_312p.md`, lane full (measurement only): app check of the layout-key fix on `release/3.1.2-patch` (3.1.1 `e080ab534` plus four cherry-picks and the release commit `ea287b0f0`), before the PR.
 **Files touched**: this entry and the 1536 prompt file with its Status; no source change on the trunk. Release branch `release/3.1.2-patch`, PR #210 into `dotnet-backend-integration`, merged by Alfonso as `ec4f2543e`, tag `3.1.2` on `ec4f2543e` (a first tag on `e080ab534`, before the merge, was deleted and redone).
 **Outcome**: ✅ completed
-**Corregge**: R-MT-19 regression on the production line: nodes stayed at the previous viewpoint's positions after a viewpoint switch (since 3.1.0).
-**Causa**: the layout key was not an input of the incremental sync snapshot (LIR `docs/discovery/lir_2026-11-07_layout_key_resync.md`).
+**Corregge**: —
+**Causa**: —
 **Regressions**: no. Branch: layout probe 3/3 at every step in three runs, container probe 0 failures, 0 page errors. Base 3.1.1: the same probe shows the regression (A→B 0/3), so it sees the bug. Gates by hand on `ea287b0f0`: `tsc --noEmit` exit 0, the six sync test files 105/105, `vite build` exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required (measurement; the fix's LIR is the one above)
