@@ -2543,3 +2543,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: app check ALL PASS, crops 1-rename-box to 5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/, checked by the chat
 **Notes**: Monaco 0.52 only console.logs a provideRenameEdits rejectReason (rename.js:238): e42169108 shows it at the cursor via the message controller. Names inside JjEL strings and validation rules are not rewritten (step F). Extra refusals: empty name, `@"id"`, nothing renameable. Seen, not traced: a pageerror `Canceled` from restoreViewState (Delayer.cancel). Decisions: ~/.jjodel-lanes/P-2026-11-07-0515/handoff.md.
 **Prompt document name**: 2026-11-07 06:09
+
+## 2026-11-07 — merge: textual-d4-rename into alfonso-frontend-jjtl (P-2026-11-07-0717)
+**Prompt**: `claude_2026-11-07_0717_prompt_merge_textual-d4-rename.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `da63da457`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load ~40 (languageService.test.ts timing, irCollapsedRender.test.ts), all green alone at load ~5; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: D4 crops 1-rename-box..5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/ checked by the chat (rename box, references renamed, refusals shown at the cursor)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0717/result.json`.
+**Prompt document name**: 2026-11-07 07:17
