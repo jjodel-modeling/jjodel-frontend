@@ -17,7 +17,7 @@ import type { SyntaxElement, SyntaxToken, TextParseResult } from './parser';
 import type { NotationStyle } from './style';
 import { tokenize } from '../../jjel/lexer';
 import { parseAction, parseExpressionStrict } from '../../jjel/parser';
-import type { JjelTokenType } from '../../jjel/types';
+import { JjelTokenType } from '../../jjel/types';
 
 export interface JjelIsland {
     /** The parsed object the value belongs to (`TextParseResult.objects`). */
@@ -32,6 +32,9 @@ export interface JjelIsland {
     /** `map[k]`: the text offset where the value's character `k` is written; `ends[k]`: the offset after it. */
     readonly map: readonly number[];
     readonly ends: readonly number[];
+    /** F1e: the owner's class and the names of its features, inherited included, as `self.<f>` may read them. */
+    readonly cls?: string;
+    readonly features?: readonly string[];
 }
 
 /** The value of a string token and where each of its characters is written, under the style's escape rule. */
@@ -152,15 +155,16 @@ export function jjelIslands(parsed: TextParseResult, mm: TextMetamodel, style: N
         }
         return fs.find(f => f.name === name && f.kind === 'attribute' && f.jjel);
     };
-    const island = (t: SyntaxToken, owner: string, f: TextFeature): void => {
+    const island = (t: SyntaxToken, owner: { id: string; cls: string }, f: TextFeature): void => {
         const { value, map, ends } = valueMap(t.raw, t.start, style.string);
         // The map is read as the tokenizer reads: a value it does not give back is not mapped, never mapped wrong.
         if (value !== t.v) return;
-        out.push({ owner, feature: f.name, mode: f.jjel!, start: t.start, end: t.end, value, map, ends });
+        const features = (featuresOf.get(owner.cls) ?? []).map(k => k.name);
+        out.push({ owner: owner.id, feature: f.name, mode: f.jjel!, start: t.start, end: t.end, value, map, ends, cls: owner.cls, features });
     };
     const walk = (n: SyntaxElement, owner: { id: string; cls: string } | null, f: TextFeature | undefined): void => {
         if (n.kind === 'token') {
-            if (n.k === 'STR' && owner && f) island(n, owner.id, f);
+            if (n.k === 'STR' && owner && f) island(n, owner, f);
             return;
         }
         if (n.kind === 'error') return;
@@ -190,6 +194,30 @@ function valueOffset(value: string, line: number, column: number): number {
     return Math.min(Math.max(at + column - 1, 0), value.length);
 }
 
+const SELF_NAVIGATION = new Set<JjelTokenType>([JjelTokenType.DOT, JjelTokenType.QUESTION_DOT]);
+const ANY_NAVIGATION = new Set<JjelTokenType>([JjelTokenType.DOT, JjelTokenType.QUESTION_DOT, JjelTokenType.DOT_LBRACKET]);
+
+/**
+ * F1e (R-TXT-55 F5, report §4.3): the `self.<f>` and `self?.<f>` of a well-formed island whose `<f>` is not a feature
+ * of the owner's class, each on its `<f>`. Only `self` as a root, never after a navigation; `self.<f>(...)` is a method
+ * and `self.[x]` state (JjEL SPEC §5.10), neither a feature. An island with no class is not checked.
+ */
+function selfNames(island: JjelIsland): JjelDiagnostic[] {
+    const { cls, features } = island;
+    if (cls === undefined || !features) return [];
+    const tokens = tokenize(island.value, { actionMode: island.mode === 'action' }).tokens.filter(t => t.end > t.start);
+    const out: JjelDiagnostic[] = [];
+    for (let i = 0; i + 2 < tokens.length; i++) {
+        const [root, nav, name] = [tokens[i], tokens[i + 1], tokens[i + 2]];
+        if (root.type !== JjelTokenType.IDENTIFIER || root.value !== 'self') continue;
+        if (i > 0 && ANY_NAVIGATION.has(tokens[i - 1].type)) continue;
+        if (!SELF_NAVIGATION.has(nav.type) || tokens[i + 3]?.type === JjelTokenType.LPAREN) continue;
+        if (features.includes(name.value)) continue;
+        out.push({ ...islandRange(island, name.start, name.end), message: `${name.value} is not a feature of ${cls}` });
+    }
+    return out;
+}
+
 /**
  * The JjEL errors of the islands (lane F1c, R-TXT-55 F3, report §4.3): each value parsed as conformance parses it
  * (`ConformanceValidator.ts`, R-SIM-44), with its exemptions, a blank value and the literal `else` of an Expression.
@@ -211,7 +239,7 @@ export function checkIslands(islands: readonly JjelIsland[]): JjelDiagnostic[] {
             const r = parseAction(value);
             parsed = r.action !== null; errors = r.errors;
         }
-        if (parsed && errors.length === 0) continue;
+        if (parsed && errors.length === 0) { out.push(...selfNames(island)); continue; }
         const e = errors[0];
         if (!e) { out.push({ ...islandRange(island, 0, value.length), message: `Not a well-formed ${mode}` }); continue; }
         const at = valueOffset(value, e.line, e.column);

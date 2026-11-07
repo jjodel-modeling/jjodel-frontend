@@ -344,10 +344,11 @@ describe('checkIslands: `self.<f>` names a feature of the owner\'s class', () =>
             expect(placed(text, found, 5)).toEqual([['gard', 'gard ', 'gard is not a feature of Transition']]);
         });
 
-        it(`${style.id}: \`?.\` is checked, an action too, every unknown in order (dies on the null-safe receiver left out, on the first only)`, () => {
-            const { text, found } = namedIn(style, 'self?.labl == "x"', 'self.[n] := self.wieght + self.target.[n]');
+        it(`${style.id}: \`?.\` is checked, an action too, every unknown in order (dies on the null-safe receiver left out, on the first of an island only)`, () => {
+            const { text, found } = namedIn(style, 'self?.labl == "x" or self.nme == "y"', 'self.[n] := self.wieght + self.target.[n]');
             expect(placed(text, found, 4)).toEqual([
                 ['labl', 'labl', 'labl is not a feature of Transition'],
+                ['nme', 'nme ', 'nme is not a feature of Transition'],
                 ['wieght', 'wieg', 'wieght is not a feature of Transition'],
             ]);
         });
