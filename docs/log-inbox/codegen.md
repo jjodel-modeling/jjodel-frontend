@@ -2376,3 +2376,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — read-only discovery; the app was probed by direct calls, not as a visual check
 **Notes**: Cause: `textDiff.ts:549` and `modelLines.ts:141` skip `set h.name` when the handle equals the name, and `create instance of C "h"` (`instance.ts:686-703`) names `data.name` and `initialName`, not the slot. Not core. Measured: the XMI export drops those names too. Plan: four textual files, five pinned tests move. N1..N5 in §8.
 **Prompt document name**: 2026-11-07 02:53
+
+## 2026-11-07 — fix(codegen): the textual layer writes the name slot of an object it creates (P-2026-11-07-0344)
+**Prompt**: `claude_2026-11-07_0344_prompt_textual_name_slot_fix.md`: option A of the name-slot discovery (P-2026-11-07-0253): `textDiff.ts` and `modelLines.ts` emit `set h.name` also when the handle equals the name, tests red first, one commit per item; no migration (N3); gates; app check on the port corpus.
+**Files touched**: `frontend/src/codegen/textual/textDiff.ts`, `__tests__/textDiff.test.ts` (`acebac08a`); `frontend/src/codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts` (`fe6f81bc7`); uncommitted: this entry and the prompt's Status (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; visual GO pending
+**Notes**: Two new tests red on HEAD; five pinned tests gain the `set h.name` line (listed in the commit bodies). Gates: typecheck 0; vitest 3 baseline import reds, 14505 passed, no timing red; build, check:docs, check:codegen-lazy exit 0. Probe 10/10 PASS: raw slots `["cpu"]`, `["result"]`, `["ready"]`, conformance empty, XMI names, no page errors. Causa from the report: a wrong assumption that the handle names the slot; the report names no originating prompt. B1 (console) stays for N1's ticket.
+**Prompt document name**: 2026-11-07 03:44

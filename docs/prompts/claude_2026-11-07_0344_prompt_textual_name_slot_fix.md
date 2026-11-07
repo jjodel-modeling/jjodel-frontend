@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0344
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · acebac08a, fe6f81bc7 · gates green · app check 10/10 PASS, crop in ~/.jjodel-lanes/P-2026-11-07-0344/, visual GO pending · log entry in docs/log-inbox/codegen.md
 Lane: full (textual layer; tests)
 Depends: P-2026-11-07-0253 (discovery docs/discovery/discovery_2026-11-07_textual_name_slot.md, option A, §8), R-TXT-56 (provisional)
 Worktree: ~/jjodel-w-textns, branch textual-name-slot
