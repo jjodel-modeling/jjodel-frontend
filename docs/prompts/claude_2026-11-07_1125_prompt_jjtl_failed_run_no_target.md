@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1125
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane fast · 6c51a33ae (code), b29f10fd0 (SPEC), 970f5bbb4 (R-FA-14) · two test files rewritten on answer (a)
 Lane: fast (one executor change and its test; unattended)
 Depends: P-2026-11-06-2305
 Worktree: ~/jjodel-w-jjtlnotarget, branch jjtl-failed-run-no-target
