@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1635
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 8f4fd2338 (pure, red first), dae6ba6c1 · gates green (vitest: 3 import reds baseline) · app check 24/24, crops in ~/.jjodel-lanes/P-2026-11-07-1635/
 Lane: full (listener, highlight collection, reveal; tests; app check with crops from real canvas gestures)
 Depends: E1a, E1b, E2a (merged), R-TXT-54
 Worktree: ~/jjodel-w-texte2b, branch textual-e2b-highlight (from trunk c0ee2cc00, own node_modules)
