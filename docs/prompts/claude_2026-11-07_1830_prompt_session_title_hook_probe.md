@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1830
 Chat: C-2026-11-07-1824
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane fast · 94cec3edf (report) · picker hides -p sessions, no follow-up lane
 Lane: fast (probe, no product code, no change to the repo's `.claude/`)
 Request: none (Alfonso in chat, «lancialo tu», 2026-11-07 18:32)
 Model: claude-opus-5-5, effort medium
