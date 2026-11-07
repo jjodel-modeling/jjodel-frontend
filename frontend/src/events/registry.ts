@@ -105,6 +105,10 @@ export const JjodelEvents = {
   // model. detail: ScriptPreviewRequest { script, modelId } (components/editor-v2/preview/scriptPreviewStore.ts);
   // an empty script clears the preview.
   SCRIPT_PREVIEW_REQUEST: 'jjodel:script-preview-request',
+  // P-2026-11-08-0027 (R-TXT-55 F6, F12). A model span clicked in a generator tab: the Text tab of the model, when
+  // open, reveals and highlights the line of the element (its feature's item when there is one) without moving the
+  // caret. detail: { modelId: string; elementId: string; featureName?: string }.
+  TEXTUAL_REVEAL: 'jjodel:textual-reveal',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────
