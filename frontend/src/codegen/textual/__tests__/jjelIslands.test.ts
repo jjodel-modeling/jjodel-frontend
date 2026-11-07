@@ -93,6 +93,9 @@ const NET_MM: TextMetamodel = {
                 { name: 'guard', type: 'Expression', jjel: 'expression' },
                 { name: 'effect', type: 'Action', jjel: 'action' },
                 { name: 'note', type: 'EString' },
+                // F1e: the features F1c's valid values read after `self.`.
+                { name: 'count', type: 'EInt' },
+                { name: 'label', type: 'EString' },
             ],
         },
     ],
@@ -296,5 +299,70 @@ describe('checkIslands: a JjEL error of an island, placed on the offending token
         expect(checkIslands([islandOf('" else"', 'expression')]).length).toBe(1);
         const action = checkIslands([islandOf('"else"', 'action')]);
         expect(action.map(d => [d.start, d.end])).toEqual([[1, 5]]);
+    });
+});
+
+// ---- Names (lane F1e, P-2026-11-07-1736; R-TXT-55 F5, report §4.3, R4) ----------------------------------------------
+
+const NAMES_MM: TextMetamodel = {
+    classes: [
+        { name: 'Net', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'transitions', type: 'Transition', containment: true, many: true }] },
+        { name: 'Arc', attributes: [{ name: 'weight', type: 'EInt' }], references: [{ name: 'target', type: 'Net' }] },
+        {
+            name: 'Transition', supers: ['Arc'],
+            attributes: [
+                { name: 'name', type: 'EString' },
+                { name: 'label', type: 'EString' },
+                { name: 'guard', type: 'Expression', jjel: 'expression' },
+                { name: 'effect', type: 'Action', jjel: 'action' },
+            ],
+        },
+    ],
+    enumerations: [],
+};
+
+/** One transition with the given guard and effect in NAMES_MM, printed and parsed in the style, its islands checked. */
+const namedIn = (style: NotationStyle, guard: string | null, effect: string | null = null) => {
+    const g = deriveConcreteGrammar(deriveBaseGrammar(NAMES_MM), style);
+    const text = printTextModel(g, [
+        { id: 'n', cls: 'Net', slots: { name: 'N', transitions: ['t'] } },
+        { id: 't', cls: 'Transition', slots: { name: 'fire', guard, effect } },
+    ]).text;
+    const parsed = parseText(text, g);
+    expect(parsed.errors).toEqual([]);
+    return { text, found: checkIslands(jjelIslands(parsed, NAMES_MM, style)) };
+};
+
+describe('checkIslands: `self.<f>` names a feature of the owner\'s class', () => {
+    for (const style of [CLIKE_STYLE, PASCAL_STYLE]) {
+        it(`${style.id}: a known feature gives nothing, own, inherited, or a reference (dies on the lookup dropped, on own features only)`, () => {
+            expect(namedIn(style, 'self.label == "go" and self.weight > 0 and self.target != null', 'self.[n] := self.weight + 1').found).toEqual([]);
+        });
+
+        it(`${style.id}: an unknown feature is placed on its token, after an escape, the class named (dies on the map skipped, on the receiver's range)`, () => {
+            const { text, found } = namedIn(style, `self.label == "go" and self.label == 'it' and self.gard > 0`);
+            expect(placed(text, found, 5)).toEqual([['gard', 'gard ', 'gard is not a feature of Transition']]);
+        });
+
+        it(`${style.id}: \`?.\` is checked, an action too, every unknown in order (dies on the null-safe receiver left out, on the first only)`, () => {
+            const { text, found } = namedIn(style, 'self?.labl == "x"', 'self.[n] := self.wieght + self.target.[n]');
+            expect(placed(text, found, 4)).toEqual([
+                ['labl', 'labl', 'labl is not a feature of Transition'],
+                ['wieght', 'wieg', 'wieght is not a feature of Transition'],
+            ]);
+        });
+    }
+
+    it('another receiver, a deeper member, a method call and state access give nothing (dies on the receiver test dropped, on `self` taken after a dot)', () => {
+        expect(namedIn(CLIKE_STYLE, 'n.gard > 0 and self.target.gard > 0 and self.gard() and self.[gard] > 0 and x.self.gard').found).toEqual([]);
+    });
+
+    it('a malformed island gives only the syntax diagnostic (dies on names checked after a parse error)', () => {
+        const { text, found } = namedIn(CLIKE_STYLE, 'self.gard >');
+        expect(placed(text, found, 2)).toEqual([['>', '>"', 'Expected expression']]);
+    });
+
+    it('an island with no class gives no name diagnostic (dies on a missing class read as no features)', () => {
+        expect(checkIslands([islandOf('"self.gard > 0"', 'expression')])).toEqual([]);
     });
 });
