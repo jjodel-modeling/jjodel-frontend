@@ -1040,3 +1040,14 @@ Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead
 Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
 **Priority**: low
 **Found in**: P-2026-11-02-0723
+
+## 2026-11-08 — ticket: lane-run merge gives the same Prompt-ID to two chats in the same minute
+**Ticket**: Two chats launched `lane-run merge --direct` in the same minute (18:34 on 2026-11-07) and both merges got Prompt-ID P-2026-11-07-1834: textual-f1e-names (chat C-2026-11-03-1037, merge adf6c9629) and oi-s3b (instance-of chat, merge e5add4d95). The two prompt files were committed one after the other (02abdd3ff, 8eda5e601) and lane-run accepted both.
+
+Effect: the lane folder ~/.jjodel-lanes/P-2026-11-07-1834/ was taken by the second merge. The first merge's gate summary (result.json, vitest logs) was overwritten, `lane-run status` reported the other merge's outcome (blocked), and the first merge had to be closed by hand without its gate record (e91177c3b).
+
+Expected: `lane-run merge` refuses, or moves to the next free minute, when docs/prompts/ or ~/.jjodel-lanes/ already holds the Prompt-ID, as `lane-run start` does for a taken folder.
+
+Workaround until fixed: before acting on a merge result, read the merge commit's subject, not only the lane folder.
+**Priority**: medium
+**Found in**: P-2026-11-07-1834
