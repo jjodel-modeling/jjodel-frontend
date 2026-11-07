@@ -16,7 +16,7 @@
 import { ROLE_IDS, roleDescriptor } from './roleCatalog';
 import type { RoleGroup, RoleId } from './roleCatalog';
 
-export type ProfileShape = 'controlFlow' | 'petri';
+export type ProfileShape = 'controlFlow' | 'petri' | 'dcn';
 
 export type ProfileConstraint = 'noEpsilon' | 'deterministic' | 'singleToken';
 
@@ -34,6 +34,7 @@ export interface ProfileParams {
 
 export const SYSTEM_PROFILE_IDS = [
     'petri', 'flowchart', 'stateMachine', 'extendedStateMachine', 'dfa', 'nfa', 'moore', 'mealy',
+    'dynamicClassification',
 ] as const;
 
 export type SystemProfileId = typeof SYSTEM_PROFILE_IDS[number];
@@ -61,17 +62,39 @@ export type RequiredItem = RoleId | EitherRequirement;
 /**
  * The runnability closure of each shape (R-SIM-48): not negotiable. The shape
  * is not the genre (R-SIM-56): control flow starts from Initial or from
- * Initial marking.
+ * Initial marking. The dcn shape (R-DCN-8) needs a static class, its
+ * viewpoints, their dynamic classes and an invariant to classify by.
  */
 const CLOSURE: { readonly [S in ProfileShape]: readonly RequiredItem[] } = {
     controlFlow: ['node', 'transition', 'nextState', { anyOf: ['initial', 'initialMarking'] }, { anyOf: ['source', 'ownedTransitions'] }],
     petri: ['node', 'transition', 'arc', 'arcSource', 'arcTarget', 'initialMarking'],
+    dcn: ['staticClass', 'viewpoints', 'dynamicClasses', 'invariant'],
 };
 
-/** The group of the other shape, whose roles a profile keeps off (R-SIM-48, R-SIM-31(4)). */
-export const OTHER_SHAPE_GROUP: { readonly [S in ProfileShape]: RoleGroup } = {
-    controlFlow: 'petri',
-    petri: 'controlFlow',
+/**
+ * The groups of the other shapes, whose roles a profile keeps off (R-SIM-48,
+ * R-SIM-31(4)): control flow and Petri hide each other's group as before, and
+ * both hide the dcn group, which hides both (P-2026-11-07-0941). The one list
+ * the validator, the codec and the dialog read.
+ */
+export const OTHER_SHAPE_GROUP: { readonly [S in ProfileShape]: readonly RoleGroup[] } = {
+    controlFlow: ['petri', 'dcn'],
+    petri: ['controlFlow', 'dcn'],
+    dcn: ['controlFlow', 'petri'],
+};
+
+/** The shape in a defect message. */
+const SHAPE_NAME: { readonly [S in ProfileShape]: string } = {
+    controlFlow: 'control-flow',
+    petri: 'Petri',
+    dcn: 'dynamic-classification',
+};
+
+/** A hidden group in a defect message. */
+const GROUP_NAME: Readonly<Partial<Record<RoleGroup, string>>> = {
+    controlFlow: 'control flow',
+    petri: 'Petri net',
+    dcn: 'dynamic classification',
 };
 
 function rolesOf(item: RequiredItem): readonly RoleId[] {
@@ -102,6 +125,15 @@ export const CONTROL_FLOW_DERIVED: Readonly<Partial<Record<RoleId, RoleMode>>> =
 /** The event metaclass is the declared type of Trigger, never copied (R-SIM-38). */
 export const EVENT_FROM_TRIGGER: RoleMode = { mode: 'derived', from: 'trigger', note: 'Declared type of Trigger' };
 
+/**
+ * A role of the dcn group under the control-flow and Petri shapes, in every
+ * system profile of theirs and in their user copies. The codec fills it in for
+ * a profile stored before the group existed and leaves it out when it writes
+ * one of these shapes, so such a profile re-encodes to the string it was read
+ * from (profileCodec.ts).
+ */
+export const DCN_OFF: Extract<RoleMode, { mode: 'off' }> = { mode: 'off', reason: 'Used by the dynamic-classification shape' };
+
 interface SystemRow {
     id: SystemProfileId;
     name: string;
@@ -119,6 +151,7 @@ function systemProfileOf(row: SystemRow): SimProfile {
         else if (on.has(r)) modes[r] = EDIT;
         else if (r === 'event' && on.has('trigger')) modes[r] = EVENT_FROM_TRIGGER;
         else if (row.shape === 'controlFlow' && roleDescriptor(r).group === 'petri') modes[r] = { mode: 'off', reason: 'Compiled from control flow' };
+        else if (row.shape !== 'dcn' && roleDescriptor(r).group === 'dcn') modes[r] = DCN_OFF;
         else if (row.shape === 'petri' && r === 'initial') modes[r] = { mode: 'off', reason: 'Petri shape uses Initial marking' };
         else modes[r] = { mode: 'off', reason: `Not used by ${row.name}` };
     }
@@ -135,6 +168,14 @@ function systemProfileOf(row: SystemRow): SimProfile {
 }
 
 const EVENTS: RoleId[] = ['trigger', 'eventIdentifier'];
+
+/**
+ * The dcn group, in edit in «Dynamic classification» (R-DCN-8). The events
+ * group stays as in every profile that does not list it: Trigger needs
+ * Transition, which the dcn shape has not, and an invocation is an event of the
+ * nucleus (discovery 2026-11-06 §3.3, Q6).
+ */
+const DCN_ROLES: RoleId[] = ROLE_IDS.filter(r => roleDescriptor(r).group === 'dcn');
 
 const SYSTEM_ROWS: readonly SystemRow[] = [
     { id: 'petri', name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal', 'guard'] },
@@ -166,9 +207,10 @@ const SYSTEM_ROWS: readonly SystemRow[] = [
         id: 'mealy', name: 'Mealy machine', shape: 'controlFlow', active: [...EVENTS, 'transitionOutput'],
         addedRequired: ['trigger', 'transitionOutput'], constraints: ['singleToken', 'noEpsilon', 'deterministic'],
     },
+    { id: 'dynamicClassification', name: 'Dynamic classification', shape: 'dcn', active: DCN_ROLES },
 ];
 
-/** The eight system profiles, read-only (R-SIM-47). */
+/** The eight system profiles of R-SIM-54 and «Dynamic classification» (R-DCN-8), read-only (R-SIM-47). */
 export const SYSTEM_PROFILES: readonly SimProfile[] = SYSTEM_ROWS.map(systemProfileOf);
 
 export function isSystemProfileId(id: string): id is SystemProfileId {
@@ -224,14 +266,15 @@ export function validateProfile(profile: SimProfile): ProfileDefect[] {
         const roles = rolesOf(item);
         if (roles.some(active)) continue;
         const names = roles.map(label).join(' or ');
-        defects.push({ code: 'closureRoleOff', roles, message: `${names} is required by the ${profile.shape === 'petri' ? 'Petri' : 'control-flow'} shape` });
+        defects.push({ code: 'closureRoleOff', roles, message: `${names} is required by the ${SHAPE_NAME[profile.shape]} shape` });
     }
-    const other = OTHER_SHAPE_GROUP[profile.shape];
+    const hidden = OTHER_SHAPE_GROUP[profile.shape];
     for (const r of ROLE_IDS) {
         const mode = profile.modes[r];
         if (mode.mode === 'off') continue;
-        if (roleDescriptor(r).group === other) {
-            defects.push({ code: 'otherShapeActive', roles: [r], message: `${label(r)} belongs to the ${other === 'petri' ? 'Petri net' : 'control flow'} group` });
+        const group = roleDescriptor(r).group;
+        if (hidden.includes(group)) {
+            defects.push({ code: 'otherShapeActive', roles: [r], message: `${label(r)} belongs to the ${GROUP_NAME[group]} group` });
         }
         for (const dep of roleDescriptor(r).dependsOn) {
             if (!active(dep)) defects.push({ code: 'dependencyOff', roles: [r, dep], message: `${label(r)} needs ${label(dep)}` });

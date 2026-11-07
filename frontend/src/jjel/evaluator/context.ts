@@ -275,6 +275,17 @@ export interface JjelStateAccess {
 }
 
 /**
+ * What `x.in(V::D)` asks (R-DCN-7, R-DCN-2). Set only by a binder; everywhere
+ * else `.in(V::D)` is an error. JjEL hands over the receiver as evaluated and
+ * the two names as written: how the classification is derived is the binder's
+ * business. The answer must be a boolean; anything else is an evaluation error.
+ */
+export interface JjelClassificationAccess {
+    /** Whether dynamic class `dynamicClass` of viewpoint `viewpoint` is active for `object`. */
+    isIn(object: unknown, viewpoint: string, dynamicClass: string): boolean;
+}
+
+/**
  * One part of an interpolated string as a `JjelTextHost` receives it
  * (R-GEN-10): the literal text between holes, unescaped, or a hole with its value.
  */
@@ -377,6 +388,11 @@ export class EvaluationContext {
      */
     stateAccess?: JjelStateAccess;
     /**
+     * What `x.in(V::D)` asks (R-DCN-7). `undefined`: no classification here,
+     * and `.in(V::D)` throws. Inherited by children, like `stateAccess`.
+     */
+    classification?: JjelClassificationAccess;
+    /**
      * Text values for templates (R-GEN-10). `undefined`: an interpolation is a
      * plain string and `+`, `join` take their usual path. Set only by the code
      * generator. Inherited by children, like `stateAccess`.
@@ -473,6 +489,8 @@ export class EvaluationContext {
         child.ambiguousInstances = this.ambiguousInstances;
         // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
         child.stateAccess = this.stateAccess;
+        // Propagate the classification hook so `.in(V::D)` answers inside forall/lambda scopes.
+        child.classification = this.classification;
         // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
         child.textHost = this.textHost;
         child.readObserver = this.readObserver;

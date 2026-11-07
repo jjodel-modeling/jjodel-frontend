@@ -89,7 +89,7 @@ import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
 import { compileNet, eventAlphabet, featuresOf, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
 import {
-    candidates, isAccepting, netRunStatus, stateAccess, stateOutputOf, step, terminated, tokens, transitionOutputOf,
+    candidates, isAccepting, netRunStatus, stateAccess, stateOutputOf, tokens, transitionOutputOf,
 } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
@@ -119,6 +119,7 @@ import type {
 } from '../../../model/simulation/netTypes';
 import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
+import { nucleusOf, petriNucleus } from './simNucleus';
 import { storedProfile } from './simRoleStatus';
 import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
@@ -767,6 +768,7 @@ export function startRun(
         kind: 'started',
         run: {
             net,
+            nucleus: petriNucleus(net),
             config: { state: net.initial, event: null },
             halt: null,
             guards: makeGuardOracle(snapshot, guards, net.places),
@@ -1398,7 +1400,7 @@ export interface InputValue {
 export function inputAsks(run: SimRun, event: string | null): InputRead[] {
     if (!run.inputs || run.halt !== null) return [];
     const state = run.config.state;
-    if (terminated(run.net, state)) return [];
+    if (nucleusOf(run).terminated(state)) return [];
     const out: InputRead[] = [];
     const seen = new Set<string>();
     for (const t of run.net.transitions) {
@@ -1737,7 +1739,7 @@ function press(
     } else {
         chosen = selector;
     }
-    const outcome = step(run.net, cfg, chosen, live.guards, live.actions, run.derived);
+    const outcome = nucleusOf(run).step(cfg, chosen, live.guards, live.actions, run.derived);
     // The store keeps the origin only among two or more candidates: a press without a selector was forced.
     // The values given are kept on the step, so a replay reads them (R-SIM-106).
     simCommit(modelId, outcome, origin, values);

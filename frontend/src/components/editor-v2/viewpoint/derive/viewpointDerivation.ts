@@ -153,6 +153,8 @@ const ROLE_PRESET: { readonly [S in ProfileShape]: Readonly<Record<string, strin
         fork: 'uml-fork-join', join: 'uml-fork-join', node: 'uml-state',
     },
     petri: { terminal: 'uml-final-state', node: 'petri-place', transition: 'petri-transition' },
+    // The dcn shape draws no vertex role yet (R-DCN-8, P-2026-11-07-0941).
+    dcn: {},
 };
 
 /** Forms that hold no compartment; a solid fill holds none either. */
