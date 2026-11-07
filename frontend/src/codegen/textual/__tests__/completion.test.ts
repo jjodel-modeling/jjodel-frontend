@@ -17,7 +17,7 @@ vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
 import type { TextCompletion } from '../languageService';
-import { analyzeText, completionsAt } from '../languageService';
+import { analyzeText, completionsAt, ISLAND_TRIGGER, triggeredCompletions } from '../languageService';
 import type { ExpectedItem, TextParseResult } from '../parser';
 import { parseText, tokenizeText } from '../parser';
 import type { TextMetamodel } from '../metamodel';
@@ -534,5 +534,37 @@ describe('F1d: the template completion keeps its default behaviour', () => {
     it('with `builtins: false`, no `stc` nor `target`, and nothing after them', () => {
         expect(templateCompletionsAt(ctx, 'x', 1, 'expression', { builtins: false })!.map(c => c.label)).toEqual(['x']);
         expect(templateCompletionsAt(ctx, 'stc.', 4, 'expression', { builtins: false })).toBeNull();
+    });
+});
+
+describe('F1d: `.` asks for completion inside an island only', () => {
+    /** C-like's own triggers, as textualMonaco.ts `styleTriggers` derives them. */
+    const CLIKE_TRIGGERS = ['{', '}', '[', ',', ']'];
+
+    it('`.` is no trigger of a catalog style', () => {
+        for (const s of [CLIKE_STYLE, PASCAL_STYLE]) {
+            const punct = [...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close];
+            expect(punct.some(t => t.endsWith(ISLAND_TRIGGER)), s.id).toBe(false);
+        }
+    });
+
+    it('typed in an island, `.` opens the island\'s candidates; a style trigger there opens nothing', () => {
+        const { all } = islandAt(CLIKE_STYLE, { guard: `self.${CUT}` });
+        expect(triggeredCompletions(all, ISLAND_TRIGGER, CLIKE_TRIGGERS).map(c => c.label)).toEqual(OWNER_FEATURES);
+        expect(triggeredCompletions(all, ',', CLIKE_TRIGGERS)).toEqual([]);
+    });
+
+    it('typed outside an island, `.` opens nothing at any offset, and a style trigger what it opened before', () => {
+        const { text } = islandAt(CLIKE_STYLE, { guard: `self.count > 0${CUT}` });
+        const g = deriveConcreteGrammar(deriveBaseGrammar(ISLAND_MM), CLIKE_STYLE);
+        let offered = 0;
+        for (let at = 0; at <= text.length; at++) {
+            const all = completionsAt(text, at, g, ISLAND_MM);
+            if (all.some(c => c.jjel)) continue;
+            offered += all.length;
+            expect(triggeredCompletions(all, ISLAND_TRIGGER, CLIKE_TRIGGERS), `offset ${at}`).toEqual([]);
+            expect(triggeredCompletions(all, '{', CLIKE_TRIGGERS), `offset ${at}`).toEqual(all);
+        }
+        expect(offered).toBeGreaterThan(50);
     });
 });
