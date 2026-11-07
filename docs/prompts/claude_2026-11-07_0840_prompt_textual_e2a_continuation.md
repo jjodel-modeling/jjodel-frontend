@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0840
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 5ca6ac98a · gates green · app check 27/27 (run7) and crop 2 retake 3/3; verifica visiva in attesa del GO (crops 1-6, 2-after-two-arrowdown in ~/.jjodel-lanes/P-2026-11-07-0746/)
 Lane: full (Text tab wiring and tests; gates; docs)
 Depends: P-2026-11-07-0746 (E2a, stopped at the soft ceiling; item 1 committed ef8c76e3c, item 2 in its handoff.diff), R-TXT-54
 Worktree: ~/jjodel-w-texte2a, branch textual-e2a-select

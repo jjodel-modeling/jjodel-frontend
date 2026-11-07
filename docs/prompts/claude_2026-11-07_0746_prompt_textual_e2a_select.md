@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0746
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · ef8c76e3c · soft ceiling, continued by P-2026-11-07-0840 (item 2 committed there, 5ca6ac98a)
 Lane: full (pure module, Text tab wiring, tests; app check)
 Depends: E1a/E1b (merged, P-2026-11-07-0645), R-TXT-54
 Worktree: ~/jjodel-w-texte2a, branch textual-e2a-select
