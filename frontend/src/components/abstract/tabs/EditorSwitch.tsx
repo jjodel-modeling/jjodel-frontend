@@ -93,6 +93,17 @@ export function saveViewpointPreference(modelid: string, viewpointId: string | n
     writeEditorPrefs(modelid, { viewpointId: viewpointId || '', editorMode: 'flow' });
 }
 
+/**
+ * The write a model tab makes when it gains focus (Q7): its viewpoint to the root and the project, when it
+ * differs from the root. It is not a user edit, so it adds no undo entry (R-MT-20); the toolbar picker's
+ * write keeps its own. Returns whether it wrote.
+ */
+export function writeFocusViewpoint(rootVpId: string | null | undefined, tabVpId: string | null): boolean {
+    if ((rootVpId || null) === (tabVpId || null)) return false;
+    activateViewpoint(tabVpId || null, { undoable: false });
+    return true;
+}
+
 interface EditorSwitchProps {
     /** Model ID passed to the editor. */
     modelid: string;
@@ -173,8 +184,7 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
             const wasFocused = focusedRef.current;
             focusedRef.current = (e as CustomEvent).detail?.activeId === modelid;
             if (!focusedRef.current || wasFocused) return;
-            const tabVp = tabViewpointRef.current;
-            if ((rootViewpointRef.current || null) !== tabVp) activateViewpoint(tabVp);
+            writeFocusViewpoint(rootViewpointRef.current, tabViewpointRef.current);
         };
         window.addEventListener(JjodelEvents.ACTIVE_TAB, onActiveTab);
         return () => window.removeEventListener(JjodelEvents.ACTIVE_TAB, onActiveTab);

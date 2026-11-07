@@ -1259,6 +1259,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if (isOnlyTransientTopLevelChange(ret, oldState)) {
                 return ret;
             }
+            // An action that is not a user edit (the viewpoint write of a tab gaining focus, R-MT-20): no entry, no merge.
+            if (action.noUndo) return ret;
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);

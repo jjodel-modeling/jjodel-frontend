@@ -45,10 +45,25 @@ export function clearLastEditedViewpoint(): void {
  * with the project.activeViewpoint update.
  *
  * @param viewpointId - ID of the viewpoint to activate, or null/'' to deactivate
+ * @param options.undoable - false flags both writes `noUndo`, so they add no undo entry: the write a model
+ *   tab makes when it gains focus (R-MT-20). Default true, the toolbar picker's user edit.
  */
-export function activateViewpoint(viewpointId: string | null): void {
+export function activateViewpoint(viewpointId: string | null, options?: { undoable?: boolean }): void {
     const project = LProject.getProject();
     const projectId = (project as any).__raw?.id;
+
+    if (options?.undoable === false) {
+        if (projectId) {
+            const a = SetFieldAction.create(projectId, 'activeViewpoint', viewpointId || null, '', true);
+            a.noUndo = true;
+            a.fire();
+        }
+        const r = SetRootFieldAction.create('viewpoint', viewpointId || null, '', true);
+        r.noUndo = true;
+        r.fire();
+        warnOnGlobalCss(viewpointId);
+        return;
+    }
 
     // 1. Set project.activeViewpoint via direct SetFieldAction (no L-proxy, no async TRANSACTION).
     //    The guard is on projectId ALONE. Guarding on viewpointId too — as this line did until
