@@ -98,3 +98,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-07 10:12
 
 **Ticket** (for the chat, none blocking): events are off in «Dynamic classification» because trigger depends on transition, which `dcn` lacks; nothing checks at binding time that `overlapping`/`complete` are Boolean; the panel's select (`PANEL_PROFILE_IDS`, `simRoleStatus.ts`) does not list the new profile; `bindProfile` runs the Petri branch on a dcn profile (harmless, dcn roles come out none); under `dcn` the dialog offers «+ on» for the general, events, data and output roles (crop `dynamic_branch_full.png`).
+
+## 2026-11-07 — merge: dcn into alfonso-frontend-jjtl (P-2026-11-07-1123)
+**Prompt**: merge `dcn` at `177378f9d` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `37fc696f7`, in the shape of `319be0670`; probes, gates, hard stop for the chat's GO.
+**Files touched**: 376a2273e — the 40 files of the branch (DCN drone fixture probe, `jjel` lexer/parser/evaluator and AST for `self.in(V::D)`, `sim` nucleus and roles, `model/simulation` role catalog, profiles and `dcn/dcnRoles.ts`, their tests, seven prompts, `docs/log-inbox/dcn.md`); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, L4.1 browser parity P-2026-11-07-0750, L2.3 roles dialog crops P-2026-11-07-1012; the rest has no UI path)
+**Notes**: One conflict, docs/log-inbox/dcn.md, by union (trunk whole, then the five branch entries). Tip moved by two docs commits of another chat (9053a07b8, 896362e52), accepted as first parent. Probes 77/77, control R-MT-24 absent. Gates: typecheck 0, vitest 14709 (14621 trunk + 88 branch, counted here: the dcn tree has no node_modules; known 3 red at import; a Chromium afterAll timed out under load, alone 18/18), hooks 967, build 0, check:docs 5/5, agents, scripts, addonly PASS.
+**Prompt document name**: 2026-11-07 11:23
