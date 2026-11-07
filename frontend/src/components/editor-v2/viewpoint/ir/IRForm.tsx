@@ -45,6 +45,8 @@ import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { SegmentedControl } from '../../../ui';
 import { useIRFormView } from './useIRFormView';
+import { irViewpointArg } from './irResolve';
+import { useEditorContextSafe } from '../../contexts/EditorContext';
 import { describeSlots, isBasicField, type FieldOffer } from './useFormWidgets';
 import { targetOptions } from '../../../../jjform';
 import { makeWriteCtx } from '../../hooks/writeCtxLproxy';
@@ -196,8 +198,9 @@ function FormCell({ layout, children }: { layout: LayoutField; children: React.R
  * Which viewpoint this host resolves its per-class view against.
  *
  * The Data Manager reads from its own singleton and never from `state.viewpoint`
- * (R-DMV-1); every other host reads from the active viewpoint, which is what `undefined`
- * means to `useIRFormView` and to `computeIRSignature`. One function and not a ternary
+ * (R-DMV-1); every other host reads from the viewpoint of the tab it sits in (L5), through
+ * `irViewpointArg`, and from the active viewpoint when no tab owns it, which is what
+ * `undefined` means to `useIRFormView` and to `computeIRSignature`. One function and not a ternary
  * per call site: the drawer's VIEW and the drawer's THEME are two reads that must not be
  * able to disagree about which viewpoint they came from.
  *
@@ -205,12 +208,13 @@ function FormCell({ layout, children }: { layout: LayoutField; children: React.R
  * import of `joiner` in that module would drag the whole runtime into a file its tests
  * load under the node environment.
  */
-function viewpointOfHost(host: FormHost): string | undefined {
-    return host === 'manager' ? DATA_MANAGER_VIEWPOINT_ID : undefined;
+function viewpointOfHost(host: FormHost, tabViewpointId: string | null | undefined): string | undefined {
+    return host === 'manager' ? DATA_MANAGER_VIEWPOINT_ID : irViewpointArg(tabViewpointId);
 }
 
 export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permissionOf, hostReferences }: IRFormProps) {
-    const resolution = useIRFormView(objectId, viewpointOfHost(host));
+    const tabViewpointId = useEditorContextSafe()?.viewpointId;
+    const resolution = useIRFormView(objectId, viewpointOfHost(host, tabViewpointId));
 
     // The L-proxy is read inside the render on purpose: `useIRFormView`'s signature
     // already covers everything read from it (name, metaclass, every slot's values), so a
@@ -248,7 +252,7 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permis
      * somebody picks a theme. A selector returning a string re-renders on that string.
      */
     const viewpointTheme = useSelector((state: any) => {
-        const vp = viewpointOfHost(host) ?? state?.viewpoint;
+        const vp = viewpointOfHost(host, tabViewpointId) ?? state?.viewpoint;
         const t = vp ? state?.idlookup?.[vp]?.formTheme : undefined;
         return isFormThemeName(t) ? t : undefined;
     });
