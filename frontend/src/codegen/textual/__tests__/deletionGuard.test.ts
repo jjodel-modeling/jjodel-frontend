@@ -19,6 +19,9 @@ import { tolerantCases } from './tolerantCorpus';
 import { GARAGE, grammarOf } from './corpus';
 import { metamodelOf, objectsOf } from './spec';
 import type { Spec } from './spec';
+import { PORT_MM, PORT_TEXT_CLIKE, portGrammar, portObjects } from './portCorpus';
+import type { ObjectSpan } from '../printer';
+import type { TextEditPlan } from '../textDiff';
 
 const lib = tolerantCases()[0];
 const print = printTextModel(lib.g, lib.objects);
@@ -112,5 +115,134 @@ describe('deletion guard (C3b item 1)', () => {
     it('the bar names the count', () => {
         expect(editStatusText({ kind: 'guard', deleted: 5, total: 10, all: false }).text).toBe('Not applied · deletes 5 objects of 10, confirm below');
         expect(editStatusText({ kind: 'guard', deleted: 10, total: 10, all: true }).text).toBe('Not applied · deletes every object (10), confirm below');
+    });
+});
+
+/**
+ * Step D lane D1 (P-2026-11-06-2301; R-TXT-37, R-TXT-53 D7): a deletion whose object's carried span lies inside a
+ * comment asks first, whatever else the pause carries. On PORT: `Module cpu {`, `input instr : Word(32)` (p1),
+ * `input : Bool` (p2), `output result : Word(8) = ...` (p3), `}`.
+ */
+describe('commenting an object out asks first (D1)', () => {
+    const g = portGrammar();
+    const model = portObjects();
+    const port = printTextModel(g, model);
+    const lineOf = (id: string): number => port.text.lastIndexOf('\n', port.spans.find(s => s.id === id)!.start - 1) + 1;
+    const indentOf = (id: string): number => lineOf(id) + 2;
+    /** The whole line of an object, its newline included. */
+    const lineLength = (id: string): number => port.text.indexOf('\n', lineOf(id)) + 1 - lineOf(id);
+
+    interface Typed { readonly text: string; readonly carried: readonly ObjectSpan[] }
+    /**
+     * Edits typed on a text, offsets of that text, and its spans as the editor carries them: they never grow at an edge,
+     * and a span whose text is deleted collapses where the deletion was.
+     */
+    function typed(edits: readonly { readonly at: number; readonly remove?: number; readonly text?: string }[],
+                   from: Typed = { text: port.text, carried: port.spans }): Typed {
+        let { text, carried } = from;
+        for (const { at, remove = 0, text: t = '' } of [...edits].sort((a, b) => b.at - a.at)) {
+            text = text.slice(0, at) + t + text.slice(at + remove);
+            const start = (o: number): number => o < at ? o : o >= at + remove ? o - remove + t.length : at;
+            const end = (o: number): number => o <= at ? o : o >= at + remove ? o - remove + t.length : at;
+            carried = carried.map(s => ({ id: s.id, start: start(s.start), end: end(s.end) }));
+        }
+        return { text, carried };
+    }
+    const read = ({ text, carried }: Typed) => {
+        const parsed = parseText(text, g);
+        const plan = planTextEdit({ mm: PORT_MM, grammar: g, model, parsed, unprinted: [], previous: carried, previousRefs: port.refs ?? [] });
+        return { plan, guard: deletionGuard({ mm: PORT_MM, objects: model }, plan, { grammar: g, text, parsed, carried }) };
+    };
+    const deletes = (plan: TextEditPlan): string[] => (plan.diff?.ops ?? []).flatMap(op => op.op === 'delete' ? [op.model] : []);
+
+    it('the corpus prints the three ports, one line each', () => {
+        expect(port.text).toBe(PORT_TEXT_CLIKE);
+    });
+
+    it('one port commented out asks, naming it (mutant: only three subtrees ask)', () => {
+        const { plan, guard } = read(typed([{ at: indentOf('p1'), text: '// ' }]));
+        expect(deletes(plan)).toEqual(['p1']);
+        expect(plan.lines?.length).toBeGreaterThan(0);
+        expect(guard).toEqual({ deleted: 2, total: model.length, all: false, commented: ['Port instr'] });
+    });
+
+    it('a nameless port commented out asks, by its class', () => {
+        expect(read(typed([{ at: lineOf('p2'), text: '//' }])).guard?.commented).toEqual(['Port (unnamed)']);
+    });
+
+    it('two ports commented out by a run of comment lines ask, in text order', () => {
+        const { plan, guard } = read(typed([{ at: indentOf('p2'), text: '// ' }, { at: indentOf('p1'), text: '// ' }]));
+        expect(deletes(plan).sort()).toEqual(['p1', 'p2']);
+        expect(guard?.commented).toEqual(['Port instr', 'Port (unnamed)']);
+    });
+
+    it('a block commented out line by line asks, naming it (mutant: each comment covers alone)', () => {
+        const starts = [0, ...[...port.text.matchAll(/\n/g)].map(m => (m.index ?? 0) + 1)];
+        const { plan, guard } = read(typed(starts.map(at => ({ at, text: '// ' }))));
+        expect(deletes(plan)).toEqual(['m']);
+        expect(guard).toEqual({ deleted: model.length, total: model.length, all: true, commented: ['Module cpu'] });
+    });
+
+    it('a port commented out together with an edit elsewhere asks (D7, mutant: only a pause that just deletes asks)', () => {
+        const width = port.text.indexOf('Word(8)') + 'Word(8'.length;
+        const { plan, guard } = read(typed([{ at: indentOf('p1'), text: '// ' }, { at: width, text: '0' }]));
+        expect(deletes(plan)).toEqual(['p1']);
+        expect(plan.diff?.ops.some(op => op.op !== 'delete')).toBe(true);
+        expect(guard?.commented).toEqual(['Port instr']);
+    });
+
+    it('a port deleted, not commented, applies as today', () => {
+        const { plan, guard } = read(typed([{ at: lineOf('p1'), remove: lineLength('p1') }]));
+        expect(deletes(plan)).toEqual(['p1']);
+        expect(guard).toBeNull();
+    });
+
+    it('a port deleted between two comment lines is not commented out (mutant: a collapsed span counts)', () => {
+        const notes = typed([{ at: lineOf('p3'), text: '  // b\n' }, { at: lineOf('p2'), text: '  // a\n' }]);
+        const at = notes.text.indexOf('  input : Bool\n');
+        const { plan, guard } = read(typed([{ at, remove: '  input : Bool\n'.length }], notes));
+        expect(deletes(plan)).toEqual(['p2']);
+        expect(guard).toBeNull();
+    });
+
+    it('uncommenting restores nothing to apply', () => {
+        const commented = typed([{ at: indentOf('p1'), text: '// ' }]);
+        const back = typed([{ at: indentOf('p1'), remove: 3 }], commented);
+        expect(back.text).toBe(port.text);
+        expect(back.carried).toEqual(port.spans.map(s => ({ ...s })));
+        const { plan, guard } = read(back);
+        expect(deletes(plan)).toEqual([]);
+        expect(guard).toBeNull();
+    });
+
+    it('a comment that covers no object changes nothing (mutant: any comment asks)', () => {
+        const note = typed([{ at: lineOf('p2'), text: '  // note\n' }]);
+        expect(deletes(read(note).plan)).toEqual([]);
+        expect(read(note).guard).toBeNull();
+        // The comment above a port, and that port deleted: the deleted span is not inside the comment.
+        const at = note.text.indexOf('  input : Bool\n');
+        const { plan, guard } = read(typed([{ at, remove: '  input : Bool\n'.length }], note));
+        expect(deletes(plan)).toEqual(['p2']);
+        expect(guard).toBeNull();
+    });
+
+    it('a type replaced, with a comment elsewhere, applies as today (mutant: any comment asks)', () => {
+        const bool = port.text.indexOf('Bool');
+        const { plan, guard } = read(typed([{ at: bool, remove: 'Bool'.length, text: 'Word(1)' }, { at: lineOf('p3'), text: '  // note\n' }]));
+        expect(deletes(plan)).toEqual(['b1']);
+        expect(plan.lines?.length).toBeGreaterThan(0);
+        expect(guard).toBeNull();
+    });
+
+    it('a trailing comment on a port deletes nothing', () => {
+        expect(read(typed([{ at: port.text.indexOf('\n', lineOf('p1')), text: ' // wide' }])).guard).toBeNull();
+    });
+
+    it('the bar names the objects commented out', () => {
+        expect(editStatusText({ kind: 'guard', deleted: 2, total: 12, all: false, commented: ['Port instr'] }).text).toBe('Not applied · comments out Port instr, confirm below');
+        expect(editStatusText({ kind: 'guard', deleted: 4, total: 12, all: false, commented: ['Port instr', 'Port (unnamed)'] }).text)
+            .toBe('Not applied · comments out Port instr, Port (unnamed), confirm below');
+        expect(editStatusText({ kind: 'guard', deleted: 8, total: 12, all: false, commented: ['Port a', 'Port b', 'Port c', 'Port d'] }).text)
+            .toBe('Not applied · comments out Port a, Port b, Port c (+1), confirm below');
     });
 });

@@ -372,10 +372,11 @@ class JjtlApplicationAbort extends Error {}
  * failed there (R-FA-12, kind 'Method'): it stops the mapping with an error on
  * both parser paths, never a warning with `null`. The message names the builtin
  * or method and, once `evaluateExpression` has located it, the outermost
- * expression it was evaluated in.
+ * expression it was evaluated in and the rule and source element of the run
+ * (R-FA-13 for a builtin).
  */
 class JjtlBuiltinError extends Error {
-    /** Where the run was when it failed, ` (rule '...', source element '...')`; set for a method only. */
+    /** Where the run was when it failed, ` (rule '...', source element '...')`; set by the innermost evaluateExpression. */
     origin = '';
 
     constructor(readonly builtin: string, readonly reason: string, readonly kind: 'Builtin' | 'Method' = 'Builtin') {
@@ -2968,7 +2969,7 @@ export class JjtlExecutor {
                         const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));
                         return builtin.call(args, ctx);
                     } catch (error) {
-                        if (error instanceof JjtlBuiltinError) error.locate(expr);
+                        if (error instanceof JjtlBuiltinError) this.withOrigin(error).locate(expr);
                         throw error;
                     }
                 }
@@ -2996,15 +2997,13 @@ export class JjtlExecutor {
             // to a name that resolves to nothing or a read on null among them,
             // is logged and falls back to null.
             if (error instanceof JjtlBuiltinError) {
-                error.locate(expr);
+                this.withOrigin(error).locate(expr);
                 throw error;
             }
             const method = methodFailureOf(error);
             if (method !== undefined) {
                 const failed = new JjtlBuiltinError(method, error instanceof Error ? error.message : String(error), 'Method');
-                const { currentRuleName, currentInstanceName } = this.context;
-                if (currentRuleName) failed.origin = ` (rule '${currentRuleName}', source element '${currentInstanceName ?? '?'}')`;
-                failed.locate(expr);
+                this.withOrigin(failed).locate(expr);
                 throw failed;
             }
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -3016,6 +3015,17 @@ export class JjtlExecutor {
             this.unresolvedReads = outerReads;
             if (reads.size > 0) this.warnUnresolvedReads(expr, reads);
         }
+    }
+
+    /**
+     * Names the rule and source element the run was in when a builtin (R-FA-13)
+     * or a method (R-FA-12) failed: a binding's error prefix does not name the
+     * rule. The innermost call sets it; the enclosing ones keep it.
+     */
+    private withOrigin(error: JjtlBuiltinError): JjtlBuiltinError {
+        const { currentRuleName, currentInstanceName } = this.context;
+        if (!error.origin && currentRuleName) error.origin = ` (rule '${currentRuleName}', source element '${currentInstanceName ?? '?'}')`;
+        return error;
     }
 
     /**

@@ -2286,6 +2286,58 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Rollback tag `pre-textual-c2e-ir-chip` on `7d171b504` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2302/result.json`.
 **Prompt document name**: 2026-11-06 23:02
 
+## 2026-11-06 — feat(codegen): D1, commenting an object out asks first (P-2026-11-06-2301)
+**Prompt**: `claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`: R-TXT-37 with R-TXT-53 D7, a deletion whose object's carried span lies inside a comment asks on the pause with the C3b guard, naming the objects, even with other changes in the same pause.
+**Files touched**: `87ca3f547`: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
+**Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
+**Prompt document name**: 2026-11-06 23:01
+
+## 2026-11-06 — merge: textual-d1-comment-guard into alfonso-frontend-jjtl (P-2026-11-06-2326)
+**Prompt**: `claude_2026-11-06_2326_prompt_merge_textual-d1-comment-guard.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d1-comment-guard` at `275eec130` into `alfonso-frontend-jjtl`, merge base `7d171b504`, 3 commits on the branch side.
+**Files touched**: merge `59b532f43`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `59b532f43` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14472 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D1 crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d1-comment-guard` on `8049bf81b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2326/result.json`.
+**Prompt document name**: 2026-11-06 23:26
+
+## 2026-11-06 — docs: step E discovery, T10 and synced selection (P-2026-11-06-2337)
+**Prompt**: `claude_2026-11-06_2337_prompt_textual_e_discovery.md`, read-only discovery of step E (T10, scenario 2, selection synced between text and canvas both ways)
+**Files touched**: docs/discovery/discovery_2026-11-06_textual_e_sync.md (new, 8 section commits a5283f565..f0a90f80f); docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md (Status flip, uncommitted)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: T10 is unimplemented (reprint sets the whole value, comments lost); recursive per-object splice proposed. Selection: SELECT_NODE in, CANVAS_SELECTION_CHANGED out, both existing; no §3.1 file, no §3.2 trigger; optional _lastSelected write drafted as an LIR. Not measured: Monaco cursor sources on typing, rc-dock unmount of a hidden canvas (R1, R2). Five lanes E1a..E3, decisions E1..E10 to ratify.
+**Prompt document name**: 2026-11-06 23:37
+
+## 2026-11-07 — merge: textual-e-sync into alfonso-frontend-jjtl (P-2026-11-07-0017)
+**Prompt**: `claude_2026-11-07_0017_prompt_merge_textual-e-sync.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e-sync` at `34035b3a0` into `alfonso-frontend-jjtl`, merge base `8049bf81b`, 10 commits on the branch side.
+**Files touched**: merge `a5cb8aafb`: 3 files from the branch side (`docs/discovery/discovery_2026-11-06_textual_e_sync.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5cb8aafb` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14495 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step E discovery)
+**Notes**: Rollback tag `pre-textual-e-sync` on `9a5a63048` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0017/result.json`.
+**Prompt document name**: 2026-11-07 00:17
+
 ## 2026-11-06 — feat(codegen): D3a, structured fixes on parse errors (P-2026-11-06-2328)
 **Prompt**: `claude_2026-11-06_2328_prompt_textual_d3a_fixes.md`, row D3a of the D report §8, design §4.3: an optional `fix` on `TextParseError`, pure text edits (D6), under `ParseOptions.fixes`: insert a missing token, near names for an unknown reference, a near keyword for a misspelled one, none otherwise; the corpus identity of CLAUDE.md §5.
 **Files touched**: `frontend/src/codegen/textual/parser.ts` (`dcccb1d16`, `a9ff46da8`, `533eabcbc`), `frontend/src/codegen/textual/__tests__/tolerant.test.ts` (same, and `99cb12a30`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).

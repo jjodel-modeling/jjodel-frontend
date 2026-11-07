@@ -7311,6 +7311,17 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
   D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
   multi-word close. D7 (ask whenever a deleted root is covered by a comment, even with other changes in the same pause; wider than R-TXT-37) ratified by Alfonso 2026-11-06 22:28; C2e option A (a shared helper for the nameless-target label) approved at the same time.
+- **R-TXT-54** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step E, T10 and
+  synced selection: decisions E1 to E10 of docs/discovery/discovery_2026-11-06_textual_e_sync.md, taken under lane auto
+  (Alfonso 2026-11-06 23:31, «Procedi con E e poi F con /lane auto»).** E1 a canvas selection highlights and scrolls the
+  text, it never moves the caret; E2 a caret move also writes `_lastSelected` so the Properties panel follows (the tree
+  view's pattern, not an undo step); E3 T10 replaces the text with `setValue`, so the pre-diagram text never sits on the
+  editor's undo stack; E4 the innermost span holding the caret is selected, a caret outside every span does nothing; E5
+  a caret on a reference token selects the token's owner, not its target; E6 nodes only in E, edges later; E7 an outline
+  click also selects on the canvas; E8 a canvas selection with no span in the text is silent; E9 the Text tab opens
+  beside the canvas, in its own lane, last; E10 T10 keeps each object's typed text when its print is unchanged,
+  recursing into children, and falls back to the full reprint when it cannot splice safely. No piece touches the
+  critical zone; lanes E1a, E1b, E2a, E2b, E3.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7634,6 +7645,108 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   run state, panel, trace, watches, scenarios, I/O board and exporter. It knows roles, not the DCN metaclasses: a
   STC profile «Dynamic classification» maps Viewpoint, dynamic classifier, Invariant, Operation, Redefinition,
   Monitor and Instance-of onto a metamodel, so another metamodel with viewpoints and invariants can use it. Spec §8.
+- **R-DCN-9** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Base of the lanes.** The lanes that need only the S1 binding layer (L2.1..L2.4, L3.x, L4.1..L4.4 of the plan in
+  `docs/discovery/discovery_2026-11-06_dcn_foundations.md` §6) are cut from `dcn` on the trunk now. L2.5 and every
+  lane on a real object diagram wait for `oi-s2u` and `oi-s3b` on the trunk, after the 3.2.0 tag. Discovery Q1.
+- **R-DCN-10** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **`DynamicClass` is a feature source, not a Classifier in the R-OI binding sense.** It extends `NamedElement` with
+  its own `Property [0..*]` list, is reached by a `featureSources` path, and never enters the creation menu. Its
+  attributes are `Property`, so `Slot.definingFeature`, `featureType` and O5 apply to dormant slots unchanged. Q2.
+- **R-DCN-11** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The DCN nucleus is its own compiler emitting a placeless `CompiledNet` on the shared step.** Classification,
+  completeness, exclusivity, Interleave, Sync and redefinition expansion sit around the step in `dcnStep.ts`;
+  `netCompile.ts` is not touched. Read as compatible with R-DCN-8; lane L4.1 (a nucleus field on `SimRun`) keeps the
+  choice reversible. Q3.
+- **R-DCN-12** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Slot syntax.** Guards, invariants and actions read `self.battery` through σ-backed handles; actions write
+  `self.battery := e` in a DCN action mode. The write goes to σ, never to the model. This is a deliberate exception
+  to the `.[x]` rule of R-SIM-18 for the DCN nucleus, written into `docs/spec/concern_languages.md` in lane L3.1. Q4.
+- **R-DCN-13** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Ranges are two optional integer bounds on `Property`, type `Integer`**, named apart from `lower`/`upper` and
+  checked by the well-formedness lane; no `RangeType` data type, which would break the S2/S3a value kinds. Q5.
+- **R-DCN-14** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Invocation events and contribution selectors have nucleus-owned opaque ids**, per (instance, operation) and per
+  (viewpoint, contribution), fixed in lane L4.2 before the first DCN scenario is saved; `scenarioCodec.ts` unchanged. Q6.
+- **R-DCN-15** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Operation arguments are R-SIM-88 inputs asked at the press**; no event instance per argument tuple. Q7.
+- **R-DCN-16** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **A blank invariant and a second instance of an `isSingleton` class are well-formedness errors**; the creation
+  menu is not filtered. Q8.
+- **R-DCN-17** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Viewpoints are inherited**: `featureSources` apply at every level of the generalization closure. Q9.
+- **R-DCN-18** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The exporter is TypeScript over the `bvToSmv` expression printer**, sharing the compiled guards with the W5
+  enumeration; not a codegen generator. Q10.
+- **R-DCN-19** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The drone fixture lives in `frontend/scripts/probe/dcn-drone-fixture.ts`** beside the UML fixture; the importable
+  example comes only after lane L4.5, so the metamodel does not freeze before the nucleus runs. Q11.
+- **R-DCN-20** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Amendment of R-OI-13 (R-DCN-3).** A slot whose `definingFeature` is reached through a `featureSources` path is in
+  the feature closure, so it is never orphan; a missing one is a `missing` warning like any other. The code is this
+  front's lane L2.1 in `model/ontological/` on the trunk; the R-OI consumers inherit it unchanged. The instance-of
+  front acknowledges this row. Q12.
+- **R-DCN-21** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Lane order follows the plan of the discovery §6, not the slice numbers**: the languages concern (L3.1) and the
+  parse of `self.in` (L3.2) come before W1..W4 (L2.4). Spec §10 keeps its numbering. Q13.
+
+## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
+
+Evidence: the project chat C-2026-11-06-2333 of 2026-11-06 (23:38 «Le tre risposte vanno bene» on the three
+recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). Discovery owed: P-2026-11-06-2350.
+
+- **R-MT-1** (2026-11-06, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **State splits in three levels: model, pair (model, viewpoint), tab.** The model (M2 or M1) is one and shared: every
+  write shows in every tab. The layout belongs to the pair (model, viewpoint), as R-LAY already keys it. The active
+  viewpoint, pan, zoom and the session size derived from content belong to the tab. The project's active viewpoint
+  becomes only the default for the next opening; it is no longer the source of truth of an open editor.
+- **R-MT-2** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Selection is shared across tabs by model element.** Selecting an element in one tab highlights it in every tab that
+  shows it, whatever the viewpoint.
+- **R-MT-3** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **A simulator run belongs to the model; tabs observe it.** The configuration σ is state of the model's run (R-SIM),
+  not of an editor; every tab on that model shows the same run.
+- **R-MT-4** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Two tabs on the same model and the same viewpoint are allowed and share the layout.** No special case: a drag in
+  one moves the node in the other.
+- **R-MT-5** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The tab's viewpoint is React state of the tab, exposed by an optional `viewpointId` on `EditorContext`.** No Redux
+  slice keyed by tab id. Q1 of `docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md`.
+- **R-MT-6** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The toolbar picker writes the tab's state and `activateViewpoint`**, since the tab whose picker is used is the
+  focused one; the project value stays the default for the next opening (R-MT-1). Q2.
+- **R-MT-7** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **A tab whose viewpoint is deleted or deactivated falls back to abstract syntax**, never to another viewpoint chosen
+  for the user. Q3.
+- **R-MT-8** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The classic editor gets no per-tab viewpoint**; it stays on the project default. Q4.
+- **R-MT-9** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **A second tab on a model opens from a context-menu item «Open in new tab ▸ <viewpoint>» on the model row** (Tree View,
+  model rail); no drag gesture in the first cut. Q5.
+- **R-MT-10** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Two tabs on one (model, viewpoint) share the stored viewport, last writer wins**, as the default for the next
+  opening; live pan and zoom stay in each tab's React Flow store. Q6.
+- **R-MT-11** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Global readers (Tree View, Properties rail, new-view parenting) follow the focused tab**, through the root and
+  project values the tab writes when it gains focus. Q7.
+- **R-MT-12** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The simulator panel stays in every tab, unchanged**; a lane limiting controls to the focused tab opens only if the
+  smoke shows a conflict. Q8.
+- **R-MT-13** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The possible layout-switch regression after `242a82bcd` is probed now, independently of multi-tab** (lane L0b). Q9.
+- **R-MT-14** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **R-LAY-19's freeze on new `state.viewpoint` readers in editor-v2 is held by a check script after lane L5**, with an
+  allow-list of the readers left. Q10.
+- **R-MT-15** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **One D-layer undo stack per user, across tabs** (R-UNDO-1); a Cmd+Z may revert a layout write made in another tab.
+  No per-tab undo. Q11.
+- **R-MT-16** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The mount-only restore of the saved viewpoint (`EditorSwitch.tsx:93`) runs only for the dock's active tab**;
+  focus-driven activation arrives with lane L2. Q12.
+- **R-MT-17** (2026-11-07, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **With several instances mounted on one model, the first mounted instance owns the populate and hands it over on
+  unmount**; the others render only. Sync registries and problem producers clear when the last instance of the model
+  unmounts. Q13.
 
 ## Superate
 

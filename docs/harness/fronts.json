@@ -168,6 +168,16 @@
       "ownerChat": "C-2026-11-06-2159",
       "ownerSince": "2026-11-06",
       "milestone": 18
+    },
+    {
+      "slug": "multi-tab",
+      "title": "Several tabs on one or more models, each with its own viewpoint: per-tab active viewpoint, layout per (model, viewpoint), shared selection (R-MT)",
+      "exit": "a decision row closes the front once per-tab viewpoints are merged into alfonso-frontend-jjtl, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-11-06",
+      "ownerChat": "C-2026-11-06-2333",
+      "ownerSince": "2026-11-06",
+      "milestone": 19
     }
   ]
 }

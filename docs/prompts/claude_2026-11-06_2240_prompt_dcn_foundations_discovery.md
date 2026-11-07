@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2240
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-06 · lane full · discovery, no code · report docs/discovery/discovery_2026-11-06_dcn_foundations.md (§0-§5, c35064743..6ebd9d064) · stopped at the soft context ceiling, continued by P-2026-11-06-2250
 Lane: full (discovery, read only)
 Depends: R-DCN-1..8, R-OI-1..16, R-SIM-21..33, R-SIM-47..55, R-SIM-137..141, R-SIM-144
 Worktree: ~/jjodel-dcn, branch dcn, at this prompt's commit on alfonso-frontend-jjtl (no node_modules: if a probe needs them, the P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
