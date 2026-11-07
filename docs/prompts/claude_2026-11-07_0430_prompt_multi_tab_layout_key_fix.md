@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0430
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 03a093081, cheap path 8328662df (P-2026-11-07-0555) · app probes pass on 8328662df (P-2026-11-07-0628); verifica visiva in attesa del GO (crops in ~/.jjodel-lanes/P-2026-11-07-0555/crops-0628/)
 Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23, R-MT-19, launched with --critical-zone-goahead P-2026-11-07-0430)
 Depends: R-MT-19, R-LAY-14, R-LAY-18, docs/discovery/discovery_2026-11-07_layout_switch_after_242a82bcd.md §5, §6
 Worktree: ~/jjodel-w-mtlk, branch multi-tab-layout-key, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

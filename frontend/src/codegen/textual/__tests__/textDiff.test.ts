@@ -21,6 +21,7 @@ import { diffText, planTextEdit } from '../textDiff';
 import type { DiffOp, ObjectRef, PlanInput } from '../textDiff';
 import { defaultedSlots, referencedElsewhere } from '../textApply';
 import { BOX, CASES, DIAMOND, GARAGE, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
+import { PORT_MM, PORT_TEXT_CLIKE, portGrammar } from './portCorpus';
 import { FIXTURE, metamodelOf, objectsOf } from './spec';
 import type { Spec } from './spec';
 
@@ -287,7 +288,7 @@ describe('an edit is the minimal diff, and its lines address the objects by regi
         const added = edit(LIBRARY_CASE, [['    Member bob {}', '    Member bob {}\n    Member cid {}']]);
         expect(added.plan.diff!.ops).toEqual([{ op: 'create', text: added.parsed.objects.find(o => o.slots.name === 'cid')!.id, cls: 'Member', into: { owner: { model: 'lib' }, feature: 'members' } },
             { op: 'attribute', target: { text: added.parsed.objects.find(o => o.slots.name === 'cid')!.id }, feature: 'name', value: 'cid' }]);
-        expect(added.plan.lines).toEqual(['create instance of Member "cid" in city.members']);
+        expect(added.plan.lines).toEqual(['create instance of Member "cid" in city.members', 'set cid.name = "cid"']);
 
         const gone = edit(LIBRARY_CASE, [['\n        borrowedBy bob', ''], ['\n    Member bob {}', '']]);
         expect(gone.plan.diff!.ops).toEqual([{ op: 'delete', model: 'm2' }]);
@@ -299,7 +300,7 @@ describe('an edit is the minimal diff, and its lines address the objects by regi
         const added = edit(c, [['    }\n  }\n  best Car[0].wheels[1]', '    }\n    Wheel z {\n      bolts {\n        Bolt q {}\n      }\n    }\n  }\n  best Car[0].wheels[1]']], { spans: true });
         expect(added.parsed.errors).toEqual([]);
         expect(added.plan.refusals).toEqual([]);
-        expect(added.plan.lines).toEqual(['create instance of Wheel "z" in beta.wheels', 'create instance of Bolt "q" in z.bolts']);
+        expect(added.plan.lines).toEqual(['create instance of Wheel "z" in beta.wheels', 'set z.name = "z"', 'create instance of Bolt "q" in z.bolts', 'set q.name = "q"']);
 
         const tree = specCase({
             classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'folders', type: 'Folder', containment: true, many: true }, { name: 'files', type: 'File', containment: true, many: true }] },
@@ -320,6 +321,20 @@ describe('an edit is the minimal diff, and its lines address the objects by regi
         expect(deleted.parsed.errors).toEqual([]);
         expect(deleted.plan.diff!.ops).toEqual([{ op: 'delete', model: 'docs' }]);
         expect(deleted.plan.lines).toEqual(['delete docs']);
+    });
+
+    it('an object created under its own name gets its name slot written: the handle names data.name only (P-2026-11-07-0344; mutant: the name !== h guard)', () => {
+        const { plan } = edit({ mm: PORT_MM, g: portGrammar(), objects: [] }, [['', PORT_TEXT_CLIKE]]);
+        expect(plan.refusals).toEqual([]);
+        const lines = plan.lines!;
+        for (const name of ['cpu', 'result', 'ready']) {
+            const at = lines.findIndex(l => l.startsWith(`create instance of `) && l.includes(` "${name}"`));
+            expect(at, name).toBeGreaterThanOrEqual(0);
+            expect(lines[at + 1]).toBe(`set ${name}.name = "${name}"`);
+        }
+        expect(lines.filter(l => l.includes('.name ='))).toEqual([
+            'set cpu.name = "cpu"', 'set Port_1.name = "instr"', 'set Port_2.name = ""', 'set result.name = "result"', 'set Ref_1.name = "instr"', 'set Ref_2.name = ""', 'set ready.name = "ready"',
+        ]);
     });
 
     it('a rename with an unchanged body: matched by its span in the editor; uncertain by similarity outside it (mutant: refusal on uncertain removed)', () => {
@@ -600,7 +615,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         const { plan } = edit(treeCase(), [[docs, ''], ['  folders {', '  folders {\n    Folder fresh {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
             { pasted: [['f1', 'a']] });
         expect(plan.refusals).toEqual([]);
-        expect(plan.lines).toEqual(['set docs.files -= a', 'delete docs', 'create instance of Folder "fresh" in root.folders', 'set fresh.files += a']);
+        expect(plan.lines).toEqual(['set docs.files -= a', 'delete docs', 'create instance of Folder "fresh" in root.folders', 'set fresh.name = "fresh"', 'set fresh.files += a']);
     });
 
     it('a swap of nesting moves in text order, the container first: no containment loop on the way (discovery R4)', () => {

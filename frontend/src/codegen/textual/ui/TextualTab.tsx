@@ -31,6 +31,7 @@ import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
 import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGrammar';
+import { JjodelEvents } from '../../../events/registry';
 import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
@@ -42,6 +43,9 @@ import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
+import { reprintChanged } from '../textReprint';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { identityOf, matchObjects } from '../textMatch';
@@ -283,6 +287,41 @@ export interface TextSync {
     /** P-2026-11-03-2326: the agreed text's object spans and reference tokens, kept with the agreement. */
     readonly spans?: readonly ObjectSpan[];
     readonly refs?: readonly RefSpan[];
+    /** E1b (R-TXT-54 E10): the print `model` was agreed as, for T10's splice. */
+    readonly printed?: AgreedPrint;
+    /** P-2026-11-07-0912: a no-change agreement's text of the last application or reprint, where Cmd/Ctrl+Z is the app's undo. */
+    readonly appText?: string;
+}
+
+/** E1b: the old print of an agreement: its object spans, its reference tokens, and the grammar it was printed in. */
+export interface AgreedPrint {
+    readonly grammar: ConcreteGrammar;
+    readonly spans: readonly ObjectSpan[];
+    readonly refs: readonly RefSpan[];
+}
+
+export function agreedPrint(base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): AgreedPrint {
+    return { grammar: base.grammar, spans: base.spans, refs: base.refs ?? [] };
+}
+
+/**
+ * T10, lane E1b (R-TXT-20, R-TXT-54 E10): the text a change of the model's print puts in place of the agreed one, with
+ * its spans and reference tokens. When the agreed text is not the bare print, `reprintChanged` keeps the typed text of
+ * every object whose print did not change; else, or when it cannot splice safely, the whole new print, as before.
+ * `carried` is what the agreed text carries; `text` and `base` are the changed model's print.
+ */
+export function modelReprint(sync: TextSync, carried: { readonly spans: readonly ObjectSpan[]; readonly refs?: readonly RefSpan[] }, text: string,
+    base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): ReprintResult & { readonly spliced: boolean } {
+    const full = { text, spans: base.spans, refs: base.refs ?? [], spliced: false };
+    if (sync.text === sync.model || !sync.printed) return full;
+    const r = reprintChanged({
+        grammar: base.grammar,
+        previous: sync.printed.grammar,
+        typed: { text: sync.text, spans: carried.spans, refs: carried.refs ?? [] },
+        old: { text: sync.model, spans: sync.printed.spans, refs: sync.printed.refs },
+        next: { text, spans: base.spans, refs: base.refs ?? [] },
+    });
+    return r ? { ...r, spliced: true } : full;
 }
 
 /**
@@ -352,6 +391,25 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
     if (plan.refusals.length) return { kind: 'refused', reasons: plan.refusals.map(r => r.message) };
     if (!plan.lines?.length) return { kind: 'unchanged' };
     return { kind: 'apply' };
+}
+
+/**
+ * E1b: a read text that asks for no change of the model (a comment typed, say) is the new agreement, so a later change
+ * of the model splices into it (T10) instead of finding a pending edit. Null for any other decision. P-2026-11-07-0912:
+ * it keeps the text of the last application or reprint (`prior`'s), so the undo stays with the editor (`appUndoKey`).
+ */
+export function unchangedAgreement(d: EditDecision, text: string, print: string, base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>, prior?: TextSync | null): TextSync | null {
+    if (d.kind !== 'unchanged') return null;
+    const appText = prior ? prior.appText ?? prior.text : undefined;
+    return { text, model: print, printed: agreedPrint(base), ...(appText !== undefined ? { appText } : {}) };
+}
+
+/**
+ * R-TXT-26, P-2026-11-07-0912: Cmd/Ctrl+Z is the app's undo when the editor holds the text of the last application or
+ * reprint; after a no-change agreement it stays the editor's, so a Format or a typed space is undone in the text.
+ */
+export function appUndoKey(sync: TextSync | null, text: string): boolean {
+    return !!sync && text === (sync.appText ?? sync.text);
 }
 
 /** What the lookup gives an edit besides the objects (textApply.ts `defaultedSlots`, `referencedElsewhere`). */
@@ -762,6 +820,8 @@ interface TextNavigatorProps {
     readonly session: TextualSession | null;
     readonly open: boolean;
     readonly children: ReactNode;
+    /** E2a (R-TXT-54 E7): a click on a row or a segment, with the offset the caret was moved to. */
+    readonly onPick?: (offset: number) => void;
 }
 
 /**
@@ -770,7 +830,7 @@ interface TextNavigatorProps {
  * selected row, scrolled into view, and the breadcrumb's path. A click on a row or a segment moves the caret to the node
  * and reveals its line. The rows are windowed by hand: only the visible ones are rendered.
  */
-function TextNavigator({ editor, session, open, children }: TextNavigatorProps) {
+function TextNavigator({ editor, session, open, children, onPick }: TextNavigatorProps) {
     const [version, setVersion] = useState(0);
     const [caret, setCaret] = useState(0);
     const [filter, setFilter] = useState('');
@@ -839,6 +899,7 @@ function TextNavigator({ editor, session, open, children }: TextNavigatorProps) 
         editor.setPosition(p);
         editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
         editor.focus();
+        onPick?.(n.selectStart);
     };
     const toggle = (n: OutlineNode): void => setCollapsed(c => {
         const next = new Set(c);
@@ -1153,9 +1214,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void }>({ read: () => {}, content: () => {}, cursor: () => {} });
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
+    // E2a (R-TXT-54): a caret the user moved selects its object on the canvas after a short wait; the last id it selected.
+    const caretPause = useMemo(() => pauseOf(CARET_SELECT_DELAY_MS, () => handlers.current.caret()), []);
+    useEffect(() => () => caretPause.cancel(), [caretPause]);
+    const canvasSelectedRef = useRef<string | null>(null);
 
     const setDecorations = (spans: readonly ObjectSpan[]): void => {
         const editor = editorRef.current;
@@ -1281,23 +1346,30 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const updateUndoKey = (): void => {
         const editor = editorRef.current;
-        undoKeyRef.current?.set(!!editor && !!syncRef.current && editor.getValue() === syncRef.current.text);
+        undoKeyRef.current?.set(!!editor && appUndoKey(syncRef.current, editor.getValue()));
     };
 
-    /** The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. */
-    const reprint = (r: ModelReading): void => {
+    /**
+     * The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. T10 (E1b):
+     * an agreed text the editor holds is spliced, keeping the typed text of the unchanged objects; `full` reprints the
+     * whole print. `setValue` either way, so the text before never sits on the editor's undo stack (E3).
+     */
+    const reprint = (r: ModelReading, full = false): void => {
         const editor = editorRef.current;
         if (!editor || !r.base) return;
         pause.cancel();
         armedRef.current = null;
         clipRef.current = null;
         heldRef.current = false;
+        const sync = syncRef.current;
+        const typed = sync && !full ? agreedEvidence(sync, editor.getValue()) ?? (editor.getValue() === sync.text ? { spans: carriedSpans(), refs: carriedRefs() } : null) : null;
+        const next = sync && typed ? modelReprint(sync, typed, r.view.text, r.base) : { text: r.view.text, spans: r.base.spans, refs: r.base.refs ?? [] };
         const viewState = editor.saveViewState();
-        syncRef.current = { text: r.view.text, model: r.view.text };
-        if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
+        syncRef.current = { text: next.text, model: r.view.text, printed: agreedPrint(r.base) };
+        if (editor.getValue() !== next.text) editor.setValue(next.text);
         if (viewState) editor.restoreViewState(viewState);
-        setDecorations(r.base.spans);
-        setRefDecorations(r.base.refs ?? []);
+        setDecorations(next.spans);
+        setRefDecorations(next.refs);
         agree();
         setMarkers(null);
         staleRef.current = false;
@@ -1369,13 +1441,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         // The applied text is the new agreement: as typed, with the spans of its objects in the new model, and its reference
         // tokens rewritten to the new print's (R-TXT-35).
         const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
-        syncRef.current = { text, model: after.view.text };
+        syncRef.current = { text, model: after.view.text, ...(after.base ? { printed: agreedPrint(after.base) } : {}) };
         const editor = editorRef.current;
         // R-TXT-44: the names the app gave show at once, and the next edit reads them (the stuck edit of P-2026-11-04-1447).
         // Only the names the model holds after the run (C2c): a cleared slot reads nameless (R-TXT-45).
         const named = after.base ? namedByModel(plan, after.base.grammar, after.base.objects) : [];
         if (after.base && editor?.getValue() === text && namedReprint({ named }, after.view.text, text) !== null) {
-            reprint(after);
+            reprint(after, true);
             setStatus({ kind: 'applied', failed: failedLines, named: named.length });
             return;
         }
@@ -1440,6 +1512,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             setStatus({ kind: 'guard', ...guard });
             return;
         }
+        const agreed = unchangedAgreement(d, text, r.view.text, r.base, sync);
+        if (agreed) { syncRef.current = agreed; agree(); updateUndoKey(); }
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
     };
 
@@ -1482,6 +1556,36 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         readEdit();
     };
 
+    /**
+     * E2a (R-TXT-54 E2, E6; discovery §4.3, §6.4): selects the element `id` on its model's canvas with `SELECT_NODE`, when
+     * the canvas is on screen and draws it as a node, and points `_lastSelected` at it as the tree view does
+     * (TreeViewContent.tsx), so the Properties panel follows: a transient root key, no model write, no undo step. Not
+     * useJjomSelection's `selectElement`, which is sync-adjacent. The pane and the joiner load here, as the adapter does.
+     * The vertices come from the graph of the mounted nodes: a node out of view is not in the DOM.
+     */
+    const selectOnCanvas = (id: string): void => {
+        void Promise.all([import('../../ui/canvasSelection'), import('../../ui/codeOrigins'), import('../../../joiner')]).then(([cs, co, j]) => {
+            const pane = cs.modelPane(modelId);
+            const box = pane?.getBoundingClientRect();
+            // Off screen: not docked, a panel hidden (an empty box), or rc-dock's inactive tab, kept mounted but hidden (measured).
+            if (!pane || !box || box.width === 0 || box.height === 0 || pane.getAttribute('aria-hidden') === 'true' || getComputedStyle(pane).visibility === 'hidden') return;
+            const ids = (selector: string): string[] => [...pane.querySelectorAll(selector)].map(e => e.getAttribute('data-id') ?? '').filter(Boolean);
+            const now = ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>;
+            const nodeId = canvasNodeOf(co.pickOnCanvas(now, canvasVertexIds(now, ids('.react-flow__node[data-id]')), ids('.react-flow__edge[data-id]'), id));
+            if (!nodeId) return;
+            canvasSelectedRef.current = id;
+            j.SetRootFieldAction.new('_lastSelected' as any, { node: '', view: '', modelElement: id }, '', false);
+            window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId, modelId } }));
+        });
+    };
+
+    /** E2a (E4, E5): the object of the innermost carried span at `offset`; `again`, an outline click, selects it even when it was the last one. */
+    const selectAt = (offset: number, again: boolean): void => {
+        const id = innermostSpanAt(carriedSpans(), offset)?.id ?? null;
+        const next = again ? id : nextSelected(canvasSelectedRef.current, id);
+        if (next) selectOnCanvas(next);
+    };
+
     handlers.current = {
         read: () => readEdit(),
         content: changes => {
@@ -1506,6 +1610,15 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             const r = readRef.current;
             if (!heldRef.current || applyingRef.current || rewritingRef.current || !r.base || r.view.text !== syncRef.current?.model) return;
             rewritePaths(r.base.refs ?? []);
+        },
+        // E2a (§6.2): the caret's object, once the spans are the ones an application or a rewrite leaves.
+        caret: () => {
+            const editor = editorRef.current;
+            const m = editor?.getModel();
+            const p = editor?.getPosition();
+            if (!m || !p) return;
+            if (applyingRef.current || rewritingRef.current) { caretPause.poke(); return; }
+            selectAt(m.getOffsetAt(p), false);
         },
     };
 
@@ -1545,7 +1658,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             editor.onDidFocusEditorText(() => monaco.editor.setTheme(ui.TEXTUAL_THEME_ID));
         }
         const r = readRef.current;
-        syncRef.current = { text: editor.getValue(), model: r.view.text };
+        syncRef.current = { text: editor.getValue(), model: r.view.text, ...(r.base ? { printed: agreedPrint(r.base) } : {}) };
         if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
@@ -1554,6 +1667,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }, APP_UNDO_KEY);
         editor.onDidChangeModelContent(e => handlers.current.content(e.changes));
         editor.onDidChangeCursorSelection(() => handlers.current.cursor());
+        // E2a: a click or a cursor key, not typing nor a move made by code (§6.1).
+        editor.onDidChangeCursorSelection(e => { if (isUserCaretMove(e)) caretPause.poke(); });
         // T7 D-5: in the capture phase the selection is still there; the change that follows is the cut.
         editor.getDomNode()?.addEventListener('cut', () => {
             const m = editor.getModel();
@@ -1651,7 +1766,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         <i className="bi bi-exclamation-triangle" aria-hidden="true" />
                         The model changed: your text is kept, not applied
                         <button type="button" className="textual-tab__stale-reload" title="Replace the text with the model's"
-                                onClick={() => reprint(readRef.current)}>
+                                onClick={() => reprint(readRef.current, true)}>
                             Reprint
                         </button>
                     </span>
@@ -1715,7 +1830,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                     <>
                         {/* The text stays mounted under the EBNF, so a pending edit survives the toggle. */}
                         <div className={'textual-tab__layer' + (mode === 'text' ? '' : ' textual-tab__layer--hidden')}>
-                            <TextNavigator editor={nav?.editor ?? null} session={nav?.session ?? null} open={outlineOpen}>
+                            <TextNavigator editor={nav?.editor ?? null} session={nav?.session ?? null} open={outlineOpen}
+                                           onPick={offset => selectAt(offset, true)}>
                                 {read.base && ui && (
                                     <Editor width="100%" height="100%" language={ui.TEXTUAL_LANGUAGE_ID} defaultValue={view.text}
                                             theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
