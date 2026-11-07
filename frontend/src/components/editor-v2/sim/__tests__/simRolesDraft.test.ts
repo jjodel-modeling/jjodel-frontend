@@ -18,7 +18,7 @@ import { profileBindings, profilePatch, storedProfile } from '../simRoleStatus';
 import type { BoundEstimate } from '../modelMarkings';
 import { systemProfile, validateProfile } from '../../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile } from '../../../../model/simulation/profileCodec';
-import { ROLE_IDS } from '../../../../model/simulation/roleCatalog';
+import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
@@ -113,6 +113,19 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are Â
         expect([SM, ESM, FLOW, PETRI].map(fold)).toEqual([[3, 14], [3, 11], [2, 12], [0, 16]]);
         // control: a set key reads the same
         expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toEqual(roleSections(SM, {}).off);
+    });
+
+    it('Dynamic classification: only the dcn group, 4 Required and 7 Optional, nothing Not used (ticket of P-2026-11-07-0941; killed by the general, events, data or output group shown, and by M16: the control-flow and Petri groups shown)', () => {
+        const DCN = systemProfile('dynamicClassification') as SimProfile;
+        const s = roleSections(DCN, {});
+        expect(s.required).toEqual([['staticClass'], ['viewpoints'], ['dynamicClasses'], ['invariant']]);
+        expect(s.optional).toEqual(['operation', 'precondition', 'body', 'redefines', 'monitor', 'overlapping', 'complete']);
+        expect([s.parameters, s.derived, s.off]).toEqual([[], [], []]);
+        const rows = [...s.required.flat(), ...s.parameters, ...s.optional, ...s.derived, ...s.off];
+        expect(rows).toHaveLength(11);
+        expect(rows.filter(r => roleDescriptor(r).group !== 'dcn')).toEqual([]);
+        // control: the net shapes still hide the dcn group and nothing else of theirs
+        expect([SM, PETRI].map(p => { const t = roleSections(p, {}); return [...t.required.flat(), ...t.parameters, ...t.optional, ...t.derived, ...t.off].filter(r => roleDescriptor(r).group === 'dcn'); })).toEqual([[], []]);
     });
 
     it('DFA, NFA, Moore, Mealy: the role they read is a Required row (probe A of P-2026-09-29-0239)', () => {

@@ -85,11 +85,12 @@ export interface RoleSections {
  */
 export function roleSections(profile: SimProfile, bag: Readonly<Record<string, unknown>>): RoleSections {
     const mode = (r: RoleId) => profile.modes[r].mode;
-    // The dcn group never shows under the two net shapes, and their groups never under dcn; the
-    // net shapes still list each other's group as off, as before the dcn shape.
+    // The dcn group never shows under the two net shapes, and under dcn it is the only group shown
+    // (ticket of P-2026-11-07-0941); the net shapes still list each other's group as off, as before
+    // the dcn shape.
     const hidden = (r: RoleId) => {
         const g = roleDescriptor(r).group;
-        return profile.shape === 'dcn' ? g === 'controlFlow' || g === 'petri' : g === 'dcn';
+        return profile.shape === 'dcn' ? g !== 'dcn' : g === 'dcn';
     };
     const shown = (r: RoleId) => r !== 'stateAttributes' && !hidden(r);
 
