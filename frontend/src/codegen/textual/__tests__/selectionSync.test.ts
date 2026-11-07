@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, selectedSpans } from '../selectionSync';
 import type { ObjectSpan } from '../printer';
 
 // `Family f { members: [ Member a { name = "x" } Member b ] }` as spans: a root, two children, a reference inside a.
@@ -165,5 +165,50 @@ describe('canvasVertexIds', () => {
     it('lets pickOnCanvas-like lookups find an element whose node is off screen', () => {
         const ids = canvasVertexIds(lookup, ['v1']);
         expect(ids.find(id => lookup[id]?.model === 'e2')).toBe('v2');
+    });
+});
+
+// Lane E2b (P-2026-11-07-1635; R-TXT-54 E1, E8): canvas to text. The canvas's selected elements to the spans the tab
+// highlights, in selection order; an element without a span gives nothing.
+describe('selectedSpans', () => {
+    it('gives the span of one selected element', () => {
+        expect(selectedSpans(SPANS, ['a'])).toEqual([A]);
+    });
+
+    it('gives the spans of several, in selection order, not in the order of the spans', () => {
+        expect(selectedSpans(SPANS, ['b', 'f'])).toEqual([B, ROOT]);
+        expect(selectedSpans(SPANS, ['f', 'b'])).toEqual([ROOT, B]);
+    });
+
+    it('gives nothing for an element with no span: stale tab, unprinted object (E8)', () => {
+        expect(selectedSpans(SPANS, ['zz'])).toEqual([]);
+        expect(selectedSpans(SPANS, ['zz', 'a'])).toEqual([A]);
+        expect(selectedSpans(SPANS, [])).toEqual([]);
+        expect(selectedSpans([], ['a'])).toEqual([]);
+    });
+
+    it('gives nothing for a collapsed span, an object the pending edit deleted', () => {
+        const gone: ObjectSpan = { id: 'a', start: 30, end: 30 };
+        expect(selectedSpans([ROOT, gone, B], ['a', 'b'])).toEqual([B]);
+    });
+
+    it('gives an element once, even listed twice', () => {
+        expect(selectedSpans(SPANS, ['a', 'a'])).toEqual([A]);
+    });
+
+    it('follows a span that moved after a reprint: the new spans, the same id', () => {
+        const moved: ObjectSpan = { id: 'a', start: A.start + 12, end: A.end + 12 };
+        expect(selectedSpans([ROOT, moved, B], ['a'])).toEqual([moved]);
+    });
+});
+
+describe('lastSelectedOf', () => {
+    it('is the one selected element: the text does not send it again', () => {
+        expect(lastSelectedOf(['a'])).toBe('a');
+    });
+
+    it('is nothing for no selection or several: a caret in any of them selects it alone', () => {
+        expect(lastSelectedOf([])).toBeNull();
+        expect(lastSelectedOf(['a', 'b'])).toBeNull();
     });
 });
