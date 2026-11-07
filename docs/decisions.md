@@ -7744,6 +7744,14 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   ownership declared in the metamodel, checked with W1..W4 in lane L2.4. Under W6 a step can never produce a double
   assignment across viewpoints, so Sync is always defined and Interleave differs from Sync only through read-write
   dependencies between viewpoints.
+- **R-DCN-24** (2026-11-08, decided by the chat C-2026-11-06-2159 on Alfonso's «decidi tu» of 2026-11-08 00:04, evidence: read, verified: none, reversible: trunk).
+  **In a DCN model a navigable association end is owned by its class.** An end owned by the association
+  (`Association.ownedEnds`) is not navigable from `self`, as in the UML 2.5 convention where navigability goes with
+  class ownership; DCN expressions reach linked instances only through class-owned ends (`Class.ownedAttributes` with
+  `Property.association` set). W1 reports a read of an association-owned end with a message saying so and how to fix
+  it; the handles of L4.3 stay as they are. The drone fixture moves `ownedSensors` and `WAU` to their classes. Reverse
+  navigation through association-owned ends is not added: it would need backward references the binding cannot
+  express (`featureSources` follows forward references only). Found by P-2026-11-07-1825 (F3).
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 
