@@ -16,9 +16,14 @@ import type { RoleId } from '../roleCatalog';
  * `simAction`, `simEntry`, `simExit` and `simStateAttributes` left the list with the
  * commit that wires them (lane C1, R-SIM-68, R-SIM-69); `simActivityFinal` with the
  * engine's reading of it (lane E1, R-SIM-53); `simAccepting`, `simStateOutput` and
- * `simTransitionOutput` with the engine's (lane S4, R-SIM-50, R-SIM-51). None is left.
+ * `simTransitionOutput` with the engine's (lane S4, R-SIM-50, R-SIM-51). The keys
+ * of the dcn group (R-DCN-8) are the new ones now.
  */
-const NEW_KEYS: string[] = [];
+const NEW_KEYS: string[] = [
+    // The dcn group (P-2026-11-07-0941): read by `dcnStcFromRoles` (dcn/dcnRoles.ts) through the catalog, by no run yet.
+    'simStaticClass', 'simViewpoints', 'simDynamicClasses', 'simInvariant', 'simOperation', 'simPrecondition',
+    'simBody', 'simRedefines', 'simMonitor', 'simOverlapping', 'simComplete',
+];
 
 /** The files of this lane: they name every key, so they are not evidence that the code does. */
 const OWN_FILES = new Set(['roleCatalog.ts', 'simProfiles.ts', 'profileCodec.ts']);
@@ -49,7 +54,7 @@ describe('roleCatalog: shape of the catalog', () => {
     it('has one descriptor per RoleId, in the order of ROLE_IDS, with unique ids', () => {
         expect(ROLE_CATALOG.map(d => d.id)).toEqual([...ROLE_IDS]);
         expect(new Set(ROLE_IDS).size).toBe(ROLE_IDS.length);
-        expect(ROLE_IDS).toHaveLength(28);
+        expect(ROLE_IDS).toHaveLength(39);
     });
 
     it('has unique non-null keys, and simEvent is not one of them (R-SIM-38)', () => {
@@ -141,8 +146,8 @@ describe('roleCatalog: the keys against the code', () => {
 });
 
 describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2026-09-29-0010)', () => {
-    it('multi is set on the four Data roles and on no other (mutant: an output role flagged)', () => {
-        expect(ROLE_CATALOG.filter(d => d.multi).map(d => d.id)).toEqual(['guard', 'action', 'entry', 'exit']);
+    it('multi is set on the four Data roles, Operation and Body, and on no other (mutant: an output role flagged)', () => {
+        expect(ROLE_CATALOG.filter(d => d.multi).map(d => d.id)).toEqual(['guard', 'action', 'entry', 'exit', 'operation', 'body']);
         // control: the single-valued roles of the amendment stay single
         for (const id of ['eventIdentifier', 'stateOutput', 'transitionOutput', 'arcWeight', 'bound'] as const) {
             expect(roleDescriptor(id).multi, id).toBeUndefined();
@@ -186,5 +191,50 @@ describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2
         for (const ids of [[], ['A'], ['A', 'B'], ['Pointer1_x', 'Pointer2_y', 'Pointer3_z']]) {
             expect(roleValues(encodeRoleValues(ids))).toEqual(ids);
         }
+    });
+});
+
+describe('the dcn group (P-2026-11-07-0941, R-DCN-8): the roles of the «Dynamic classification» profile', () => {
+    const DCN: RoleId[] = [
+        'staticClass', 'viewpoints', 'dynamicClasses', 'invariant', 'operation', 'precondition', 'body',
+        'redefines', 'monitor', 'overlapping', 'complete',
+    ];
+
+    it('are the last eleven ids of the catalog, in this order, and the only roles of the group', () => {
+        expect(ROLE_IDS.slice(28)).toEqual(DCN);
+        expect(ROLE_CATALOG.filter(d => d.group === 'dcn').map(d => d.id)).toEqual(DCN);
+    });
+
+    it('carry the key, kind and dependencies of the prompt (mutant: a kind or a dependency changed)', () => {
+        expect(DCN.map(r => [r, roleDescriptor(r).key, roleDescriptor(r).kind, roleDescriptor(r).dependsOn])).toEqual([
+            ['staticClass', 'simStaticClass', 'class', []],
+            ['viewpoints', 'simViewpoints', 'reference', ['staticClass']],
+            ['dynamicClasses', 'simDynamicClasses', 'reference', ['viewpoints']],
+            ['invariant', 'simInvariant', 'expressionAttribute', ['dynamicClasses']],
+            ['operation', 'simOperation', 'reference', ['staticClass']],
+            ['precondition', 'simPrecondition', 'expressionAttribute', ['operation']],
+            ['body', 'simBody', 'actionListAttribute', ['operation']],
+            ['redefines', 'simRedefines', 'reference', ['operation']],
+            ['monitor', 'simMonitor', 'reference', ['dynamicClasses']],
+            ['overlapping', 'simOverlapping', 'attribute', ['viewpoints']],
+            ['complete', 'simComplete', 'attribute', ['viewpoints']],
+        ]);
+    });
+
+    it('are single-valued but Operation and Body (R-SIM-90), and no role of the other groups depends on them', () => {
+        for (const r of DCN) expect(roleDescriptor(r).multi, r).toBe(r === 'operation' || r === 'body' ? true : undefined);
+        for (const d of ROLE_CATALOG) {
+            if (d.group === 'dcn') continue;
+            for (const dep of d.dependsOn) expect(DCN.includes(dep), `${d.id} -> ${dep}`).toBe(false);
+        }
+    });
+
+    it('are found by their keys, and leave the lookups of the existing roles as they were', () => {
+        expect(roleOfKey('simInvariant')).toBe('invariant');
+        expect(roleOfKey('simComplete')).toBe('complete');
+        expect(dependentsOf('viewpoints')).toEqual(['dynamicClasses', 'overlapping', 'complete']);
+        expect(dependentsOf('operation')).toEqual(['precondition', 'body', 'redefines']);
+        // control: the dependents of an existing role are unchanged
+        expect(dependentsOf('transition')).toEqual(['ownedTransitions', 'source', 'nextState', 'trigger', 'guard', 'action', 'transitionOutput']);
     });
 });
