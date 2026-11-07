@@ -26,7 +26,8 @@ vi.mock('../../DockManager', () => ({
 }));
 vi.mock('../EditorSwitch.scss', () => ({}));
 
-import { initialTabViewpoint, isActiveDockTab, savedViewpointToRestore, saveViewpointPreference } from '../EditorSwitch';
+import { initialTabViewpoint, isActiveDockTab, savedViewpointToRestore, saveViewpointPreference, writeFocusViewpoint } from '../EditorSwitch';
+import { activateViewpoint } from '../../../../utils/lastViewpoint';
 
 const KEY = (m: string) => 'jjodel.editorPrefs.' + m;
 
@@ -131,6 +132,26 @@ describe('EditorSwitch viewpoint preferences (R-MT-16)', () => {
         it('writes abstract syntax as the empty id', () => {
             saveViewpointPreference('mA', null);
             expect(JSON.parse(ls.get(KEY('mA'))!)).toEqual({ viewpointId: '', editorMode: 'flow' });
+        });
+    });
+
+    // R-MT-20 (P-2026-11-07-0935): the focus write is not a user edit, so it adds no undo entry.
+    describe('writeFocusViewpoint', () => {
+        beforeEach(() => { vi.mocked(activateViewpoint).mockClear(); });
+        it('writes the tab viewpoint without an undo entry when it differs from the root', () => {
+            expect(writeFocusViewpoint('vpV', 'vpW')).toBe(true);
+            expect(activateViewpoint).toHaveBeenCalledTimes(1);
+            expect(activateViewpoint).toHaveBeenCalledWith('vpW', { undoable: false });
+        });
+        it('writes abstract syntax as null, without an undo entry', () => {
+            expect(writeFocusViewpoint('vpV', null)).toBe(true);
+            expect(activateViewpoint).toHaveBeenCalledWith(null, { undoable: false });
+        });
+        it('writes nothing when the tab viewpoint is the root one, the empty forms included', () => {
+            expect(writeFocusViewpoint('vpV', 'vpV')).toBe(false);
+            expect(writeFocusViewpoint('', null)).toBe(false);
+            expect(writeFocusViewpoint(undefined, null)).toBe(false);
+            expect(activateViewpoint).not.toHaveBeenCalled();
         });
     });
 });

@@ -72,7 +72,13 @@ vi.mock('../../../joiner', () => ({
             return Array.isArray(actions) ? actions.map(one) : one(actions);
         },
     },
-    CompositeAction: { cname: 'CompositeAction', type: 'COMPOSITE_ACTION' },
+    // A class, not a literal: `doreducer` wraps a single dispatched action in one (reducer.ts:1437), the way a
+    // write fired outside a TRANSACTION reaches the store.
+    CompositeAction: class {
+        static cname = 'CompositeAction'; static type = 'COMPOSITE_ACTION';
+        type = 'COMPOSITE_ACTION'; className = 'CompositeAction'; actions: any[];
+        constructor(actions: any[]) { this.actions = actions; }
+    },
     SetFieldAction: { cname: 'SetFieldAction', type: 'SET_ME_FIELD' },
     SetRootFieldAction: { cname: 'SetRootFieldAction', type: 'SET_ROOT_FIELD' },
     CreateElementAction: { cname: 'CreateElementAction', type: 'CREATE_ELEMENT' },
@@ -311,5 +317,57 @@ describe('nesting, empty groups and unmatched ends', () => {
         s = dispatch(s, create('X2', 'b'));
         expect(history().length).toBe(3);
         expect(ids(dispatch(s, undoAction()))).toEqual(['O1', 'S1', 'X1']);
+    });
+});
+
+/**
+ * R-MT-20 (P-2026-11-07-0935): the viewpoint write a model tab makes when it gains focus carries `noUndo`, and
+ * the reducer skips the history bookkeeping for it: no entry of its own, no merge into the entry below. The
+ * toolbar picker writes the same fields without the flag and keeps its entry.
+ */
+describe('a write flagged noUndo adds no undo entry (R-MT-20)', () => {
+    const noUndo = (a: any) => ({ ...a, noUndo: true });
+    /** The two actions `activateViewpoint` fires: the project field, then the root, back to back. */
+    const viewpointWrite = (s: any, vp: string, flag: boolean, dt: number) => {
+        const mark = (a: any) => (flag ? noUndo(a) : a);
+        s = dispatch(s, mark(set('O1', 'activeViewpoint', vp)), dt);
+        return dispatch(s, mark(setRoot('viewpoint', vp)), 0);
+    };
+    const withOneEdit = () => {
+        const s = dispatch({ ...freshState(), viewpoint: 'vpA' }, rename('O1', 'door'));
+        expect(history().length).toBe(1);
+        return s;
+    };
+
+    for (const dt of [1000, 20]) {
+        it(`a focus write ${dt} ms after an edit leaves the stack as it was, and the entry below unmerged`, () => {
+            let s = withOneEdit();
+            const below = history()[0];
+            const belowBefore = JSON.stringify(below);
+            s = viewpointWrite(s, 'vpB', true, dt);
+            expect(s.viewpoint).toBe('vpB');
+            expect(s.idlookup.O1.activeViewpoint).toBe('vpB');
+            expect(history().length).toBe(1);
+            expect(h.statehistory.all.undoable.length).toBe(1);
+            expect(history()[0]).toBe(below);
+            expect(JSON.stringify(below)).toBe(belowBefore);
+        });
+    }
+
+    it('one undo after a focus write reverts the edit below it and leaves the focused viewpoint (R-MT-15)', () => {
+        let s = withOneEdit();
+        s = viewpointWrite(s, 'vpB', true, 1000);
+        s = dispatch(s, undoAction());
+        expect(s.idlookup.O1.name).toBe('lock');
+        expect(s.viewpoint).toBe('vpB');
+    });
+
+    it('a picker write without the flag still adds exactly one entry, and its undo restores the viewpoint', () => {
+        let s = withOneEdit();
+        s = viewpointWrite(s, 'vpB', false, 1000);
+        expect(history().length).toBe(2);
+        s = dispatch(s, undoAction());
+        expect(s.viewpoint).toBe('vpA');
+        expect(s.idlookup.O1.name).toBe('door');
     });
 });
