@@ -244,3 +244,6 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (proposed, for the multi-tab front, medium): no probe under `frontend/scripts/probe/` covers the problem producers across tabs (grep for multi-tab, two tabs, `acquireProducerMount`, `ACTIVE_TAB`: exit 1; control: the three onto probes found). The two-tab probes live in `~/.jjodel-lanes/` (`P-2026-11-07-1352/two-tab.mjs`) on two models. Owed with L6: two tabs on one model, close one, the other keeps its badges (four producers); instantiate from a tab whose viewpoint is not the root's.
 
 **Ticket** (proposed, low): a canvas beside a Script tab (`DockManager.openBeside`) never receives `ACTIVE_TAB` (`Dock.handleLayoutChange` reads `dockbox.children[0]` only), so its viewpoint can differ from the root's on today's trunk; inferred from code, not measured. The probe for the root-key mutant of `runInstantiate` can stage it there. The three onto probes are owed on `aad8e74bb`.
+
+
+**Probe results** (chat, 2026-11-07 18:04, on `4b665664a`, owed by P-2026-11-07-1620 which stopped at the context ceiling): onto-s2-instantiate 22/22 (S2-1m included), onto-s3a-slot-problems 8/8 (default export), onto-s3b-ghost-rows 6/6 (uml-s3b); 1-minute load 20.2 to 15.0; logs in `~/.jjodel-lanes/P-2026-11-07-1620/`.
