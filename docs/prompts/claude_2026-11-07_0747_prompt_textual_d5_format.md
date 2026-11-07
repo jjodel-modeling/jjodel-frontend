@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0747
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · afb9d681b · gates green · app check ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-07-0747/, checked by the session · log entry in docs/log-inbox/codegen.md
 Lane: full (pure formatter, Monaco providers, tests; app check)
 Depends: D4 (merged, P-2026-11-07-0717), E1a (textReprint.ts, merged), R-TXT-53
 Worktree: ~/jjodel-w-textd5, branch textual-d5-format

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0841
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · afb9d681b (no code in this lane) · undo diagnosed, ticket in the log entry · crop 5-undo in ~/.jjodel-lanes/P-2026-11-07-0841/ · log entry in docs/log-inbox/codegen.md
 Lane: full (diagnostic, possible fix in the D5 files; docs)
 Depends: P-2026-11-07-0747 (D5, stopped at the soft ceiling; code 65eda512f, afb9d681b), R-TXT-53
 Worktree: ~/jjodel-w-textd5, branch textual-d5-format
