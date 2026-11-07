@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1444
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 40797ae02, 4fd8bff06 (red), 0f957cd2e · gates green (vitest: 3 import reds baseline, 2 Chromium load reds green alone) · crops 1-4 in ~/.jjodel-lanes/P-2026-11-07-1444/ · log entry in docs/log-inbox/codegen.md
 Lane: full (semantic tokens, tests; app check with crops)
 Depends: F1a (branch textual-f1a-islands, merging now), R-TXT-55 (F2)
 Worktree: ~/jjodel-w-textf1b, branch textual-f1b-highlight (from textual-f1a-islands 6ce76bca7, so F1a is in; merges after F1a)

@@ -2710,3 +2710,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: non applicabile
 **Notes**: R1 in the app (DemoESM): `String(a.type)` is `Expression`/`Action`, `a.type.id` undefined, `lookup[a.id].type` the primitive id; ids check 10/10. `jjelIslands` takes the style as a third argument. Benches: 6/6 and 12/14 killed, the two survivors being defensive guards no input reaches. Vitest: the 3 import reds, plus laneRun.test.ts timing out under the full run (145/145 alone).
 **Prompt document name**: 2026-11-07 13:56
+
+## 2026-11-07 — feat(codegen): F1b, JjEL highlighted inside its islands (P-2026-11-07-1444)
+**Prompt**: `claude_2026-11-07_1444_prompt_textual_f1b_highlight.md`, row F1b of the step F report, decision F2 (R-TXT-55): JjEL islands coloured by semantic sub-tokens from the JjEL lexer, existing legend, lexer error falls back to one string.
+**Files touched**: `40797ae02`, `4fd8bff06` __tests__/languageService.test.ts (red); `0f957cd2e` languageService.ts, jjelIslands.ts (all under frontend/src/codegen/textual/); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe ALL PASS on 3444 (DemoESM, real picker and typing); crops 1-clike, 2-pascal, 3-third-style, 4-lexer-error in ~/.jjodel-lanes/P-2026-11-07-1444/, checked by the session
+**Notes**: Roles: JjEL word keyword, name after `.`/`?.`/`.[` feature, other names name, literals by kind, operators none; quotes and Pascal join quotes string, `\n`/`#10` none. Bench 13/13 killed. Gates: typecheck 0, build 0, check:codegen-lazy ALL GREEN, vitest 3 import reds + 2 Chromium hook timeouts (irCollapsedRender, irSelectionRing) green alone 18/18.
+**Prompt document name**: 2026-11-07 14:44
