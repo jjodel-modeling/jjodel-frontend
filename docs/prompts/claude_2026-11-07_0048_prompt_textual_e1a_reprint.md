@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0048
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · code d795d9533 (textReprint.ts, 19 tests, bench 6/6 killed) · gates green
 Lane: full (new pure module; tests)
 Depends: P-2026-11-06-2337 (step E discovery, §3.3 and §9 row E1a), R-TXT-54 (provisional, E3 and E10), R-TXT-20
 Worktree: ~/jjodel-w-texte1, branch textual-e1-reprint, from b01e829d9 (own node_modules)

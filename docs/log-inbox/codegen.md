@@ -2337,3 +2337,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step E discovery)
 **Notes**: Rollback tag `pre-textual-e-sync` on `9a5a63048` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0017/result.json`.
 **Prompt document name**: 2026-11-07 00:17
+
+## 2026-11-07 — feat(codegen): E1a, T10's splice keeps typed text (P-2026-11-07-0048)
+**Prompt**: `claude_2026-11-07_0048_prompt_textual_e1a_reprint.md`, row E1a of the step E report: a pure `reprintChanged` that keeps each object's typed text when its own print is unchanged, recursing into children, null when it cannot splice safely; tests first, mutation bench on rules 1, 2 and 4.
+**Files touched**: `d795d9533`: frontend/src/codegen/textual/textReprint.ts (new), frontend/src/codegen/textual/__tests__/textReprint.test.ts (new); uncommitted: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 19 tests on GARAGE, a one-root model, DemoESM (scene_3) and the null fallbacks; 6 mutants on rules 1, 2, 4 all killed (commit body). Gates: typecheck 0, vitest 14512 passed with the 3 baseline import reds, build 0, check:codegen-lazy green. Inputs need the old print's spans: E1b must keep them with the agreement. Own comments of a changed object move by owner (R4).
+**Prompt document name**: 2026-11-07 00:48
