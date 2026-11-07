@@ -188,7 +188,40 @@ try {
         return { model: m.id, mm: idl[m.id].instanceof, book: book && book.id, isbn: attr('isbn'), title: dfNamed('title'), year: dfNamed('year'),
             dune: dune && dune.id, isbnSlot: slotOf(attr('isbn')), yearSlot: slotOf(dfNamed('year')), integer: integer && integer.id, vertices };`, undefined, 0);
     out.ids = ids;
-    const vid = await page.evaluate((vs: string[]) => vs.find((v) => document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${v}"]`)) ?? null, ids.vertices as string[]);
+    const findVid = () => page.evaluate((vs: string[]) => vs.find((v) => document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${v}"]`)) ?? null, ids.vertices as string[]);
+    let vid = await findVid();
+    // The canvas mounts only the nodes in view (EditorV2.tsx, onlyRenderVisible.ts): when dune is off-screen, drag the
+    // pane towards its store layout until its node mounts (P-2026-11-07-0155, the step of P-2026-11-07-0110's variant).
+    if (!vid && (ids.vertices as string[]).length > 0) {
+        const lay = await ev<{ lk: string; x: number; y: number; w: number; h: number }>(page, `
+            const st = w.store.getState();
+            const lk = (await import('/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts')).getLayoutKeyOf(st);
+            const l = (await import('/src/components/editor-v2/viewpoint/layout/vertexLayout.ts')).readVertexLayout(st.idlookup[a], lk);
+            return { lk, x: l.x, y: l.y, w: l.w, h: l.h };`, (ids.vertices as string[])[0], 0);
+        console.log('SETUP  dune layout ' + JSON.stringify(lay));
+        for (let i = 0; i < 40 && !vid; i++) {
+            const g = await page.evaluate((l) => {
+                const flow = document.querySelector('.dock-tabpane-active .react-flow'); const vp = flow && flow.querySelector('.react-flow__viewport');
+                if (!flow || !vp) return null;
+                const m = new DOMMatrixReadOnly(getComputedStyle(vp).transform);
+                const r = flow.getBoundingClientRect();
+                const cx = r.left + m.e + (l.x + (l.w || 0) / 2) * m.a; const cy = r.top + m.f + (l.y + (l.h || 0) / 2) * m.a;
+                const tx = r.left + r.width / 2; const ty = r.top + r.height / 2;
+                const dx = tx - cx; const dy = ty - cy; const s = Math.min(1, 250 / Math.max(1, Math.hypot(dx, dy)));
+                for (let oy = -150; oy <= 150; oy += 30) for (let ox = -150; ox <= 150; ox += 30) {
+                    const px = tx + ox; const py = ty + oy; const h = document.elementFromPoint(px, py);
+                    if (h && h.classList.contains('react-flow__pane')) return { px, py, ex: px + dx * s, ey: py + dy * s, dx, dy, z: m.a };
+                }
+                return { px: null, dx, dy, z: m.a };
+            }, lay);
+            if (!g || g.px === null) { console.log('SETUP  no pane point ' + JSON.stringify(g)); break; }
+            await page.mouse.move(g.px, g.py); await page.mouse.down();
+            await page.mouse.move(g.ex, g.ey, { steps: 8 }); await page.mouse.up();
+            await wait(page, 300);
+            vid = await findVid();
+            if (vid) console.log(`SETUP  dune mounted after ${i + 1} drag(s), last delta ${Math.round(g.dx)},${Math.round(g.dy)} zoom ${g.z}`);
+        }
+    }
     out.vertex = vid;
     if (vid) { await bringIntoView(page, vid); out.inView = await nodeBox(page, vid); }
     if (!ids.dune || !ids.book || !ids.isbn || !ids.isbnSlot || !ids.yearSlot || !ids.integer || !vid) throw new Error('fixture ids missing: ' + JSON.stringify({ ...ids, vid }));
