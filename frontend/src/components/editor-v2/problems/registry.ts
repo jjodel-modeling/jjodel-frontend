@@ -56,8 +56,12 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * classifier's feature closure (missing, orphan, two for one feature), a value of the wrong type, a cycle in the
  * generalization, mapped by `instantiationToProblems.ts` and written by `InstantiationProblemSync`. One kind for all
  * five findings (the finding is in the id and the title). Same price as the four above, asked for by name.
+ *
+ * `'dcn'` (P-2026-11-07-1825, lane L2.4) is the eighth: the DCN well-formedness checks W1..W4, W6, R-DCN-13 and
+ * R-DCN-16 (spec §5) on the class-level elements, mapped by `dcnToProblems.ts` and published by `DcnProblemSync`.
+ * Same price and same reasoning as the three above; the L2.4 prompt authorizes it by name.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'instantiation';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'instantiation' | 'dcn';
 
 export interface NodeProblemAction {
     label: string;
