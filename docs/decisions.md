@@ -7774,6 +7774,24 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   is fixed by a dependency on `getLayoutKeyOf(state)` and one re-transform of every vertex when it changes; L3's per-tab
   key enters through the same dependency. Critical zone: the lane waits for Alfonso's go-ahead and starts with a Layer
   Impact Report.
+- **R-MT-20** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **Focusing a tab writes the active viewpoint without an undo entry; a pick from the toolbar picker keeps its entry.**
+  Measured by P-2026-11-07-0457 (V3: +1 undo entry per focus write on L2, +0 on the parent). Fixed on `multi-tab-l2`
+  by P-2026-11-07-0935 before the L2 merge, with a per-action `noUndo` flag checked in one line of `reducer.ts`
+  (core change approved by Alfonso 2026-11-07 10:06, «approve the noUndo flag»).
+- **R-MT-21** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: read, verified: none, reversible: trunk).
+  **A saved `''` written before L1 is accepted as abstract syntax.** The preference (localStorage
+  `jjodel.editorPrefs.<modelid>`) carries no version, so a value written by the pre-L1 cross-writes cannot be told apart
+  from a user's choice; models that carry one open in abstract syntax after L2 (R-MT-18). No migration.
+- **R-MT-22** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **The cost of a correct layout switch on large models is accepted.** After the key-only path (8328662df) a switch on
+  the 407-instance harness model costs +53 ms median and +474 ms mean over the parent, which left the nodes at the
+  wrong positions; the rest is React Flow and `DynamicHandles` on nodes that really move. A lane on `DynamicHandles`
+  opens only if the cost shows in use.
+- **R-MT-23** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
+  one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
+  The tag and any deploy stay with Alfonso.
 
 ## Superate
 
