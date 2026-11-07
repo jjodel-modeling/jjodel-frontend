@@ -3,7 +3,8 @@
  * the language `jjodel-textual` with six providers on the language service (semantic tokens, document symbols, folding
  * ranges, definition, references, hover), a Monarch tokenizer for the EBNF tab, and one light theme (D-UI-15). Step D lane
  * D2c adds the seventh, completion (docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §3.3 C4), and lane D3b
- * the eighth, the code actions of the parse errors' fixes (same report §4).
+ * the eighth, the code actions of the parse errors' fixes (same report §4), and lane D4 the ninth, rename through the text
+ * (same report §5).
  *
  * A Monaco theme is global: the theme here is the JjScript theme (`vs`, the JjTL colours on the `.jjscript` tokens) plus
  * the rules of the text and of the EBNF, so a JjScript editor beside the tab keeps its colours. The semantic token types
@@ -18,7 +19,7 @@ import type * as Monaco from 'monaco-editor';
 import { jjscriptThemeRules } from '../../../jjscript/editor/jjscriptLanguage';
 import { jjtlTheme } from '../../../jjtl/editor/jjtlTheme';
 import type { ConcreteGrammar } from '../concreteGrammar';
-import { analyzeText, completionsAt, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
+import { analyzeText, completionsAt, renameEdits, renameLocation, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '../languageService';
 import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
@@ -116,6 +117,8 @@ export interface TextualReading {
     readonly analysis: TextAnalysis;
     /** The metamodel the text was read against: completion reads its enumerations (D2c). */
     readonly mm?: TextMetamodel;
+    /** The carried reference tokens the text was read with (R-TXT-35): rename reads the edited text with them (D4). */
+    readonly keep?: ParseOptions['keep'];
 }
 
 export interface TextualSession {
@@ -143,8 +146,9 @@ export function openTextualSession(model: Monaco.editor.ITextModel, input: Textu
             let value: TextualReading | null = null;
             if (base) {
                 const text = model.getValue();
-                const parsed = parseText(text, base.grammar, { keep: input.keep() });
-                value = { text, grammar: base.grammar, parsed, analysis: analyzeText(text, parsed, base.grammar, base.mm), mm: base.mm };
+                const keep = input.keep();
+                const parsed = parseText(text, base.grammar, { keep });
+                value = { text, grammar: base.grammar, parsed, analysis: analyzeText(text, parsed, base.grammar, base.mm), mm: base.mm, keep };
             }
             cache = { version, value };
             return value;
@@ -332,6 +336,37 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             return { actions, dispose: () => {} };
         },
     }, { providedCodeActionKinds: ['quickfix'] });
+
+    // Step D lane D4 (report §5.2, decision D4): rename through the text, never a model write. The box opens on the token at
+    // the cursor with the name as one types it; the edits come as one workspace edit, so one undo stop, and the typing
+    // pause applies the new name through the diff like any edit. A refusal is the box's reason.
+    const NO_READING = 'the text has no notation to read it with';
+    // Monaco 0.52 sends a rejectReason of provideRenameEdits to the notification service, which the standalone editor only
+    // logs (rename.js): the reason is shown at the cursor by the message controller, as resolveRenameLocation's is.
+    type MessageController = Monaco.editor.IEditorContribution & { showMessage(message: string, position: Monaco.IPosition): void };
+    const showRefusal = (model: Monaco.editor.ITextModel, position: Monaco.IPosition, message: string): void => {
+        const editor = monaco.editor.getEditors().find(e => e.getModel() === model);
+        editor?.getContribution<MessageController>('editor.contrib.messageController')?.showMessage(message, position);
+    };
+    monaco.languages.registerRenameProvider(TEXTUAL_LANGUAGE_ID, {
+        resolveRenameLocation: (model, position) => {
+            const r = readingOf(model);
+            const offset = model.getOffsetAt(position);
+            const loc = r?.mm ? renameLocation(r.text, offset, r.grammar, r.mm, r.keep) : { refused: NO_READING };
+            if ('refused' in loc) return { range: rangeOf(model, { start: offset, end: offset }), text: '', rejectReason: loc.refused };
+            return { range: rangeOf(model, loc), text: loc.name };
+        },
+        provideRenameEdits: (model, position, newName) => {
+            const r = readingOf(model);
+            const out = r?.mm ? renameEdits(r.text, model.getOffsetAt(position), newName, r.grammar, r.mm, r.keep) : { refused: NO_READING };
+            if ('refused' in out) {
+                showRefusal(model, position, out.refused);
+                return { edits: [], rejectReason: out.refused };
+            }
+            const versionId = model.getVersionId();
+            return { edits: out.edits.map(e => ({ resource: model.uri, versionId, textEdit: { range: rangeOf(model, e), text: e.text } })) };
+        },
+    });
 
     monaco.editor.defineTheme(TEXTUAL_THEME_ID, {
         base: 'vs',
