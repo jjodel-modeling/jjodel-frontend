@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-0106
 Chat: C-2026-11-06-2333
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane L0b · dcb988216 (measurements by the lane, report by the chat after the RC-51 ceiling)
 Lane: full (measurement only, no source change; the fix, if any, is a critical-zone lane of its own)
 Depends: R-MT-13, R-LAY-14, R-LAY-18, docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §3.4, §6, §7 row L0b
 Worktree: ~/jjodel-w-mtl0b, branch multi-tab-l0b, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)
