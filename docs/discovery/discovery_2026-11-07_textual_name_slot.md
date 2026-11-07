@@ -143,3 +143,140 @@ renamed object heals; the others (`alu`, `Module_0`) keep theirs.
 
 The Port `result`, the Ref `ready` and the Module `alu` are exported **without a name**: the defect is data loss on
 export, not only a conformance false positive. (In probe run e the B3 Module `zz` is exported `name="zz"`.)
+
+## 5. The write, traced (read, on HEAD `e47437874`)
+
+### 5.1 The textual apply
+
+`textApply.ts:74-99` `applyTextEdit` joins `plan.lines` into one script, registers the plan's handles, and runs
+`applyAsOneStep` (PreviewBar). It writes no name of its own. The lines come from `textDiff.ts` `diffLines`; a create is
+emitted at `textDiff.ts:543-550`:
+
+```ts
+lines.push(`create instance of ${o.cls} ${jjscriptString(h)}${into}`);
+…
+const name = identityOf(g, o);
+if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
+if (name === null && g.objects[o.cls]?.named) lines.push(`set ${h}.name = ""`);
+```
+
+and the handle is the object's own name whenever that name is a unique identifier free of class names
+(`textDiff.ts:466-467`, `h = name`). So for `cpu`, `result`, `ready` the condition `name !== h` is false and **no line
+writes the name**: the textual layer counts on `create instance of Module "cpu"` to name the object.
+
+«New model from text» with a non-empty script uses the sibling generator, with the same skip, `modelLines.ts:141`:
+
+```ts
+if (o.slots[f.name] !== h) lines.push(`set ${h}.name = ${jjscriptString(o.slots[f.name] as string)}`);
+```
+
+(read; the probe exercised `textDiff` only, since its `createModelFromText` ran an empty script, as D3b's did).
+
+### 5.2 The JjScript create
+
+`jjscript/executor/commands/instance.ts:686-703` `executeCreateInstance`:
+
+```ts
+const dObject = (DObject as any).new(metaclass.id, container ? container.slot.id : targetModel.id,
+    container ? DValue : DModel, instanceName, true);
+…
+if (explicitInstanceName && dObject) {
+    (dObject as any).initialName = explicitInstanceName;
+}
+```
+
+The handle reaches `DObject.name` (the `name` argument of `DObject.new`) and `initialName` (the direct write), never the
+identity slot. The executor's own message treats handle and name as two things, `instance.ts:677`: «the 'name'
+attribute can still be set to any (even duplicate) value afterwards».
+
+### 5.3 The core create
+
+`model/logicWrapper/LModelElement.tsx:6104-6113` `DObject.new`:
+
+```ts
+if (!name) name = computedDefaultName;
+let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
+    .DNamedElement(name).DObject(instanceoff).end((d) => DObject.listInModel(d, fatherType));
+// initialName: always the auto-generated default, regardless of the explicit `name` parameter.
+ret.initialName = computedDefaultName;
+```
+
+`DObject.new` writes `data.name` only. Seeding the slot is the job of the callers that bind it: `LValue.addObject` on a
+`setTimeout` and `createAdapter.createInstance`, whose comment says so (`createAdapter.ts`, the block «The values arrive
+with the create»: «`name`, passed bare so that the same string reaches `DObject.name` … AND the identity slot»). C2 of §4
+measures that binding.
+
+The `set` path that does write the slot, `instance.ts:1087-1101`: inside `TRANSACTION('JjScript: Set instance
+attribute')`, `featureProxy.value = primitive` on `lObject['$name']`, which is the slot write, with slot to name
+propagated by `setValueAtPosition` (model/CLAUDE.md §3.12). B2, B3 and D of §4 measure it.
+
+### 5.4 Where the name becomes visible without the slot
+
+- `LModelElement.tsx:6219` (`LObject.get_name`): `if (Array.isArray(rawValues) && rawValues.length === 0 &&
+  context.data.name) return context.data.name;` — the L name, the tree, labels.
+- `LModelElement.tsx:7806-7808` (`get_values`, identity slot): `const fallback = o && (writtenEmpty ? o.name :
+  (o.initialName || o.name)); if (fallback) ret[0] = fallback;` — `$name.value`, and with it the eval context the
+  Text tab prints from. Since `instance.ts:702` made `initialName` the handle, the slot reads `cpu`.
+
+The readers that see the raw slot, and so see the absence:
+
+- `model/conformance/ConformanceValidator.ts:180-187` (CHECK 2): `const rawVals = (f as any).__raw?.values; … return
+  vals.some((v: any) => v !== null && v !== undefined && v !== '');`, with the comment at :172-179 that «the name slot
+  gets no special fallback».
+- `services/export/XMIService.ts:309-310`: `const rawValues: any[] = (feature.__raw?.values || []) as any[]; if
+  (rawValues.length === 0) continue;` — the export of E.
+
+## 6. Where the cause is
+
+Not in the core. Each core piece does what its comment declares: `DObject.new` names `data.name` and leaves the slot to
+the binders (§5.3); `get_name` and `get_values` read a never-written slot through `data.name` / `initialName` by design
+(UNQ1, R-TXT-45 D1, §5.4); conformance and export judge on the raw slot by design (§5.4). The apply transaction
+(`applyAsOneStep`) runs the lines it is given and is not involved: B3 through the same path writes the slot.
+
+The defect is a contract mismatch between two non-core layers:
+
+1. **Textual layer** (`textDiff.ts:549`, `modelLines.ts:141`): it assumes that a creation handle equal to the name
+   names the object, and omits the `set h.name`. This is the cause of the reported symptom.
+2. **JjScript executor** (`instance.ts:686-703`): `create instance of C "h"` gives the object the handle as its displayed
+   name and its `initialName` without binding the identity slot. This is the cause of B1 (scripts and the console),
+   and the reason the textual assumption looks true on screen.
+
+Fixing (1) alone fixes every object created from text, by the path B3 measures; fixing (2) alone would fix both, but
+touches the executor's create (§7, N1).
+
+### 6.1 Files a fix would touch, against CLAUDE.md §3.1 and §3.2
+
+| file | §3.1 table | §3.2 trigger | note |
+|---|---|---|---|
+| `frontend/src/codegen/textual/textDiff.ts` | no | no | emits JjScript text; the write runs through the existing `set` path |
+| `frontend/src/codegen/textual/modelLines.ts` | no | no | same |
+| `frontend/src/codegen/textual/__tests__/textDiff.test.ts` | no | no | test |
+| `frontend/src/codegen/textual/__tests__/modelLines.test.ts` | no | no | test |
+| `frontend/src/jjscript/executor/commands/instance.ts` (N1 option B only) | no | **yes**, read as RC-15 reads it: a creator (`DObject.new`) in a non-test source under `frontend/src`, and a new slot write next to it | Layer Impact Report draft below |
+
+Option A (textual) needs no Layer Impact Report. For option B, a draft:
+
+```
+LAYER IMPACT REPORT (draft, option B: the create writes the identity slot)
+
+Layers touched:
+  [x] D-layer (Redux raw data): the identity DValue of each object created by `create instance of C "h"`
+  [x] L-layer (computed proxies): read only; get_name / get_values unchanged
+  [ ] JjOM
+  [x] Canvas v2-flow: indirectly, the label reads the same name
+  [ ] Canvas classic
+  [ ] Sync layer
+  [ ] Persistence (VersionFixer / jsxString)
+
+D-layer — what changes: after DObject.new, the slot gets [handle] (deferred until the object's features
+  exist, §9.1/§9.2 of model/CLAUDE.md, or by the executor's own wait); what does NOT change: DObject.new,
+  initialName, data.name; cross-layer: slot→name propagation fires a SetFieldAction on 'name' with the same
+  value (terminal, §3.12); side-effect safety: the write must land inside the run's undo step, or one Undo
+  leaves a named-but-slotless object behind.
+
+Smoke-test scenarios potentially affected:
+  - console `create instance of C "x"`: slot ["x"], conformance clean, XMI exports name="x"
+  - a script creating 50 objects: timing of the run (one deferred write per object)
+  - undo of a script run: one step removes the objects and their slot writes
+  - Text tab apply: no duplicate write once option A is also in (an idempotent same-value set)
+```
