@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1622
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · eb1bbfb10 (red), c933ffbcf, d20872c26 (red), 2666906fa · gates green (vitest: 3 import reds baseline, 7 load reds green alone) · probe 20/20, crops in ~/.jjodel-lanes/P-2026-11-07-1622/ · log entry in docs/log-inbox/codegen.md
 Lane: full (completion delegated to the template completion, trigger, tests; app check with crops)
 Depends: F1a, F1b, F1c (this branch starts from F1c's tip e8d4c0f39, which contains F1a and F1b), R-TXT-55 (F4)
 Worktree: ~/jjodel-w-textf1d, branch textual-f1d-complete (from e8d4c0f39, own node_modules)
