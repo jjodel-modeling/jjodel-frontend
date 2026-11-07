@@ -341,6 +341,13 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
     // the cursor with the name as one types it; the edits come as one workspace edit, so one undo stop, and the typing
     // pause applies the new name through the diff like any edit. A refusal is the box's reason.
     const NO_READING = 'the text has no notation to read it with';
+    // Monaco 0.52 sends a rejectReason of provideRenameEdits to the notification service, which the standalone editor only
+    // logs (rename.js): the reason is shown at the cursor by the message controller, as resolveRenameLocation's is.
+    type MessageController = Monaco.editor.IEditorContribution & { showMessage(message: string, position: Monaco.IPosition): void };
+    const showRefusal = (model: Monaco.editor.ITextModel, position: Monaco.IPosition, message: string): void => {
+        const editor = monaco.editor.getEditors().find(e => e.getModel() === model);
+        editor?.getContribution<MessageController>('editor.contrib.messageController')?.showMessage(message, position);
+    };
     monaco.languages.registerRenameProvider(TEXTUAL_LANGUAGE_ID, {
         resolveRenameLocation: (model, position) => {
             const r = readingOf(model);
@@ -352,7 +359,10 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
         provideRenameEdits: (model, position, newName) => {
             const r = readingOf(model);
             const out = r?.mm ? renameEdits(r.text, model.getOffsetAt(position), newName, r.grammar, r.mm, r.keep) : { refused: NO_READING };
-            if ('refused' in out) return { edits: [], rejectReason: out.refused };
+            if ('refused' in out) {
+                showRefusal(model, position, out.refused);
+                return { edits: [], rejectReason: out.refused };
+            }
             const versionId = model.getVersionId();
             return { edits: out.edits.map(e => ({ resource: model.uri, versionId, textEdit: { range: rangeOf(model, e), text: e.text } })) };
         },

@@ -336,13 +336,14 @@ describe('measured', () => {
 describe('D2c: the completion provider of the Text tab (report §3.3 C4)', () => {
     const KIND = { Keyword: 17, EnumMember: 16, Reference: 21 };
     const providers = new Map<string, any>();
+    const editors: unknown[] = [];
     const fakeMonaco = {
         Emitter: class { event = () => ({ dispose: () => {} }); fire(): void {} },
         Range: class { constructor(readonly startLineNumber: number, readonly startColumn: number, readonly endLineNumber: number, readonly endColumn: number) {} },
         languages: new Proxy({ CompletionItemKind: KIND, CompletionTriggerKind: { Invoke: 0, TriggerCharacter: 1 }, SymbolKind: {}, FoldingRangeKind: {} } as Record<string, unknown>, {
             get: (t, k: string) => k in t ? t[k] : (id: string, p: unknown) => { if (/^register.*Provider$/.test(k) && id === TEXTUAL_LANGUAGE_ID) providers.set(k, p); },
         }),
-        editor: { registerCommand: () => {}, defineTheme: () => {}, getEditors: () => [] },
+        editor: { registerCommand: () => {}, defineTheme: () => {}, getEditors: () => editors },
     };
     registerTextualMonaco(fakeMonaco as unknown as typeof Monaco);
     const provider = providers.get('registerCompletionItemProvider');
@@ -505,6 +506,25 @@ describe('D2c: the completion provider of the Text tab (report §3.3 C4)', () =>
                 expect(rename.provideRenameEdits(model, model.getPositionAt(at(kept, 'city')), 'metropolis').edits).toHaveLength(1);
                 expect(rename.provideRenameEdits(model, model.getPositionAt(at(kept, 'reader0')), 'reader9').rejectReason).toMatch(/changes what the reference/);
             }, keep);
+        });
+
+        // Monaco 0.52 sends a rejectReason of provideRenameEdits to the notification service, which the standalone editor
+        // only logs (app check P-2026-11-07-0609, crop 5): the reason is also shown at the cursor, on the model's editor.
+        it("shows a refusal after typing at the cursor, on the model's editor, and still returns it", () => {
+            withModel(text, model => {
+                const shown: [string, Monaco.IPosition][] = [];
+                const other = { getModel: () => modelOf('x'), getContribution: () => ({ showMessage: () => { throw new Error('other editor'); } }) };
+                const own = { getModel: () => model, getContribution: (id: string) => (id === 'editor.contrib.messageController' ? { showMessage: (m: string, p: Monaco.IPosition) => shown.push([m, p]) } : null) };
+                editors.push(other, own);
+                try {
+                    const position = model.getPositionAt(at(text, 'reader0'));
+                    const refused = rename.provideRenameEdits(model, position, 'reader1');
+                    expect(refused.rejectReason).toMatch(/is ambiguous/);
+                    expect(shown).toEqual([[refused.rejectReason, position]]);
+                    rename.provideRenameEdits(model, model.getPositionAt(at(text, 'Member reader1') + 7), 'patron');
+                    expect(shown).toHaveLength(1);
+                } finally { editors.length = 0; }
+            });
         });
     });
 
