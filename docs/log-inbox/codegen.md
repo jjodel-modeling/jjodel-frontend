@@ -2569,3 +2569,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato: app check run7 27/27 and the crop 2 retake 3/3 (`probe2.mjs`), crops 1-6 and `2-after-two-arrowdown.png` in ~/.jjodel-lanes/P-2026-11-07-0746/ viewed by the session; GO pending
 **Notes**: Two findings the discovery did not foresee, both fixed in DOVE: the canvas unmounts nodes out of view, so `canvasVertexIds` walks the graphs of the mounted nodes; rc-dock keeps an inactive tab mounted, aria-hidden, visibility hidden, with a non-zero box (contra §6.4), now refused. `_lastSelected` is a transient root key outside the sync: see the §7.2 draft of discovery_2026-11-06_textual_e_sync.md. Bench 7/7 and 6/6 in the commits.
 **Prompt document name**: 2026-11-07 08:40
+
+## 2026-11-07 — merge: textual-e2a-select into alfonso-frontend-jjtl (P-2026-11-07-0927)
+**Prompt**: `claude_2026-11-07_0927_prompt_merge_textual-e2a-select.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `57280dd8f`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load ~85 (hook tests laneRun, laneRunDirect, laneTracking; textual completion, languageService, tolerant; irCollapsedRender, irSelectionRing), all green alone at load 6-20; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: E2a crops 1-6 and 2-after-two-arrowdown in ~/.jjodel-lanes/P-2026-11-07-0746/ checked by the chat (caret selects its node, typing selects nothing, outline click, Properties follows)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0927/result.json`.
+**Prompt document name**: 2026-11-07 09:27
