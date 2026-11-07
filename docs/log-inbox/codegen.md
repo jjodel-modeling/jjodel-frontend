@@ -2517,3 +2517,16 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato — chat, unattended: E1b crops in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat on this tree
 **Notes**: Expectation: trunk tip 539 files, 14526 passed, plus `textReprint.test.ts` 28 = 14554; the one missing pass is the outline timing red. Union, trunk first then branch, add-only against both parents (39 and 102 lines). Step 5: D3b conformance and E1b splice regions of TextualTab.tsx disjoint, no duplicate declaration.
 **Prompt document name**: 2026-11-07 06:07
+
+## 2026-11-07 — merge: textual-e1-reprint into alfonso-frontend-jjtl (P-2026-11-07-0645)
+**Prompt**: `claude_2026-11-07_0645_prompt_merge_textual-e1-reprint.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `511a3de3c`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 100-112 (languageService.test.ts timing, irSelectionRing.test.ts hook timeout), all green alone (the timing test at load 8); resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: E1b crops 1-before..4-after-delete in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat (comments kept after a canvas rename and a canvas delete)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0645/result.json`.
+**Prompt document name**: 2026-11-07 06:45
