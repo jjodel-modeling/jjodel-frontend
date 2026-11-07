@@ -65,11 +65,23 @@ export function getActiveLayoutKey(): string {
  * `SymbolEditorModal.tsx`).
  *
  * `getActiveLayoutKey` is this function applied to the live store, and nothing else — the two
- * can never disagree.
+ * can never disagree. It is `getLayoutKeyFor` on the root viewpoint, and nothing else either.
  */
 export function getLayoutKeyOf(state: any): string {
+    let vp: unknown;
+    try { vp = state?.viewpoint; } catch { return ABSTRACT_SYNTAX_LAYOUT_KEY; }
+    return getLayoutKeyFor(state, vp);
+}
+
+/**
+ * The layout key of a viewpoint the caller names, on a state it already holds (R-LAY-19): a
+ * canvas asks for the key of ITS viewpoint, which with several tabs is not the root's. Same rules
+ * as `getLayoutKeyOf` — exclusive viewpoint id, abstract syntax otherwise — and the same answer
+ * when `vpId` is `state.viewpoint`. It never reads `state.viewpoint` itself.
+ */
+export function getLayoutKeyFor(state: any, vpId: unknown): string {
     try {
-        const vp = state?.viewpoint;
+        const vp = vpId;
         if (typeof vp !== 'string' || !vp) return ABSTRACT_SYNTAX_LAYOUT_KEY;
         const d: any = state?.idlookup?.[vp];
         if (!d) return ABSTRACT_SYNTAX_LAYOUT_KEY;

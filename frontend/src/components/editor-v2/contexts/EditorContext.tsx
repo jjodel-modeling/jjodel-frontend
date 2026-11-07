@@ -30,6 +30,12 @@ interface EditorContextValue {
     /** The M1 model being edited. Candidate instances are restricted to it: DClass.instances is
      *  flat over the whole project, so without this the select would offer other models' singletons. */
     modelId?: string;
+    /** The viewpoint of the tab this canvas belongs to (R-MT-1, R-LAY-19): `null` is abstract
+     *  syntax, `undefined` means no tab owns the canvas (standalone route) and readers fall back
+     *  to the root. Read instead of `state.viewpoint` by editor-v2 code that renders one canvas. */
+    viewpointId?: string | null;
+    /** Sets the tab's viewpoint; the toolbar picker calls it beside `activateViewpoint` (Q2). */
+    onViewpointChange?: (viewpointId: string | null) => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);
