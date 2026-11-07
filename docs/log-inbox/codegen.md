@@ -2465,3 +2465,55 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Smoke visivo**: passato — chat, unattended: name-slot crop text-tab-cpu-no-warning.png in ~/.jjodel-lanes/P-2026-11-07-0344/ checked by the chat
 **Notes**: Rollback tag `pre-textual-name-slot` on `69c191631` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0443/result.json`.
 **Prompt document name**: 2026-11-07 04:43
+
+## 2026-11-07 — feat(codegen): E1a, T10's splice keeps typed text (P-2026-11-07-0048)
+**Prompt**: `claude_2026-11-07_0048_prompt_textual_e1a_reprint.md`, row E1a of the step E report: a pure `reprintChanged` that keeps each object's typed text when its own print is unchanged, recursing into children, null when it cannot splice safely; tests first, mutation bench on rules 1, 2 and 4.
+**Files touched**: `d795d9533`: frontend/src/codegen/textual/textReprint.ts (new), frontend/src/codegen/textual/__tests__/textReprint.test.ts (new); uncommitted: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 19 tests on GARAGE, a one-root model, DemoESM (scene_3) and the null fallbacks; 6 mutants on rules 1, 2, 4 all killed (commit body). Gates: typecheck 0, vitest 14512 passed with the 3 baseline import reds, build 0, check:codegen-lazy green. Inputs need the old print's spans: E1b must keep them with the agreement. Own comments of a changed object move by owner (R4).
+**Prompt document name**: 2026-11-07 00:48
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0251)
+**Prompt**: `claude_2026-11-07_0251_prompt_textual-e1-reprint_take_trunk.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `7807c9c78`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 120 (laneTracking, completion, languageService, tolerant, irCollapsedRender, irSelectionRing), all green alone at load 2; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: the branch takes the trunk
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0251/result.json`.
+**Prompt document name**: 2026-11-07 02:51
+
+## 2026-11-07 — feat(codegen): E1b, T10 wired into the Text tab (P-2026-11-07-0510)
+**Prompt**: `claude_2026-11-07_0346_prompt_textual_e1b_wired.md` (stopped at the RC-51 soft ceiling) and its continuation `claude_2026-11-07_0510_prompt_textual_e1b_continuation.md`: the Text tab's reprint splices with `reprintChanged`, and a comment-only edit becomes the agreement.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (code `0be037a6f`, bench 6/6; `40b7be107`, bench 3/3); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `40b7be107`: typecheck 0, build 0, check:docs and check:codegen-lazy green; vitest 14530 passed, 3 baseline import reds, plus the 1000 ms guard of `tolerant.test.ts`, 56/56 alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: scenario 2 by canvas gestures, 11/11 PASS, crops 1-4 in `~/.jjodel-lanes/P-2026-11-07-0510/`, checked by the chat (comments kept after rename and delete)
+**Notes**: Behaviour change: after a comment-only edit Cmd/Ctrl+Z is the app's undo, as after an application. The probe shows the docked Text panel with a probe-only CSS rule (PinnableDock hides it); no product change, placement is lane E3. Object count via `allSubObjects.length` (10, then 9). Handoff: `~/.jjodel-lanes/P-2026-11-07-0346/handoff.md`.
+**Prompt document name**: 2026-11-07 05:10
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0607)
+**Prompt**: `claude_2026-11-07_0607_prompt_textual-e1-reprint_take_trunk.md`, rendered by `lane-run merge --trunk-into`: the trunk `alfonso-frontend-jjtl` at `4ad2bf5fc` into `textual-e1-reprint` at `a75356f55`, one merge commit, `--no-ff` (RC-14), merge base `a28b49cc8`.
+**Files touched**: merge `c8a3be5f3` (31 files from the trunk side; union of `docs/log-inbox/codegen.md`, auto-merge of `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c8a3be5f3`: typecheck 0; typecheck:scripts 0; vitest 540 files, 14553 passed, 2 skipped, red the 3 baseline import files plus `outline.test.ts` (10 ms timing) and `irSelectionRing.test.ts` (afterAll browser close) at load 72, both green alone; hooks 967 = trunk; build 0; check:docs A..E PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E1b crops in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat on this tree
+**Notes**: Expectation: trunk tip 539 files, 14526 passed, plus `textReprint.test.ts` 28 = 14554; the one missing pass is the outline timing red. Union, trunk first then branch, add-only against both parents (39 and 102 lines). Step 5: D3b conformance and E1b splice regions of TextualTab.tsx disjoint, no duplicate declaration.
+**Prompt document name**: 2026-11-07 06:07
