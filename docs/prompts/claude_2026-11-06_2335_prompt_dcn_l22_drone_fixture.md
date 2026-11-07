@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-06-2335
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 0e2867ed8 · probe 17/17, no visual check owed (closure written by the chat C-2026-11-06-2159 from the handoff after the context ceiling)
 Lane: full (new probe, a fixture other lanes will build on)
 Depends: R-DCN-1, R-DCN-3, R-DCN-10, R-DCN-13, R-DCN-16, R-DCN-17, R-DCN-19, L2.1 (d51def3e7)
 Worktree: ~/jjodel-w-dcn-l22, branch dcn-l22, from dcn at this prompt's commit (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
