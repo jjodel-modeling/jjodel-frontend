@@ -6,6 +6,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-07 — probe: a hook sets the session title (P-2026-11-07-1830)
+**Prompt**: probe whether `SessionStart` / `UserPromptSubmit` hooks can set the Claude Code session title for a lane (startup, resume, file-driven); fast lane, measure only, chat `C-2026-11-07-1824`
+**Files touched**: `docs/discovery/discovery_2026-11-07_session_title_hook_probe.md`, `docs/log-inbox/harness.md`; probe files outside the repo in `/tmp/title-probe/`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: claude 2.1.314: the hook title is stored (custom-title + agent-name in the session JSONL) at startup and resume, in `-p` and in the lane-run form; file-driven works. Sidebar display unverified, Alfonso's check. Details in the discovery report.
+**Prompt document name**: 2026-11-07 18:30
 
 ## 2026-10-13 — chore(harness): the typecheck baseline is zero in the norms and the merge templates, RC-48 (P-2026-10-12-2002)
 **Prompt**: `claude_2026-10-12_2002_prompt_typecheck_zero_s3_gate_at_zero.md`, full lane (more than 3 files; governance files), one phase, director Juri (chat `C-2026-10-12-1955`), lane 3/3 of `chain-P-2026-10-12-2000` in the worktree `jjodel-tc0` on `fix/typecheck-baseline-zero`, started by `lane-run start` after the chain stopped on slice 2's question: the baseline stops being a number, five edits of text the prompt quotes, one regeneration, the decision row RC-48.
