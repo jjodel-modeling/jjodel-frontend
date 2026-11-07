@@ -19,7 +19,11 @@
  *   type of a reference), so it gives none.
  * - `featureClosure`: the features of a classifier, its own first and then the inherited ones, level by level over the
  *   generalization. A feature is listed once. A cycle is reported as data (the ids around it, the first repeated at
- *   the end) and not followed.
+ *   the end) and not followed. With `featureSources` (R-DCN-10, R-DCN-17), every path is then applied from every
+ *   classifier of that closure, in closure order and then record order: each hop follows `referenceTargets`, the
+ *   targets of the last hop are features, listed after the own and inherited ones, each once. `dormantOwner` maps each
+ *   of them to the element the next-to-last hop reached (the dynamic class; the classifier for a one-hop path), and is
+ *   absent when the binding has no `featureSources`.
  * - `slotDiff`: for an instance, the features of its classifier's closure that have no slot, and the slots whose
  *   defining feature is not in the closure. Nothing is judged when the binding has no slot roles or the instance has no
  *   classifier.
@@ -46,6 +50,8 @@ export interface FeatureClosure {
     features: string[];
     /** Each cycle as the classifier ids around it, the first one repeated at the end. */
     cycles: string[][];
+    /** Each feature reached through a feature source, to the element that holds it; only with `featureSources`. */
+    dormantOwner?: Record<string, string>;
 }
 
 export interface OrphanSlot {
@@ -148,7 +154,24 @@ export function featureClosure(view: OntoReadView, binding: OntoBinding, classif
         }
         level = next;
     }
-    return { features, cycles };
+    if (binding.featureSources === undefined) return { features, cycles };
+    const dormantOwner: Record<string, string> = {};
+    for (const classifier of visited) {
+        for (const { path } of binding.featureSources) {
+            let reached = [classifier];
+            for (const hop of path.slice(0, -1)) reached = reached.flatMap(id => view.referenceTargets(id, hop));
+            const last = path[path.length - 1];
+            for (const owner of reached) {
+                for (const f of view.referenceTargets(owner, last)) {
+                    if (seenFeatures.has(f)) continue;
+                    seenFeatures.add(f);
+                    features.push(f);
+                    dormantOwner[f] = owner;
+                }
+            }
+        }
+    }
+    return { features, cycles, dormantOwner };
 }
 
 /** The missing features and the orphan slots of `instanceId`: see the module comment. */

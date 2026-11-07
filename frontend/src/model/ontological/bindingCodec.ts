@@ -10,7 +10,8 @@
  *
  * Decoding judges the SHAPE only: the types of the fields, not whether an id exists in the metamodel nor whether the
  * four slot roles come together (both are bindingCheck.ts's, so that a stored record that breaks a rule is still
- * readable and can be shown and mended). A root or a record that has a key this version does not know keeps it, and
+ * readable and can be shown and mended). `featureSources` (R-DCN-10, R-DCN-20) is a list of paths of M2 reference ids,
+ * each path non-empty; a record without it encodes as it did before the role existed. A root or a record that has a key this version does not know keeps it, and
  * `encode` writes it back; an unknown `v` is refused, never guessed at. No VersionFixer step: a project saved before
  * the key has none, and unknown bag keys survive save and load.
  *
@@ -36,6 +37,13 @@ export interface OntoValueKind {
     [unknown: string]: unknown;
 }
 
+/** A path of M2 references from a classifier to more features (a DCN dynamic class's attributes); the last hop yields them. */
+export interface OntoFeatureSource {
+    /** M2 reference ids, at least one. */
+    path: string[];
+    [unknown: string]: unknown;
+}
+
 export interface OntoBinding {
     name: string;
     /** Instance to classifier; owned by the instance metaclass. */
@@ -53,6 +61,8 @@ export interface OntoBinding {
     featureType?: string;
     defaultValue?: string;
     valueKinds?: OntoValueKind[];
+    /** More features, reached from every classifier of the generalization closure (R-DCN-17). */
+    featureSources?: OntoFeatureSource[];
     [unknown: string]: unknown;
 }
 
@@ -68,7 +78,7 @@ export type DecodedOntoBindings =
 
 /** The optional single-id roles, in the order a record is written. */
 const ID_ROLES = ['featureContainer', 'slotContainer', 'definingFeature', 'valueHolder', 'abstractFlag', 'featureType', 'defaultValue'] as const;
-const KNOWN_KEYS = new Set<string>(['name', 'typeReference', 'generalization', 'valueKinds', ...ID_ROLES]);
+const KNOWN_KEYS = new Set<string>(['name', 'typeReference', 'generalization', 'valueKinds', 'featureSources', ...ID_ROLES]);
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isId = (v: unknown): v is string => typeof v === 'string' && v !== '';
@@ -106,6 +116,17 @@ function decodeValueKinds(list: unknown, at: string, errors: string[]): OntoValu
     return out;
 }
 
+function decodeFeatureSources(list: unknown, at: string, errors: string[]): OntoFeatureSource[] | undefined {
+    if (!Array.isArray(list)) { errors.push(`${at}: not a list.`); return undefined; }
+    const out: OntoFeatureSource[] = [];
+    list.forEach((s, i) => {
+        if (!isRecord(s)) return void errors.push(`${at}[${i}]: not a record.`);
+        if (!Array.isArray(s.path) || s.path.length === 0 || !s.path.every(isId)) return void errors.push(`${at}[${i}].path: not a non-empty list of ids.`);
+        out.push({ path: [...s.path], ...extrasOf(s, new Set(['path'])) });
+    });
+    return out;
+}
+
 function decodeBinding(item: unknown, index: number, errors: string[]): OntoBinding | undefined {
     const at = `bindings[${index}]`;
     if (!isRecord(item)) { errors.push(`${at}: not a record.`); return undefined; }
@@ -121,6 +142,7 @@ function decodeBinding(item: unknown, index: number, errors: string[]): OntoBind
         else errors.push(`${at}.generalization: not a record.`);
     }
     const valueKinds = item.valueKinds !== undefined ? decodeValueKinds(item.valueKinds, `${at}.valueKinds`, errors) : undefined;
+    const featureSources = item.featureSources !== undefined ? decodeFeatureSources(item.featureSources, `${at}.featureSources`, errors) : undefined;
     if (errors.length > before) return undefined;
 
     const out: OntoBinding = { name: item.name as string, typeReference: item.typeReference as string };
@@ -128,6 +150,7 @@ function decodeBinding(item: unknown, index: number, errors: string[]): OntoBind
     if (generalization) out.generalization = generalization;
     for (const role of ID_ROLES) if (role !== 'featureContainer' && item[role] !== undefined) out[role] = item[role] as string;
     if (valueKinds) out.valueKinds = valueKinds;
+    if (featureSources) out.featureSources = featureSources;
     return { ...out, ...extrasOf(item, KNOWN_KEYS) };
 }
 

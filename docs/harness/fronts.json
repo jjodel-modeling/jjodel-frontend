@@ -158,6 +158,26 @@
       "ownerChat": "C-2026-11-02-1016",
       "ownerSince": "2026-11-02",
       "milestone": 17
+    },
+    {
+      "slug": "dcn",
+      "title": "Dynamic Classification Notation: static classes with viewpoints of dynamic classes, object diagrams, simulation as a second engine nucleus (R-DCN)",
+      "exit": "slices 1..6 of docs/spec/claude_spec_2026-11-06_dcn_metamodel_simulation.md §10 are merged into alfonso-frontend-jjtl, or a decision row defers the rest",
+      "state": "open",
+      "openedOn": "2026-11-06",
+      "ownerChat": "C-2026-11-06-2159",
+      "ownerSince": "2026-11-06",
+      "milestone": 18
+    },
+    {
+      "slug": "multi-tab",
+      "title": "Several tabs on one or more models, each with its own viewpoint: per-tab active viewpoint, layout per (model, viewpoint), shared selection (R-MT)",
+      "exit": "a decision row closes the front once per-tab viewpoints are merged into alfonso-frontend-jjtl, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-11-06",
+      "ownerChat": "C-2026-11-07-0425",
+      "ownerSince": "2026-11-07",
+      "milestone": 19
     }
   ]
 }

@@ -81,6 +81,7 @@ import ChipsWidget from './widgets/ChipsWidget';
 import ReferencePicker from './widgets/ReferencePicker';
 import { extendedWidget, type WidgetChip } from './widgets';
 import { optionSlot } from '../../../../jjform';
+import { namelessTargetLabel } from '../../utils/namelessTargetLabel';
 
 /** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
  *  the single definition now lives with the projection that produces them. */
@@ -149,9 +150,9 @@ function displayValue(raw: unknown): string {
     if (typeof raw === 'string') {
         try {
             const l: any = LPointerTargetable.fromPointer(raw);
-            // Presence, not a truthy name: a nameless target labels '' and is not a broken
-            // chip (R-TXT-46 D4).
-            if (l && typeof l.name === 'string') return l.name;
+            // Presence, not a truthy name: a nameless target is not a broken chip (R-TXT-46
+            // D4), and it reads `: <Class>` as on the default view (R-TXT-47 D6).
+            if (l && typeof l.name === 'string') return namelessTargetLabel(l) ?? l.name;
         } catch {
             // Not a pointer, or a pointer to something that no longer exists: fall through
             // and show the value itself rather than blanking the row.

@@ -1,0 +1,154 @@
+# log-inbox — lane «dcn»
+
+Entries written by the DCN lanes on `dcn` (P9, parallel lanes). Whoever closes the batch moves them
+into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and empties this file. The
+active log is not touched by this lane.
+
+---
+
+## 2026-11-06 — feat: featureSources in the ontological binding, dormant slots in the feature closure
+**Prompt**: DCN L2.1 (P-2026-11-06-2300): optional `featureSources` on `OntoBinding` (codec), applied by `featureClosure` from every classifier of the generalization closure with an additive `dormantOwner`, judged by `bindingCheck`; tests first, mutation bench, one code commit.
+**Files touched**: d51def3e7 — `frontend/src/model/ontological/bindingCodec.ts`, `bindingReader.ts`, `bindingCheck.ts`, `__tests__/bindingCodec.test.ts`, `__tests__/bindingReader.test.ts`, `__tests__/bindingCheck.test.ts`; docs commit — `docs/log-inbox/dcn.md` (new), the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Six code files, the Rule 19 deroga of the prompt. Bench 24/24 killed; an equivalent frontier dedup was dropped, a no-aliasing codec test added. Gates: typecheck 0, ontological 69/69, full run 3 failed files (the known three) / 533 passed, build 0. `dormantOwner` is present (possibly empty) whenever `featureSources` is, absent otherwise. The first hop is not checked against the classifier metaclass: the prompt did not ask it.
+**Prompt document name**: 2026-11-06 23:00
+
+## 2026-11-07 — merge: dcn-l21 into alfonso-frontend-jjtl (P-2026-11-06-2351)
+**Prompt**: merge `dcn-l21` at `37fc696f7` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `895669463`, in the shape of `59b532f43`; probes, gates, hard stop for the chat's GO.
+**Files touched**: a743c3f37 — the 12 files of the branch (`docs/decisions.md`, the DCN foundations discovery, `docs/log-inbox/dcn.md`, three prompts, `frontend/src/model/ontological/binding{Check,Codec,Reader}.ts` and their tests); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Zero conflicts, no union. The tip moved to `65852b291` (another chat's docs commit) during the pre-merge gates; accepted as trunk, first parent of the merge. Probes 27/27, control R-MT-5 absent. Gates: typecheck 0, vitest 14491 (14489 + 2 skipped, the known 3 red at import; a first run in parallel with the build timed out two Chromium afterAll hooks, rerun alone clean), hooks 967/967, build 0, check:docs 5/5, agents, scripts, addonly PASS.
+**Prompt document name**: 2026-11-06 23:51
+
+## 2026-11-06 — chore: DCN drone fixture, the DCN metamodel and the drone class level on the UML fixture
+**Prompt**: DCN L2.2 (P-2026-11-06-2335): new browser probe `dcn-drone-fixture.ts` (R-DCN-19): DCN metamodel of spec §3 on the UML tables, object record with `featureSources`, drone class level of Fig. 6, measures of Expression/Action types, JjEL forms, bindingCheck, instantiableClassifiers, featureClosure, conformance; export as dcn-drone.jjodel.
+**Files touched**: 0e2867ed8 — `frontend/scripts/probe/dcn-drone-fixture.ts` (new), `docs/discovery/assets/dcn-drone/dcn-drone.json`, `dcn-drone-class-level-light.png`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 17/17 PASS, port 3084, page errors []. JjEL refuses && and ||: invariants stored with and/or; Alert reads self.ownedSensors.first(s => s.classifier.name == 'WindSensor').speed (all five forms parse). All 16 placeholder bodies fail the .[x] rule: the 16 conformance warnings. The given dynamic classes own no attribute: dormantOwner measured on seeded ones after export. Welcome key 3.1.1 set in the probe (seed gap already ticketed, hw-notation inbox). Detail: commit body 0e2867ed8.
+**Prompt document name**: 2026-11-06 23:35
+
+## 2026-11-07 — feat: parse `::` and `self.in(V::D)` into a ClassificationTest node
+**Prompt**: DCN L3.2 (P-2026-11-07-0700): a `DOUBLE_COLON` token, a `ClassificationTest { object, viewpoint, dynamicClass }` node for a member call `in` whose only argument is `IDENT :: IDENT`, `::` refused anywhere else, the evaluator throwing «classification is not bound here»; tests first, mutation bench, one code commit.
+**Files touched**: 0125bae93 — `frontend/src/jjel/lexer/lexer.ts`, `types/tokens.ts`, `types/ast.ts`, `parser/parser.ts`, `evaluator/evaluator.ts`, `__tests__/classificationTest.test.ts` (new), `frontend/src/codegen/target/js/printer.ts`, `frontend/src/model/simulation/subsetChecker.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Eight files, Rule 19 deroga from the chat: printer.ts and subsetChecker.ts only close exhaustive switches (HARD STOP raised, answered). Bench 11/11 killed. Typecheck 0, JjEL 581/581, build 0; full run 6 failed files: the known three, plus irSelectionRing, tolerant and languageService under load, all green alone (languageService also on the tip). Interface named ClassificationTestExpr like its neighbours. `?.in(V::D)` is refused.
+**Prompt document name**: 2026-11-07 07:00
+
+## 2026-11-07 — refactor: a nucleus field on the simulator run, Petri as its default
+**Prompt**: DCN L4.1 (P-2026-11-07-0701): `SimNucleus` beside `simRunState.ts`, `petriNucleus(net)` over `netStep.ts`, `SimRun.nucleus` set by `startRun`; replay, step back, slider, single step, Play and the Clock's enabling test on the field; tests first, parity, mutation bench, browser probe against the base; one code commit.
+**Files touched**: 8de3f6ae8 — `frontend/src/components/editor-v2/sim/simNucleus.ts` (new), `simRunState.ts`, `simBridge.ts`, `simBoardClock.ts`, `__tests__/simNucleus.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, 2026-11-07: browser parity with base on scene_3_DemoESM, 17 gestures identical, P-2026-11-07-0750)
+**Notes**: `nucleus` is optional: the existing suites build SimRun literals without it, so `nucleusOf` falls back to the Petri nucleus of `run.net`, cached per net. Switched also `inputAsks`'s `terminated`, on the path of Play and single step. Bench 12/12 killed. Gates: typecheck 0; sim 1560/1560; full run the known three plus an irSelectionRing Chromium hook timeout under load (5/5 alone); build 0. Probe sim-event-attrs-browser 3091 vs base 3092: same 4 PASS lines; no probe covers step back or the Clock.
+**Prompt document name**: 2026-11-07 07:01
+
+## 2026-11-07 — feat: the classification accessor on the JjEL evaluation context
+**Prompt**: DCN L3.3 (P-2026-11-07-0940): `JjelClassificationAccess { isIn }` beside `JjelStateAccess`, optional `classification` on `EvaluationContext` inherited by child scopes; `ClassificationTest` evaluates its receiver and asks the accessor, throws without one, a non-boolean answer an error; optional accessor on `buildGuardContext`; tests first, mutation bench, one code commit.
+**Files touched**: 969aa0b3d — `frontend/src/jjel/evaluator/context.ts`, `evaluator.ts`, `frontend/src/model/simulation/guardContext.ts`, `frontend/src/jjel/__tests__/classificationAccess.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Without an accessor the throw comes before the receiver is evaluated, as `.[a]` does. The receiver goes to `isIn` as evaluated, not by id. Bench 8/9 killed; survivor `return !!answer` after the typeof guard is equivalent. Gates: typecheck 0; jjel + simulation 1350/1350; full run the known three plus a languageService 50 ms budget and an irSelectionRing hook timeout under load (38/38 alone); build 0.
+**Prompt document name**: 2026-11-07 09:40
+
+## 2026-11-07 — feat: the dcn role group and the system profile Dynamic classification
+**Prompt**: DCN L2.3 (P-2026-11-07-0941, stopped at the context ceiling; continued by P-2026-11-07-1012): role group `dcn` (11 roles), shape `dcn` with its closure, hidden groups per shape, profile «Dynamic classification», `dcnStcFromRoles`; fix the `roleSections` regression, gates, mutation bench, browser crops of the roles dialog.
+**Files touched**: f6b918db1 — `frontend/src/model/simulation/roleCatalog.ts`, `simProfiles.ts`, `profileCodec.ts`, `dcn/dcnRoles.ts` (new), `dcn/__tests__/dcnRoles.test.ts` (new), `__tests__/roleCatalog.test.ts`, `__tests__/simProfiles.test.ts`; `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `simRolesDraft.ts`, `__tests__/simLabels.test.ts`; `frontend/src/components/editor-v2/viewpoint/derive/notations.ts`, `viewpointDerivation.ts`; docs commit — `docs/log-inbox/dcn.md`, the Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 09:41
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe: Petri dialog byte-identical to b02f337d7; crops read by the chat 2026-11-07)
+**Notes**: Rule 19 deroga, 12 files: answer A, then simLabels.test.ts by the chat. Operation and Body are multi (R-SIM-90). Bench 18/19: M16 (net groups shown under dcn by roleSections) survives; its killing test belongs in simRolesDraft.test.ts, out of scope, and the crop covers it. Gates: typecheck 0, build 0, check:docs 5/5, full run at baseline (3 known files); 5 load-timing files rerun alone 207/207. Crops: ~/.jjodel-lanes/P-2026-11-07-1012/crops.
+**Prompt document name**: 2026-11-07 10:12
+
+**Ticket** (for the chat, none blocking): events are off in «Dynamic classification» because trigger depends on transition, which `dcn` lacks; nothing checks at binding time that `overlapping`/`complete` are Boolean; the panel's select (`PANEL_PROFILE_IDS`, `simRoleStatus.ts`) does not list the new profile; `bindProfile` runs the Petri branch on a dcn profile (harmless, dcn roles come out none); under `dcn` the dialog offers «+ on» for the general, events, data and output roles (crop `dynamic_branch_full.png`).
+
+## 2026-11-07 — merge: dcn into alfonso-frontend-jjtl (P-2026-11-07-1123)
+**Prompt**: merge `dcn` at `177378f9d` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `37fc696f7`, in the shape of `319be0670`; probes, gates, hard stop for the chat's GO.
+**Files touched**: 376a2273e — the 40 files of the branch (DCN drone fixture probe, `jjel` lexer/parser/evaluator and AST for `self.in(V::D)`, `sim` nucleus and roles, `model/simulation` role catalog, profiles and `dcn/dcnRoles.ts`, their tests, seven prompts, `docs/log-inbox/dcn.md`); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, L4.1 browser parity P-2026-11-07-0750, L2.3 roles dialog crops P-2026-11-07-1012; the rest has no UI path)
+**Notes**: One conflict, docs/log-inbox/dcn.md, by union (trunk whole, then the five branch entries). Tip moved by two docs commits of another chat (9053a07b8, 896362e52), accepted as first parent. Probes 77/77, control R-MT-24 absent. Gates: typecheck 0, vitest 14709 (14621 trunk + 88 branch, counted here: the dcn tree has no node_modules; known 3 red at import; a Chromium afterAll timed out under load, alone 18/18), hooks 967, build 0, check:docs 5/5, agents, scripts, addonly PASS.
+**Prompt document name**: 2026-11-07 11:23
+
+## 2026-11-07 — feat: the DCN compiler, resolved roles and model to a placeless net
+**Prompt**: DCN L4.2 (P-2026-11-07-1216): pure module `dcnCompile.ts` from the resolved dcn roles, a model read view and the R-OI binding to a CompiledNet with no places, one transition per invocation and per monitor contribution with opaque ids and a side table; σ seeded from the closure, dormant slots included; domains from range bounds; optional instance key on StateAttributeDecl; plus the L2.3 ticket (dialog under `dcn` shows the dcn group only).
+**Files touched**: a5bef0684 — `frontend/src/model/simulation/dcn/dcnCompile.ts` (new), `dcn/__tests__/dcnCompile.test.ts` (new), `netTypes.ts`; 839affc1a — `frontend/src/components/editor-v2/sim/simRolesDraft.ts`, `sim/__tests__/simRolesDraft.test.ts`; docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 25/26 (survivor: precondition read on a monitor, which has none) and 3/3 with M16. Dialog hide rule changed locally in simRolesDraft.ts, not the shared list (validator and codec read it). All ticks on one event `dcn-tick` (R-SIM-122). Parameters, range bounds, literals passed as an extra `features` input. Generalization walk copied from bindingReader. String flagged without domain. Closure written by the chat from the handoff.
+**Prompt document name**: 2026-11-07 12:16
+
+## 2026-11-07 — feat: slot writes `self.battery := e` in a DCN action mode
+**Prompt**: DCN L3.4 (P-2026-11-07-1215): `parseAction(source, { dcn: true })` admits a member target as a new `SlotTarget` node, `JjelAction.target` widened to the union; `actionEvaluator.ts` returns a slot write as an assignment marked `slot: true`; the core unchanged (an `undeclared` halt until L4.4); tests first, mutation bench, one code commit.
+**Files touched**: 5d86470c9 — `frontend/src/jjel/types/ast.ts`, `frontend/src/jjel/parser/parser.ts`, `frontend/src/model/simulation/actionEvaluator.ts`, `frontend/src/model/simulation/__tests__/slotAction.test.ts` (new); docs commit — `docs/log-inbox/dcn.md`, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — every suite green but `irCollapsedRender.test.ts`, whose Chromium `afterAll` timed out in 2 of 6 runs on the branch (all 13 tests passing) and in 0 of 5 on the tip; nothing it imports changed
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: New node, not MemberAccess: `SlotTarget` carries `object` and `attribute`, the field names of `StateAccessExpr`, so the six readers outside jjel/ (printer, stcChecks, simBridge, simStateUsage) compile unchanged; none selects the mode. The marker type `ActionAssignment` lives in actionEvaluator.ts, since netTypes.ts was off limits. Bench 14/14 killed. Gates: typecheck 0, jjel+simulation 1394/1394, full run 546/550 (the known 3 + the flake above), build 0.
+**Prompt document name**: 2026-11-07 12:15
+
+**Ticket** (for L4.4, not blocking): the core keys an assignment by `element` and `attr` only, so a slot named like a declared state attribute of the same element would be applied to σ as that attribute, not halted `undeclared`. L4.4 has to read `slot` before the declaration lookup in `netStep.ts`.
+
+## 2026-11-07 — merge: dcn-l42 into alfonso-frontend-jjtl (P-2026-11-07-1308)
+**Prompt**: `claude_2026-11-07_1308_prompt_merge_dcn-l42.md`, lane full (merge): `dcn-l42` at `178c1c837` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, zero conflicts measured.
+**Files touched**: merge `75f973840`: the 12 files of the branch (this inbox, the L3.4 and L4.2 prompts, `ast.ts`, `parser.ts`, `actionEvaluator.ts`, `netTypes.ts`, `dcnCompile.ts`, `simRolesDraft.ts` and three test files); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `75f973840`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts, check:addonly PASS, hooks 967/967; vitest 552 files, 14797 passed and 2 skipped as expected (tip 14762 + 35), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; the L4.2 dialog ticket is checked by simRolesDraft.test.ts; chat GO)
+**Notes**: Merge tree `b1469f16d` equal to the merge-tree measure; probes 5/5 once; no union resolution. Branch vitest count not run in `/Users/alfonso/jjodel-w-dcn-l42` (no node_modules there; writing forbidden): the 35 new tests counted at `178c1c837` (+1, +17, +17), matched on the merge. First hooks run killed (exit 144) beside the full suite, 967/967 alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-07 13:08

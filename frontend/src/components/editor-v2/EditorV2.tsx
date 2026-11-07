@@ -61,7 +61,7 @@ import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportIn
 import { openViewportFallback, type NodeRect } from './openViewport';
 import { canRenderOnlyVisible } from './onlyRenderVisible';
 import { allMeasured, decorateUnmeasured, isDecorated, shouldDecorate, undecorate, type DecorationEntry } from './unmeasuredNodes';
-import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
+import { getActiveLayoutKey, getLayoutKeyFor } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
@@ -395,6 +395,12 @@ export interface EditorV2Props {
     hasViewpoint?: boolean;
     /** Handler invoked when the user clicks the segmented mode toggle. */
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
+    /** The viewpoint of the tab this canvas belongs to (R-MT-1, R-LAY-19), exposed by
+     *  EditorContext: `null` is abstract syntax, `undefined` means no tab (standalone route), and
+     *  then the readers below fall back to the root as before. */
+    viewpointId?: string | null;
+    /** Sets the tab's viewpoint, for the toolbar picker (through EditorContext). */
+    onViewpointChange?: (viewpointId: string | null) => void;
 }
 
 /**
@@ -493,7 +499,7 @@ function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: b
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
+function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
     // Phase 3: React Flow state — initialised from demo data when standalone,
     // or populated by useJjomSync when modelid is provided.
     const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
@@ -587,9 +593,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // `defaultViewport` (so the canvas opens where it was left, with no flash at the
     // origin) and suppresses the opening fit. Null = first ever opening under this
     // (model, layout key) → the fit is the fallback, unchanged.
+    // The tab's viewpoint, through a ref so that the callbacks reading it keep their deps. The
+    // viewport key is the layout key of THAT viewpoint (R-LAY-19); with no tab, the root's.
+    const viewpointIdRef = useRef(viewpointId);
+    viewpointIdRef.current = viewpointId;
+    const tabLayoutKey = (): string => viewpointIdRef.current === undefined
+        ? getActiveLayoutKey()
+        : getLayoutKeyFor(store.getState(), viewpointIdRef.current);
     const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
     if (restoredViewportRef.current === undefined) {
-        restoredViewportRef.current = readStoredViewport(modelid, getActiveLayoutKey());
+        restoredViewportRef.current = readStoredViewport(modelid, tabLayoutKey());
     }
     const applyDistributionRef = useRef<((eds: Edge[]) => Edge[]) | null>(null);
     const setEdgesRef = useRef(setEdges);
@@ -599,6 +612,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the first (edge-less) layout. Set below; armed only on the justCreated path. See
     // docs/discovery/2026-07-07-s4b-recalc-bypass.md (H2).
     const armReLayoutRef = useRef<(() => void) | null>(null);
+    // The tab's viewpoint (L2) gives the sync its layout key (L3): passed here, because this component
+    // renders the EditorContext.Provider below this call and the hook cannot read it.
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
@@ -629,7 +644,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 setEdges(eds => applyDistributionRef.current!(eds));
             }
         }, 50);
-    });
+    }, undefined, viewpointId);
     useM1ReferenceEdges(modelid, graphId);
 
     // Debounced autosave of node positions on drag-end (gated by autosaveLayout)
@@ -3987,13 +4002,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const saveViewport = useCallback(() => {
         const vp = getViewport();
         lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
-        writeStoredViewport(modelid, getActiveLayoutKey(), vp);
+        writeStoredViewport(modelid, tabLayoutKey(), vp);
     }, [modelid, getViewport]);
     const modelidRef = useRef(modelid);
     modelidRef.current = modelid;
     useEffect(() => () => {
         const vp = lastViewportRef.current;
-        if (vp) writeStoredViewport(modelidRef.current, getActiveLayoutKey(), vp);
+        if (vp) writeStoredViewport(modelidRef.current, tabLayoutKey(), vp);
     }, []);
 
     // Register the flow editor as a ZoomController with the active-editor context.
@@ -4132,7 +4147,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (opts?.full) {
             const state: any = store.getState();
             const lookup = state?.idlookup ?? {};
-            const vpState: Record<string, unknown> = (typeof state?.viewpoint === 'string' && lookup[state.viewpoint]?._state) || {};
+            // The tab's viewpoint (R3 of the multi-tab discovery); the root only with no tab.
+            const vpId: unknown = viewpointIdRef.current === undefined ? state?.viewpoint : viewpointIdRef.current;
+            const vpState: Record<string, unknown> = (typeof vpId === 'string' && lookup[vpId]?._state) || {};
             // The profile the derived viewpoint was derived with; a metamodel without one takes the class view's;
             // any other canvas keeps today's strategy (null).
             let profile: ElkLayoutProfile | null = null;
@@ -4985,7 +5002,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelId: modelid }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelid]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelId: modelid, viewpointId, onViewpointChange }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelid, viewpointId, onViewpointChange]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {
@@ -5376,7 +5393,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
+function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
     return (
         <ReactFlowProvider>
             <EditorV2Inner
@@ -5386,6 +5403,8 @@ function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoi
                 editorMode={editorMode}
                 hasViewpoint={hasViewpoint}
                 onEditorModeChange={onEditorModeChange}
+                viewpointId={viewpointId}
+                onViewpointChange={onViewpointChange}
             />
         </ReactFlowProvider>
     );

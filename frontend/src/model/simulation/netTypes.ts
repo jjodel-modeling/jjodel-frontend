@@ -58,6 +58,11 @@ export interface StateAttributeDecl {
     readonly equation?: string;
     /** An input variable (R-SIM-88): semantic, no initial, no equation; asked by the bridge at the press that reads it. */
     readonly input?: true;
+    /**
+     * The M1 id of the one instance that carries the attribute, when the declaration is per instance rather than per
+     * metaclass (the DCN nucleus, R-DCN-3: a slot of that instance); `metaclass` is then the instance's metaclass.
+     */
+    readonly instance?: string;
 }
 
 /**

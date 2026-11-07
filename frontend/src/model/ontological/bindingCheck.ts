@@ -9,7 +9,9 @@
  * - the type reference and the slot container are owned by the same instance metaclass;
  * - the defining feature is owned by the slot metaclass, the type of the slot container;
  * - the four slot roles (slot container, defining feature, value holder, value kinds) all come or none does (R-OI-7),
- *   so a record may bind the type reference alone.
+ *   so a record may bind the type reference alone;
+ * - each path of `featureSources` (R-DCN-10) is a list of references, the type of hop i owns hop i+1 or inherits it,
+ *   and, when the record has a defining feature, the type of the last hop conforms to the type that feature points to.
  * Across records: a name is held once.
  *
  * Defects are data and block nothing (R-VAL-4): the caller shows them.
@@ -87,6 +89,38 @@ export function checkBinding(binding: OntoBinding, sketch: MetamodelSketch): Bin
     if (slotContainer && definingFeature && definingFeature.owner !== slotContainer.type) {
         defect('definingFeature', `The defining feature is owned by ${definingFeature.owner}, the slot metaclass is ${slotContainer.type}.`);
     }
+
+    const conforms = (id: string, superId: string): boolean => {
+        const seen = new Set<string>();
+        const stack = [id];
+        while (stack.length > 0) {
+            const c = stack.pop() as string;
+            if (c === superId) return true;
+            if (seen.has(c)) continue;
+            seen.add(c);
+            stack.push(...(classes.get(c)?.supers ?? []));
+        }
+        return false;
+    };
+    (binding.featureSources ?? []).forEach(({ path }, i) => {
+        const at = `featureSources[${i}]`;
+        const hops = path.map((id, j) => {
+            const sort = sortOf(id);
+            if (sort === null) defect('featureSources', `${at}.path[${j}]: ${id} is not in the metamodel.`);
+            else if (sort !== 'reference') defect('featureSources', `${at}.path[${j}]: ${id} is a ${sort}, a path needs references.`);
+            return references.get(id);
+        });
+        for (let j = 0; j + 1 < hops.length; j++) {
+            const hop = hops[j], nextHop = hops[j + 1];
+            if (hop && nextHop && !conforms(hop.type, nextHop.owner)) {
+                defect('featureSources', `${at}.path[${j + 1}]: ${nextHop.id} is owned by ${nextHop.owner}, which ${hop.type} (the type of ${hop.id}) neither is nor inherits.`);
+            }
+        }
+        const lastHop = hops[hops.length - 1];
+        if (lastHop && definingFeature && !conforms(lastHop.type, definingFeature.type)) {
+            defect('featureSources', `${at}.path[${hops.length - 1}]: ${lastHop.id} holds ${lastHop.type}, the defining feature points to ${definingFeature.type}.`);
+        }
+    });
     return defects;
 }
 

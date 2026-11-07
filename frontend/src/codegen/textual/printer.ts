@@ -198,66 +198,57 @@ const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [
  */
 export const printerNameLookups = { count: 0 };
 
+/** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
+ *  literals' order (ties in model order). */
+function starValues(n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject, resolve: (id: unknown) => TextObject | undefined): unknown[] {
+    const vs = n.feat === undefined ? [] : asArray(o.slots[n.feat]);
+    const w = n.where;
+    if (!w) return vs;
+    const rank = (v: unknown): number => { const c = resolve(v); return c ? w.literals.indexOf(String(c.slots[w.attr])) : -1; };
+    return vs.filter(v => rank(v) >= 0).sort((a, b) => rank(a) - rank(b));
+}
+
+/** How the text writes the objects of a model, by name or by path: what `textNaming` returns. */
+export interface TextNaming {
+    /** R-TXT-4: a reference whose targets are `targets` names `t` by its name when unique among their objects, else by its path. */
+    readonly ref: (targets: readonly string[], t: TextObject) => string;
+    /** R-TXT-25 (5, 6), R-TXT-28, R-TXT-29: the containment path of `t`. */
+    readonly path: (t: TextObject) => string;
+    /** A name as the text writes it: bare when it is an identifier and no reserved word, else quoted. */
+    readonly name: (s: string) => string;
+    /** A string in the style's quote. */
+    readonly quote: (s: string) => string;
+    /** The objects no other object contains, in the order given. */
+    readonly roots: readonly TextObject[];
+}
+
 /**
- * Prints the objects of a model. The roots are the objects no other object contains, in the order given; a
- * reference or containment slot names its targets by id. A containment of an id that names no object is skipped; a
- * reference to one prints `@` and the id as a string (R-TXT-32), as does an `OuterRef` the parser read.
+ * D2b (report §3.3 C3, decision D3): the names and paths of `objects` as `printTextModel` writes them, the one writer the
+ * printer and completion share, so that the two cannot drift. A pure function of the grammar and the objects; an object
+ * of a class without a rule names nothing and contains nothing here (the printer refuses it).
  */
-export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[]): TextPrintReport {
+export function textNaming(g: ConcreteGrammar, objects: readonly TextObject[]): TextNaming {
     const style = g.style;
     const byId = new Map(objects.map(o => [o.id, o]));
-    const ruleOf = (o: TextObject): ObjectRule => {
-        const r = g.objects[o.cls];
-        if (!r) throw new Error(`no rule for class ${o.cls} (abstract, or not in the metamodel)`);
-        return r;
-    };
-    // The object rules by name: a grouping's derived rules print the objects of their class (concreteGrammar.ts).
-    const ruleNamed = new Map(g.rules.flatMap(r => (r.t === 'object' ? [[r.name, r] as const] : [])));
-
     const resolve = (id: unknown): TextObject | undefined => (typeof id === 'string' ? byId.get(id) : undefined);
-    /** R-TXT-32: the id of a reference target the text does not print. */
-    const outerOf = (v: unknown): string | undefined => (isOuterRef(v) ? v.outer : typeof v === 'string' && !byId.has(v) ? v : undefined);
-
-    /** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
-     *  literals' order (ties in model order). */
-    const values = (n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject): unknown[] => {
-        const vs = n.feat === undefined ? [] : asArray(o.slots[n.feat]);
-        const w = n.where;
-        if (!w) return vs;
-        const rank = (v: unknown): number => { const c = resolve(v); return c ? w.literals.indexOf(String(c.slots[w.attr])) : -1; };
-        return vs.filter(v => rank(v) >= 0).sort((a, b) => rank(a) - rank(b));
-    };
 
     // The containment tree: each object's container and its path segment, `f[i]` even for a single containment. R-TXT-29:
     // f is the feature's printed keyword, the feature name when none is printed; i is the object's position in the feature
     // as the text gives it, the one the parser reads back: the model order, but a grouped containment prints its values
     // group by group (those no group prints come after them, and a path to them names no object).
     const parent = new Map<string, { readonly owner: TextObject; readonly segment: string }>();
-    const contained = new Map<string, string[]>();
-    // R-TXT-30: the values of a grouped containment that no group prints, kept until the walk says which owners print.
-    const left: Omit<UnprintedObject, 'inside'>[] = [];
     for (const o of objects) {
-        const rule = ruleOf(o);
-        for (const f of rule.features) {
+        const rule = g.objects[o.cls];
+        for (const f of rule?.features ?? []) {
             if (f.kind !== 'containment') continue;
             const all = asArray(o.slots[f.name]);
             const stars = groupStars(containmentNode(rule.body, f.name));
-            const grouped = stars.flatMap(n => values(n, o));
+            const grouped = stars.flatMap(n => starValues(n, o, resolve));
             const order = stars.length ? [...grouped, ...all.filter(v => !grouped.includes(v))] : all;
             const kw = featureKeyword(g, o.cls, f.name);
             order.forEach((id, i) => {
-                if (typeof id === 'string' && byId.has(id)) {
-                    parent.set(id, { owner: o, segment: `${kw}[${i}]` });
-                    const list = contained.get(o.id);
-                    if (list) list.push(id); else contained.set(o.id, [id]);
-                }
+                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: `${kw}[${i}]` });
             });
-            const attr = stars[0]?.where?.attr;
-            if (attr === undefined) continue;
-            for (const id of all) {
-                const c = grouped.includes(id) ? undefined : resolve(id);
-                if (c) left.push({ id: c.id, owner: o.id, feature: f.name, cls: c.cls, attr, reason: isSet(c.slots[attr]) ? 'outside' : 'unset' });
-            }
         }
     }
     const roots = objects.filter(o => !parent.has(o.id));
@@ -290,7 +281,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     // R-TXT-41 (D3): a name equal to a word that can stand at an optional head name's place is quoted (C1d).
     const words = new Set([...style.reservedNames, ...expressionWords(g), ...(g.headWords ?? [])]);
     const name = (s: string): string => (IDENTIFIER.test(s) && !words.has(s) ? s : quote(s));
-    const nameOf = (o: TextObject): unknown => (ruleOf(o).named ? o.slots.name : undefined);
+    const nameOf = (o: TextObject): unknown => (g.objects[o.cls]?.named ? o.slots.name : undefined);
     // Linear resolution (step A): the objects by name, built once, in place of a scan of all objects per reference.
     const byName = new Map<string, TextObject[]>();
     for (const o of objects) {
@@ -301,13 +292,71 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     }
 
     // R-TXT-4: the target's name when it is unique among the instances of the reference's type, else its path.
-    const ref = (n: Extract<GrammarNode, { t: 'xref' }>, t: TextObject): string => {
+    const ref = (targets: readonly string[], t: TextObject): string => {
         const nm = nameOf(t);
         const candidates = typeof nm === 'string' ? byName.get(nm) ?? [] : [];
         printerNameLookups.count += candidates.length;
-        if (typeof nm === 'string' && candidates.filter(x => n.targets.includes(x.cls)).length === 1) return name(nm);
+        if (typeof nm === 'string' && candidates.filter(x => targets.includes(x.cls)).length === 1) return name(nm);
         return path(t);
     };
+
+    return { ref, path, name, quote, roots };
+}
+
+/**
+ * Prints the objects of a model. The roots are the objects no other object contains, in the order given; a
+ * reference or containment slot names its targets by id. A containment of an id that names no object is skipped; a
+ * reference to one prints `@` and the id as a string (R-TXT-32), as does an `OuterRef` the parser read.
+ */
+export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[]): TextPrintReport {
+    const style = g.style;
+    const byId = new Map(objects.map(o => [o.id, o]));
+    const ruleOf = (o: TextObject): ObjectRule => {
+        const r = g.objects[o.cls];
+        if (!r) throw new Error(`no rule for class ${o.cls} (abstract, or not in the metamodel)`);
+        return r;
+    };
+    // The object rules by name: a grouping's derived rules print the objects of their class (concreteGrammar.ts).
+    const ruleNamed = new Map(g.rules.flatMap(r => (r.t === 'object' ? [[r.name, r] as const] : [])));
+
+    const resolve = (id: unknown): TextObject | undefined => (typeof id === 'string' ? byId.get(id) : undefined);
+    /** R-TXT-32: the id of a reference target the text does not print. */
+    const outerOf = (v: unknown): string | undefined => (isOuterRef(v) ? v.outer : typeof v === 'string' && !byId.has(v) ? v : undefined);
+
+    /** The values a star iterates (`starValues`). */
+    const values = (n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject): unknown[] => starValues(n, o, resolve);
+
+    // The containment tree as the text gives it (`textNaming`): here, the objects each object contains. R-TXT-30: the
+    // values of a grouped containment that no group prints, kept until the walk says which owners print.
+    const contained = new Map<string, string[]>();
+    const left: Omit<UnprintedObject, 'inside'>[] = [];
+    for (const o of objects) {
+        const rule = ruleOf(o);
+        for (const f of rule.features) {
+            if (f.kind !== 'containment') continue;
+            const all = asArray(o.slots[f.name]);
+            const stars = groupStars(containmentNode(rule.body, f.name));
+            const grouped = stars.flatMap(n => values(n, o));
+            const order = stars.length ? [...grouped, ...all.filter(v => !grouped.includes(v))] : all;
+            order.forEach(id => {
+                if (typeof id === 'string' && byId.has(id)) {
+                    const list = contained.get(o.id);
+                    if (list) list.push(id); else contained.set(o.id, [id]);
+                }
+            });
+            const attr = stars[0]?.where?.attr;
+            if (attr === undefined) continue;
+            for (const id of all) {
+                const c = grouped.includes(id) ? undefined : resolve(id);
+                if (c) left.push({ id: c.id, owner: o.id, feature: f.name, cls: c.cls, attr, reason: isSet(c.slots[attr]) ? 'outside' : 'unset' });
+            }
+        }
+    }
+
+    // D2b (report §3.3 C3): names, paths and references through the writer completion shares.
+    const naming = textNaming(g, objects);
+    const { roots, quote, name } = naming;
+    const ref = (n: Extract<GrammarNode, { t: 'xref' }>, t: TextObject): string => naming.ref(n.targets, t);
 
     // Output: a token goes on the current line, after the indentation or a space; a line break is written lazily, so
     // the text never ends with one. Punctuation that closes or separates sticks to the token before it.

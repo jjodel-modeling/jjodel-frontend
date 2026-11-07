@@ -27,6 +27,7 @@ import {
     IndexAccessExpr,
     ObjectLiteralExpr,
     StateAccessExpr,
+    ClassificationTestExpr,
     BinaryOperator,
     UnaryOperator
 } from '../types/ast';
@@ -356,6 +357,8 @@ export class JjelEvaluator {
                 return this.evaluateObjectLiteral(expr, evalCtx);
             case 'StateAccess':
                 return this.evaluateStateAccess(expr, evalCtx);
+            case 'ClassificationTest':
+                return this.evaluateClassificationTest(expr, evalCtx);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }
@@ -1265,6 +1268,26 @@ export class JjelEvaluator {
             throw new JjelEvaluationError(`'${expr.attribute}' is not a state attribute of ${(target as any).name ?? id}`, expr);
         }
         return value;
+    }
+
+    /**
+     * `x.in(V::D)` (R-DCN-7): whether dynamic class D of viewpoint V is active
+     * for what `x` evaluates to, asked of the context's classification hook.
+     * Without a hook it throws, and the tri-state reports `exception`. An
+     * answer that is not a boolean throws too: never coerced.
+     */
+    private evaluateClassificationTest(expr: ClassificationTestExpr, ctx: EvaluationContext): JjelValue {
+        const access = ctx.classification;
+        if (!access) {
+            throw new JjelEvaluationError(`${expr.viewpoint}::${expr.dynamicClass}: classification is not bound here`, expr);
+        }
+        const target = this.evaluate(expr.object, ctx);
+        const answer: unknown = access.isIn(target, expr.viewpoint, expr.dynamicClass);
+        if (typeof answer !== 'boolean') {
+            const got = answer === null ? 'null' : typeof answer;
+            throw new JjelEvaluationError(`${expr.viewpoint}::${expr.dynamicClass}: the classification answered ${got}, not a boolean`, expr);
+        }
+        return answer;
     }
 
     // ============================================

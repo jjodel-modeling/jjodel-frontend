@@ -45,7 +45,8 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
-import { vertexChildrenHash } from '../sync/vertexSnapshot';
+import { elementSnapshotsOf, snapshotUnchanged, layoutKeyOnlyChange, rekeyedNode } from '../sync/vertexSnapshot';
+import { getLayoutKeyOf, getLayoutKeyFor } from '../viewpoint/layout/vertexLayoutAdapter';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
@@ -283,6 +284,7 @@ export function useJjomSync(
     setEdges: SetEdges,
     onInitialized?: () => void,
     layoutOptions?: AutoLayoutOptions,
+    viewpointId?: string | null,
 ): UseJjomSyncResult {
     const layout = layoutOptions
         ? { ...DEFAULT_LAYOUT, ...layoutOptions }
@@ -343,6 +345,8 @@ export function useJjomSync(
 
     // ── Previous D-object references for diffing ───────────────────────
     const prevElementsRef = useRef<Map<string, any>>(new Map());
+    // The layout key prevElementsRef's entries were built under (P-2026-11-07-0555).
+    const prevLayoutKeyRef = useRef<string>('');
     const prevSubElementsRef = useRef<string[]>(EMPTY_ARRAY);
 
     // ── Anti-bounce re-run: one tick after the window when a run skipped a changed id ──
@@ -1143,29 +1147,20 @@ export function useJjomSync(
     // For each ID in subElements, select state.idlookup[id].
     // Custom comparator ensures we only trigger when an individual
     // D-object reference changes (not when unrelated objects change).
-    const elementSnapshots = useSelector((state: DState) => {
-        if (subElementIds.length === 0) return null;
-        const result = new Map<string, any>();
-        for (const id of subElementIds) {
-            const elem = state.idlookup[id];
-            if (elem) {
-                result.set(id, elem);
-                const modelId = (elem as any).model;
-                if (modelId && typeof modelId === 'string') {
-                    const modelElem = state.idlookup[modelId] as any;
-                    if (modelElem) {
-                        result.set(`model:${id}`, modelElem);
-                        // Content hash of everything else the vertex's node renders
-                        // (children, slot features and types, reference target names,
-                        // ghost ancestry). A single number entry per vertex — avoids
-                        // infinite re-render loops. See sync/vertexSnapshot.ts.
-                        result.set(`ch:${id}`, vertexChildrenHash(state.idlookup as any, modelElem));
-                    }
-                }
-            }
-        }
-        return result;
-    }, mapReferenceEqual);
+    // Plus, per element with a model element, a content hash of everything else the
+    // vertex's node renders, the layout key in force included (R-MT-19): a single number
+    // entry per vertex — avoids infinite re-render loops. See sync/vertexSnapshot.ts.
+    // The key is the tab's (multi-tab L3): `viewpointId` is the viewpoint of the tab that owns this
+    // canvas, `undefined` when none does, which reads the root as before. A parameter and not the
+    // EditorContext: EditorV2Inner calls this hook above the provider it renders.
+    const layoutKeyIn = (state: DState): string => viewpointId === undefined
+        ? getLayoutKeyOf(state) : getLayoutKeyFor(state, viewpointId);
+    const elementSnapshots = useSelector((state: DState) =>
+        elementSnapshotsOf(state.idlookup as any, subElementIds, layoutKeyIn(state)), mapReferenceEqual);
+    // The key that snapshot was built under, read off the same state: the incremental sync compares
+    // it with prevLayoutKeyRef to patch a vertex the key alone moved (P-2026-11-07-0555), and hands
+    // it to every transform below.
+    const layoutKey = useSelector((state: DState) => layoutKeyIn(state));
 
     // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
     // Called by the init push, by the flush after its patches, and by its own poll.
@@ -1254,11 +1249,11 @@ export function useJjomSync(
 
             for (const v of vertices) {
                 if (isSingletonSuppressed(v.id)) continue;
-                const rfNode = jjomVertexToRFNode(v);
+                const rfNode = jjomVertexToRFNode(v, layoutKey);
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
             for (const e of edges) {
-                const rfEdge = jjomEdgeToRFEdge(e);
+                const rfEdge = jjomEdgeToRFEdge(e, layoutKey);
                 // Skip orphan edges (source/target vertex not in graph)
                 if (rfEdge && nodeCache.has(rfEdge.source) && nodeCache.has(rfEdge.target)) {
                     edgeCache.set(rfEdge.id, rfEdge);
@@ -1271,6 +1266,7 @@ export function useJjomSync(
             // Snapshot current D-object references
             if (elementSnapshots) {
                 prevElementsRef.current = new Map(elementSnapshots);
+                prevLayoutKeyRef.current = layoutKey;
             }
             prevSubElementsRef.current = subElementIds;
 
@@ -1337,7 +1333,7 @@ export function useJjomSync(
                         // Skip if already in cache (previous cycle's consumeDropCreated)
                         if (!isDropCreated && rfNodeCache.current.has(id)) continue;
 
-                        const rfNode = jjomVertexToRFNode(lProxy);
+                        const rfNode = jjomVertexToRFNode(lProxy, layoutKey);
                         if (rfNode) {
                             if (isDropCreated) {
                                 rfNode.data = { ...rfNode.data, autoEdit: true };
@@ -1353,7 +1349,7 @@ export function useJjomSync(
                             continue;
                         }
 
-                        const rfEdge = jjomEdgeToRFEdge(lProxy);
+                        const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
@@ -1397,13 +1393,7 @@ export function useJjomSync(
         for (const id of subElementIds) {
             if (!prevIds.has(id)) continue;
 
-            const dElement = elementSnapshots.get(id);
-            const prevD = prevElements.get(id);
-            const currModel = elementSnapshots.get(`model:${id}`);
-            const prevModel = prevElements.get(`model:${id}`);
-            const currHash = elementSnapshots.get(`ch:${id}`);
-            const prevHash = prevElements.get(`ch:${id}`);
-            const unchanged = prevD === dElement && prevModel === currModel && currHash === prevHash;
+            const unchanged = snapshotUnchanged(prevElements, elementSnapshots, id);
 
             if (isCanvasUpdated(id)) { // anti-bounce (drag positions only)
                 // Its old entries stay in prevElements (below), so the re-run scheduled after
@@ -1414,12 +1404,18 @@ export function useJjomSync(
             if (unchanged) continue;
 
             try {
-                const lProxy: any = LPointerTargetable.fromPointer(id);
-                if (!lProxy) continue;
-                const className = lProxy.className ?? lProxy.__raw?.className;
+                // A vertex the layout key alone moved (P-2026-11-07-0555): the transformer would give
+                // back the cached node with the new key's geometry, so rekeyedNode builds that node and
+                // the proxy reads are skipped. Any other change takes the full transform.
+                const cached = rfNodeCache.current.get(id);
+                const rekeyed = cached && layoutKeyOnlyChange(prevElements, elementSnapshots, id, prevLayoutKeyRef.current, layoutKey)
+                    ? rekeyedNode(cached, elementSnapshots.get(id), layoutKey) : null;
+                const lProxy: any = rekeyed ? null : LPointerTargetable.fromPointer(id);
+                if (!rekeyed && !lProxy) continue;
+                const className = rekeyed ? elementSnapshots.get(id).className : (lProxy.className ?? lProxy.__raw?.className);
 
                 if (isVertexClassName(className)) {
-                    const rfNode = jjomVertexToRFNode(lProxy);
+                    const rfNode = rekeyed ?? jjomVertexToRFNode(lProxy, layoutKey);
                     if (rfNode) {
                         const existing = rfNodeCache.current.get(id);
                         if (existing) {
@@ -1469,7 +1465,7 @@ export function useJjomSync(
                         }
                     }
                 } else if (isEdgeClassName(className)) {
-                    const rfEdge = jjomEdgeToRFEdge(lProxy);
+                    const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                     if (rfEdge) {
                         // Preserve handles from applyDistribution
                         const existing = rfEdgeCache.current.get(id);
@@ -1498,6 +1494,7 @@ export function useJjomSync(
             }
         }
         prevElementsRef.current = nextPrev;
+        prevLayoutKeyRef.current = layoutKey;
         prevSubElementsRef.current = subElementIds;
 
         // One re-run after the anti-bounce window for the ids skipped above (no run per render).

@@ -27,6 +27,8 @@ import {
 import { useCodegenEnabled } from '../../codegen/setting';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { saveViewpointPreference } from '../abstract/tabs/EditorSwitch';
+import { useEditorContextSafe } from './contexts/EditorContext';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
@@ -294,7 +296,16 @@ function Toolbar({
     // array feeds a rendering selector, not a navigation tree. A `Default` holding
     // authored views is reached through the view tree, not activated as the viewpoint
     // things render through.
-    const rawActiveViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    //
+    // The value shown is the tab's viewpoint (R-MT-1, multi-tab L2), from EditorContext; the root
+    // only when no tab owns this canvas (the standalone route), as before.
+    const editorContext = useEditorContextSafe();
+    const rootViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    const tabViewpointId = editorContext?.viewpointId;
+    const rawActiveViewpointId = (tabViewpointId === undefined ? rootViewpointId : tabViewpointId) as string;
+    // Read through a ref by the picker handler, which keeps its `[modelId]` deps.
+    const onTabViewpointChangeRef = useRef(editorContext?.onViewpointChange);
+    onTabViewpointChangeRef.current = editorContext?.onViewpointChange;
     const viewpointPointers = useSelector((state: any) => state.viewpoints) as string[];
     const viewpoints = (viewpointPointers || [])
         .filter(ptr => !Defaults.isSystemViewpoint(ptr) && !isDataManagerViewpointId(ptr))
@@ -383,6 +394,13 @@ function Toolbar({
             return;
         }
         activateViewpoint(vpId || null);
+        // Q2: the pick is this tab's viewpoint too; the root and the project follow it because
+        // the tab whose picker is used is the focused one.
+        onTabViewpointChangeRef.current?.(vpId || null);
+        // The pick is this model's preference and no other's: the mounted EditorSwitch of every
+        // open tab sees the root change, so the write lives here, with the picker (R-MT-16).
+        // isMetamodel stays out of the deps: it is fixed for a given modelId.
+        if (modelId && !isMetamodel) saveViewpointPreference(modelId, vpId || null);
     }, [modelId]);
 
     // ── The picker itself: a custom listbox, no longer a <select> (NAV2) ──

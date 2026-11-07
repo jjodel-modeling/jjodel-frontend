@@ -2207,3 +2207,564 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step D discovery report)
 **Notes**: Rollback tag `pre-textual-d-writing-aids` on `fc79098ad` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2058/result.json`.
 **Prompt document name**: 2026-11-06 20:58
+
+## 2026-11-06 — feat(codegen): D2a, the expected set at a cursor (P-2026-11-06-2118)
+**Prompt**: Step D lane D2a (report §3.3 C1, §8; D2, D10): optional `ParseOptions.cursor`, `TextParseResult.expected` of `ExpectedItem`s, tests on the probe's cursors, a no-cursor identity test on the corpus.
+**Files touched**: `frontend/src/codegen/textual/parser.ts` (`c4a545aa3`), `frontend/src/codegen/textual/__tests__/completion.test.ts` new (`c4a545aa3`, `e23c3870c`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — parser only, no UI.
+**Notes**: Red first 17/18. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Identity test killed 4/4 mutants (bench in `e23c3870c`). Readings: block tokens are kind `block` (D2b maps them to keywords); a cursor before a token the parse reads gives what was tested up to it; after an output, `input` is out of order and not offered; free layout offers `=` on the next line.
+**Prompt document name**: 2026-11-06 21:18
+
+## 2026-11-06 — feat(codegen): D2b, completion candidates in the language service (P-2026-11-06-2146)
+**Prompt**: Step D lane D2b (report §3.3 C2, C3, §8; D3, D10): the printer's reference, path and name writers exported as one pure function the printer calls; `completionsAt` in the language service on D2a's expected set; tests in `completion.test.ts`.
+**Files touched**: `frontend/src/codegen/textual/printer.ts` (`b0b1139df`), `frontend/src/codegen/textual/languageService.ts` (`387e558d7`), `frontend/src/codegen/textual/__tests__/completion.test.ts` (`b0b1139df`, `387e558d7`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — language service only, no UI.
+**Notes**: Red first: C3 1/19, C2 14/33. Print tests unchanged and green after `textNaming`. Bench in `387e558d7`: 7/7 mutants killed. Gates: typecheck 0; vitest 534 files passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. Range: the ID word the cursor is in or ends, else the cursor; the parse cursor goes to the word's start. Orphans of a broken text get a root path from `textNaming`.
+**Prompt document name**: 2026-11-06 21:46
+
+## 2026-11-06 — feat(codegen): D2c, the completion provider of the Text tab (P-2026-11-06-2213)
+**Prompt**: Step D lane D2c (report §3.3 C4, §8): a `CompletionItemProvider` in `registerTextualMonaco` on `completionsAt` and the session's reading, kinds, ranges, literal docs, style punctuation as triggers; tests in `languageService.test.ts`; app check with crops on the port corpus.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts` (`f5fb02d8b`), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 8/8 PASS, 5 crops in `~/.jjodel-lanes/P-2026-11-06-2213/`, GO pending.
+**Notes**: Red first 6/6; bench 7/7 killed (in `f5fb02d8b`). Gates: typecheck 0; vitest 534 passed, 3 baseline import reds; build, check:docs, check:codegen-lazy 0. `TextualReading` gains optional `mm`. Triggers: the catalog styles' punctuation, filtered per request by the reading's style. After `=` the port offers operand keywords only (operands are new Refs, not references); references shown at `peer`. Focused suggest row overflows the widget's right edge: no app rule names it.
+**Prompt document name**: 2026-11-06 22:13
+
+## 2026-11-06 — merge: textual-d-writing-aids into alfonso-frontend-jjtl (P-2026-11-06-2243)
+**Prompt**: `claude_2026-11-06_2243_prompt_merge_textual-d-writing-aids.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d-writing-aids` at `845f7612f` into `alfonso-frontend-jjtl`, merge base `71e9e3ab7`, 11 commits on the branch side.
+**Files touched**: merge `77a912e14`: 10 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2118_prompt_textual_d2a_expected_set.md`, `docs/prompts/claude_2026-11-06_2146_prompt_textual_d2b_completions.md`, `docs/prompts/claude_2026-11-06_2213_prompt_textual_d2c_completion_provider.md`, `frontend/src/codegen/textual/__tests__/completion.test.ts`, `frontend/src/codegen/textual/__tests__/languageService.test.ts`, `frontend/src/codegen/textual/languageService.ts`, `frontend/src/codegen/textual/parser.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `77a912e14` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14454 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D2c crops d2c-1..4 in ~/.jjodel-lanes/P-2026-11-06-2213/ checked by the chat; suggest widget selected-row overflow ticketed
+**Notes**: Rollback tag `pre-textual-d-writing-aids-P-2026-11-06-2243` on `54f38d163` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2243/result.json`.
+**Prompt document name**: 2026-11-06 22:43
+
+## 2026-11-06 — fix(editor-v2): C2e, a nameless reference target is labelled `: <Class>` on the IR form (P-2026-11-06-2041)
+**Prompt**: `claude_2026-11-06_2041_prompt_textual_c2e_ir_chip.md`, R-TXT-47 D6, critical zone: Phase 1 report, then on Alfonso's GO (22:28, option A) the label via a shared pure helper, tests red first, gates, app check.
+**Files touched**: `docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md` (ed9054afd); `editor-v2/utils/namelessTargetLabel.ts` (new), `editor-v2/utils/jjomTransformers.ts`, `editor-v2/viewpoint/ir/IRFormField.tsx`, `editor-v2/utils/__tests__/namelessRefTarget.test.ts` (baec942aa); the prompt's Status and this entry (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md
+**Smoke visivo**: passato — probe 7/7 on port 3541, crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/; Alfonso's GO pending (R-TXT-47)
+**Notes**: No stock host shows a reference through IRFormField (manager passes hostReferences, IRForm.tsx:392; configurator: attributes only); the probe mounts the real IRForm directly. Ticket: referenceName (ReferenceWidget.tsx:51-60) labels a nameless target '' and ListWidget.tsx:89 falls back to the raw pointer id; a lane of its own (Alfonso 22:28).
+**Prompt document name**: 2026-11-06 20:41
+
+## 2026-11-06 — merge: textual-c2e-ir-chip into alfonso-frontend-jjtl (P-2026-11-06-2302)
+**Prompt**: `claude_2026-11-06_2302_prompt_merge_textual-c2e-ir-chip.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2e-ir-chip` at `53359fde7` into `alfonso-frontend-jjtl`, merge base `fc79098ad`, 4 commits on the branch side.
+**Files touched**: merge `ad6da074b`: 7 files from the branch side (`docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2041_prompt_textual_c2e_ir_chip.md`, `frontend/src/components/editor-v2/utils/__tests__/namelessRefTarget.test.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/utils/namelessTargetLabel.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRFormField.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ad6da074b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14459 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: C2e crop c2e-1-ir-form-mod.png in ~/.jjodel-lanes/P-2026-11-06-2041/, Alfonso GO 23:01
+**Notes**: Rollback tag `pre-textual-c2e-ir-chip` on `7d171b504` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2302/result.json`.
+**Prompt document name**: 2026-11-06 23:02
+
+## 2026-11-06 — feat(codegen): D1, commenting an object out asks first (P-2026-11-06-2301)
+**Prompt**: `claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`: R-TXT-37 with R-TXT-53 D7, a deletion whose object's carried span lies inside a comment asks on the pause with the C3b guard, naming the objects, even with other changes in the same pause.
+**Files touched**: `87ca3f547`: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
+**Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
+**Prompt document name**: 2026-11-06 23:01
+
+## 2026-11-06 — merge: textual-d1-comment-guard into alfonso-frontend-jjtl (P-2026-11-06-2326)
+**Prompt**: `claude_2026-11-06_2326_prompt_merge_textual-d1-comment-guard.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d1-comment-guard` at `275eec130` into `alfonso-frontend-jjtl`, merge base `7d171b504`, 3 commits on the branch side.
+**Files touched**: merge `59b532f43`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2301_prompt_textual_d1_comment_guard.md`, `frontend/src/codegen/textual/__tests__/deletionGuard.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `59b532f43` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14472 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D1 crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d1-comment-guard` on `8049bf81b` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-2326/result.json`.
+**Prompt document name**: 2026-11-06 23:26
+
+## 2026-11-06 — docs: step E discovery, T10 and synced selection (P-2026-11-06-2337)
+**Prompt**: `claude_2026-11-06_2337_prompt_textual_e_discovery.md`, read-only discovery of step E (T10, scenario 2, selection synced between text and canvas both ways)
+**Files touched**: docs/discovery/discovery_2026-11-06_textual_e_sync.md (new, 8 section commits a5283f565..f0a90f80f); docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md (Status flip, uncommitted)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: T10 is unimplemented (reprint sets the whole value, comments lost); recursive per-object splice proposed. Selection: SELECT_NODE in, CANVAS_SELECTION_CHANGED out, both existing; no §3.1 file, no §3.2 trigger; optional _lastSelected write drafted as an LIR. Not measured: Monaco cursor sources on typing, rc-dock unmount of a hidden canvas (R1, R2). Five lanes E1a..E3, decisions E1..E10 to ratify.
+**Prompt document name**: 2026-11-06 23:37
+
+## 2026-11-07 — merge: textual-e-sync into alfonso-frontend-jjtl (P-2026-11-07-0017)
+**Prompt**: `claude_2026-11-07_0017_prompt_merge_textual-e-sync.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e-sync` at `34035b3a0` into `alfonso-frontend-jjtl`, merge base `8049bf81b`, 10 commits on the branch side.
+**Files touched**: merge `a5cb8aafb`: 3 files from the branch side (`docs/discovery/discovery_2026-11-06_textual_e_sync.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-06_2337_prompt_textual_e_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5cb8aafb` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14495 tests in 537 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile: docs only (step E discovery)
+**Notes**: Rollback tag `pre-textual-e-sync` on `9a5a63048` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0017/result.json`.
+**Prompt document name**: 2026-11-07 00:17
+
+## 2026-11-07 — docs: step F discovery, embedded JjEL and tracing (P-2026-11-06-2357)
+**Prompt**: `claude_2026-11-06_2357_prompt_textual_f_discovery.md`: step F of the textual IDE plan, read only: where JjEL lives in a textual model, highlighting, checking and completion inside the string, generated line to model line, what T8 is, critical zone, lane plan with F1..Fn.
+**Files touched**: `afd1b3138`..`ee0ba5a0f` (8 commits): `docs/discovery/discovery_2026-11-07_textual_f_jjel_tracing.md`; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe `probe_jjel.ts` (lane folder): JjEL values round-trip in c-like, Pascal and indent, one raw index per value char, JjEL error positions mapped to document offsets. Origins per fragment and click-to-canvas already ship in the generator tab; the Text tab lacks an entry point. T8 = re-import of an exported file (textual_viewpoint report :812). Lanes F1a-F1e, F2, T8a-T8d; F1-F12 to ratify. Hard stop.
+**Prompt document name**: 2026-11-06 23:57
+
+## 2026-11-07 — merge: textual-f-jjel-tracing into alfonso-frontend-jjtl (P-2026-11-07-0116)
+**Prompt**: `claude_2026-11-07_0116_prompt_merge_textual-f-jjel-tracing.md`, a direct merge by `lane-run merge --direct`, no session: the step F discovery branch into `alfonso-frontend-jjtl`.
+**Files touched**: merge `07d20a2f5` (the F discovery report, its prompt and log entry); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. One vitest red at load 104 (`elementWaiterScope`, a timing check), 6/6 alone at load 3; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — docs only (step F discovery)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0116/result.json`.
+**Prompt document name**: 2026-11-07 01:16
+
+## 2026-11-06 — feat(codegen): D3a, structured fixes on parse errors (P-2026-11-06-2328)
+**Prompt**: `claude_2026-11-06_2328_prompt_textual_d3a_fixes.md`, row D3a of the D report §8, design §4.3: an optional `fix` on `TextParseError`, pure text edits (D6), under `ParseOptions.fixes`: insert a missing token, near names for an unknown reference, a near keyword for a misspelled one, none otherwise; the corpus identity of CLAUDE.md §5.
+**Files touched**: `frontend/src/codegen/textual/parser.ts` (`dcccb1d16`, `a9ff46da8`, `533eabcbc`), `frontend/src/codegen/textual/__tests__/tolerant.test.ts` (same, and `99cb12a30`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck exit 0; full vitest 14465 passed, 2 skipped, 537 files, red only the 3 baseline import files; build exit 0; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Parser only; `printer.ts` imported (`textNaming`), unchanged. Literals included in (3), and ambiguous names in (2) as their paths. Not covered: a path segment with the class or feature name in place of its keyword (§4.3 row), and path fixes when an orphan precedes a root of the same class. Mutation bench of six mutants, all killed: `99cb12a30` message.
+**Prompt document name**: 2026-11-06 23:28
+
+## 2026-11-07 — merge: textual-d-writing-aids takes alfonso-frontend-jjtl (P-2026-11-07-0117)
+**Prompt**: `claude_2026-11-07_0117_prompt_textual-d-writing-aids_take_trunk.md`, a direct merge by `lane-run merge --trunk-into --direct`, no session: the trunk into the step D branch before D3b (D1 changed `ui/TextualTab.tsx`).
+**Files touched**: merge `a4b4d551f`, union of `docs/log-inbox/codegen.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Five vitest files red at load 104 (timing and browser-close checks), 121/121 alone at load 3; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the branch takes the trunk
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0117/result.json`.
+**Prompt document name**: 2026-11-07 01:17
+
+## 2026-11-07 — feat(codegen): D3b, quick fixes and conformance markers (P-2026-11-07-0157)
+**Prompt**: `claude_2026-11-07_0157_prompt_textual_d3b_actions.md`, row D3b of the D report §8: a CodeActionProvider turning D3a's `fix` into quick fixes (D6); conformance violations as warnings on the carried spans of object and feature, source `conformance`, never blocking the apply (D8); tests; app check with crops.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts`, `__tests__/conformanceMarks.test.ts` (new) (`4bae15ec2`); `conformanceMarks.ts` (new), `ui/TextualTab.tsx`, the same test (`90d1c79b6`); `docs/log-inbox/codegen.md`, the prompt's Status line (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates: typecheck exit 0; full vitest 14514 passed, 2 skipped, red the 3 baseline import files and 2 Chromium-layout files under load, 18/18 alone; build exit 0, dynamic-import warnings 7 as before; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The provider test lives in conformanceMarks.test.ts, the only test file in scope. useConformance is loaded by a dynamic import (it imports joiner, which the bench cannot). Conformance marks offer no fix yet (§4.3 rows). The quick-fix menu truncates `replace with "in…`. App check: 3 steps, ALL PASS, crops d3b-1..3b in ~/.jjodel-lanes/P-2026-11-07-0157/.
+**Prompt document name**: 2026-11-07 01:57
+
+**Ticket** (P-2026-11-07-0157): a model created from text by `createModelFromText` reads `Module cpu`, D name and L `$name` `cpu`, but its raw `name` slot is `[]`, so useConformance reports «missing required attribute "name"» on a named object. Measured by the probe (`MEAS 3 the Module rows`); the app check used it as its conformance warning. Owner: the textual apply or the identity slot write, not this lane.
+
+## 2026-11-07 — ticket: Objects created on the canvas (and by the create command) leave the name slot empty
+**Ticket**: An object created on the canvas has an empty raw `name` slot: only its automatic display name is set. Conformance reads the slot, so it flags a required name as missing, and the XMI export drops the name. This predates the Text tab.
+
+Found by the name-slot discovery P-2026-11-07-0253 (docs/discovery/discovery_2026-11-07_textual_name_slot.md, control case and §6.1). The same report has option B: the create command in the executor (`instance.ts:686-703`) sets the displayed name and `initialName`, never the slot. A fix there is in the core: it needs the Layer Impact Report drafted in §6.1 and Alfonso's go-ahead before any lane.
+
+Approved as a ticket by Alfonso, 2026-11-07 03:39.
+**Priority**: medium
+**Found in**: P-2026-11-07-0253
+
+## 2026-11-07 — merge: textual-d-writing-aids into alfonso-frontend-jjtl (P-2026-11-07-0250)
+**Prompt**: `claude_2026-11-07_0250_prompt_merge_textual-d-writing-aids.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `5e1179252`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 120 (laneTracking, languageService, outline, elementWaiterScope, irCollapsedRender), all green alone at load 2; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: D3b crops d3b-1..3b in ~/.jjodel-lanes/P-2026-11-07-0157/ checked by the chat
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0250/result.json`.
+**Prompt document name**: 2026-11-07 02:50
+
+## 2026-11-07 — discovery: the empty raw name slot of an object created from text (P-2026-11-07-0253)
+**Prompt**: `claude_2026-11-07_0253_prompt_textual_name_slot_discovery.md`: root cause of D3b's finding (P-2026-11-07-0157) that a Module created from the Text tab reads `cpu` everywhere but its raw `name` slot is `[]`, and conformance flags it. Reproduce with controls, trace the write, place the cause, plan the fix.
+**Files touched**: `docs/discovery/discovery_2026-11-07_textual_name_slot.md` (four commits, `dac574b7c`..`55d88a441`); uncommitted: this entry and the prompt's Status (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read only; no source file changed)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (drafted in the report for option B only)
+**Smoke visivo**: non applicabile — read-only discovery; the app was probed by direct calls, not as a visual check
+**Notes**: Cause: `textDiff.ts:549` and `modelLines.ts:141` skip `set h.name` when the handle equals the name, and `create instance of C "h"` (`instance.ts:686-703`) names `data.name` and `initialName`, not the slot. Not core. Measured: the XMI export drops those names too. Plan: four textual files, five pinned tests move. N1..N5 in §8.
+**Prompt document name**: 2026-11-07 02:53
+
+## 2026-11-07 — fix(codegen): the textual layer writes the name slot of an object it creates (P-2026-11-07-0344)
+**Prompt**: `claude_2026-11-07_0344_prompt_textual_name_slot_fix.md`: option A of the name-slot discovery (P-2026-11-07-0253): `textDiff.ts` and `modelLines.ts` emit `set h.name` also when the handle equals the name, tests red first, one commit per item; no migration (N3); gates; app check on the port corpus.
+**Files touched**: `frontend/src/codegen/textual/textDiff.ts`, `__tests__/textDiff.test.ts` (`acebac08a`); `frontend/src/codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts` (`fe6f81bc7`); uncommitted: this entry and the prompt's Status (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; visual GO pending
+**Notes**: Two new tests red on HEAD; five pinned tests gain the `set h.name` line (listed in the commit bodies). Gates: typecheck 0; vitest 3 baseline import reds, 14505 passed, no timing red; build, check:docs, check:codegen-lazy exit 0. Probe 10/10 PASS: raw slots `["cpu"]`, `["result"]`, `["ready"]`, conformance empty, XMI names, no page errors. Causa from the report: a wrong assumption that the handle names the slot; the report names no originating prompt. B1 (console) stays for N1's ticket.
+**Prompt document name**: 2026-11-07 03:44
+
+## 2026-11-07 — merge: textual-name-slot into alfonso-frontend-jjtl (P-2026-11-07-0443)
+**Prompt**: `claude_2026-11-07_0443_prompt_merge_textual-name-slot.md`, a direct merge by `lane-run merge --direct`, no session: `textual-name-slot` at `5b9953e38` into `alfonso-frontend-jjtl`, merge base `04b782a5b`, 10 commits on the branch side.
+**Files touched**: merge `1d4ca6039`: 8 files from the branch side (`docs/discovery/discovery_2026-11-07_textual_name_slot.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0253_prompt_textual_name_slot_discovery.md`, `docs/prompts/claude_2026-11-07_0344_prompt_textual_name_slot_fix.md`, `frontend/src/codegen/textual/__tests__/modelLines.test.ts`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/modelLines.ts`, `frontend/src/codegen/textual/textDiff.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1d4ca6039` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14528 tests in 539 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: name-slot crop text-tab-cpu-no-warning.png in ~/.jjodel-lanes/P-2026-11-07-0344/ checked by the chat
+**Notes**: Rollback tag `pre-textual-name-slot` on `69c191631` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0443/result.json`.
+**Prompt document name**: 2026-11-07 04:43
+
+## 2026-11-07 — feat(codegen): E1a, T10's splice keeps typed text (P-2026-11-07-0048)
+**Prompt**: `claude_2026-11-07_0048_prompt_textual_e1a_reprint.md`, row E1a of the step E report: a pure `reprintChanged` that keeps each object's typed text when its own print is unchanged, recursing into children, null when it cannot splice safely; tests first, mutation bench on rules 1, 2 and 4.
+**Files touched**: `d795d9533`: frontend/src/codegen/textual/textReprint.ts (new), frontend/src/codegen/textual/__tests__/textReprint.test.ts (new); uncommitted: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 19 tests on GARAGE, a one-root model, DemoESM (scene_3) and the null fallbacks; 6 mutants on rules 1, 2, 4 all killed (commit body). Gates: typecheck 0, vitest 14512 passed with the 3 baseline import reds, build 0, check:codegen-lazy green. Inputs need the old print's spans: E1b must keep them with the agreement. Own comments of a changed object move by owner (R4).
+**Prompt document name**: 2026-11-07 00:48
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0251)
+**Prompt**: `claude_2026-11-07_0251_prompt_textual-e1-reprint_take_trunk.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `7807c9c78`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 120 (laneTracking, completion, languageService, tolerant, irCollapsedRender, irSelectionRing), all green alone at load 2; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: the branch takes the trunk
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0251/result.json`.
+**Prompt document name**: 2026-11-07 02:51
+
+## 2026-11-07 — feat(codegen): E1b, T10 wired into the Text tab (P-2026-11-07-0510)
+**Prompt**: `claude_2026-11-07_0346_prompt_textual_e1b_wired.md` (stopped at the RC-51 soft ceiling) and its continuation `claude_2026-11-07_0510_prompt_textual_e1b_continuation.md`: the Text tab's reprint splices with `reprintChanged`, and a comment-only edit becomes the agreement.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (code `0be037a6f`, bench 6/6; `40b7be107`, bench 3/3); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `40b7be107`: typecheck 0, build 0, check:docs and check:codegen-lazy green; vitest 14530 passed, 3 baseline import reds, plus the 1000 ms guard of `tolerant.test.ts`, 56/56 alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: scenario 2 by canvas gestures, 11/11 PASS, crops 1-4 in `~/.jjodel-lanes/P-2026-11-07-0510/`, checked by the chat (comments kept after rename and delete)
+**Notes**: Behaviour change: after a comment-only edit Cmd/Ctrl+Z is the app's undo, as after an application. The probe shows the docked Text panel with a probe-only CSS rule (PinnableDock hides it); no product change, placement is lane E3. Object count via `allSubObjects.length` (10, then 9). Handoff: `~/.jjodel-lanes/P-2026-11-07-0346/handoff.md`.
+**Prompt document name**: 2026-11-07 05:10
+
+## 2026-11-07 — merge: textual-e1-reprint takes alfonso-frontend-jjtl (P-2026-11-07-0607)
+**Prompt**: `claude_2026-11-07_0607_prompt_textual-e1-reprint_take_trunk.md`, rendered by `lane-run merge --trunk-into`: the trunk `alfonso-frontend-jjtl` at `4ad2bf5fc` into `textual-e1-reprint` at `a75356f55`, one merge commit, `--no-ff` (RC-14), merge base `a28b49cc8`.
+**Files touched**: merge `c8a3be5f3` (31 files from the trunk side; union of `docs/log-inbox/codegen.md`, auto-merge of `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c8a3be5f3`: typecheck 0; typecheck:scripts 0; vitest 540 files, 14553 passed, 2 skipped, red the 3 baseline import files plus `outline.test.ts` (10 ms timing) and `irSelectionRing.test.ts` (afterAll browser close) at load 72, both green alone; hooks 967 = trunk; build 0; check:docs A..E PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E1b crops in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat on this tree
+**Notes**: Expectation: trunk tip 539 files, 14526 passed, plus `textReprint.test.ts` 28 = 14554; the one missing pass is the outline timing red. Union, trunk first then branch, add-only against both parents (39 and 102 lines). Step 5: D3b conformance and E1b splice regions of TextualTab.tsx disjoint, no duplicate declaration.
+**Prompt document name**: 2026-11-07 06:07
+
+## 2026-11-07 — merge: textual-e1-reprint into alfonso-frontend-jjtl (P-2026-11-07-0645)
+**Prompt**: `claude_2026-11-07_0645_prompt_merge_textual-e1-reprint.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `511a3de3c`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load 100-112 (languageService.test.ts timing, irSelectionRing.test.ts hook timeout), all green alone (the timing test at load 8); resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: E1b crops 1-before..4-after-delete in ~/.jjodel-lanes/P-2026-11-07-0510/ checked by the chat (comments kept after a canvas rename and a canvas delete)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0645/result.json`.
+**Prompt document name**: 2026-11-07 06:45
+
+## 2026-11-07 — feat(codegen): D4, safe rename through the text (P-2026-11-07-0609)
+**Prompt**: `claude_2026-11-07_0515_prompt_textual_d4_rename.md` (row D4 of the step D report §8, R-TXT-53 D4: `renameEdits` with the reparse check, the Text tab's rename provider, gates, app check), stopped at the soft ceiling after items 1-3, and its continuation `claude_2026-11-07_0609_prompt_textual_d4_continuation.md` (app check with crops, docs); the app check found a defect, fixed with Alfonso's approval.
+**Files touched**: `frontend/src/codegen/textual/languageService.ts`, `ui/textualMonaco.ts`, `__tests__/languageService.test.ts` (`ec89f027f`, `63c4fffc6`, `e42169108`); this entry; the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `e42169108`: typecheck exit 0; `src/codegen/textual` 1109 passed, 2 skipped, 1 red: the `1,000 objects` timing test (104 ms, load ~14-24), green in the file alone (50/50), as in 0515; full suite, build and checks as in 0515 on `63c4fffc6`. Red first 1/1, mutation (editor without the model filter) killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: app check ALL PASS, crops 1-rename-box to 5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/, checked by the chat
+**Notes**: Monaco 0.52 only console.logs a provideRenameEdits rejectReason (rename.js:238): e42169108 shows it at the cursor via the message controller. Names inside JjEL strings and validation rules are not rewritten (step F). Extra refusals: empty name, `@"id"`, nothing renameable. Seen, not traced: a pageerror `Canceled` from restoreViewState (Delayer.cancel). Decisions: ~/.jjodel-lanes/P-2026-11-07-0515/handoff.md.
+**Prompt document name**: 2026-11-07 06:09
+
+## 2026-11-07 — merge: textual-d4-rename into alfonso-frontend-jjtl (P-2026-11-07-0717)
+**Prompt**: `claude_2026-11-07_0717_prompt_merge_textual-d4-rename.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `da63da457`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load ~40 (languageService.test.ts timing, irCollapsedRender.test.ts), all green alone at load ~5; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: D4 crops 1-rename-box..5-collision in ~/.jjodel-lanes/P-2026-11-07-0609/ checked by the chat (rename box, references renamed, refusals shown at the cursor)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0717/result.json`.
+**Prompt document name**: 2026-11-07 07:17
+
+## 2026-11-07 — feat(codegen): E2a, text to canvas selection (P-2026-11-07-0746, P-2026-11-07-0840)
+**Prompt**: `claude_2026-11-07_0746_prompt_textual_e2a_select.md` (stopped at the RC-51 soft ceiling after item 1) and its continuation `claude_2026-11-07_0840_prompt_textual_e2a_continuation.md`: a click or cursor key in the Text tab, or an outline click, selects the caret's object on the canvas and in Properties (R-TXT-54 E2, E4-E7).
+**Files touched**: `frontend/src/codegen/textual/selectionSync.ts`, `__tests__/selectionSync.test.ts` (`ef8c76e3c`, `5ca6ac98a`), `ui/TextualTab.tsx` (`5ca6ac98a`); this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest: the 3 baseline import reds plus `tolerant.test.ts` timing guard (1056 ms > 1000 under full-suite load), green alone (64/64).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: app check run7 27/27 and the crop 2 retake 3/3 (`probe2.mjs`), crops 1-6 and `2-after-two-arrowdown.png` in ~/.jjodel-lanes/P-2026-11-07-0746/ viewed by the session; GO pending
+**Notes**: Two findings the discovery did not foresee, both fixed in DOVE: the canvas unmounts nodes out of view, so `canvasVertexIds` walks the graphs of the mounted nodes; rc-dock keeps an inactive tab mounted, aria-hidden, visibility hidden, with a non-zero box (contra §6.4), now refused. `_lastSelected` is a transient root key outside the sync: see the §7.2 draft of discovery_2026-11-06_textual_e_sync.md. Bench 7/7 and 6/6 in the commits.
+**Prompt document name**: 2026-11-07 08:40
+
+## 2026-11-07 — merge: textual-e2a-select into alfonso-frontend-jjtl (P-2026-11-07-0927)
+**Prompt**: `claude_2026-11-07_0927_prompt_merge_textual-e2a-select.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `57280dd8f`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest reds at load ~85 (hook tests laneRun, laneRunDirect, laneTracking; textual completion, languageService, tolerant; irCollapsedRender, irSelectionRing), all green alone at load 6-20; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: E2a crops 1-6 and 2-after-two-arrowdown in ~/.jjodel-lanes/P-2026-11-07-0746/ checked by the chat (caret selects its node, typing selects nothing, outline click, Properties follows)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-0927/result.json`.
+**Prompt document name**: 2026-11-07 09:27
+
+## 2026-11-07 — ticket: A canvas create gets no undo step of its own (reducer.ts:1280 vertex merge)
+**Ticket**: An object dropped on the v2 canvas never gets an undo step of its own. Measured by P-2026-11-07-0654 (docs/discovery/discovery_2026-11-07_slot_identity_656.md §9, on branch slot-identity-656): after `syncCreateObject` the state history keeps the same length (undoDelta 0), and one Undo reverts the user's previous action while the new object stays.
+
+Cause (read): `reducer.ts:1280` merges every delta that touches a vertex (`delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs`) into the previous undo entry. The drop of a new object creates a vertex, so its creation folds into whatever came before.
+
+Expected: a delta that creates a DObject is not merged by the vertex rule; one Undo removes the dropped object (and its vertex), and nothing else.
+
+Outside ticket #656 (R-TXT-57 (4)). redux reducer: two-phase, Layer Impact Report.
+**Priority**: medium
+**Found in**: P-2026-11-07-0654
+
+## 2026-11-07 — fix(codegen): Cmd+Z after a no-change edit undoes the text (P-2026-11-07-0912)
+**Prompt**: `claude_2026-11-07_0912_prompt_textual_undo_agreement.md`: after a Format, typed spaces or a comment read as «No change», Cmd/Ctrl+Z went to the app's undo and reverted the previous model change; it must undo the text edit, with T10's splice kept.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textReprint.test.ts` (red `41c2916de`), `frontend/src/codegen/textual/ui/TextualTab.tsx` (`0272658db`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 05:10 (E1b decision 4, the undo hand-over after a comment-only edit)
+**Causa**: (c)
+**Regressions**: no. Typecheck 0, build, check:docs, check:codegen-lazy green; full vitest 14593 passed, the 3 baseline import reds plus two Chromium hook timeouts (`irCollapsedRender`, `irSelectionRing`), green alone (18/18).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: undo probe B-E all PASS, pre-fix control reproduces the bug (buffer empty, Ports 0); scenario 2 11/11; crops 1-3 in ~/.jjodel-lanes/P-2026-11-07-0912/ viewed by the session; GO pending
+**Notes**: Cause: `unchangedAgreement` made the no-change text `sync.text` and `updateUndoKey` gave Cmd+Z to the app on it. Fix: the agreement keeps `appText`, the text of the last application or reprint; `appUndoKey` routes to the app only there. Bench 5/5. No formatter on this branch (D5): the probe formats by minimal edits. Scenario 2 needed a Zoom out gesture: since E2a a text click scrolls the canvas off `push`.
+**Prompt document name**: 2026-11-07 09:12
+
+**Ticket** (found by this lane's scenario-2 run, not fixed, cause not measured): typing `// end state` then Enter gave `// end stateState` with no newline (crop `s2/1-before.png`), which reads as Enter accepting a completion item opened inside a comment.
+
+## 2026-11-07 — merge: textual-undo-agreement into alfonso-frontend-jjtl (P-2026-11-07-1103)
+**Prompt**: `claude_2026-11-07_1103_prompt_merge_textual-undo-agreement.md`, a direct merge by `lane-run merge --direct`, no session: `textual-undo-agreement` at `f93c79a12` into `alfonso-frontend-jjtl`, merge base `e08c85271`, 5 commits on the branch side.
+**Files touched**: merge `319be0670`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0912_prompt_textual_undo_agreement.md`, `frontend/src/codegen/textual/__tests__/textReprint.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `319be0670` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14621 tests in 543 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: undo fix crops 1-format-undo-after-pause, 2-spaces-undo-after-pause, 3-scenario2-after-rename in ~/.jjodel-lanes/P-2026-11-07-0912/ checked by the chat
+**Notes**: Rollback tag `pre-textual-undo-agreement-P-2026-11-07-1103` on `e71c6abdc` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1103/result.json`.
+**Prompt document name**: 2026-11-07 11:03
+
+## 2026-11-07 — ticket: Text tab: Enter at the end of a comment accepts a completion (// end stateState)
+**Ticket**: Seen by P-2026-11-07-0912 (undo fix lane) during its scenario-2 probe run, reported in its log entry as a Ticket paragraph, cause not measured: in the Text tab, typing `// end state` at the end of a line and then Enter gave `// end stateState` on one line, with no newline inserted, as if the Enter accepted a completion item (`State`) instead of breaking the line.
+
+To measure first: whether the suggest widget is open inside a comment (completion should not trigger inside `//` comments), and whether Enter accepts a suggestion there. Files likely involved: `codegen/textual/ui/textualMonaco.ts` (CompletionItemProvider, D2c), `codegen/textual/languageService.ts` (`completionsAt`).
+**Priority**: high
+**Found in**: P-2026-11-07-0912
+
+## 2026-11-07 — feat(codegen): D5, Format Document and Format Selection (P-2026-11-07-0747, P-2026-11-07-0841)
+**Prompt**: `claude_2026-11-07_0747_prompt_textual_d5_format.md` (lane D5, R-TXT-53 D5: pure format, Monaco document and range providers), stopped at the soft ceiling; `claude_2026-11-07_0841_prompt_textual_d5_continuation.md` finished it from the handoff: the undo after Format, crops, docs.
+**Files touched**: `frontend/src/codegen/textual/format.ts` (new), `__tests__/format.test.ts` (new) in 65eda512f; `ui/textualMonaco.ts` in afb9d681b; 0841: no code; this entry and the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck and build exit 0, check:codegen-lazy ALL GREEN, format.test.ts 20/20; full vitest 3 baseline import reds plus 3 load reds green alone (languageService, irCollapsedRender, irSelectionRing). Gates not rerun in 0841: no code changed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe-d5 ALL PASS on 3747; crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/, 5-undo and 5-undo-before-pause in ~/.jjodel-lanes/P-2026-11-07-0841/, checked by the session; GO pending
+**Notes**: Format is one step on Monaco's stack: Cmd+Z before the pause restores the typed text (diag mode D, 4 Ports). Mutant M8 (parentheses kept inside brackets) survives: declared intent, no output tells it. Under the Indentation style PORT's empty Conj prints as nothing (`instr & & and(ready)`), which does not parse back: a printer gap, not D5; formatText returns null there. Decisions: ~/.jjodel-lanes/P-2026-11-07-0747/handoff.md.
+**Prompt document name**: 2026-11-07 07:47
+
+**Ticket** (P-2026-11-07-0841, medium): after the pause, Cmd+Z following any meaning-free edit (Format, typed spaces, a comment) is the app's undo, not the editor's: `unchangedAgreement` (TextualTab.tsx:1493-1494, E1b) makes the text the agreement, the R-TXT-26 key (:1602-1606) routes Cmd+Z to UndoAction, which undoes the previous store step. Measured: Format, pause "No change", Cmd+Z: 4 Ports to 0, buffer "", canUndo false (crop 5-undo); two typed spaces do the same (diag mode C). Redo does not bring it back. Fix lives in TextualTab.tsx, outside D5. Probe: ~/.jjodel-lanes/P-2026-11-07-0841/diag-undo.mjs, MODE=B|C|D.
+
+## 2026-11-07 — merge: textual-d5-format into alfonso-frontend-jjtl (P-2026-11-07-1141)
+**Prompt**: `claude_2026-11-07_1141_prompt_merge_textual-d5-format.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d5-format` at `b6bbe612e` into `alfonso-frontend-jjtl`, merge base `db79d40ff`, 5 commits on the branch side.
+**Files touched**: merge `938b5fe1f`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0747_prompt_textual_d5_format.md`, `docs/prompts/claude_2026-11-07_0841_prompt_textual_d5_continuation.md`, `frontend/src/codegen/textual/__tests__/format.test.ts`, `frontend/src/codegen/textual/format.ts`, `frontend/src/codegen/textual/ui/textualMonaco.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `938b5fe1f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14729 tests in 548 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D5 crops 1-before..4-broken in ~/.jjodel-lanes/P-2026-11-07-0747/ and 5-undo in ~/.jjodel-lanes/P-2026-11-07-0841/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d5-format` on `376a2273e` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1141/result.json`.
+**Prompt document name**: 2026-11-07 11:41
+
+## 2026-11-07 — fix(codegen): #687, Enter at a comment's end breaks the line (P-2026-11-07-1145)
+**Prompt**: `claude_2026-11-07_1145_prompt_textual_687_comment_enter.md` (ticket #687, lane full): `// end state` then Enter accepted a completion (`stateState`); cause by real gestures, smallest fix, tests red first, app check. TextualTab.tsx approved by the chat for the one option line.
+**Files touched**: `__tests__/completion.test.ts` in 77eb3b725 and 0ff891055 (red); `languageService.ts` in 6822a9f21; `ui/TextualTab.tsx` in c9c34c610 (one line); this entry and the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-06 22:13 (D2c), ticket #687
+**Causa**: (c)
+**Regressions**: no. Typecheck and build exit 0, check:codegen-lazy ALL GREEN, check:docs 5/5; completion.test.ts 39/39; full vitest 3 baseline import reds only (a first run's 2 Chromium hook timeouts green alone)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe ALL PASS on 3687 (comment kept, caret on line 29, no widget; control `Ev` offers Event); crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/, checked by the session
+**Notes**: Two layers. completionsAt (languageService.ts:550) gave the next token's keywords at an offset in a comment's trivia; now none in a comment or a string. Silent, Monaco fell back to word-based items (State, nextState): the language has no tokenizer, so its no-suggestions-in-comments default never applies; wordBasedSuggestions 'off' in TEXT_EDITOR_OPTIONS. completion.test.ts mocks TextualTab's store and Monaco imports.
+**Prompt document name**: 2026-11-07 11:45
+
+## 2026-11-07 — merge: textual-687-comment-enter takes alfonso-frontend-jjtl (P-2026-11-07-1248)
+**Prompt**: `claude_2026-11-07_1248_prompt_textual-687-comment-enter_take_trunk.md`, trunk-into by `lane-run merge --trunk-into`: `alfonso-frontend-jjtl` at `7e44b15ae` into `textual-687-comment-enter`, one `--no-ff` merge commit before the branch's own merge (RC-14), merge base `b6bbe612e`, 96 commits on the trunk side.
+**Files touched**: merge `cc917a087`: `docs/log-inbox/codegen.md` resolved by union (trunk's entry, then the branch's), the trunk's 99 files auto-merged, `ui/TextualTab.tsx` on both sides; this commit: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. Gates on `cc917a087`: typecheck 0 errors; typecheck:scripts exit 0; vitest 14768 passed in 550 files, the trunk's 14762 plus the branch's 6, 3 red at import; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly FAIL, see Notes.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #687 crop 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/ checked by the chat
+**Notes**: check:addonly red on cc917a087: hw-notation.md:1307 (2026-11-05 closure of the blocked jjtl-method-failure-error merge) was rewritten by the trunk's 3f7f6f7f4, which has no Log-Repair trailer. It is inherited, not from the union. The step 7 reset was denied by the harness, and its target 0781ed96e would drop 4ea6bc699; the merge stays, by the chat's GO. Second cause (a). Trunk tip moved to 9d3a79c22, docs only. 29 probes once, control R-MT-24 absent.
+**Prompt document name**: 2026-11-07 12:48
+
+**Ticket** (P-2026-11-07-1248, high): the trunk's `3f7f6f7f4` rewrote the add-only entry `docs/log-inbox/hw-notation.md` (heading `2026-11-05 — docs: closure of the blocked jjtl-method-failure-error merge`) with no `Log-Repair:` trailer, so every merge of the trunk into a branch fails `check:addonly` against its first parent. Fix on the trunk: a `KNOWN_REPAIRS` entry for `3f7f6f7f4` in `frontend/scripts/gates/check-addonly.ts`. Same lane: the `lane-run` trunk-into template names the pre-prompt sha as the reset target, so the reset would drop the prompt commit.
+
+## 2026-11-07 — merge: textual-687-comment-enter into alfonso-frontend-jjtl (P-2026-11-07-1330)
+**Prompt**: `claude_2026-11-07_1330_prompt_merge_textual-687-comment-enter.md`, a direct merge by `lane-run merge --direct`, no session.
+**Files touched**: merge `c9d3ba4e2`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Vitest red at load ~40 (outline.test.ts timing), green alone at load ~4; resolved with `lane-run resolve --why`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: #687 crops 1-before-fix, 2-after-fix in ~/.jjodel-lanes/P-2026-11-07-1145/ checked by the chat (comment kept, caret on a new line, no suggest widget)
+**Notes**: Closed by hand: `lane-run go` refuses a blocked merge. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1330/result.json`.
+**Prompt document name**: 2026-11-07 13:30
+
+## 2026-11-07 — feat(codegen): E3, the Text tab opens beside its model's canvas (P-2026-11-07-1208)
+**Prompt**: `claude_2026-11-07_1208_prompt_textual_e3_beside.md`, row E3 / decision E9 (R-TXT-54): the Text tab opened while its model's canvas is shown docks beside it, visible without the probe-only CSS rule; elsewhere it opens as today. Tests red first, gates, app check with crops.
+**Files touched**: `frontend/src/codegen/textual/__tests__/openTextualTab.test.ts` (red `5b13ac57a`, then `5dcf50283`), `frontend/src/codegen/textual/ui/openTextualTab.tsx` (`5dcf50283`)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `5dcf50283`: typecheck exit 0; full vitest 14751 passed, the 3 baseline import reds plus the `tolerant.test.ts` 1000 ms timing guard (1139 ms), green alone 64/64; build exit 0; check:codegen-lazy ALL GREEN; check:docs run after this entry. Mutation bench 9/9 killed (commit body).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — session, unattended: probe ALL PASS 15/15, crops 1-opened-beside, 2-no-canvas, 3-caret-selects in ~/.jjodel-lanes/P-2026-11-07-1208/ (run1.log)
+**Notes**: Pure `textualPlacement(dock, modelId)`: only the model's own canvas counts (`shownCanvas` with an empty lookup). Visibility: the title carries `not-pinned`, PinnableDock's header marker, so `.not-strip` shows the panel: no SCSS, no dock change. Crop 2 by direct call: the picker lives on the canvas, so no gesture opens the tab with no canvas shown; the project page too (the app bar has no project tab).
+**Prompt document name**: 2026-11-07 12:08
+
+**Ticket** (P-2026-11-07-1208, low): beside the canvas the Text tab has no app bar entry (crop 1: only `demoESM`), unlike the generator tab (Navbar.tsx `syncTabs`); and its panel keeps the split mode's 710px cap of the last panel (abstract/style.scss), which the generator panel lifts in TemplateEditorTab.scss. Both are outside openTextualTab.tsx.
+
+## 2026-11-07 — merge: textual-e3-beside into alfonso-frontend-jjtl (P-2026-11-07-1353)
+**Prompt**: `claude_2026-11-07_1353_prompt_merge_textual-e3-beside.md`, a direct merge by `lane-run merge --direct`, no session: `textual-e3-beside` at `6a3b1cfc3` into `alfonso-frontend-jjtl`, merge base `e31ec1d02`, 4 commits on the branch side.
+**Files touched**: merge `687294cff`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_1208_prompt_textual_e3_beside.md`, `frontend/src/codegen/textual/__tests__/openTextualTab.test.ts`, `frontend/src/codegen/textual/ui/openTextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `687294cff` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14816 tests in 552 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: E3 crops 1-opened-beside, 2-no-canvas, 3-caret-selects in ~/.jjodel-lanes/P-2026-11-07-1208/ checked by the chat
+**Notes**: Rollback tag `pre-textual-e3-beside` on `945db7ab8` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1353/result.json`.
+**Prompt document name**: 2026-11-07 13:53
+
+## 2026-11-07 — discovery: ticket #656, the identity slot of objects created by JjScript and on the canvas (P-2026-11-07-0720)
+**Prompt**: `claude_2026-11-07_0654_prompt_slot_identity_656_discovery.md` (session 47b95570, stopped at the context ceiling, handoff in `~/.jjodel-lanes/P-2026-11-07-0654/`) and its continuation `claude_2026-11-07_0720_prompt_slot_identity_656_continuation.md` (session ff21fbcc): Phase 1 of #656, the executor's slot write (await, defer, forced commit), canvas options (a)/(b)/(c), classification, Layer Impact Report, lane plan; HARD STOP after the report.
+**Files touched**: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` (new), this entry. Prototypes only in the temporary worktree `~/jjodel-w-slot656-proto` (removed; diff in `~/.jjodel-lanes/P-2026-11-07-0720/proto.diff`). No file under `frontend/src` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Partial: 0654 hit the context ceiling, 0720 finished it; the Status flips are not in this commit (the status-flip skill is user-invoked only). Forced commit correct on every check (S6a 10/10) but 16.8 s / 13.6 s for 50 creates vs 19.1 / 15.5 awaited, 6.2 s / 71 ms base; deferred write falsified. LIR is the final draft in the report §7, for Phase 2. Probe logs `.agent-logs/probe656-*.log`.
+**Prompt document name**: 2026-11-07 07:20
+
+**Ticket** (outside #656, recommended as its own): a canvas create never gets its own undo step — `reducer.ts:1280` merges every delta touching a vertex into the previous entry; measured `syncCreateObject` leaves `statehistory` at 33/33 and one Undo reverts the previous action while the object stays. Evidence: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` §9.
+
+## 2026-11-07 — fix(codegen): #656 lane L2, CHECK 2 and the XMI export read a never-written name slot (P-2026-11-07-1230)
+**Prompt**: `claude_2026-11-07_1230_prompt_slot_identity_656_l2_read.md`: lane L2 of #656 (R-TXT-58, option (b)): CHECK 2 and the XMI export read a never-written identity slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`); a slot written `[""]` stays nameless (R-TXT-45). Tests red first, gates, app check with real gestures.
+**Files touched**: `frontend/src/model/conformance/__tests__/ConformanceValidator.test.ts`, `frontend/src/services/export/__tests__/xmi-export-identity-slot.test.ts` (new) in d2baf819c (red); `frontend/src/model/conformance/ConformanceValidator.ts`, `frontend/src/services/export/XMIService.ts` in cfef82da2; this entry; the Status lines of the 1230 and 1003 prompts.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 02:53 (#656 CHECK 2 and the XMI export on a never-written identity slot)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe agente 12/12, crops in ~/.jjodel-lanes/P-2026-11-07-1230/; verifica visiva della chat pendente)
+**Notes**: Causa: both read the raw slot while Properties reads the get_values fallback. Core reading not exported, mirrored inline in each file (no core change). Red on HEAD 3+6, bench 6/6 killed. Gates: tsc 0, vitest 14541 + 3 baseline import reds (2 Chromium hook timeouts in run 1, green in run 2), build 0, codegen-lazy 0. No Problems panel exists (ValidationPill.tsx:27): crops use the node problem dot and overlay.
+**Prompt document name**: 2026-11-07 12:30
+
+**Ticket** (observed, outside L2, unchanged by it): an old object (`data.name` old1, `initialName` Module_1, slot `[]`) shows `old1` in the tree but exports `name="Module_1"`, since the export follows `get_values` while `get_name` returns `data.name` (report §4 O). A nameless object shows a truncated id in the tree while the status bar still reads `conforms to portprobe`. The dropped `Module_0` node renders no `name` row, the console-created `x1` does. Crops 2-4.
+
+## 2026-11-07 — merge: slot-identity-656 into alfonso-frontend-jjtl (P-2026-11-07-1418)
+**Prompt**: `claude_2026-11-07_1418_prompt_merge_slot-identity-656.md`, a direct merge by `lane-run merge --direct`, no session: `slot-identity-656` at `4c948d6e9` into `alfonso-frontend-jjtl`, merge base `4ad2bf5fc`, 13 commits on the branch side.
+**Files touched**: merge `c529f5dfe`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-07_slot_identity_656.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-07_0654_prompt_slot_identity_656_discovery.md`, `docs/prompts/claude_2026-11-07_0720_prompt_slot_identity_656_continuation.md`, `docs/prompts/claude_2026-11-07_1003_prompt_slot_identity_656_l1_executor.md`, `docs/prompts/claude_2026-11-07_1230_prompt_slot_identity_656_l2_read.md`, `frontend/src/model/conformance/ConformanceValidator.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c529f5dfe` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14831 tests in 553 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #656 L2 crops 1-console-create-problems, 2-canvas-drop-problems, 3-xmi, 4-empty-name in ~/.jjodel-lanes/P-2026-11-07-1230/ checked by the chat
+**Notes**: Rollback tag `pre-slot-identity-656` on `083b273e4` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-07-1418/result.json`.
+**Prompt document name**: 2026-11-07 14:18

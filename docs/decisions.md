@@ -7328,7 +7328,38 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   a changed target or a nameless object; D5 Format keeps comments, drops redundant parentheses, runs only on an
   applicable parse; D6 a quick fix is a text edit only; D8 conformance markers are warnings that never block applying;
   D9 validation-rule markers only after a run; D10 completion offers per-block tokens, the head prefix and the rest of a
-  multi-word close. D7 (ask whenever a deleted root is covered by a comment, wider than R-TXT-37) waits for Alfonso.
+  multi-word close. D7 (ask whenever a deleted root is covered by a comment, even with other changes in the same pause; wider than R-TXT-37) ratified by Alfonso 2026-11-06 22:28; C2e option A (a shared helper for the nameless-target label) approved at the same time.
+- **R-TXT-54** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step E, T10 and
+  synced selection: decisions E1 to E10 of docs/discovery/discovery_2026-11-06_textual_e_sync.md, taken under lane auto
+  (Alfonso 2026-11-06 23:31, «Procedi con E e poi F con /lane auto»).** E1 a canvas selection highlights and scrolls the
+  text, it never moves the caret; E2 a caret move also writes `_lastSelected` so the Properties panel follows (the tree
+  view's pattern, not an undo step); E3 T10 replaces the text with `setValue`, so the pre-diagram text never sits on the
+  editor's undo stack; E4 the innermost span holding the caret is selected, a caret outside every span does nothing; E5
+  a caret on a reference token selects the token's owner, not its target; E6 nodes only in E, edges later; E7 an outline
+  click also selects on the canvas; E8 a canvas selection with no span in the text is silent; E9 the Text tab opens
+  beside the canvas, in its own lane, last; E10 T10 keeps each object's typed text when its print is unchanged,
+  recursing into children, and falls back to the full reprint when it cannot splice safely. No piece touches the
+  critical zone; lanes E1a, E1b, E2a, E2b, E3.
+- **R-TXT-55** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step F,
+  embedded JjEL, tracing and T8: decisions F1 to F12 of docs/discovery/discovery_2026-11-07_textual_f_jjel_tracing.md §8.2,
+  taken under lane auto (Alfonso 2026-11-06 23:31, «Procedi con E e poi F con /lane auto»).** F1 JjEL values are the
+  attributes typed by `Pointer_EXPRESSION` and `Pointer_ACTION`, keyed on the id, an optional `jjel` on `TextAttribute`;
+  F2 islands are coloured by semantic sub-tokens from the JjEL lexer, no embedded Monarch language; F3 a JjEL error is a
+  warning, source `jjel`, never blocking the apply, with conformance's exemptions; F4 completion inside an island reuses
+  the template completion with `self` bound to the owner; F5 a static check of `self.<feature>` only, warning, lane F1e;
+  F6 a generated line reaches the Text tab by a direct registry event, after E2b; F7 a click with the Text tab closed does
+  nothing in F; F8 order F1a to F1e, F2 after E2b, then T8a to T8d; F9 ids travel in the text as a `// @id` comment per
+  object, not a grammar token; F10 one `TextConfirmPanel` for the edit and the re-import; F11 JjEL in EString attributes
+  is out of F; F12 the event is `TEXTUAL_REVEAL` with `{ modelId, elementId, featureName? }`. No piece touches the
+  critical zone; a matching threshold changes only by a ratified row (T8d).
+- **R-TXT-56** (2026-11-07, provisional, unattended, evidence: measured, verified: none, reversible: branch). **The empty
+  name slot of an object created from text: option A of docs/discovery/discovery_2026-11-07_textual_name_slot.md, taken
+  under lane auto.** The textual layer writes the slot explicitly: textDiff.ts and modelLines.ts emit `set <h>.name` after
+  a create even when the handle equals the name; no migration of objects already created (a rename heals them). Option B
+  (the executor's create command, core) and the canvas-created empty slot are a ticket, #656, approved by Alfonso
+  2026-11-07 03:39; a fix there needs the Layer Impact Report drafted in §6.1 and his go-ahead.
+- **R-TXT-57** (2026-11-07, ratified by Alfonso 2026-11-07 09:53 «Dammi le 5 risposte», evidence: measured, verified: none, reversible: branch). **Ticket #656, the answers to §13 of docs/discovery/discovery_2026-11-07_slot_identity_656.md.** (1) The awaited per-create slot write (~270 ms per named create, 50 console creates 71 ms → 13.6 s) is not shipped as is: the executor lane first prototypes and measures the end-of-run write (every still-empty identity slot of the run written once, one commit per run) and keeps it if a `set h.name` right after the create always wins, one Undo removes the run, and timings stay near today's; otherwise it stops with the measurements before falling back. (2) Two lanes: the executor first (§3.2 trigger, Layer Impact Report updated to the chosen variant and shown to Alfonso before merge), then the canvas. (3) Canvas option (b): CHECK 2 and the XMI export read a never-written slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`); a slot written `[""]` stays nameless (R-TXT-45). Old models are healed by that reading, no migration. Option A's textual `set h.name` stays. (4) A canvas create that gets no undo step of its own (`reducer.ts:1280`) is a ticket of its own, outside #656. (5) The `identical assignment` console line for a same-value `set` is silenced in the executor lane.
+- **R-TXT-58** (2026-11-07, ratified by Alfonso 2026-11-07 12:27 «a», evidence: measured, verified: none, reversible: branch). **Ticket #656 after lane L1 (P-2026-11-07-1003, Outcome: question): option (a).** The end-of-run slot write failed R-TXT-57 (1) on the console (50 creates 45 ms → 11 s; one Undo no longer removes the console loop) and holds only on the `applyAsOneStep` paths, where it needs `PreviewBar.tsx`. Lane L1 is dropped: no executor change, no core change; `create instance of C "h"` keeps naming `DObject.name` and `initialName` only. Lane L2 alone ships: CHECK 2 and the XMI export read a never-written identity slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`), on every path (console, scripts, canvas, Text tab, old saved models); a slot written `[""]` stays nameless (R-TXT-45). R-TXT-57 (1) and (5) (the `identical assignment` line) lapse with L1; (2) reduces to L2; (3) and (4) stand. The L1 prototype stays in `~/.jjodel-lanes/P-2026-11-07-1003/proto-endofrun.diff` if a written slot is ever needed. R-TXT-57's answers were also confirmed by Alfonso 2026-11-07 10:05 («Facciamo come dici tu»).
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7425,9 +7456,15 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   R-FA-11 extends to JjEL methods. A method the value's type does not have (`"4".log2()`) and a library method that
   throws stop the mapping with an error on every path, never a warning with `null`. Out of it, unchanged: a name that
   resolves to nothing, a property read on null or on a missing feature; a method called on null and a call on a model
-  element without that feature count as the latter (provisional, unattended, P-2026-11-05-1530). JjEL outside JjTL
+  element without that feature count as the latter (decided unattended by P-2026-11-05-1530, ratified by Alfonso 2026-11-06 23:02). JjEL outside JjTL
   throws the same error as before. Extends R-FA-11, which stays unchanged. Evidence: `method-failure.test.ts` and the
   node runs of `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md`.
+- **R-FA-13** (2026-11-06, ratified by Alfonso 2026-11-06 23:02, evidence: read, verified: none, reversible: trunk):
+  a builtin that fails inside a JjTL expression (R-FA-11) names the rule and the source element in its error, as a
+  failing method does under R-FA-12. Extends R-FA-11, which stays unchanged otherwise.
+- **R-FA-14** (2026-11-07, ratified by Alfonso 2026-11-07 11:21, evidence: read, verified: none, reversible: trunk):
+  a failed JjTL run (`success: false`) returns no target model: the executor leaves `targetModel` undefined, so no
+  caller can write a partial one; errors, warnings and trace are returned as before. Registered by P-2026-11-07-1125.
 - **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
   `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
   are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
@@ -7606,6 +7643,178 @@ R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: ag
   with a warning; an ELong beyond 2^53 keeps its text with a warning. Projects saved before the change keep their
   strings; no migration of saved projects: re-importing the XMI heals them (ratified with the row). Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
   (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
+
+## R-DCN: Dynamic Classification Notation, viewpoints of dynamic classes and their simulation (decisions 2026-11-06)
+
+Evidence: the project chat C-2026-11-06-2159 of 2026-11-06 (22:13 «sì a tutti i consigli» on the eight
+recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_2026-11-06_dcn_metamodel_simulation.md`,
+`docs/harness/fronts.json` (front `dcn`). Discovery owed: P-2026-11-06-2240.
+
+- **R-DCN-1** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The DCN extends the R-OI UML metamodel; it is not a separate language.** Static classes, viewpoints, dynamic
+  classes and their instances live in one model, with the instantiation of R-OI-1. The object diagram reuses the R-OI
+  creation menu, slot synthesis, «Sync slots», ghost and orphan rows and the `instantiation` problem kind. No
+  cross-link `instanceof` references between two metamodels, as in the LNCS 16470 chapter. Spec §3, §4.
+- **R-DCN-2** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The dynamic classification of an instance is derived, never stored.** It is the set of dynamic classes of each
+  viewpoint whose invariant holds on the instance's slot values. No reference on the instance names its current
+  class; reclassification is a consequence of every step, never a step. In the exporter it is a `DEFINE`. Spec §6.
+- **R-DCN-3** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **An instance has slots for every feature of its static class and of every dynamic class of its viewpoints.** A
+  slot of an inactive dynamic class is dormant: it keeps its value and cannot be read outside its class. Access is
+  enforced by the static check W1 (spec §5), not by a runtime tri-state. Slots are never created or removed during a
+  run. Amends R-OI-13 for this client: a dormant slot is not orphan and raises no problem; the amendment is owed to
+  the instance-of front before slice 2.
+- **R-DCN-4** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **The default run policy is Interleave with Random choices; Sync stays available.** In Interleave every
+  contribution of a viewpoint (a redefinition of an invoked operation, a monitor of a tick) is a transition labelled
+  with its viewpoint, ordered through the existing «Choices: Ask | Random» policy: the cross-viewpoint transition
+  system of the SoSyM paper. In Sync all contributions form one parallel assignment and two writes of one slot are
+  the double-assignment defect of R-SIM-17. Spec §6.
+- **R-DCN-5** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **Trajectory constraints start with two bounded patterns, BoundedPersistence and BoundedResponse.** They are
+  watches (R-SIM-137) with a counter per instance and export as bounded `LTLSPEC`. Free LTL comes after the .smv
+  exporter. Spec §3, §7, §9.
+- **R-DCN-6** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **Unbounded `Integer` attributes are simulated but not exported.** The exporter reports a problem for each; only
+  Boolean, Enumeration and Range attributes are verifiable, as the simulator's finite domains of 2026-10-10.
+- **R-DCN-7** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **JjEL gains one accessor, `self.in(V::D)`, true when dynamic class D of viewpoint V is active for `self`.** It is
+  written into `docs/spec/concern_languages.md` before any lane implements it; no other DCN construct enters JjEL.
+- **R-DCN-8** (2026-11-06, ratified by Alfonso 2026-11-06 22:13 «sì a tutti i consigli», evidence: read, verified: none, reversible: trunk).
+  **DCN simulation is a second engine nucleus, guarded commands over slots, next to the Petri nucleus.** It shares
+  run state, panel, trace, watches, scenarios, I/O board and exporter. It knows roles, not the DCN metaclasses: a
+  STC profile «Dynamic classification» maps Viewpoint, dynamic classifier, Invariant, Operation, Redefinition,
+  Monitor and Instance-of onto a metamodel, so another metamodel with viewpoints and invariants can use it. Spec §8.
+- **R-DCN-9** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Base of the lanes.** The lanes that need only the S1 binding layer (L2.1..L2.4, L3.x, L4.1..L4.4 of the plan in
+  `docs/discovery/discovery_2026-11-06_dcn_foundations.md` §6) are cut from `dcn` on the trunk now. L2.5 and every
+  lane on a real object diagram wait for `oi-s2u` and `oi-s3b` on the trunk, after the 3.2.0 tag. Discovery Q1.
+- **R-DCN-10** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **`DynamicClass` is a feature source, not a Classifier in the R-OI binding sense.** It extends `NamedElement` with
+  its own `Property [0..*]` list, is reached by a `featureSources` path, and never enters the creation menu. Its
+  attributes are `Property`, so `Slot.definingFeature`, `featureType` and O5 apply to dormant slots unchanged. Q2.
+- **R-DCN-11** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The DCN nucleus is its own compiler emitting a placeless `CompiledNet` on the shared step.** Classification,
+  completeness, exclusivity, Interleave, Sync and redefinition expansion sit around the step in `dcnStep.ts`;
+  `netCompile.ts` is not touched. Read as compatible with R-DCN-8; lane L4.1 (a nucleus field on `SimRun`) keeps the
+  choice reversible. Q3.
+- **R-DCN-12** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Slot syntax.** Guards, invariants and actions read `self.battery` through σ-backed handles; actions write
+  `self.battery := e` in a DCN action mode. The write goes to σ, never to the model. This is a deliberate exception
+  to the `.[x]` rule of R-SIM-18 for the DCN nucleus, written into `docs/spec/concern_languages.md` in lane L3.1. Q4.
+- **R-DCN-13** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Ranges are two optional integer bounds on `Property`, type `Integer`**, named apart from `lower`/`upper` and
+  checked by the well-formedness lane; no `RangeType` data type, which would break the S2/S3a value kinds. Q5.
+- **R-DCN-14** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Invocation events and contribution selectors have nucleus-owned opaque ids**, per (instance, operation) and per
+  (viewpoint, contribution), fixed in lane L4.2 before the first DCN scenario is saved; `scenarioCodec.ts` unchanged. Q6.
+- **R-DCN-15** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Operation arguments are R-SIM-88 inputs asked at the press**; no event instance per argument tuple. Q7.
+- **R-DCN-16** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **A blank invariant and a second instance of an `isSingleton` class are well-formedness errors**; the creation
+  menu is not filtered. Q8.
+- **R-DCN-17** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Viewpoints are inherited**: `featureSources` apply at every level of the generalization closure. Q9.
+- **R-DCN-18** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The exporter is TypeScript over the `bvToSmv` expression printer**, sharing the compiled guards with the W5
+  enumeration; not a codegen generator. Q10.
+- **R-DCN-19** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **The drone fixture lives in `frontend/scripts/probe/dcn-drone-fixture.ts`** beside the UML fixture; the importable
+  example comes only after lane L4.5, so the metamodel does not freeze before the nucleus runs. Q11.
+- **R-DCN-20** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Amendment of R-OI-13 (R-DCN-3).** A slot whose `definingFeature` is reached through a `featureSources` path is in
+  the feature closure, so it is never orphan; a missing one is a `missing` warning like any other. The code is this
+  front's lane L2.1 in `model/ontological/` on the trunk; the R-OI consumers inherit it unchanged. The instance-of
+  front acknowledges this row. Q12.
+- **R-DCN-21** (2026-11-06, ratified by Alfonso 2026-11-06 22:54 «si», evidence: read, verified: none, reversible: trunk).
+  **Lane order follows the plan of the discovery §6, not the slice numbers**: the languages concern (L3.1) and the
+  parse of `self.in` (L3.2) come before W1..W4 (L2.4). Spec §10 keeps its numbering. Q13.
+
+## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
+
+Evidence: the project chat C-2026-11-06-2333 of 2026-11-06 (23:38 «Le tre risposte vanno bene» on the three
+recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). Discovery owed: P-2026-11-06-2350.
+
+- **R-MT-1** (2026-11-06, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **State splits in three levels: model, pair (model, viewpoint), tab.** The model (M2 or M1) is one and shared: every
+  write shows in every tab. The layout belongs to the pair (model, viewpoint), as R-LAY already keys it. The active
+  viewpoint, pan, zoom and the session size derived from content belong to the tab. The project's active viewpoint
+  becomes only the default for the next opening; it is no longer the source of truth of an open editor.
+- **R-MT-2** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Selection is shared across tabs by model element.** Selecting an element in one tab highlights it in every tab that
+  shows it, whatever the viewpoint.
+- **R-MT-3** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **A simulator run belongs to the model; tabs observe it.** The configuration σ is state of the model's run (R-SIM),
+  not of an editor; every tab on that model shows the same run.
+- **R-MT-4** (2026-11-06, ratified by Alfonso 2026-11-06 23:38 «Le tre risposte vanno bene», evidence: read, verified: none, reversible: trunk).
+  **Two tabs on the same model and the same viewpoint are allowed and share the layout.** No special case: a drag in
+  one moves the node in the other.
+- **R-MT-5** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The tab's viewpoint is React state of the tab, exposed by an optional `viewpointId` on `EditorContext`.** No Redux
+  slice keyed by tab id. Q1 of `docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md`.
+- **R-MT-6** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The toolbar picker writes the tab's state and `activateViewpoint`**, since the tab whose picker is used is the
+  focused one; the project value stays the default for the next opening (R-MT-1). Q2.
+- **R-MT-7** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **A tab whose viewpoint is deleted or deactivated falls back to abstract syntax**, never to another viewpoint chosen
+  for the user. Q3.
+- **R-MT-8** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The classic editor gets no per-tab viewpoint**; it stays on the project default. Q4.
+- **R-MT-9** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **A second tab on a model opens from a context-menu item «Open in new tab ▸ <viewpoint>» on the model row** (Tree View,
+  model rail); no drag gesture in the first cut. Q5.
+- **R-MT-10** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **Two tabs on one (model, viewpoint) share the stored viewport, last writer wins**, as the default for the next
+  opening; live pan and zoom stay in each tab's React Flow store. Q6.
+- **R-MT-11** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **Global readers (Tree View, Properties rail, new-view parenting) follow the focused tab**, through the root and
+  project values the tab writes when it gains focus. Q7.
+- **R-MT-12** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The simulator panel stays in every tab, unchanged**; a lane limiting controls to the focused tab opens only if the
+  smoke shows a conflict. Q8.
+- **R-MT-13** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The possible layout-switch regression after `242a82bcd` is probed now, independently of multi-tab** (lane L0b). Q9.
+- **R-MT-14** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **R-LAY-19's freeze on new `state.viewpoint` readers in editor-v2 is held by a check script after lane L5**, with an
+  allow-list of the readers left. Q10.
+- **R-MT-15** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **One D-layer undo stack per user, across tabs** (R-UNDO-1); a Cmd+Z may revert a layout write made in another tab.
+  No per-tab undo. Q11.
+- **R-MT-16** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **The mount-only restore of the saved viewpoint (`EditorSwitch.tsx:93`) runs only for the dock's active tab**;
+  focus-driven activation arrives with lane L2. Q12.
+- **R-MT-17** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: read, verified: none, reversible: trunk).
+  **With several instances mounted on one model, the first mounted instance owns the populate and hands it over on
+  unmount**; the others render only. Sync registries and problem producers clear when the last instance of the model
+  unmounts. Q13.
+- **R-MT-18** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: measured, verified: none, reversible: trunk).
+  **A saved empty preference means abstract syntax and is restored as such** (`activateViewpoint(null)`), kept apart
+  from «no preference saved». Lane L2 does it; L1 left it out (scene 3b of P-2026-11-07-0105: `!savedVpId` skips `''`).
+- **R-MT-19** (2026-11-07, ratified by Alfonso 2026-11-07 04:23 «Si a tutto», evidence: measured, verified: none, reversible: trunk).
+  **The layout key becomes an input of the incremental sync of `useJjomSync.ts` before lane L3, as its first step.**
+  The regression of `242a82bcd` (live since 3.1.0, `docs/discovery/discovery_2026-11-07_layout_switch_after_242a82bcd.md`)
+  is fixed by a dependency on `getLayoutKeyOf(state)` and one re-transform of every vertex when it changes; L3's per-tab
+  key enters through the same dependency. Critical zone: the lane waits for Alfonso's go-ahead and starts with a Layer
+  Impact Report.
+- **R-MT-20** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **Focusing a tab writes the active viewpoint without an undo entry; a pick from the toolbar picker keeps its entry.**
+  Measured by P-2026-11-07-0457 (V3: +1 undo entry per focus write on L2, +0 on the parent). Fixed on `multi-tab-l2`
+  by P-2026-11-07-0935 before the L2 merge, with a per-action `noUndo` flag checked in one line of `reducer.ts`
+  (core change approved by Alfonso 2026-11-07 10:06, «approve the noUndo flag»).
+- **R-MT-21** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: read, verified: none, reversible: trunk).
+  **A saved `''` written before L1 is accepted as abstract syntax.** The preference (localStorage
+  `jjodel.editorPrefs.<modelid>`) carries no version, so a value written by the pre-L1 cross-writes cannot be told apart
+  from a user's choice; models that carry one open in abstract syntax after L2 (R-MT-18). No migration.
+- **R-MT-22** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **The cost of a correct layout switch on large models is accepted.** After the key-only path (8328662df) a switch on
+  the 407-instance harness model costs +53 ms median and +474 ms mean over the parent, which left the nodes at the
+  wrong positions; the rest is React Flow and `DynamicHandles` on nodes that really move. A lane on `DynamicHandles`
+  opens only if the cost shows in use.
+- **R-MT-23** (2026-11-07, ratified by Alfonso 2026-11-07 09:29 «Ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
+  one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
+  The tag and any deploy stay with Alfonso.
 
 ## Superate
 

@@ -31,15 +31,21 @@ import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
 import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGrammar';
+import { JjodelEvents } from '../../../events/registry';
 import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
-import { isApplicableParse, parseText } from '../parser';
+import { conformanceMarks, CONFORMANCE_SOURCE } from '../conformanceMarks';
+import type { MarkedViolation } from '../conformanceMarks';
+import { commentsOf, isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
+import { reprintChanged } from '../textReprint';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, nextSelected } from '../selectionSync';
+import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { identityOf, matchObjects } from '../textMatch';
@@ -281,6 +287,41 @@ export interface TextSync {
     /** P-2026-11-03-2326: the agreed text's object spans and reference tokens, kept with the agreement. */
     readonly spans?: readonly ObjectSpan[];
     readonly refs?: readonly RefSpan[];
+    /** E1b (R-TXT-54 E10): the print `model` was agreed as, for T10's splice. */
+    readonly printed?: AgreedPrint;
+    /** P-2026-11-07-0912: a no-change agreement's text of the last application or reprint, where Cmd/Ctrl+Z is the app's undo. */
+    readonly appText?: string;
+}
+
+/** E1b: the old print of an agreement: its object spans, its reference tokens, and the grammar it was printed in. */
+export interface AgreedPrint {
+    readonly grammar: ConcreteGrammar;
+    readonly spans: readonly ObjectSpan[];
+    readonly refs: readonly RefSpan[];
+}
+
+export function agreedPrint(base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): AgreedPrint {
+    return { grammar: base.grammar, spans: base.spans, refs: base.refs ?? [] };
+}
+
+/**
+ * T10, lane E1b (R-TXT-20, R-TXT-54 E10): the text a change of the model's print puts in place of the agreed one, with
+ * its spans and reference tokens. When the agreed text is not the bare print, `reprintChanged` keeps the typed text of
+ * every object whose print did not change; else, or when it cannot splice safely, the whole new print, as before.
+ * `carried` is what the agreed text carries; `text` and `base` are the changed model's print.
+ */
+export function modelReprint(sync: TextSync, carried: { readonly spans: readonly ObjectSpan[]; readonly refs?: readonly RefSpan[] }, text: string,
+    base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): ReprintResult & { readonly spliced: boolean } {
+    const full = { text, spans: base.spans, refs: base.refs ?? [], spliced: false };
+    if (sync.text === sync.model || !sync.printed) return full;
+    const r = reprintChanged({
+        grammar: base.grammar,
+        previous: sync.printed.grammar,
+        typed: { text: sync.text, spans: carried.spans, refs: carried.refs ?? [] },
+        old: { text: sync.model, spans: sync.printed.spans, refs: sync.printed.refs },
+        next: { text, spans: base.spans, refs: base.refs ?? [] },
+    });
+    return r ? { ...r, spliced: true } : full;
 }
 
 /**
@@ -350,6 +391,25 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
     if (plan.refusals.length) return { kind: 'refused', reasons: plan.refusals.map(r => r.message) };
     if (!plan.lines?.length) return { kind: 'unchanged' };
     return { kind: 'apply' };
+}
+
+/**
+ * E1b: a read text that asks for no change of the model (a comment typed, say) is the new agreement, so a later change
+ * of the model splices into it (T10) instead of finding a pending edit. Null for any other decision. P-2026-11-07-0912:
+ * it keeps the text of the last application or reprint (`prior`'s), so the undo stays with the editor (`appUndoKey`).
+ */
+export function unchangedAgreement(d: EditDecision, text: string, print: string, base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>, prior?: TextSync | null): TextSync | null {
+    if (d.kind !== 'unchanged') return null;
+    const appText = prior ? prior.appText ?? prior.text : undefined;
+    return { text, model: print, printed: agreedPrint(base), ...(appText !== undefined ? { appText } : {}) };
+}
+
+/**
+ * R-TXT-26, P-2026-11-07-0912: Cmd/Ctrl+Z is the app's undo when the editor holds the text of the last application or
+ * reprint; after a no-change agreement it stays the editor's, so a Format or a typed space is undone in the text.
+ */
+export function appUndoKey(sync: TextSync | null, text: string): boolean {
+    return !!sync && text === (sync.appText ?? sync.text);
 }
 
 /** What the lookup gives an edit besides the objects (textApply.ts `defaultedSlots`, `referencedElsewhere`). */
@@ -547,17 +607,63 @@ export interface DeletionGuard {
     readonly total: number;
     /** Every printed object goes (R-TXT-43). */
     readonly all: boolean;
+    /** Step D lane D1 (R-TXT-37, R-TXT-53 D7): the deleted objects a comment of the text covers, `Class name`, in text order. */
+    readonly commented?: readonly string[];
 }
 
-/** The guard of an applicable plan: `GUARD_ROOTS` deleted subtrees or more, or every object; null otherwise. */
-export function deletionGuard(base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan): DeletionGuard | null {
+/** What the pause read, for the guard to tell an object commented out from one deleted (D1). */
+export interface GuardRead {
+    readonly grammar: ConcreteGrammar;
+    readonly text: string;
+    readonly parsed: Pick<TextParseResult, 'tree'>;
+    /** The previous parse's spans, where the edit carried them. */
+    readonly carried: readonly ObjectSpan[];
+}
+
+/**
+ * Step D lane D1 (R-TXT-37, R-TXT-53 D7): the carried spans of the deleted subtrees that lie inside a comment of the
+ * text, in text order. A run of comments separated by whitespace only covers as one, for a block commented line by
+ * line; a span collapsed by a deletion is never covered.
+ */
+export function commentedOut(plan: TextEditPlan, read: GuardRead): ObjectSpan[] {
+    if (!plan.diff || !read.parsed.tree) return [];
+    const runs: [number, number][] = [];
+    for (const c of [...commentsOf(read.parsed.tree, read.grammar)].sort((a, b) => a.start - b.start)) {
+        const last = runs[runs.length - 1];
+        if (last && c.start >= last[1] && !read.text.slice(last[1], c.start).trim()) last[1] = Math.max(last[1], c.end);
+        else runs.push([c.start, c.end]);
+    }
+    const roots = new Set(plan.diff.ops.flatMap(op => op.op === 'delete' ? [op.model] : []));
+    return read.carried
+        .filter(s => roots.has(s.id) && s.end > s.start && runs.some(([from, to]) => from <= s.start && s.end <= to))
+        .sort((a, b) => a.start - b.start);
+}
+
+/** An object as the guard names it, as the confirmation panel does: `Class name`, or `Class (unnamed)`. */
+function guardLabel(g: ConcreteGrammar, o: TextObject | undefined, id: string): string {
+    if (!o) return id;
+    const name = identityOf(g, o);
+    return name === null ? `${o.cls} (unnamed)` : `${o.cls} ${name}`;
+}
+
+/**
+ * The guard of an applicable plan: `GUARD_ROOTS` deleted subtrees or more, or every object, or, given what the pause
+ * read, a deleted object a comment covers (D1); null otherwise.
+ */
+export function deletionGuard(base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan, read?: GuardRead): DeletionGuard | null {
     if (!plan.diff || !plan.lines?.length) return null;
     const gone = deletedObjects(base.mm, base.objects, plan.diff.ops);
     if (!gone.size) return null;
     const roots = plan.diff.ops.filter(op => op.op === 'delete' && gone.has(op.model)).length;
     const all = base.objects.every(o => gone.has(o.id));
+    const byId = new Map(base.objects.map(o => [o.id, o]));
+    const commented = read ? commentedOut(plan, read).map(s => guardLabel(read.grammar, byId.get(s.id), s.id)) : [];
+    if (commented.length) return { deleted: gone.size, total: base.objects.length, all, commented };
     return all || roots >= GUARD_ROOTS ? { deleted: gone.size, total: base.objects.length, all } : null;
 }
+
+/** The objects a guard names, three at most, then how many more. */
+const commentedText = (names: readonly string[]): string => `${names.slice(0, 3).join(', ')}${names.length > 3 ? ` (+${names.length - 3})` : ''}`;
 
 /** A marker of the text: the offsets and the message. */
 export interface TextMark {
@@ -635,7 +741,8 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
         case 'unchanged': return { text: 'No change', error: false };
         case 'cut': return { text: `Cut · paste to move ${s.count === 1 ? 'it' : 'them'}`, error: false };
         case 'guard': return {
-            text: s.all ? `Not applied · deletes every object (${s.total}), confirm below` : `Not applied · deletes ${s.deleted} objects of ${s.total}, confirm below`,
+            text: s.commented?.length ? `Not applied · comments out ${commentedText(s.commented)}, confirm below`
+                : s.all ? `Not applied · deletes every object (${s.total}), confirm below` : `Not applied · deletes ${s.deleted} objects of ${s.total}, confirm below`,
             error: false,
         };
         case 'kept': return { text: 'Not applied · deletions cancelled', error: true };
@@ -713,6 +820,8 @@ interface TextNavigatorProps {
     readonly session: TextualSession | null;
     readonly open: boolean;
     readonly children: ReactNode;
+    /** E2a (R-TXT-54 E7): a click on a row or a segment, with the offset the caret was moved to. */
+    readonly onPick?: (offset: number) => void;
 }
 
 /**
@@ -721,7 +830,7 @@ interface TextNavigatorProps {
  * selected row, scrolled into view, and the breadcrumb's path. A click on a row or a segment moves the caret to the node
  * and reveals its line. The rows are windowed by hand: only the visible ones are rendered.
  */
-function TextNavigator({ editor, session, open, children }: TextNavigatorProps) {
+function TextNavigator({ editor, session, open, children, onPick }: TextNavigatorProps) {
     const [version, setVersion] = useState(0);
     const [caret, setCaret] = useState(0);
     const [filter, setFilter] = useState('');
@@ -790,6 +899,7 @@ function TextNavigator({ editor, session, open, children }: TextNavigatorProps) 
         editor.setPosition(p);
         editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
         editor.focus();
+        onPick?.(n.selectStart);
     };
     const toggle = (n: OutlineNode): void => setCollapsed(c => {
         const next = new Set(c);
@@ -905,6 +1015,7 @@ export const TEXT_EDITOR_OPTIONS = {
     glyphMargin: false,
     lineDecorationsWidth: 14,
     'semanticHighlighting.enabled': true,
+    wordBasedSuggestions: 'off', // ticket #687: no document words in a comment when the language service offers none
 } as const;
 
 /** The Monaco adapter, loaded on the tab's mount (it imports `joiner`, which the bench cannot). */
@@ -912,6 +1023,19 @@ type TextualMonacoModule = typeof import('./textualMonaco');
 
 /** The owner of the edit's markers in the Monaco model. */
 const EDIT_MARKER_OWNER = 'textual-edit';
+
+/** D3b: the owner of the conformance markers, apart from the edit's, so a pause's parse never clears them (D8). */
+const CONFORMANCE_MARKER_OWNER = 'textual-conformance';
+
+/** The conformance hook, loaded on the tab's mount (model/conformance/useConformance imports `joiner`, which the bench cannot). */
+type ConformanceHook = typeof import('../../../model/conformance/useConformance')['useConformance'];
+
+/** D3b: reads the model's conformance with the loaded hook and hands its violations on; renders nothing. */
+function ConformanceReader({ use, modelId, onRead }: { readonly use: ConformanceHook; readonly modelId: string; readonly onRead: (vs: readonly MarkedViolation[]) => void }) {
+    const result = use(modelId);
+    useEffect(() => onRead(result?.violations ?? []), [result]);
+    return null;
+}
 
 /** The context key that sends Cmd/Ctrl+Z to the app's undo: set while the text holds no pending edit (R-TXT-26). */
 const APP_UNDO_KEY = 'textualNoPendingEdit';
@@ -1082,14 +1206,22 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const heldRef = useRef(false);
     const [ui, setUi] = useState<TextualMonacoModule | null>(null);
     useEffect(() => { void import('./textualMonaco').then(m => setUi(m)); }, []);
+    // D3b: the model's conformance violations, marked on the carried spans; loaded like the adapter.
+    const [conformance, setConformance] = useState<{ readonly use: ConformanceHook } | null>(null);
+    useEffect(() => { void import('../../../model/conformance/useConformance').then(m => setConformance({ use: m.useConformance })); }, []);
+    const violationsRef = useRef<readonly MarkedViolation[]>([]);
     // Step B2: the outline's open state, kept per tab, and what the outline and the breadcrumb read once the editor is up.
     const [outlineOpen, setOutlineOpen] = useState(() => outlineOpenOf(tabId));
     const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void }>({ read: () => {}, content: () => {}, cursor: () => {} });
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void; caret: () => void }>({ read: () => {}, content: () => {}, cursor: () => {}, caret: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
+    // E2a (R-TXT-54): a caret the user moved selects its object on the canvas after a short wait; the last id it selected.
+    const caretPause = useMemo(() => pauseOf(CARET_SELECT_DELAY_MS, () => handlers.current.caret()), []);
+    useEffect(() => () => caretPause.cancel(), [caretPause]);
+    const canvasSelectedRef = useRef<string | null>(null);
 
     const setDecorations = (spans: readonly ObjectSpan[]): void => {
         const editor = editorRef.current;
@@ -1106,6 +1238,36 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             };
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
+        setConformanceMarkers();
+    };
+
+    /**
+     * D3b (D8): the violations as warnings on the carried spans, each time the spans or the violations change; between two
+     * pauses Monaco moves them with the text. Their own owner: the apply never reads them.
+     */
+    const setConformanceMarkers = (): void => {
+        const monaco = monacoRef.current;
+        const m = editorRef.current?.getModel();
+        if (!monaco || !m) return;
+        const text = m.getValue();
+        const reading = sessionRef.current?.current();
+        const tree = reading && reading.text === text ? reading.parsed.tree : undefined;
+        monaco.editor.setModelMarkers(m, CONFORMANCE_MARKER_OWNER, conformanceMarks(violationsRef.current, carriedSpans(), text, tree).map(c => {
+            const from = m.getPositionAt(c.start);
+            const to = m.getPositionAt(c.end);
+            return {
+                severity: monaco.MarkerSeverity.Warning,
+                source: CONFORMANCE_SOURCE,
+                message: c.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+    };
+
+    const onViolations = (vs: readonly MarkedViolation[]): void => {
+        violationsRef.current = vs;
+        setConformanceMarkers();
     };
 
     const setRefDecorations = (refs: readonly RefSpan[]): void => {
@@ -1185,23 +1347,30 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const updateUndoKey = (): void => {
         const editor = editorRef.current;
-        undoKeyRef.current?.set(!!editor && !!syncRef.current && editor.getValue() === syncRef.current.text);
+        undoKeyRef.current?.set(!!editor && appUndoKey(syncRef.current, editor.getValue()));
     };
 
-    /** The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. */
-    const reprint = (r: ModelReading): void => {
+    /**
+     * The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. T10 (E1b):
+     * an agreed text the editor holds is spliced, keeping the typed text of the unchanged objects; `full` reprints the
+     * whole print. `setValue` either way, so the text before never sits on the editor's undo stack (E3).
+     */
+    const reprint = (r: ModelReading, full = false): void => {
         const editor = editorRef.current;
         if (!editor || !r.base) return;
         pause.cancel();
         armedRef.current = null;
         clipRef.current = null;
         heldRef.current = false;
+        const sync = syncRef.current;
+        const typed = sync && !full ? agreedEvidence(sync, editor.getValue()) ?? (editor.getValue() === sync.text ? { spans: carriedSpans(), refs: carriedRefs() } : null) : null;
+        const next = sync && typed ? modelReprint(sync, typed, r.view.text, r.base) : { text: r.view.text, spans: r.base.spans, refs: r.base.refs ?? [] };
         const viewState = editor.saveViewState();
-        syncRef.current = { text: r.view.text, model: r.view.text };
-        if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
+        syncRef.current = { text: next.text, model: r.view.text, printed: agreedPrint(r.base) };
+        if (editor.getValue() !== next.text) editor.setValue(next.text);
         if (viewState) editor.restoreViewState(viewState);
-        setDecorations(r.base.spans);
-        setRefDecorations(r.base.refs ?? []);
+        setDecorations(next.spans);
+        setRefDecorations(next.refs);
         agree();
         setMarkers(null);
         staleRef.current = false;
@@ -1273,13 +1442,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         // The applied text is the new agreement: as typed, with the spans of its objects in the new model, and its reference
         // tokens rewritten to the new print's (R-TXT-35).
         const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
-        syncRef.current = { text, model: after.view.text };
+        syncRef.current = { text, model: after.view.text, ...(after.base ? { printed: agreedPrint(after.base) } : {}) };
         const editor = editorRef.current;
         // R-TXT-44: the names the app gave show at once, and the next edit reads them (the stuck edit of P-2026-11-04-1447).
         // Only the names the model holds after the run (C2c): a cleared slot reads nameless (R-TXT-45).
         const named = after.base ? namedByModel(plan, after.base.grammar, after.base.objects) : [];
         if (after.base && editor?.getValue() === text && namedReprint({ named }, after.view.text, text) !== null) {
-            reprint(after);
+            reprint(after, true);
             setStatus({ kind: 'applied', failed: failedLines, named: named.length });
             return;
         }
@@ -1318,10 +1487,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const ev = evidence(r.base);
         const shared = sessionRef.current?.current();
         const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
-        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed, carriedRefs(), reuse);
+        const carried = carriedSpans();
+        const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse);
         setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
-        // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
-        if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
+        const read: GuardRead = { grammar: r.base.grammar, text, parsed, carried };
+        // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones. D1: an object
+        // commented out keeps its span, so the next pause still finds it inside the comment.
+        if (plan.diff) setDecorations([...certainSpans(parsed, plan.diff.match), ...commentedOut(plan, read)]);
         const d = editDecision(text, sync, parsed, plan, staleRef.current);
         // T7 D-5: a cut's objects are not deleted on the pause; their paste, identical, moves them.
         const held = heldByCut(clipRef.current, r.base, plan);
@@ -1333,13 +1505,16 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setConfirm(d.kind === 'confirm'
             ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
             : null);
-        // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first.
-        const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan) : null;
+        // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first. D1: so
+        // does an object commented out, whatever else the pause carries.
+        const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan, read) : null;
         if (guard) {
             guardTextRef.current = { text, ...(confirmed ? { confirmed } : {}) };
             setStatus({ kind: 'guard', ...guard });
             return;
         }
+        const agreed = unchangedAgreement(d, text, r.view.text, r.base, sync);
+        if (agreed) { syncRef.current = agreed; agree(); updateUndoKey(); }
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
     };
 
@@ -1382,6 +1557,36 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         readEdit();
     };
 
+    /**
+     * E2a (R-TXT-54 E2, E6; discovery §4.3, §6.4): selects the element `id` on its model's canvas with `SELECT_NODE`, when
+     * the canvas is on screen and draws it as a node, and points `_lastSelected` at it as the tree view does
+     * (TreeViewContent.tsx), so the Properties panel follows: a transient root key, no model write, no undo step. Not
+     * useJjomSelection's `selectElement`, which is sync-adjacent. The pane and the joiner load here, as the adapter does.
+     * The vertices come from the graph of the mounted nodes: a node out of view is not in the DOM.
+     */
+    const selectOnCanvas = (id: string): void => {
+        void Promise.all([import('../../ui/canvasSelection'), import('../../ui/codeOrigins'), import('../../../joiner')]).then(([cs, co, j]) => {
+            const pane = cs.modelPane(modelId);
+            const box = pane?.getBoundingClientRect();
+            // Off screen: not docked, a panel hidden (an empty box), or rc-dock's inactive tab, kept mounted but hidden (measured).
+            if (!pane || !box || box.width === 0 || box.height === 0 || pane.getAttribute('aria-hidden') === 'true' || getComputedStyle(pane).visibility === 'hidden') return;
+            const ids = (selector: string): string[] => [...pane.querySelectorAll(selector)].map(e => e.getAttribute('data-id') ?? '').filter(Boolean);
+            const now = ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>;
+            const nodeId = canvasNodeOf(co.pickOnCanvas(now, canvasVertexIds(now, ids('.react-flow__node[data-id]')), ids('.react-flow__edge[data-id]'), id));
+            if (!nodeId) return;
+            canvasSelectedRef.current = id;
+            j.SetRootFieldAction.new('_lastSelected' as any, { node: '', view: '', modelElement: id }, '', false);
+            window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId, modelId } }));
+        });
+    };
+
+    /** E2a (E4, E5): the object of the innermost carried span at `offset`; `again`, an outline click, selects it even when it was the last one. */
+    const selectAt = (offset: number, again: boolean): void => {
+        const id = innermostSpanAt(carriedSpans(), offset)?.id ?? null;
+        const next = again ? id : nextSelected(canvasSelectedRef.current, id);
+        if (next) selectOnCanvas(next);
+    };
+
     handlers.current = {
         read: () => readEdit(),
         content: changes => {
@@ -1406,6 +1611,15 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             const r = readRef.current;
             if (!heldRef.current || applyingRef.current || rewritingRef.current || !r.base || r.view.text !== syncRef.current?.model) return;
             rewritePaths(r.base.refs ?? []);
+        },
+        // E2a (§6.2): the caret's object, once the spans are the ones an application or a rewrite leaves.
+        caret: () => {
+            const editor = editorRef.current;
+            const m = editor?.getModel();
+            const p = editor?.getPosition();
+            if (!m || !p) return;
+            if (applyingRef.current || rewritingRef.current) { caretPause.poke(); return; }
+            selectAt(m.getOffsetAt(p), false);
         },
     };
 
@@ -1445,7 +1659,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             editor.onDidFocusEditorText(() => monaco.editor.setTheme(ui.TEXTUAL_THEME_ID));
         }
         const r = readRef.current;
-        syncRef.current = { text: editor.getValue(), model: r.view.text };
+        syncRef.current = { text: editor.getValue(), model: r.view.text, ...(r.base ? { printed: agreedPrint(r.base) } : {}) };
         if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
@@ -1454,6 +1668,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }, APP_UNDO_KEY);
         editor.onDidChangeModelContent(e => handlers.current.content(e.changes));
         editor.onDidChangeCursorSelection(() => handlers.current.cursor());
+        // E2a: a click or a cursor key, not typing nor a move made by code (§6.1).
+        editor.onDidChangeCursorSelection(e => { if (isUserCaretMove(e)) caretPause.poke(); });
         // T7 D-5: in the capture phase the selection is still there; the change that follows is the cut.
         editor.getDomNode()?.addEventListener('cut', () => {
             const m = editor.getModel();
@@ -1551,7 +1767,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         <i className="bi bi-exclamation-triangle" aria-hidden="true" />
                         The model changed: your text is kept, not applied
                         <button type="button" className="textual-tab__stale-reload" title="Replace the text with the model's"
-                                onClick={() => reprint(readRef.current)}>
+                                onClick={() => reprint(readRef.current, true)}>
                             Reprint
                         </button>
                     </span>
@@ -1615,13 +1831,15 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                     <>
                         {/* The text stays mounted under the EBNF, so a pending edit survives the toggle. */}
                         <div className={'textual-tab__layer' + (mode === 'text' ? '' : ' textual-tab__layer--hidden')}>
-                            <TextNavigator editor={nav?.editor ?? null} session={nav?.session ?? null} open={outlineOpen}>
+                            <TextNavigator editor={nav?.editor ?? null} session={nav?.session ?? null} open={outlineOpen}
+                                           onPick={offset => selectAt(offset, true)}>
                                 {read.base && ui && (
                                     <Editor width="100%" height="100%" language={ui.TEXTUAL_LANGUAGE_ID} defaultValue={view.text}
                                             theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
                                             onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
                                 )}
                             </TextNavigator>
+                            {conformance && <ConformanceReader use={conformance.use} modelId={modelId} onRead={onViolations} />}
                         </div>
                         {mode === 'ebnf' && ui && (
                             <div className="textual-tab__layer">
@@ -1650,7 +1868,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                             <section className="textual-tab__confirm" aria-label="Deletions to confirm">
                                 <header className="textual-tab__confirm-head">
                                     <i className="bi bi-exclamation-triangle" aria-hidden="true" />
-                                    <span>{status.all
+                                    <span>{status.commented?.length
+                                        ? `The text comments out ${commentedText(status.commented)}: confirm deletes ${status.deleted === 1 ? 'it' : `${status.deleted} objects`} from the model`
+                                        : status.all
                                         ? `The text deletes every object of the model (${status.total})`
                                         : `The text deletes ${status.deleted} objects of ${status.total}`}</span>
                                     <button type="button" className="textual-tab__create" onClick={onGuardConfirm}

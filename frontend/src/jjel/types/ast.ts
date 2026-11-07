@@ -43,7 +43,8 @@ export type JjelExpression =
     | WithDoExpr
     | IndexAccessExpr
     | ObjectLiteralExpr
-    | StateAccessExpr;
+    | StateAccessExpr
+    | ClassificationTestExpr;
 
 // ============================================
 // LITERALS
@@ -328,6 +329,24 @@ export interface StateAccessExpr extends JjelASTNode {
 }
 
 // ============================================
+// CLASSIFICATION TEST
+// ============================================
+
+/**
+ * Classification test: expr.in(V::D), true when the dynamic class D of the
+ * viewpoint V is active for the receiver (R-DCN-7). A member call `in` whose
+ * single argument is a qualified name; `in` with any other argument stays a
+ * MethodCall. Evaluated through an accessor the caller binds (lane L3.3).
+ * Examples: self.in(Mode::Charging), self.wau.in(Alert::Safe)
+ */
+export interface ClassificationTestExpr extends JjelASTNode {
+    type: 'ClassificationTest';
+    object: JjelExpression;
+    viewpoint: string;
+    dynamicClass: string;
+}
+
+// ============================================
 // COLLECTIONS
 // ============================================
 
@@ -392,14 +411,33 @@ export interface JjelParserResult {
 }
 
 /**
+ * The target of a slot write, `<expr>.<feature> := <expression>`, parsed only
+ * in the DCN action mode (R-DCN-12): `object` is the receiver, `attribute` the
+ * feature it writes. Not an expression; the field names are those of
+ * `StateAccessExpr`, so a reader of the attribute name reads either target.
+ * Examples: self.battery, self.wau.speed
+ */
+export interface SlotTarget extends JjelASTNode {
+    type: 'SlotTarget';
+    object: JjelExpression;
+    attribute: string;
+}
+
+/**
  * An action: `<target> := <expression>` (R-SIM-17, R-SIM-40). Not an
  * expression, so no evaluator ever meets an assignment: the target is a
- * state access whose attribute is never `marked` or `tokens` (R-SIM-30).
+ * state access whose attribute is never `marked` or `tokens` (R-SIM-30), or,
+ * in the DCN action mode only, a slot of the receiver (R-DCN-12).
  */
 export interface JjelAction {
-    target: StateAccessExpr;
+    target: StateAccessExpr | SlotTarget;
     value: JjelExpression;
     location?: ASTLocation;
+}
+
+/** The options of `parseAction`: `dcn` selects the DCN action mode (R-DCN-12). Off by default. */
+export interface JjelActionParseOptions {
+    dcn?: boolean;
 }
 
 export interface JjelActionParserResult {

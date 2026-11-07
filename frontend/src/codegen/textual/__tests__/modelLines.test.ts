@@ -166,7 +166,9 @@ describe('handles, order and values', () => {
         expect(modelLines(metamodelOf(spec), objectsOf(spec)).lines).toEqual([
             'create instance of Sys "top"',
             'create instance of Sys "leaf" in top.parts',
+            'set top.name = "top"',
             'set top.w = 1',
+            'set leaf.name = "leaf"',
             'set leaf.w = 2',
             'set top.main = leaf',
         ]);
@@ -177,10 +179,19 @@ describe('handles, order and values', () => {
         // Thing_1 is a name in the text: the generated handles skip it.
         expect([...built.handles.values()]).toEqual(['Thing_2', 'Thing_3', 'Thing_4', 'Thing_5', 'Thing_1']);
         expect(built.lines.filter(l => l.includes('.name ='))).toEqual([
-            'set Thing_2.name = "create"', 'set Thing_3.name = "True"', 'set Thing_4.name = "Thing"', 'set Thing_5.name = "two words"',
+            'set Thing_2.name = "create"', 'set Thing_3.name = "True"', 'set Thing_4.name = "Thing"', 'set Thing_5.name = "two words"', 'set Thing_1.name = "Thing_1"',
         ]);
         const dup = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).handles;
         expect([dup.get('p1'), dup.get('p2'), dup.get('p4'), dup.get('p5')]).toEqual(['Part_1', 'Part_2', 'FAST', 'Part_3']);
+    });
+
+    it('an object created under its own name gets its name slot written among the attributes: the handle names data.name only (P-2026-11-07-0344; mutant: the slot !== h guard)', () => {
+        const spec: Spec = {
+            classes: [{ name: 'Sys', attributes: [{ name: 'name', type: 'EString' }] }],
+            enums: {},
+            objects: [{ id: 's', cls: 'Sys', slots: { name: 'top' } }],
+        };
+        expect(modelLines(metamodelOf(spec), objectsOf(spec)).lines).toEqual(['create instance of Sys "top"', 'set top.name = "top"']);
     });
 
     it('a many-valued reference is written with += per value, in order, duplicates kept; a single one with =', () => {

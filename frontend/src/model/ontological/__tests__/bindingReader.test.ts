@@ -130,6 +130,79 @@ describe('featureClosure', () => {
     });
 });
 
+// DCN (R-DCN-10, R-DCN-17): a static class reaches its dynamic classes by containment, viewpoints then classes, and a
+// dynamic class owns its attributes under a reference of its own.
+const DCN_PATH = ['Class.viewpoints', 'Viewpoint.classes', 'DynamicClass.attributes'];
+const DCN: OntoBinding = { ...OBJECT, featureSources: [{ path: DCN_PATH }] };
+
+const dcnLibrary = (overrides: Record<string, Obj> = {}): Record<string, Obj> => library({
+    Book: { meta: 'Class', refs: { 'Class.ownedAttributes': ['isbn', 'genre'], 'Class.generalizations': ['gBook'], 'Class.viewpoints': ['vpLoan'] } },
+    Publication: { meta: 'Class', refs: { 'Class.ownedAttributes': ['title', 'year'], 'Class.viewpoints': ['vpShelf'] }, attrs: { 'Class.isAbstract': true } },
+    vpLoan: { meta: 'Viewpoint', refs: { 'Viewpoint.classes': ['Borrowed', 'Reserved'] } },
+    vpShelf: { meta: 'Viewpoint', refs: { 'Viewpoint.classes': ['Archived'] } },
+    Borrowed: { meta: 'DynamicClass', refs: { 'DynamicClass.attributes': ['dueDate', 'borrower'] } },
+    Reserved: { meta: 'DynamicClass', refs: { 'DynamicClass.attributes': ['reservedBy'] } },
+    Archived: { meta: 'DynamicClass', refs: { 'DynamicClass.attributes': ['archivedOn'] } },
+    ...overrides,
+});
+
+describe('featureClosure with feature sources (DCN)', () => {
+    it('a two-hop source applies on the classifier and on its general, after own and inherited features', () => {
+        const r = featureClosure(viewOf(dcnLibrary()), DCN, 'Book');
+        expect(r.features).toEqual(['isbn', 'genre', 'title', 'year', 'dueDate', 'borrower', 'reservedBy', 'archivedOn']);
+        expect(r.dormantOwner).toEqual({ dueDate: 'Borrowed', borrower: 'Borrowed', reservedBy: 'Reserved', archivedOn: 'Archived' });
+        expect(r.cycles).toEqual([]);
+    });
+
+    it('the general alone sees only its own viewpoints', () => {
+        const r = featureClosure(viewOf(dcnLibrary()), DCN, 'Publication');
+        expect(r.features).toEqual(['title', 'year', 'archivedOn']);
+        expect(r.dormantOwner).toEqual({ archivedOn: 'Archived' });
+    });
+
+    it('a feature reached twice is listed once, under the first owner; an own feature is not a source feature', () => {
+        const objs = dcnLibrary({
+            Archived: { meta: 'DynamicClass', refs: { 'DynamicClass.attributes': ['dueDate', 'isbn', 'archivedOn'] } },
+        });
+        const r = featureClosure(viewOf(objs), DCN, 'Book');
+        expect(r.features).toEqual(['isbn', 'genre', 'title', 'year', 'dueDate', 'borrower', 'reservedBy', 'archivedOn']);
+        expect(r.dormantOwner).toEqual({ dueDate: 'Borrowed', borrower: 'Borrowed', reservedBy: 'Reserved', archivedOn: 'Archived' });
+    });
+
+    it('sources apply in record order at each classifier; a one-hop source is owned by the classifier itself', () => {
+        const objs = dcnLibrary({
+            Book: { meta: 'Class', refs: { 'Class.ownedAttributes': ['isbn', 'genre'], 'Class.generalizations': ['gBook'], 'Class.viewpoints': ['vpLoan'], 'Class.extra': ['bonus'] } },
+        });
+        const two: OntoBinding = { ...OBJECT, featureSources: [{ path: ['Class.extra'] }, { path: DCN_PATH }] };
+        const r = featureClosure(viewOf(objs), two, 'Book');
+        expect(r.features).toEqual(['isbn', 'genre', 'title', 'year', 'bonus', 'dueDate', 'borrower', 'reservedBy', 'archivedOn']);
+        expect(r.dormantOwner).toEqual({ bonus: 'Book', dueDate: 'Borrowed', borrower: 'Borrowed', reservedBy: 'Reserved', archivedOn: 'Archived' });
+    });
+
+    it('a classifier with no viewpoint has an empty owner map; a cycle still terminates and sources apply once per classifier', () => {
+        const none = featureClosure(viewOf(dcnLibrary()), DCN, 'Library');
+        expect(none.features).toEqual(['libName']);
+        expect(none.dormantOwner).toEqual({});
+        const objs = dcnLibrary({
+            Publication: { meta: 'Class', refs: { 'Class.ownedAttributes': ['title', 'year'], 'Class.generalizations': ['gPub'], 'Class.viewpoints': ['vpShelf'] } },
+            gPub: { meta: 'Generalization', refs: { 'Generalization.general': ['Book'] } },
+        });
+        const r = featureClosure(viewOf(objs), DCN, 'Book');
+        expect(r.features).toEqual(['isbn', 'genre', 'title', 'year', 'dueDate', 'borrower', 'reservedBy', 'archivedOn']);
+        expect(r.cycles).toEqual([['Book', 'Publication', 'Book']]);
+    });
+
+    it('parity: without feature sources the closure has exactly the fields of before, and the same features', () => {
+        const view = viewOf(dcnLibrary());
+        for (const id of ['Book', 'Publication', 'Library', 'Magazine']) {
+            const r = featureClosure(view, OBJECT, id);
+            expect(Object.keys(r)).toEqual(['features', 'cycles']);
+            expect(r).toStrictEqual({ features: featureClosure(view, { ...DCN, featureSources: undefined }, id).features, cycles: [] });
+        }
+        expect(featureClosure(view, OBJECT, 'Book').features).toEqual(['isbn', 'genre', 'title', 'year']);
+    });
+});
+
 describe('instantiableClassifiers', () => {
     const ids = ['Publication', 'Book', 'Magazine', 'Library', 'Member', 'borrows', 'Genre'];
 
@@ -308,5 +381,18 @@ describe('slotDiff', () => {
         const none = { missing: [], orphans: [], cycles: [] };
         expect(slotDiff(viewOf(objs), { name: 'x', typeReference: 'IS.classifier', featureContainer: 'Class.ownedAttributes' }, 'b1')).toEqual(none);
         expect(slotDiff(viewOf(objs), OBJECT, 'u1')).toEqual(none);
+    });
+
+    it('a slot of a source feature (dormant) is not an orphan; a missing one is missing, in closure order', () => {
+        const objs = dcnLibrary({
+            b1: { meta: IS, refs: { 'IS.classifier': ['Book'], 'IS.slots': ['s1', 's2', 's3', 's4', 's5', 's6'] } },
+            s1: slots('isbn'), s2: slots('genre'), s3: slots('title'), s4: slots('year'), s5: slots('dueDate'), s6: slots('archivedOn'),
+        });
+        expect(slotDiff(viewOf(objs), DCN, 'b1')).toEqual({ missing: ['borrower', 'reservedBy'], orphans: [], cycles: [] });
+        expect(slotDiff(viewOf(objs), OBJECT, 'b1')).toEqual({
+            missing: [],
+            orphans: [{ slot: 's5', feature: 'dueDate' }, { slot: 's6', feature: 'archivedOn' }],
+            cycles: [],
+        });
     });
 });

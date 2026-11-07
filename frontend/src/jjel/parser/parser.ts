@@ -48,6 +48,9 @@ import {
     IndexAccessExpr,
     ObjectLiteralExpr,
     StateAccessExpr,
+    ClassificationTestExpr,
+    SlotTarget,
+    JjelActionParseOptions,
     JjelActionParserResult,
     ASTLocation,
     BinaryOperator,
@@ -67,6 +70,9 @@ const MEMBER_NAME_TYPES: ReadonlySet<JjelTokenType> = new Set<JjelTokenType>([
     JjelTokenType.IDENTIFIER,
     ...Object.values(JJEL_KEYWORDS).filter(t => !LITERAL_KEYWORD_TYPES.has(t)),
 ]);
+
+/** `::` has one place in JjEL (R-DCN-7); a `::` the parser meets anywhere else is this error. */
+const DOUBLE_COLON_PLACE = "'::' is allowed only in a classification test, written '<object>.in(V::D)': one viewpoint, '::', one dynamic class, nothing else in the parentheses.";
 
 /**
  * `interpolation` builds `InterpolatedStringExpr` from the tokens of an
@@ -136,19 +142,28 @@ export class JjelParser {
      * An action, `<target> := <expression>` (R-SIM-17, R-SIM-40): the target
      * ends in `.[attribute]`, never a read-only one, and the input ends with
      * the expression. Expects the tokens of an action-mode lexer (`ASSIGN`).
+     * With `dcn` (R-DCN-12) the target may also be a member, `<expr>.<feature>`,
+     * and becomes a `SlotTarget`; the caller selects the mode, never the text.
      */
-    parseAction(): JjelActionParserResult {
+    parseAction(options?: JjelActionParseOptions): JjelActionParserResult {
         try {
             if (this.isAtEnd()) {
                 throw this.error(this.peek(), "Expected an action: '<target>.[attribute] := <expression>'");
             }
             const startToken = this.peek();
-            const target = this.postfix();
-            if (target.type !== 'StateAccess') {
-                throw this.error(this.peek(), "The target of an action must end in '.[attribute]'");
-            }
-            if (STATE_RESERVED.readOnlyAttributes.includes(target.attribute)) {
-                throw this.error(this.peek(), `'${target.attribute}' is read-only: an action cannot assign it`);
+            const path = this.postfix();
+            let target: StateAccessExpr | SlotTarget;
+            if (path.type === 'StateAccess') {
+                if (STATE_RESERVED.readOnlyAttributes.includes(path.attribute)) {
+                    throw this.error(this.peek(), `'${path.attribute}' is read-only: an action cannot assign it`);
+                }
+                target = path;
+            } else if (options?.dcn === true && path.type === 'MemberAccess') {
+                target = { type: 'SlotTarget', object: path.object, attribute: path.property, location: path.location };
+            } else {
+                throw this.error(this.peek(), options?.dcn === true
+                    ? "The target of an action must end in '.[attribute]' or in '.feature'"
+                    : "The target of an action must end in '.[attribute]'");
             }
             this.consume(JjelTokenType.ASSIGN, "Expected ':=' after the target of the action");
             const value = this.expression();
@@ -419,6 +434,7 @@ export class JjelParser {
     /**
      * postfix = primary (
      *     . memberName (( argList ))?
+     *   | . IN ( IDENTIFIER :: IDENTIFIER )
      *   | ?. memberName (( argList ))?
      *   | .[ IDENTIFIER ]
      *   | [ expression ]
@@ -431,7 +447,21 @@ export class JjelParser {
             if (this.match(JjelTokenType.DOT)) {
                 const propToken = this.consumeMemberName("Expected property name after '.'");
 
-                if (this.match(JjelTokenType.LPAREN)) {
+                if (propToken.type === JjelTokenType.IN && this.isQualifiedNameArgument()) {
+                    // Classification test: expr.in(V::D) (R-DCN-7)
+                    this.consume(JjelTokenType.LPAREN, "Expected '('");
+                    const viewpoint = this.advance();
+                    this.advance();
+                    const dynamicClass = this.advance();
+                    this.consume(JjelTokenType.RPAREN, "Expected ')' after the dynamic class");
+                    expr = {
+                        type: 'ClassificationTest',
+                        object: expr,
+                        viewpoint: viewpoint.value,
+                        dynamicClass: dynamicClass.value,
+                        location: this.makeLocation(this.getStartToken(expr), this.previous()),
+                    } as ClassificationTestExpr;
+                } else if (this.match(JjelTokenType.LPAREN)) {
                     // Method call
                     const args = this.argumentList();
                     this.consume(JjelTokenType.RPAREN, "Expected ')' after arguments");
@@ -494,12 +524,24 @@ export class JjelParser {
                     index,
                     location: this.makeLocation(this.getStartToken(expr), this.previous()),
                 } as IndexAccessExpr;
+            } else if (this.check(JjelTokenType.DOUBLE_COLON)) {
+                throw this.error(this.peek(), DOUBLE_COLON_PLACE);
             } else {
                 break;
             }
         }
 
         return expr;
+    }
+
+    /** At `( IDENTIFIER :: IDENTIFIER )`, the only argument list that makes `in` a classification test. */
+    private isQualifiedNameArgument(): boolean {
+        const at = (k: number) => this.tokens[this.current + k]?.type;
+        return at(0) === JjelTokenType.LPAREN
+            && at(1) === JjelTokenType.IDENTIFIER
+            && at(2) === JjelTokenType.DOUBLE_COLON
+            && at(3) === JjelTokenType.IDENTIFIER
+            && at(4) === JjelTokenType.RPAREN;
     }
 
     /**
@@ -621,6 +663,7 @@ export class JjelParser {
             } as IdentifierExpr;
         }
 
+        if (this.check(JjelTokenType.DOUBLE_COLON)) throw this.error(this.peek(), DOUBLE_COLON_PLACE);
         throw this.error(this.peek(), "Expected expression");
     }
 
@@ -1210,8 +1253,9 @@ export function parseTemplateText(source: string): JjelParserResult {
 
 /**
  * Parse an action, `<target>.[attribute] := <expression>` (R-SIM-17, R-SIM-40).
+ * `options.dcn` admits `<expr>.<feature> := <expression>` too (R-DCN-12).
  */
-export function parseAction(source: string): JjelActionParserResult {
+export function parseAction(source: string, options?: JjelActionParseOptions): JjelActionParserResult {
     const lexer = new JjelLexer(source, { actionMode: true });
     const { tokens, errors: lexerErrors } = lexer.tokenize();
 
@@ -1227,5 +1271,5 @@ export function parseAction(source: string): JjelActionParserResult {
     }
 
     const parser = new JjelParser(tokens);
-    return parser.parseAction();
+    return parser.parseAction(options);
 }
