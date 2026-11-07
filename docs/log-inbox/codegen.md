@@ -2480,3 +2480,18 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Prompt document name**: 2026-11-07 07:20
 
 **Ticket** (outside #656, recommended as its own): a canvas create never gets its own undo step — `reducer.ts:1280` merges every delta touching a vertex into the previous entry; measured `syncCreateObject` leaves `statehistory` at 33/33 and one Undo reverts the previous action while the object stays. Evidence: `docs/discovery/discovery_2026-11-07_slot_identity_656.md` §9.
+
+## 2026-11-07 — fix(codegen): #656 lane L2, CHECK 2 and the XMI export read a never-written name slot (P-2026-11-07-1230)
+**Prompt**: `claude_2026-11-07_1230_prompt_slot_identity_656_l2_read.md`: lane L2 of #656 (R-TXT-58, option (b)): CHECK 2 and the XMI export read a never-written identity slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`); a slot written `[""]` stays nameless (R-TXT-45). Tests red first, gates, app check with real gestures.
+**Files touched**: `frontend/src/model/conformance/__tests__/ConformanceValidator.test.ts`, `frontend/src/services/export/__tests__/xmi-export-identity-slot.test.ts` (new) in d2baf819c (red); `frontend/src/model/conformance/ConformanceValidator.ts`, `frontend/src/services/export/XMIService.ts` in cfef82da2; this entry; the Status lines of the 1230 and 1003 prompts.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 02:53 (#656 CHECK 2 and the XMI export on a never-written identity slot)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe agente 12/12, crops in ~/.jjodel-lanes/P-2026-11-07-1230/; verifica visiva della chat pendente)
+**Notes**: Causa: both read the raw slot while Properties reads the get_values fallback. Core reading not exported, mirrored inline in each file (no core change). Red on HEAD 3+6, bench 6/6 killed. Gates: tsc 0, vitest 14541 + 3 baseline import reds (2 Chromium hook timeouts in run 1, green in run 2), build 0, codegen-lazy 0. No Problems panel exists (ValidationPill.tsx:27): crops use the node problem dot and overlay.
+**Prompt document name**: 2026-11-07 12:30
+
+**Ticket** (observed, outside L2, unchanged by it): an old object (`data.name` old1, `initialName` Module_1, slot `[]`) shows `old1` in the tree but exports `name="Module_1"`, since the export follows `get_values` while `get_name` returns `data.name` (report §4 O). A nameless object shows a truncated id in the tree while the status bar still reads `conforms to portprobe`. The dropped `Module_0` node renders no `name` row, the console-created `x1` does. Crops 2-4.

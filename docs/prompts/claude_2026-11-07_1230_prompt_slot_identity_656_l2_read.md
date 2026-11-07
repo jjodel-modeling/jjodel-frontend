@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1230
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · d2baf819c, cfef82da2 · gates green · app check 12/12 PASS, crops in ~/.jjodel-lanes/P-2026-11-07-1230/, visual GO pending · log entry in docs/log-inbox/codegen.md
 Lane: full (conformance, export, tests; app check)
 Depends: P-2026-11-07-0654/0720 (discovery), P-2026-11-07-1003 (L1, dropped), R-TXT-45, R-TXT-57, R-TXT-58 (Alfonso 12:27 «a»)
 Worktree: ~/jjodel-w-slot656, branch slot-identity-656
