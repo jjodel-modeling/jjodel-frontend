@@ -53,8 +53,14 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeomet
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
+import { clientCentre } from './utils/canvasCentre';
+import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
+import { revealViewport } from './utils/revealNode';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
-import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
+import { openViewportFallback, type NodeRect } from './openViewport';
+import { canRenderOnlyVisible } from './onlyRenderVisible';
+import { allMeasured, decorateUnmeasured, isDecorated, shouldDecorate, undecorate, type DecorationEntry } from './unmeasuredNodes';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -128,7 +134,12 @@ import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
+import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureObstacles } from './preview/previewElements';
+import { PreviewEdge } from './preview/PreviewEdge';
+import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
+import { PreviewBar } from './preview/PreviewBar';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -148,6 +159,8 @@ const nodeTypes: NodeTypes = {
 // De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
 const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
 const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+// The longest the auto-layout waits for React Flow to measure the nodes it had not mounted (unmeasuredNodes.ts).
+const AUTO_LAYOUT_MEASURE_WAIT_MS = 5000;
 
 // ─── Viewport persistence ────────────────────────────────────────────
 // Pan and zoom are pure view state: they live in localStorage, never in the D-layer
@@ -188,6 +201,7 @@ const edgeTypes: EdgeTypes = {
     inheritance: UnifiedEdge,
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
+    preview: PreviewEdge,           // M2 ghost edge on its own orthogonal route (P-2026-10-25-1005)
 };
 
 // ---------------------------------------------------------------------------
@@ -433,7 +447,7 @@ const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
  * open panel, followed as it opens, closes and grows; in the Simulation pill's slot when there is none. The chip is
  * the Simulation chip's (`sim-panel__chip`), so the two read as a pair; the place is inline, no stylesheet loads here.
  */
-function CodegenSlot({ modelid }: { modelid: string }) {
+function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: boolean }) {
     const anchor = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const [left, setLeft] = useState<number | null>(null);
@@ -461,7 +475,7 @@ function CodegenSlot({ modelid }: { modelid: string }) {
         <div ref={anchor} style={{ display: 'contents' }}>
             {open && CodePanel ? (
                 <React.Suspense fallback={null}>
-                    <CodePanel modelid={modelid} left={place} onClose={() => setOpen(false)} />
+                    <CodePanel modelid={modelid} isMetamodel={isMetamodel} left={place} onClose={() => setOpen(false)} />
                 </React.Suspense>
             ) : (
                 <div className="codegen-pill" style={{ position: 'absolute', left: place, bottom: 24, zIndex: 850 }}>
@@ -567,6 +581,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
     const fitViewRef = useRef<(() => void) | null>(null);
+    // True when the current viewport frames no node (ticket #419); set beside fitViewRef below.
+    const viewportShowsNoNodeRef = useRef<(() => boolean) | null>(null);
     // Viewport restored from a previous session, read ONCE at mount: it feeds
     // `defaultViewport` (so the canvas opens where it was left, with no flash at the
     // origin) and suppresses the opening fit. Null = first ever opening under this
@@ -589,10 +605,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
             // creating populate run, so the layout runs only on a graph no vertex of which has a layout
             // record yet; otherwise the new vertices keep their default placement and nothing else moves
-            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155). Above a size cap it does not run either
+            // (P-2026-11-04-0926).
             const createdOnOpen = justCreatedGraphRef.current;
             justCreatedGraphRef.current = false;
-            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+            const size = { nodes: getNodes().length, edges: getEdges().length };
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {}, size)) {
                 await autoLayoutRef.current();
                 // The M1 reference edges materialize asynchronously AFTER this first
                 // layout; watch for them and re-run the layout once when they land.
@@ -602,7 +620,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
             // only thing to do is NOT fit over it (R-LAY-18: no new fitView sites).
-            if (!restoredViewportRef.current) fitViewRef.current?.();
+            // Unless it frames no node: then it goes through the open fit and its fallback (ticket #419).
+            if (!restoredViewportRef.current || viewportShowsNoNodeRef.current?.()) fitViewRef.current?.();
             // Apply port distribution to edges loaded from JjOM.
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
@@ -751,10 +770,35 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes: getFlowNodes, getNode, getEdges: getFlowEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
+    // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
+    // canvas without them, so none of them can be laid out, snapshotted or written back.
+    // Undecorated (unmeasuredNodes.ts): no reader of getNodes() sees the estimated size of a never-measured node.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)).map(undecorate), [getFlowNodes]);
+    const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
-    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // Ticket #419: a fit that frames no node (the box centre between the nodes at minZoom) pans, same zoom, onto
+    // the node nearest the box centre (openViewport.ts). R-LAY-18: a setViewport after the existing fits, no new fit.
+    const openFallbackViewport = useCallback(() => {
+        const { nodeLookup, width, height } = storeApi.getState();
+        const rects: NodeRect[] = [];
+        for (const n of nodeLookup.values()) {
+            if (n.hidden || isPreviewId(n.id)) continue;
+            const p = n.internals.positionAbsolute;
+            rects.push({ id: n.id, x: p.x, y: p.y, w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
+        }
+        return openViewportFallback(rects, getViewport(), { width, height, rightInset: getCanvasRightInset() }, fitPadding());
+    }, [storeApi, getViewport]);
+    const ensureNodeInView = useCallback((duration?: number) => {
+        const next = openFallbackViewport();
+        if (next) setViewport(next, { duration });
+    }, [openFallbackViewport, setViewport]);
+    viewportShowsNoNodeRef.current = () => openFallbackViewport() !== null;
+    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
+    // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
+    const fitViewOptions = useFitViewOptions();
 
     const {
         activeEditorId,
@@ -1130,20 +1174,24 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!nodeId || modelId !== modelid) return;
             setNodes(nds => nds.map(n => ({ ...n, selected: n.id === nodeId })));
             setEdges(eds => eds.map(e => ({ ...e, selected: false })));
-            // Center the view on the selected node
+            // Bring the selected node into view on React Flow's own pane (P-2026-10-25-1441):
+            // same zoom, no move when it is already fully inside.
             const targetNode = getNodes().find(n => n.id === nodeId);
             if (targetNode) {
-                const x = (targetNode.position?.x ?? 0) + ((targetNode.measured?.width ?? 150) / 2);
-                const y = (targetNode.position?.y ?? 0) + ((targetNode.measured?.height ?? 50) / 2);
-                const vp = getViewport();
-                // F3: subtract the overlay's right inset so "one third from the left"
-                // is measured against the VISIBLE canvas width, not the full window.
-                setViewport({ x: -x * vp.zoom + (window.innerWidth - getCanvasRightInset()) / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
+                const box = {
+                    x: targetNode.position?.x ?? 0,
+                    y: targetNode.position?.y ?? 0,
+                    width: targetNode.measured?.width ?? 150,
+                    height: targetNode.measured?.height ?? 50,
+                };
+                const { width, height } = storeApi.getState();
+                const next = revealViewport(box, getViewport(), { width, height }, getCanvasRightInset());
+                if (next) setViewport(next, { duration: 300 });
             }
         };
         window.addEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
         return () => window.removeEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
-    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
+    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport, storeApi]);
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
@@ -1562,6 +1610,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
+    // Publish React Flow's multi-selection (R-JJD-3): one emission per animation frame at most,
+    // none when the ordered list is unchanged. Read-only: `_lastSelected` and selectElement are
+    // untouched, so single selection works as before.
+    const publishedSelectionRef = useRef<string[]>([]);
+    const selectionFrameRef = useRef<number | null>(null);
+    const selectedNodesRef = useRef(selectedNodes);
+    selectedNodesRef.current = selectedNodes;
+    useEffect(() => {
+        if (selectionFrameRef.current !== null) return;
+        selectionFrameRef.current = requestAnimationFrame(() => {
+            selectionFrameRef.current = null;
+            const prev = publishedSelectionRef.current;
+            const next = orderSelection(prev, selectedNodesRef.current.map((n) => n.id));
+            if (sameIdList(prev, next)) return;
+            publishedSelectionRef.current = next;
+            const detail: CanvasSelectionDetail = {
+                modelId: modelid ?? '',
+                nodeIds: next,
+                elementIds: resolveElementIds(next, (store.getState() as any).idlookup),
+            };
+            window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+        });
+    }, [selectedNodes, modelid]);
+    useEffect(() => () => {
+        if (selectionFrameRef.current !== null) cancelAnimationFrame(selectionFrameRef.current);
+        selectionFrameRef.current = null;
+        if (publishedSelectionRef.current.length === 0) return;
+        publishedSelectionRef.current = [];
+        const detail: CanvasSelectionDetail = { modelId: modelid ?? '', nodeIds: [], elementIds: [] };
+        window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+    }, [modelid]);
+
     // Canonical selection channel — `_lastSelected.modelElement` is written by both
     // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
     // `onMouseDown`). Used to drive PalettePanel's context-aware sections so the
@@ -1639,6 +1719,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const irContainmentRef = useRef(irContainment);
     irContainmentRef.current = irContainment;
 
+    // React Flow renders only the elements in view (P-2026-11-02-0020) unless a view that can draw an object on
+    // canvas needs its node mounted: a graphVertex container, or a box derived from content (onlyRenderVisible.ts).
+    // Keyed on the containment model, which follows the viewpoint and the node set; with no IR viewpoint it is the
+    // same empty model on every render, so this runs once.
+    const onlyRenderVisible = useMemo(() => {
+        const model = irContainment.model;
+        if (model.objByVertex.size === 0) return true;
+        const state: any = store.getState();
+        const index = getIRIndex(state, computeIRSignature(state));
+        return canRenderOnlyVisible(index, state.idlookup ?? {}, model.objByVertex.values(), model.containers.size);
+    }, [irContainment.model]);
+
     /**
      * Membership slot edits of a graphVertex gesture (S3, R-GV-8): an append through the L-proxy `.values` setter, as
      * handleReconnect writes a slot, a removal by value (LIR §4). The caller wraps them in ONE SetField-only
@@ -1670,6 +1762,71 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
         [irContainment.nodes, irContainment.edges, simEvents],
     );
+
+    // Ghost preview of a planned script (S4b, R-JJD-2): synthetic nodes and edges appended to the arrays handed to
+    // React Flow, as the run's events are hidden above. No D-object, never draggable or selectable, ids prefixed and
+    // filtered out of getNodes/getEdges and of every handler below. Same arrays as before when there is no preview.
+    useEffect(() => installScriptPreviewListener(() => (store.getState() as any).idlookup ?? {}), []);
+    const scriptPreview = useScriptPreview(modelid);
+    // The ghosts read the rows, edge labels and edges the canvas has drawn (P-2026-10-25-0110): one more pass
+    // two frames after a new preview, when the DOM shows what the first pass was computed before.
+    const [previewLayoutPass, setPreviewLayoutPass] = useState(0);
+    useEffect(() => {
+        if (!scriptPreview) return;
+        let second = 0;
+        const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setPreviewLayoutPass((n) => n + 1)); });
+        return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+    }, [scriptPreview]);
+    const canvasElements = useMemo(() => {
+        if (!scriptPreview) return flowElements;
+        const idlookup = (store.getState() as any).idlookup ?? {};
+        const drawn = drawnNodes(flowElements.nodes, (nodeId) => {
+            const model = idlookup[nodeId]?.model;
+            return typeof model === 'string' && model ? model : undefined;
+        });
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
+    }, [flowElements, scriptPreview, previewLayoutPass]);
+
+    // A large canvas that renders only the visible elements hands React Flow its never-measured nodes with the
+    // handles of the DynamicHandles pool and an estimated size, so React Flow does not mount every one of them to
+    // measure it (P-2026-11-04-0901, LIR docs/discovery/lir_2026-11-04_canvas_mount_unmeasured.md). The canvas state
+    // never holds the estimate. `mountAll` suspends the decoration while the auto-layout waits for real sizes.
+    const [mountAll, setMountAll] = useState(false);
+    const decorationCacheRef = useRef(new Map<string, DecorationEntry>());
+    // Ids React Flow has measured at least once, and ids that went in decorated and are not measured yet.
+    const measuredIdsRef = useRef(new Set<string>());
+    const decoratedIdsRef = useRef(new Set<string>());
+    const rfNodes = useMemo(() => {
+        if (mountAll || !shouldDecorate(onlyRenderVisible, canvasElements.nodes.length)) {
+            decorationCacheRef.current.clear();
+            decoratedIdsRef.current.clear();
+            return canvasElements.nodes;
+        }
+        const out = decorateUnmeasured(canvasElements.nodes, canvasElements.edges, decorationCacheRef.current, measuredIdsRef.current);
+        decoratedIdsRef.current.clear();
+        if (out !== canvasElements.nodes) for (const n of out) if (isDecorated(n)) decoratedIdsRef.current.add(n.id);
+        return out;
+    }, [canvasElements, onlyRenderVisible, mountAll]);
+
+    // The first measurement of a node that went in decorated: one more port distribution, coalesced on two frames,
+    // reads its real size once the canvas state holds it. Distribution never runs on the estimate.
+    const measuredRedistributionRafRef = useRef(0);
+    const noteMeasurements = useCallback((changes: any[]) => {
+        let first = false;
+        for (const c of changes) {
+            if (c?.type !== 'dimensions' || !c.dimensions) continue;
+            measuredIdsRef.current.add(c.id);
+            if (decoratedIdsRef.current.delete(c.id)) first = true;
+        }
+        if (!first || measuredRedistributionRafRef.current) return;
+        measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+            measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+                measuredRedistributionRafRef.current = 0;
+                if (applyDistributionRef.current) setEdges(eds => applyDistributionRef.current!(eds));
+            });
+        });
+    }, [setEdges]);
+    useEffect(() => () => cancelAnimationFrame(measuredRedistributionRafRef.current), []);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -2315,20 +2472,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         takeSnapshot();
     }, [takeSnapshot]);
 
-    // Handle drop from palette
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
-
+    // Create a palette element at a client point: the body of the palette drop, shared by the
+    // drop (at the cursor) and by a click or Enter/Space on a palette entry (at the canvas centre).
+    const createFromPalette = useCallback(
+        (rawType: string, metaclassId: string | undefined, client: { x: number; y: number }) => {
             // Members must be dropped on nodes, not canvas
             if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
             const position = screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
+                x: client.x,
+                y: client.y,
             });
 
             // Center node under cursor instead of placing top-left at cursor
@@ -2348,7 +2501,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
                 // M1: objectNode from palette
                 if (rawType === 'objectNode') {
-                    const metaclassId = event.dataTransfer.getData('metaclassId');
                     if (!metaclassId) return;
                     const mi = modeInfoRef.current;
                     const metaclass = mi.allClasses.find(c => c.id === metaclassId);
@@ -2416,7 +2568,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }
                         if (compatRefs.length > 1) {
                             setPendingContainmentDrop({
-                                position: { x: event.clientX, y: event.clientY },
+                                position: { x: client.x, y: client.y },
                                 flowPosition: position,
                                 containerNodeId: containerNode.id,
                                 childClass: metaclass,
@@ -2559,6 +2711,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setNodes((nds) => [...nds, newNode]);
         },
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
+    );
+
+    // Handle drop from palette
+    const onDrop = useCallback(
+        (event: React.DragEvent) => {
+            event.preventDefault();
+
+            const rawType = event.dataTransfer.getData('application/reactflow');
+            if (!rawType) return;
+
+            createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
+        },
+        [createFromPalette]
+    );
+
+    // Click or Enter/Space on a palette entry: the drop at the centre of the canvas the overlay leaves
+    // visible, on the drop's grid.
+    const onPaletteActivate = useCallback(
+        (type: string, metaclassId?: string) => {
+            const canvas = editorContainerRef.current;
+            if (!canvas) return;
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+        },
+        [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
@@ -3934,6 +4110,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // `full` is the toolbar's (P-2026-10-01-2215 Phase 2): real sizes, labels, the viewpoint's profile, the 8 px grid
     // and ELK's routes. Without it (the first open, the late-edge re-layout) the layout is today's, unchanged.
     const handleAutoLayout = useCallback(async (opts?: { full?: boolean }) => {
+        // ELK reads real sizes only: with never-measured nodes decorated, mount them all as before, wait until the
+        // canvas state holds their measurement (capped), then lay out.
+        if (decoratedIdsRef.current.size > 0) {
+            setMountAll(true);
+            const start = performance.now();
+            await new Promise<void>((resolve) => {
+                const tick = () => {
+                    const pending = getNodes().filter((n) => !measuredIdsRef.current.has(n.id));
+                    if (allMeasured(pending) || performance.now() - start > AUTO_LAYOUT_MEASURE_WAIT_MS) resolve();
+                    else requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+            setMountAll(false);
+        }
         const currentNodes = getNodes();
         const currentEdges = getEdges();
         if (currentNodes.length === 0) return;
@@ -4082,7 +4273,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     },
                 };
             })));
-            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
+            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
             return;
         }
 
@@ -4134,11 +4325,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
-    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid]);
+        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
-    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);
+    // A layout ELK cannot finish is reported, not thrown into the page (P-2026-11-04-1443): nothing moved.
+    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }).catch((err: unknown) => {
+        console.warn('[EditorV2] auto layout failed:', err);
+        toast.error(err instanceof RangeError
+            ? 'Auto layout: this diagram is too large for the layout engine. Nothing was moved.'
+            : 'Auto layout failed. Nothing was moved.');
+    }), [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
@@ -4413,6 +4610,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // (e.g. from updateNodeInternals → dimension changes triggered
             // by our own setEdges), just apply the changes without edge recalc.
             if (isProcessingNodesChangeRef.current) {
+                noteMeasurements(changes);
                 onNodesChange(changes);
                 return;
             }
@@ -4708,6 +4906,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return true; // first measurement or actual size change
             });
             if (changesToApply.length > 0) {
+                noteMeasurements(changesToApply);
                 onNodesChange(changesToApply);
             }
 
@@ -4716,7 +4915,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
         },
         [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout,
-            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes]
+            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes, noteMeasurements]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -4830,6 +5029,43 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         document.addEventListener('mouseup', onMouseUp);
     }, []);
 
+    // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
+    const handleCanvasNodesChange = useCallback((changes: any[]) => {
+        // A `replace` or `add` React Flow builds from a decorated node goes in undecorated: no estimate in the canvas state.
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id))
+            .map((c) => (c?.item && isDecorated(c.item) ? { ...c, item: undecorate(c.item) } : c));
+        if (own.length > 0) handleNodesChange(own);
+    }, [handleNodesChange]);
+    const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
+        const own = changes.filter((c) => !isPreviewId((c as any)?.id ?? (c as any)?.item?.id));
+        if (own.length > 0) onEdgesChange(own);
+    }, [onEdgesChange]);
+    const handleCanvasConnect = useCallback((connection: Connection) => {
+        if (isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        onConnect(connection);
+    }, [onConnect]);
+    const isValidCanvasConnection = useCallback((connection: Edge | Connection) =>
+        !isPreviewId(connection.source) && !isPreviewId(connection.target) && isValidConnection(connection),
+    [isValidConnection]);
+    const handleCanvasReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
+        if (isPreviewId(oldEdge.id) || isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        handleReconnect(oldEdge, connection);
+    }, [handleReconnect]);
+    const handleCanvasNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (!isPreviewId(node.id)) jjomSelection.onNodeClick(event, node);
+    }, [jjomSelection]);
+    const handleCanvasEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (!isPreviewId(edge.id)) onEdgeClick(event, edge);
+    }, [onEdgeClick]);
+    const handleCanvasNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+        if (isPreviewId(node.id)) { event.preventDefault(); return; }
+        onNodeContextMenu(event, node);
+    }, [onNodeContextMenu]);
+    const handleCanvasEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (isPreviewId(edge.id)) { event.preventDefault(); return; }
+        onEdgeContextMenu(event, edge);
+    }, [onEdgeContextMenu]);
+
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
@@ -4837,26 +5073,26 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={flowElements.nodes}
-                edges={flowElements.edges}
-                onNodesChange={handleNodesChange}
+                nodes={rfNodes}
+                edges={canvasElements.edges}
+                onNodesChange={handleCanvasNodesChange}
                 onNodeDrag={handleNodeDragPointer}
                 onNodeDragStop={handleNodeDragPointerEnd}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+                onEdgesChange={handleCanvasEdgesChange}
+                onConnect={handleCanvasConnect}
                 onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
-                onReconnect={handleReconnect}
+                isValidConnection={isValidCanvasConnection}
+                onReconnect={handleCanvasReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
                 reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-                onNodeContextMenu={onNodeContextMenu}
-                onEdgeContextMenu={onEdgeContextMenu}
+                onNodeContextMenu={handleCanvasNodeContextMenu}
+                onEdgeContextMenu={handleCanvasEdgeContextMenu}
                 onPaneContextMenu={onPaneContextMenu}
-                onNodeClick={jjomSelection.onNodeClick}
-                onEdgeClick={onEdgeClick}
+                onNodeClick={handleCanvasNodeClick}
+                onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
@@ -4865,7 +5101,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMove={handleMove}
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
-                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
+                fitViewOptions={fitViewOptions}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -4880,6 +5116,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 zoomOnPinch={true}
                 deleteKeyCode={null}
                 connectionRadius={40}
+                onlyRenderVisibleElements={onlyRenderVisible}
             >
                 <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
                     <defs>
@@ -4924,6 +5161,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 />
                 )}
             </ReactFlow>
+
+            {/* A preview another view drives (the Refactoring tab, P-2026-10-25-0020) keeps its bar there. */}
+            {scriptPreview && !scriptPreview.owner && <PreviewBar preview={scriptPreview} />}
 
             {pendingConnection && (
                 <EdgeTypePopup
@@ -4985,6 +5225,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     undeclaredClasses={irPalette.undeclared}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
+                    onItemActivate={onPaletteActivate}
+                    collapsed={!!scriptPreview?.owner}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
@@ -5122,7 +5364,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
                 {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
                 {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
-                {CODEGEN_BUILD && modelid && codePill && <CodegenSlot modelid={modelid} />}
+                {/* R-GEN-23: no Code pill in consumer mode, decided here so codegen/setting.ts imports nothing. */}
+                {CODEGEN_BUILD && modelid && codePill && !isConsumerMode() && <CodegenSlot modelid={modelid} isMetamodel={!isModelMode} />}
 
             </div>
         </EditorContext.Provider>

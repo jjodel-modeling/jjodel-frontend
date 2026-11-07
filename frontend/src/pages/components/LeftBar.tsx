@@ -1,5 +1,5 @@
 import {useState, useEffect, MouseEventHandler, JSX} from 'react';
-import {useSelector} from 'react-redux';
+import {shallowEqual, useSelector} from 'react-redux';
 import {DProject, LProject, LUser, R, U, findEnvironmentConfig, findProfile, visibleTopLevelTypes} from '../../joiner';
 
 import {DashProps} from "./Dashboard";
@@ -15,8 +15,20 @@ import { createM2 } from './Navbar';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { activeProfileId, isConsumerMode } from '../../components/environment/consumerMode';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../../components/scripts/scriptFiles';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
+import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
+import type { DProjectScript } from '../../joiner/classes';
+import { generatorEntries, useCodegenEnabled } from '../../codegen/setting';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
+
+// «New model from text» (R-TXT-23, P-2026-11-02-0045) opens a tab whose module lives in src/codegen/, reached by dynamic
+// import only (R-GEN-2, scripts/gates/check-codegen-lazy.ts), under the build flag as Toolbar.tsx's `CODEGEN_BUILD`:
+// without `VITE_CODEGEN=true` Vite turns the literal into `undefined === 'true'` and Rollup drops the import.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
 
 function relativeTime(date: number | string | Date): string {
     const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
@@ -45,6 +57,8 @@ type ItemProps = {
     dot?: boolean;
     onClick?: MouseEventHandler;
     active?: boolean;
+    // The dashboard page this item leads to is the one shown: active style plus aria-current.
+    current?: boolean;
     count?: number;
     muted?: boolean;
     danger?: boolean;
@@ -59,13 +73,13 @@ const Item = (props: ItemProps) => {
     const cls = [
         'item',
         props.dot ? 'red-dot' : '',
-        props.active ? 'active' : '',
+        props.active || props.current ? 'active' : '',
         props.muted ? 'item--muted' : '',
         props.danger ? 'item--danger' : '',
     ].filter(Boolean).join(' ');
 
     return (
-        <div onClick={finalaction} className={cls}>
+        <div onClick={finalaction} className={cls} aria-current={props.current ? 'page' : undefined}>
             {props.icon && props.icon}&nbsp;<span>{props.children}</span>
             {props.count !== undefined && <span className="item-count">{props.count}</span>}
         </div>
@@ -100,6 +114,9 @@ const Menu = (props: MenuProps) => {
         </div>
     );
 }
+
+/** The SCRIPTS list of a project with none, one reference for every render (S6b). */
+const NO_SCRIPTS: DProjectScript[] = [];
 
 function LeftBar(props: LeftBarProps): JSX.Element {
 
@@ -300,6 +317,40 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const consumerTypes = consumerTypesKey
         ? consumerTypesKey.split('\u0002').map((row) => { const [id, name] = row.split('\u0001'); return { id, name }; })
         : [];
+    // S6b (R-JJD-5): the project's script files. One empty array for "none", so the selector
+    // does not hand back a new reference on every store change.
+    const pScripts: DProjectScript[] = useSelector((state: any) => {
+        const list = readProjectScripts(state);
+        return list.length ? list : NO_SCRIPTS;
+    });
+    const [scriptMenu, setScriptMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+    const [renamingScriptId, setRenamingScriptId] = useState<string | null>(null);
+    const [scriptRenameValue, setScriptRenameValue] = useState('');
+    const [deletingScript, setDeletingScript] = useState<DProjectScript | null>(null);
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
+    useEffect(() => {
+        if (!scriptMenu) return;
+        const close = () => setScriptMenu(null);
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('click', close);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [scriptMenu]);
+    const startScriptRename = (sc: DProjectScript) => {
+        setScriptMenu(null);
+        setRenamingScriptId(sc.id);
+        setScriptRenameValue(sc.name.endsWith(SCRIPT_EXTENSION) ? sc.name.slice(0, -SCRIPT_EXTENSION.length) : sc.name);
+    };
+    const commitScriptRename = () => {
+        if (!renamingScriptId) return;
+        const sc = pScripts.find(x => x.id === renamingScriptId);
+        // An empty name keeps the old one: the pure rename would turn it into `script.jjs`.
+        if (sc && scriptRenameValue.trim()) renameProjectScript(sc.id, scriptRenameValue);
+        setRenamingScriptId(null);
+    };
     const [shownTypeId, setShownTypeId] = useState<string | null>(null);
     useEffect(() => {
         const onShown = (e: Event) => setShownTypeId((e as CustomEvent).detail?.typeId ?? null);
@@ -318,6 +369,29 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const pViewpoints = project?.viewpoints || [];
     // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
     const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;
+
+    // R-GEN-42: the GENERATORS section, with the experimental setting on (and the build flag) only, never in
+    // consumer mode (R-GEN-23). The keys are read through codegen/setting.ts, the only codegen module this eager
+    // file may import; the tab is reached by a dynamic import, so the lazy gate (R-GEN-2) stays green.
+    const codegenOn = useCodegenEnabled();
+    const showGenerators = codegenOn && !consumer;
+    const generatorBags: unknown[] = useSelector((state: any) =>
+        (showGenerators ? pMetamodels.map(m => state?.idlookup?.[m.id]?._state) : []), shallowEqual);
+    const generatorGroups = showGenerators
+        ? pMetamodels.map((m, i) => ({ id: m.id, name: m.name, entries: generatorEntries({ [m.id]: { _state: generatorBags[i] } }, m.id) }))
+        : [];
+    const [pickingGeneratorMetamodel, setPickingGeneratorMetamodel] = useState(false);
+    const openGenerator = (metamodelId: string, metamodelName: string, generatorId: string) => {
+        if (CODEGEN_BUILD) void import('../../codegen/ui/openTemplateEditor').then(m => m.openTemplateEditor(metamodelId, metamodelName, null, generatorId));
+    };
+    const newGenerator = (metamodelId: string) => {
+        setPickingGeneratorMetamodel(false);
+        if (CODEGEN_BUILD) void import('../../codegen/ui/openTemplateEditor').then(m => m.createGenerator(metamodelId));
+    };
+    const onNewGeneratorClick = () => {
+        if (pMetamodels.length === 1) newGenerator(pMetamodels[0].id);
+        else if (pMetamodels.length > 1) setPickingGeneratorMetamodel(p => !p);
+    };
 
     /**
      * `itemAction` is the row's SECOND door: a hover-revealed button that opens a
@@ -377,6 +451,95 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         );
     };
 
+    /**
+     * SCRIPTS (S6b): the markup of `renderSection`, plus what a script row needs and the other
+     * rows do not: a context menu with Rename and Delete, and an inline rename field.
+     */
+    const renderScriptsSection = () => {
+        const isCollapsed = !!collapsedSections['scripts'];
+        const menuScript = scriptMenu ? pScripts.find(x => x.id === scriptMenu.id) : undefined;
+        return (
+            <div className={`psb-section${isCollapsed ? ' collapsed' : ''}`} data-psb-section="scripts">
+                <div className="psb-section-header" onClick={() => toggleSection('scripts')}>
+                    <span className="psb-section-label">Refactorings</span>
+                    <i className="bi bi-chevron-down psb-chevron" />
+                </div>
+                <div className="psb-section-body">
+                    {pScripts.map(sc => (
+                        <div
+                            key={sc.id}
+                            className="psb-item"
+                            data-script-id={sc.id}
+                            onClick={() => { if (renamingScriptId !== sc.id) DockManager.openScript(sc.id); }}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const menuW = 160, menuH = 80;
+                                setScriptMenu({
+                                    id: sc.id,
+                                    x: Math.min(e.clientX, window.innerWidth - menuW - 8),
+                                    y: Math.min(e.clientY, window.innerHeight - menuH - 8),
+                                });
+                            }}
+                            title={sc.name}
+                        >
+                            <span className="psb-badge psb-badge--S">R</span>
+                            {renamingScriptId === sc.id ? (
+                                <input
+                                    className="psb-rename-input"
+                                    autoFocus
+                                    value={scriptRenameValue}
+                                    aria-label="Refactoring name"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setScriptRenameValue(e.target.value)}
+                                    onBlur={commitScriptRename}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitScriptRename();
+                                        else if (e.key === 'Escape') setRenamingScriptId(null);
+                                    }}
+                                />
+                            ) : (
+                                <span className="psb-item-name">{sc.name}</span>
+                            )}
+                            <i className="bi bi-arrow-right psb-item-arrow" />
+                        </div>
+                    ))}
+                    {/* R-JJD-14: the same dialog as the «+» artifact menu, which asks the target level. */}
+                    <div className="psb-new" onClick={() => setRefactoringDialogOpen(true)}>
+                        <i className="bi bi-plus" />
+                        <span>New refactoring</span>
+                    </div>
+                </div>
+                {scriptMenu && menuScript && (
+                    <div
+                        className="tree-node__context-menu psb-script-menu"
+                        style={{ position: 'fixed', top: scriptMenu.y, left: scriptMenu.x, zIndex: 9999 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="tree-node__context-item" onClick={() => startScriptRename(menuScript)}>
+                            <i className="bi bi-pencil" />
+                            <span>Rename</span>
+                        </div>
+                        <div className="tree-node__context-item" onClick={() => { setScriptMenu(null); setDeletingScript(menuScript); }}>
+                            <i className="bi bi-trash3" />
+                            <span>Delete</span>
+                        </div>
+                    </div>
+                )}
+                <ConfirmDialog
+                    isOpen={!!deletingScript}
+                    title="Delete refactoring"
+                    message={`Delete "${deletingScript?.name ?? ''}"? This cannot be undone.`}
+                    confirmText="Delete"
+                    variant="danger"
+                    onConfirm={() => { if (deletingScript) deleteProjectScript(deletingScript.id); setDeletingScript(null); }}
+                    onCancel={() => setDeletingScript(null)}
+                />
+                <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
+            </div>
+        );
+    };
+
     const isProjectActionsCollapsed = !!collapsedSections['project'];
 
     return(<>
@@ -405,6 +568,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     (m) => { const lm = pMetamodels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
                     () => { if (project) createM2(project); },
                     'New metamodel',
+                    codegenOn ? {
+                        icon: 'bi-file-earmark-plus',
+                        title: 'New model from text',
+                        onClick: (m) => {
+                            if (CODEGEN_BUILD) void import('../../codegen/textual/ui/openTextualTab').then(t => t.openNewModelTab(m.id));
+                        },
+                    } : undefined,
                 )}
 
                 {/* #157 R5 — consumer: the types of the profile, in place of the models. */}
@@ -460,6 +630,58 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     () => requestFromProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG),
                     'New transform',
                 )}
+
+                {showGenerators && (
+                    <div className={`psb-section psb-section--generators${collapsedSections['generators'] ? ' collapsed' : ''}`}>
+                        <div className="psb-section-header" onClick={() => toggleSection('generators')}>
+                            <span className="psb-section-label">Generators</span>
+                            <i className="bi bi-chevron-down psb-chevron" />
+                        </div>
+                        <div className="psb-section-body">
+                            {generatorGroups.map(g => (
+                                <div key={g.id} className="psb-generator-group" data-metamodel={g.id}>
+                                    {generatorGroups.length > 1 && g.entries.length > 0 && (
+                                        <div className="psb-group" title={g.name}>{g.name}</div>
+                                    )}
+                                    {g.entries.map(e => (
+                                        <div
+                                            key={e.id}
+                                            className="psb-item"
+                                            data-generator={e.id}
+                                            onClick={() => openGenerator(g.id, g.name, e.id)}
+                                            title={e.name}
+                                        >
+                                            <span className="psb-badge psb-badge--G">G</span>
+                                            <span className="psb-item-name">{e.name}</span>
+                                            <i className="bi bi-arrow-right psb-item-arrow" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                            {pMetamodels.length > 0 && (
+                                <div className="psb-new" onClick={onNewGeneratorClick}>
+                                    <i className="bi bi-plus" />
+                                    <span>New generator</span>
+                                </div>
+                            )}
+                            {/* More than one metamodel: «New generator» asks which one first. */}
+                            {pickingGeneratorMetamodel && pMetamodels.length > 1 && pMetamodels.map(m => (
+                                <div
+                                    key={m.id}
+                                    className="psb-item psb-generator-pick"
+                                    onClick={() => newGenerator(m.id)}
+                                    title={`New generator on ${m.name}`}
+                                >
+                                    <span className="psb-badge psb-badge--M">M</span>
+                                    <span className="psb-item-name">{m.name}</span>
+                                    <i className="bi bi-arrow-right psb-item-arrow" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {!consumer && renderScriptsSection()}
 
                 {!consumer && renderSection(
                     'viewpoints', 'Viewpoints', 'V',
@@ -520,11 +742,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Main Navigation - Workspace */}
                 <Menu>
-                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />}>All projects</Item>
+                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />} current={active === 'All' && currentFilter === 'all'}>All projects</Item>
                 </Menu>
 
-                {/* Filters Section - Quick access to filtered views (synced with toolbar) */}
-                <Menu title={'Filters'} mode={'collapsable'}>
+                {/* Filters Section - Quick access to filtered views (synced with toolbar); not on Templates (handoff §2.4) */}
+                {active !== 'Templates' && <Menu title={'Filters'} mode={'collapsable'}>
                     <Item
                         action={() => handleFilterChange('private')}
                         icon={<i className="bi bi-lock" />}
@@ -540,7 +762,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-people" />}
                         active={currentFilter === 'collaborative'}
                     >Collaborative</Item>
-                </Menu>
+                </Menu>}
 
                 {/* Favorites Section */}
                 <Menu title={'Favorites'} mode={'collapsable'}>
@@ -555,8 +777,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Browse Section - Templates & Explore (moved from navbar tabs) */}
                 <Menu title={'Browse'} mode={'collapsable'}>
-                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />}>Templates</Item>
-                    <Item action={'explore'} icon={<i className="bi bi-compass" />}>Explore</Item>
+                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />} current={active === 'Templates'}>Templates</Item>
+                    <Item action={'explore'} icon={<i className="bi bi-compass" />} current={active === 'Explore'}>Explore</Item>
                 </Menu>
 
                 {/* Recently Modified - ONLY show if projects exist */}

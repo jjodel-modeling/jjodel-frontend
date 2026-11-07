@@ -337,3 +337,17 @@ describe('guards read σ through the adapter, on the Petri core', () => {
         }
     });
 });
+
+describe('forall / exists over several variables (R-FA, P-2026-11-02-1330)', () => {
+    it('exists over two variables is a verdict', () => {
+        expect(run('exists a, b in Transition.instances | a != b and a.count + b.count == 7')).toEqual({ kind: 'true' });
+        expect(run('exists a in Transition.instances, b in Door.instances | a.requires == b and a.count == 2')).toEqual({ kind: 'false' });
+    });
+
+    it('a forall over two variables as the whole guard is the subset defect E-FORALL, never a value', () => {
+        const out = run('forall a, b in Transition.instances such that a != b');
+        expect(out).toMatchObject({ kind: 'defect', reason: 'subset' });
+        expect(out.kind === 'defect' && out.detail).toMatch(/^E-FORALL/);
+        expect(run('(forall a, b in Transition.instances such that a != b).isEmpty')).toEqual({ kind: 'false' });
+    });
+});

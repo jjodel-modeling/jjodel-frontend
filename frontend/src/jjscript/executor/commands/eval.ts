@@ -107,6 +107,12 @@ export interface BuildEvalContextOptions {
      * `docs/discovery/harness/probe_2026-09-09_estensione_perimetro_validato.mts`.
      */
     extentModelId?: string;
+    /**
+     * Binds `data` (and `node`) to this element instead of Redux `_lastSelected`
+     * (P-2026-10-24-0241, Jjodie live JjEL over a multi-selection: one call per
+     * element). `null`: bind neither. Absent: `_lastSelected`, as before.
+     */
+    self?: { elementId: string; nodeId?: string } | null;
 }
 
 /**
@@ -324,8 +330,8 @@ export function buildEvalContext(
     // `self.instanceOf == RoadNetwork` resolves by reference identity.
     try {
         const state: any = store.getState();
-        const selectedMeId = state?._lastSelected?.modelElement;
-        const selectedNodeId = state?._lastSelected?.node;
+        const selectedMeId = opts?.self !== undefined ? opts.self?.elementId : state?._lastSelected?.modelElement;
+        const selectedNodeId = opts?.self !== undefined ? opts.self?.nodeId : state?._lastSelected?.node;
         if (selectedMeId) {
             const me = LPointerTargetable.fromPointer(selectedMeId) as any;
             if (me) variables['data'] = wrapSelectedElement(me, classByName, instanceById, fillWorklist);
@@ -426,6 +432,7 @@ function shallowClassToJjelValue(cls: any): JjelValue {
         shallowReferenceToJjelValue(ref, className)
     );
     const operations = (cls.operations || []).map((op: any) => ({
+        id: op.id ?? '',
         name: op.name ?? '',
         returnType: op.type?.name ?? op.typeName ?? 'void',
         className
@@ -447,6 +454,9 @@ function shallowClassToJjelValue(cls: any): JjelValue {
     } catch { /* proxy access can fail */ }
 
     return {
+        // The element's pointer (R-FA-10), as on M1 instances: a forall body acts on THIS
+        // element, and two distinct classes of one shape are not `==`.
+        id: cls.id ?? '',
         name: className,
         // M3 type name (meta-metaclass), e.g. "DClass". Source: D-layer runtime
         // class name auto-set by the joiner at construction (classes.ts:458).
@@ -488,13 +498,15 @@ function shallowClassToJjelValue(cls: any): JjelValue {
  */
 function shallowAttributeToJjelValue(attr: any, className: string): JjelValue {
     return {
+        id: attr.id ?? '',
         name: attr.name ?? '',
         type: attr.type?.name ?? attr.typeName ?? 'String',
         className,
         isDerived: attr.isDerived ?? attr.derived ?? false,
         isId: attr.isId ?? attr.id ?? false,
         multiValued: attr.upperBound === -1 || attr.upperBound === '*',
-        defaultValue: attr.defaultValue ?? null,
+        // The editor and the Ecore import fill `defaultValueLiteral`, not `defaultValue`.
+        defaultValue: attr.defaultValue ?? declaredLiteralDefault(attr) ?? null,
         __type: 'Attribute'
     } as JjelValue;
 }
@@ -505,6 +517,7 @@ function shallowAttributeToJjelValue(attr: any, className: string): JjelValue {
 function shallowReferenceToJjelValue(ref: any, className: string): JjelValue {
     const upper = ref.upperBound ?? ref.upper ?? 1;
     return {
+        id: ref.id ?? '',
         name: ref.name ?? '',
         type: ref.type?.name ?? ref.typeName ?? '',
         containment: ref.containment ?? false,
@@ -522,11 +535,13 @@ function shallowReferenceToJjelValue(ref: any, className: string): JjelValue {
  */
 function shallowPackageToJjelValue(pkg: any): JjelValue {
     const classes = (pkg.classes || []).map((c: any) => ({
+        id: c.id ?? '',
         name: c.name ?? '',
         isAbstract: c.isAbstract ?? c.abstract ?? false,
         isInterface: c.isInterface ?? c.interface ?? false
     }));
     return {
+        id: pkg.id ?? '',
         name: pkg.name ?? '',
         uri: pkg.uri ?? '',
         prefix: pkg.prefix ?? '',
@@ -541,10 +556,12 @@ function shallowPackageToJjelValue(pkg: any): JjelValue {
  */
 function shallowEnumToJjelValue(e: any): JjelValue {
     const literals = (e.literals || []).map((l: any) => ({
+        id: l.id ?? '',
         name: l.name ?? '',
         value: l.value ?? null
     }));
     return {
+        id: e.id ?? '',
         name: e.name ?? '',
         literals,
         literalCount: literals.length,
@@ -714,6 +731,8 @@ function fillInstanceSlots(
  *   1. Declared default: if the attribute declares a `defaultValue`, use it,
  *      coerced to the attribute's primitive type (same `type`/`defaultValue`
  *      fields read by shallowAttributeToJjelValue — no parallel value pipeline).
+ *   1b. Else the declared `defaultValueLiteral` (the string the editor and the
+ *      Ecore import write), parsed strictly; unparsable -> as if none (2/3).
  *   2. Mandatory: else if `lowerBound >= 1`, the canonical type default —
  *      boolean -> false, numeric -> 0, EString -> "", enum -> first literal name.
  *   3. Optional: else (lowerBound 0, or not reliably readable) -> null.
@@ -728,21 +747,7 @@ function emptyAttributeDefault(meta: any): JjelValue {
 
     // Type categorisation, shared by declared-default coercion and the canonical
     // default. Reuses the attribute's classifier; introduces no parallel pipeline.
-    let typeName = '';
-    let isEnum = false;
-    let enumLiterals: any[] = [];
-    try {
-        const t = meta.type;
-        if (t) {
-            isEnum = t.isEnum === true || t.className === 'DEnumerator';
-            typeName = String(t.name || '').toLowerCase();
-            if (isEnum) { try { enumLiterals = t.literals || []; } catch { enumLiterals = []; } }
-        }
-    } catch { /* type unreadable -> 'other' below */ }
-
-    const isBool = !isEnum && typeName.includes('bool');
-    const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
-    const isStr  = !isEnum && typeName.includes('string');
+    const { isEnum, enumLiterals, isBool, isNum, isStr } = attributeTypeCategory(meta);
 
     const firstLiteralName = (): JjelValue => {
         try { const n = enumLiterals[0]?.name; return typeof n === 'string' ? n : null; }
@@ -774,6 +779,13 @@ function emptyAttributeDefault(meta: any): JjelValue {
         return declared;
     }
 
+    // 1b. Declared default as written by the editor (JjScript `set ... default`) and
+    // the Ecore import: the string `defaultValueLiteral` (P-2026-11-01-2350). Parsed
+    // strictly: a literal that does not parse as the attribute's type reads as if no
+    // default were declared (falls through to 2/3), so "false" never reads true.
+    const parsed = declaredLiteralDefault(meta);
+    if (parsed !== undefined) return parsed;
+
     // 2. Mandatory -> canonical type default.
     let lower: any;
     try { lower = meta.lowerBound; } catch { lower = undefined; }
@@ -787,6 +799,78 @@ function emptyAttributeDefault(meta: any): JjelValue {
 
     // 3. Optional / unknown lower bound -> null.
     return null;
+}
+
+/** The attribute's type, categorised as emptyAttributeDefault coerces it. */
+function attributeTypeCategory(meta: any): { isEnum: boolean; enumLiterals: any[]; isBool: boolean; isNum: boolean; isStr: boolean; isInt: boolean } {
+    let typeName = '';
+    let isEnum = false;
+    let enumLiterals: any[] = [];
+    try {
+        const t = meta.type;
+        if (t) {
+            isEnum = t.isEnum === true || t.className === 'DEnumerator';
+            typeName = String(t.name || '').toLowerCase();
+            if (isEnum) { try { enumLiterals = t.literals || []; } catch { enumLiterals = []; } }
+        }
+    } catch { /* type unreadable -> 'other' below */ }
+
+    const isBool = !isEnum && typeName.includes('bool');
+    const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
+    const isStr  = !isEnum && typeName.includes('string');
+    // EInt, ELong, EShort, EByte, EBigInteger and their object forms.
+    const isInt  = !isEnum && /^e?(int|integer|long|short|byte|biginteger)(object)?$/.test(typeName);
+    return { isEnum, enumLiterals, isBool, isNum, isStr, isInt };
+}
+
+/**
+ * The declared `defaultValueLiteral` of an attribute, parsed to its type with the
+ * same accepted forms as the `defaultValue` coercion in emptyAttributeDefault.
+ * `undefined` = no literal, or unparsable. Enum: the literal named by the string.
+ * EString and other types: the string.
+ */
+function declaredLiteralDefault(meta: any): JjelValue | undefined {
+    if (!meta) return undefined;
+    let literal: any;
+    try { literal = meta.defaultValueLiteral; } catch { literal = undefined; }
+    if (typeof literal !== 'string' || literal === '') return undefined;
+
+    const { isEnum, enumLiterals, isBool, isNum, isInt } = attributeTypeCategory(meta);
+    if (isEnum) {
+        try {
+            const named = enumLiterals.find((l: any) => l?.name === literal);
+            return typeof named?.name === 'string' ? named.name : undefined;
+        } catch { return undefined; }
+    }
+    const s = literal.trim();
+    if (isBool) {
+        const b = s.toLowerCase();
+        if (b === 'true' || b === '1') return true;
+        if (b === 'false' || b === '0') return false;
+        return undefined;
+    }
+    if (isNum) {
+        if (s === '') return undefined;
+        const n = Number(s);
+        if (!Number.isFinite(n)) return undefined;
+        // An integer type takes integer literals only, as Ecore does: "2.5" on EInt
+        // reads as no declared default (R-TXT-25 (9)).
+        if (isInt && !/^[+-]?\d+$/.test(s)) { warnRejectedLiteral(meta, literal); return undefined; }
+        return n;
+    }
+    return literal;
+}
+
+const rejectedLiteralWarnings = new Set<string>();
+
+/** The notice for a rejected default literal, once per attribute and literal. */
+function warnRejectedLiteral(meta: any, literal: string): void {
+    let attr = '', type = '';
+    try { attr = String(meta.name ?? ''); type = String(meta.type?.name ?? ''); } catch { /* unreadable */ }
+    const key = attr + ':' + type + ':' + literal;
+    if (rejectedLiteralWarnings.has(key)) return;
+    rejectedLiteralWarnings.add(key);
+    console.warn(`[JjEL] default literal "${literal}" of attribute ${attr} is not a valid ${type}: read as no declared default`);
 }
 
 /**

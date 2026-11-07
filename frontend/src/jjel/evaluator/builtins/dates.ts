@@ -474,7 +474,8 @@ export function getDateMethod(name: string): ((...args: any[]) => JjelValue) | u
         format
     };
 
-    return methods[name];
+    // Own keys only: an inherited name (`constructor`, `toString`...) is no method (R-GEN-29).
+    return Object.prototype.hasOwnProperty.call(methods, name) ? methods[name] : undefined;
 }
 
 /**
@@ -489,5 +490,5 @@ export function getDateConstructor(name: string): ((...args: any[]) => JjelValue
         parseDate: parseDateString
     };
 
-    return constructors[name];
+    return Object.prototype.hasOwnProperty.call(constructors, name) ? constructors[name] : undefined;
 }

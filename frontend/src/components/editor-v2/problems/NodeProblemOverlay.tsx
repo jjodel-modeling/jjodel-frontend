@@ -173,6 +173,8 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
         ? { left: placement.left, top: placement.top, visibility: 'visible' }
         : { left: -9999, top: -9999, visibility: 'hidden' };
 
+    // A portal bubbles through the React tree: without these stops an event inside the overlay also reaches the
+    // node that renders the dot (onNodeClick selects it, outside an action's undo group; rename; node context menu).
     return createPortal(
         <div
             ref={overlayRef}
@@ -181,6 +183,9 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
             style={style}
             role="dialog"
             onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+            onDoubleClick={e => e.stopPropagation()}
+            onContextMenu={e => e.stopPropagation()}
         >
             <button
                 className="node-problem-overlay__close"

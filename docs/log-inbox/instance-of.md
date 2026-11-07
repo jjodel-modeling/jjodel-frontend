@@ -174,3 +174,20 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-25-2220
 **Detail**: docs/discovery/assets/onto-s3b/onto-s3b-typing-light.png
+
+## 2026-11-06 — fix: undo groups reconciled with option (c), L1..L2 closed (P-2026-11-06-2257)
+**Prompt**: close the undo-groups chain of option (c) (discovery P-2026-11-06-2105, L1 merge P-2026-11-06-2150, L1b deadline and queue P-2026-11-06-2225): five cross-front probes on oi-s2u, each failure rerun on the trunk, this entry, Status flips of 2150 and 2225
+**Files touched**: docs/discovery/discovery_2026-11-06_onto_undo_groups_reconcile.md (5b1e2fe41, branch oi-undo-discovery); L1: reducer.ts, undoGroup.test.ts, EditorV2.tsx, instantiate.ts (merge 197ae1fd1); L1b: instantiate.ts, instantiate.test.ts (809d85ce1, 9baae8d88); chat: scripts/smoke/states.ts (19abb1356, trunk 54f38d163); L2: this inbox, the Status lines of the prompts 2150 and 2225
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (states.ts, 19abb1356: the chat's welcome-key fix between L1b's two probe runs, in no lane's DOVE list; ten files across the chain, every other one in its lane's list)
+**Layer Impact Report**: produced (discovery §6, 5b1e2fe41, before L1's diff; L1 cited it)
+**Smoke visivo**: non applicabile
+**Notes**: Gates: typecheck 0, build 0, vitest 58/58 + 40/40 (L1), 60/60 (L1b). Bench: T1 survives, equivalent with one user, accepted; T2, T3, Q1, D1 killed. onto-s2 21/21, S2-3b1 lateSync 0. Probes at 87cf9a392: undo-inline-edit 33/33, s4c 11/11, rf2 15/15, udo exit 0 (no entry from a pane click); new-model-instantiate exit 1, identical on the trunk: not a regression. Load 4.4-113. Detail: ~/.jjodel-lanes/P-2026-11-06-2257/closing.md
+**Prompt document name**: 2026-11-06 22:57
+
+**Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/new-model-instantiate.ts` predates the «New model» dialog (6d70d38c1): its setup clicks the Models «+ New» and never presses «Create model», so `model: null`, every path misses and the `vp-*` setup crashes on a disabled viewpoint trigger. Same result on the trunk at ad6da074b.
+
+**Ticket** (proposed, trunk-side, low): `frontend/scripts/probe/templates-mode-restore.ts` seeds the welcome keys itself (:66-67) and lacks `jjodel_welcome_3_1_1_seen`, which `scripts/smoke/states.ts` seeds since 19abb1356 (trunk 54f38d163): on a fresh browser the 3.1.1 WelcomeModal can swallow its first click. Same on the trunk; verified by grep, probe not run.

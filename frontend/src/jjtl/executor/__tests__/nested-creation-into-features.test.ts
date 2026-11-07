@@ -156,7 +156,7 @@ describe('-> feature { -> Class { ... } }', () => {
         expect(table.columns.isPrimaryKey).toBe(true);
     });
 
-    it('an unknown class inside the wrapper is reported without claiming a skip', async () => {
+    it('an unknown class inside the wrapper is an error naming the feature, and nothing is written (R-JTG-17)', async () => {
         const result = await run(`Entity -> Table {
     -> columns {
         -> Nope {
@@ -166,10 +166,13 @@ describe('-> feature { -> Class { ... } }', () => {
 }
 `, FULL, RELATIONAL);
 
-        const msg = result.warnings.find(w => w.includes("Target class 'Nope'"));
+        expect(result.success).toBe(false);
+        expect(result.targetModel).toBeUndefined();
+        const msg = result.errors.find(e => e.includes("Target class 'Nope'"));
         expect(msg).toBeDefined();
         expect(msg).toContain('Table.columns');
         expect(msg).not.toContain('Mapping skipped');
+        expect(result.warnings.some(w => w.includes("Target class 'Nope'"))).toBe(false);
     });
 
     it('an unknown feature is named in a warning instead of being dropped in silence', async () => {

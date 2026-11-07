@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-0930
 Chat: C-2026-10-18-2254
 Front: notation-library
 Lane: full (IR type, compiler, both backends, predicate editor, tests, gallery rebuild)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane notation-library · 50ab1d74c, 15fac4bfa, e1bb5db65 · verifica visiva passata 2026-10-19 16:41 (Alfonso, RC-23)
 Request: Alfonso, 2026-10-19 09:20, «ok con la prima» (the chat's option 1: an IR predicate added next to `marked`)
 Depends: P-2026-10-19-0300 (example viewpoints, `18ce5cdf1`, its decision awaiting Alfonso on the token marking)
 

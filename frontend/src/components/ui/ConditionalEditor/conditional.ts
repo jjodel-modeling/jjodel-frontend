@@ -171,6 +171,8 @@ function formatNode(p: Predicate, subject: string | undefined): string {
             const m = p as { path?: PathExpr };
             return m.path !== undefined ? `marked on ${formatPath(m.path, subject)}` : 'marked';
         }
+        case 'simActive':
+            return 'sim active';
         default:
             return PREDICATE_PLACEHOLDER;
     }

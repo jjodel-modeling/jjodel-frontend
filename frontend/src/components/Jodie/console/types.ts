@@ -14,8 +14,8 @@ import type {
     ChatMessage,
     CodeFlavor,
     ConsoleEntry,
-    TAIProvider,
-} from '../../../types/jodie';
+} from '../types';
+import type { ProviderId } from '../../../services/ai';
 
 /** Result of running a provider: the entries to append to the history. */
 export interface ConsoleResult {
@@ -35,7 +35,7 @@ export interface ConsoleContext {
     /** Code-mode flavor. Required by the jjel provider. */
     codeFlavor?: CodeFlavor;
     /** Resolved LLM provider after the handler's auto-switch. Required by the jjodie provider. */
-    activeProvider?: TAIProvider;
+    activeProvider?: ProviderId;
     /** Chat-only history passed to the LLM. Used by the jjodie provider. */
     history?: ChatMessage[];
     /** Structural project context string. Used by the jjodie provider. */

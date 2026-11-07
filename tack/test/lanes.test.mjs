@@ -140,7 +140,7 @@ test('collectLanes writes nothing in the lane root: names, sizes and mtimes are 
 
 test('collectLanes: no lane folder leaves the adapter off; a folder that is not a unit id is ignored', (t) => {
   const { db, dir, root } = world(t);
-  assert.deepEqual(collectLanes(db, join(dir, 'absent'), NOW), { enabled: false, lanes: 0, read: 0, unchanged: 0, errors: 0, spendRows: 0 });
+  assert.deepEqual(collectLanes(db, join(dir, 'absent'), NOW), { enabled: false, lanes: 0, read: 0, unchanged: 0, errors: 0, spendRows: 0, stopScanned: 0 });
   mkdirSync(join(root, 'scratch'));
   assert.equal(collectLanes(db, root, NOW).lanes, 7);
 });
@@ -194,7 +194,7 @@ test('layer 3 over lanes and a log: outcome, cause_tally, regression_rate, out_o
   assert.equal(logs.entries, 5);
   const m = computeAll(loadSelection(db, {}));
   assert.deepEqual(m.outcome.log, { entries: 4, completed: 3, partial: 0, problems: 1 });
-  assert.deepEqual(m.outcome.lanes, { lanes: 7, done: 5, 'hard-stop': 0, question: 0, blocked: 1, unparsed: 0, none: 0, running: 1 });
+  assert.deepEqual(m.outcome.lanes, { lanes: 7, done: 5, 'hard-stop': 0, breakpoint: 0, ceiling: 0, question: 0, blocked: 1, unparsed: 0, none: 0, running: 1 });
   assert.equal(m.cause_tally.total, 2);
   assert.deepEqual([m.cause_tally.causes.a, m.cause_tally.causes.c], [1, 1]);
   assert.deepEqual(m.regression_rate, { yes: 1, no: 2, unknown: 1, share: 1 / 3 });
@@ -377,8 +377,8 @@ test('schema 5 to 6: the lanes rows kept, the new columns null, every lane marke
   v5.close();
   const db = openStore(path);
   t.after(() => db.close());
-  assert.equal(SCHEMA_VERSION, 7);
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 7);
+  assert.equal(SCHEMA_VERSION, 8);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 8);
   const r = { ...db.prepare('SELECT * FROM lanes').get() };
   assert.deepEqual([r.id, r.last_outcome, r.cache_key, r.kind, r.title, r.work_ms, r.worktree, r.resolved, r.adoptions],
     ['P-2026-01-01-0000', 'done', '', null, null, null, null, null, null]);

@@ -18,7 +18,13 @@ import {
     DATA_MANAGER_OPTION_LABEL,
     DATA_MANAGER_OPTION_VALUE,
     isDataManagerOption,
+    isTextualOption,
+    TEXTUAL_OPTION_ICON,
+    TEXTUAL_OPTION_VALUE,
+    textualLanguageNameOf,
+    textualOptionLabel,
 } from './dataManagerOption';
+import { useCodegenEnabled } from '../../codegen/setting';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
@@ -113,6 +119,19 @@ interface SyntaxEntry {
 
 const ABSTRACT_SYNTAX_ENTRY: SyntaxEntry = { value: '', label: 'Abstract syntax', icon: 'bi-diagram-3' };
 const VIEWPOINT_ENTRY_ICON = 'bi-eye';
+
+// The textual entry (R-TXT-23, P-2026-11-02-0040) opens a tab whose module lives in src/codegen/, reached by dynamic
+// import only (R-GEN-2, scripts/gates/check-codegen-lazy.ts). Under the build flag, as EditorV2's `CODEGEN_BUILD`:
+// without `VITE_CODEGEN=true` Vite turns the literal into `undefined === 'true'` and Rollup drops the import. The bare
+// text `import.meta.env.X` is the form Vite replaces; tsconfig has no vite/client types, hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+
+/** The name of the metamodel `modelId` is an instance of, '' when there is none: the textual entry's default label. */
+function metamodelNameOf(lookup: Readonly<Record<string, any>> | undefined, modelId: string | undefined): string {
+    const mm = modelId ? lookup?.[lookup?.[modelId]?.instanceof] : undefined;
+    return typeof mm?.name === 'string' ? mm.name : '';
+}
 
 /** `aria-controls` / `aria-activedescendant` need ids, and the listbox is portalled onto
  *  `document.body` — outside the toolbar's subtree, where a scoped id would not help. One
@@ -314,6 +333,11 @@ function Toolbar({
     // through, and value={null} would turn the controlled <select> into an uncontrolled one — React
     // warns and the selection stops tracking the store. Coerced here and nowhere upstream.
     const shownViewpointId = isMetamodel ? '' : (activeViewpointId || '');
+    // The textual entry shows only when both the setting and the build flag are on (R-GEN-2).
+    const codegenEnabled = useCodegenEnabled() && CODEGEN_BUILD;
+    const metamodelName = useSelector((state: any) => metamodelNameOf(state.idlookup, modelId)) as string;
+    // The language's name, when the metamodel's syntax annotations set one (R-TXT-25 (12)): the entry's label then.
+    const languageName = useSelector((state: any) => textualLanguageNameOf(state.idlookup, modelId)) as string | null;
 
     // ── VIEW group enablement ──
     // Notation and Theme govern the abstract-syntax rendering. As soon as a concrete-syntax
@@ -347,6 +371,15 @@ function Toolbar({
             } catch (e) {
                 console.warn('[Toolbar] Data manager: model not resolvable', modelId, e);
             }
+            return;
+        }
+        // The textual entry is not a viewpoint either: it opens the read-only Text tab, a sibling of the canvas tab as
+        // the manager is. The label is read from the store here, so the handler keeps its `[modelId]` deps.
+        if (isTextualOption(vpId)) {
+            if (!modelId) return;
+            const lookup = (store.getState() as any).idlookup;
+            const label = textualOptionLabel(metamodelNameOf(lookup, modelId), textualLanguageNameOf(lookup, modelId));
+            if (CODEGEN_BUILD) void import('../../codegen/textual/ui/openTextualTab').then(m => m.openTextualTab(modelId, label));
             return;
         }
         activateViewpoint(vpId || null);
@@ -396,11 +429,20 @@ function Toolbar({
         // `DockManager.openManager` refuses anyway, and off without a `modelId`, which is
         // what the entry has to resolve to open the tab.
         if (modelId) {
+            // One hairline above the synthetic entries: the textual one first when codegen is on, then the manager.
+            if (codegenEnabled) {
+                syntaxEntries.push({
+                    value: TEXTUAL_OPTION_VALUE,
+                    label: textualOptionLabel(metamodelName, languageName),
+                    icon: TEXTUAL_OPTION_ICON,
+                    sep: true,
+                });
+            }
             syntaxEntries.push({
                 value: DATA_MANAGER_OPTION_VALUE,
                 label: DATA_MANAGER_OPTION_LABEL,
                 icon: DATA_MANAGER_OPTION_ICON,
-                sep: true,
+                sep: !codegenEnabled,
             });
         }
     }
@@ -423,7 +465,8 @@ function Toolbar({
         setSyntaxOpen(false);
         // Focus goes back to the trigger, as it does when a `<select>` closes — except for
         // the manager entry, which moves to another tab: pulling focus back onto a control
-        // of the tab just left is worse than leaving it where the dock puts it.
+        // of the tab just left is worse than leaving it where the dock puts it. The textual entry opens a tab too.
+        if (isTextualOption(value)) { handleViewpointChange(value); return; }
         if (!isDataManagerOption(value)) syntaxTriggerRef.current?.focus();
         handleViewpointChange(value);
     };
@@ -1205,10 +1248,11 @@ function Toolbar({
                     </>
                 )}
                 {/* Fit to view retired from this group on 2026-08-26 (mockup 1c): the
-                    group is zoom and nothing else. Nothing is lost with it — the level
-                    button beside it runs `handleResetZoom`, which is the SAME call as
-                    `handleFitView` (`fitView({padding, maxZoom: 1, duration: 200})`,
-                    EditorV2.tsx:3313-3316), so the affordance survives under the `%`. */}
+                    group is zoom and nothing else. The level button beside it does NOT
+                    fit the view: it runs `handleActiveResetZoom` (EditorV2.tsx), which
+                    calls `activeController.setZoom(1)` — an absolute 100%, no fit, no
+                    recentering. `handleFitView` (`fitView({padding, maxZoom: 1,
+                    duration: 200})`) is a separate handler, not reachable from this group. */}
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
 

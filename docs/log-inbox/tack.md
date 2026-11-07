@@ -306,3 +306,171 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Chat checked the Lanes tab on 4710 from the tack-s8 worktree at e68c140bb (renders, Waiting 0 vs 14 before the fix, P-2026-10-19-1800 and 2140 not listed, Prompt-IDs whole, titles wrap, running and last-24h sections populated); tack code at the merge identical to the checked tip; decided under R-TACK-4
 **Notes**: Rollback tag `pre-tack-s8` on `87eba6097` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0052/result.json`.
 **Prompt document name**: 2026-10-20 00:52
+
+## 2026-10-21 — merge: tack-spec into alfonso-frontend-jjtl (P-2026-10-21-1023)
+**Prompt**: `claude_2026-10-21_1023_prompt_merge_tack-spec.md`, a direct merge by `lane-run merge --direct`, no session: `tack-spec` at `d819de505` into `alfonso-frontend-jjtl`, merge base `c3db63f69`, 2 commits on the branch side.
+**Files touched**: merge `39b1964ba`: 3 files from the branch side (`docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md`, `docs/prompts/claude_2026-10-20_1900_prompt_tack_monitor_vs_spec_disc.md`, `tack/docs/design-monitor-vs-spec.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `39b1964ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: design note and discovery report, docs only; recommendations ratified by Alfonso 2026-10-21 10:19 (R-TACK-7)
+**Notes**: Rollback tag `pre-tack-spec` on `ebbaebdb9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1023/result.json`.
+**Prompt document name**: 2026-10-21 10:23
+
+## 2026-10-21 — feat: Tack stops, breakpoint, ceiling and hard-stop classes, auto pill
+**Prompt**: P-2026-10-21-1015: a lane that ends `Outcome: hard-stop` is classed breakpoint (the prompt planned it), ceiling (context ceiling, handoff written) or hard-stop (unplanned), and a lane whose resumes all start with `[auto]` gets an auto pill. Measure first, classify in the collector (`stop_kind`, schema 8), show it on the Lanes page, the waiting tile and banner, the Last 24 hours table and the Insights outcome keys.
+**Files touched**: tack/src/collectors/lane-run/collect.mjs, tack/src/store/schema-8.sql (new), tack/src/store/open.mjs, tack/src/board/api.mjs, tack/src/board/lanes.js, tack/src/board/board.css, tack/src/board/insights.js, tack/src/metrics/layer3.mjs, tack/README.md, tack/test/stops.test.mjs (new), tack/test/lanes.test.mjs, tack/test/lanes-api.test.mjs, docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1015_prompt_tack_breakpoints.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (tack suite 231 of 231 pass; 210 before plus 21 new and adjusted)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-stops/board.pid, store copy /tmp/tack-stops/real.db)
+**Notes**: 677 lane folders: 193 hard-stops = 27 breakpoint, 23 ceiling, 143 hard-stop (store of 679: 27, 23, 144). 133 of 159 hard-stops had no readable prompt.txt, so the prompt falls back to input-1.md (breakpoint 11 to 27). Hand check, 10 per class: ceiling 10/10; breakpoint 10/10 plausible; hard-stop 6 right, 4 are planned stops of prompts without a HARD STOP section (the rule says hard-stop). 0 lanes carry [auto] yet. 4710, last 24 h: 12 ceiling, 3 hard-stop.
+**Prompt document name**: 2026-10-21 10:15
+
+## 2026-10-21 — feat: Tack slice 9, waiting cards, /api/attention, distinct stop events
+**Prompt**: P-2026-10-21-1025 (code, stopped at the 200k context ceiling, RC-51, nothing committed) and its continuation P-2026-10-21-1117 (tests, privacy, 4710, commits): waiting lanes as cards with pill, reason, Recommended: line and linked chat, read from log.jsonl and never stored; the banner scrolls to them or holds the one card; GET /api/attention in the 4700 shape; follow-ups of P-2026-10-21-1015 (no HARD STOP section counts as breakpoint, swatches at 3:1, breakpoint/ceiling/hard-stop events).
+**Files touched**: tack/README.md, tack/contract/v1/settings.json, tack/src/board/{api.mjs,board.css,lanes.js,server.mjs,waiting.mjs (new)}, tack/src/collectors/lane-run/collect.mjs, tack/src/notify/notifier.mjs, tack/test/{load,notify,settings,stops,privacy}.test.mjs, tack/test/{swatches,waiting}.test.mjs (new) (code commit 5b7c02c12); docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1025_prompt_tack_s9_waiting_cards.md and claude_2026-10-21_1117_prompt_tack_s9_continuation.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (tack suite 252 of 252 pass; waiting.test.mjs 13 new, privacy 1 new; mutation bench: no 2 KB trim, inverted card order, newest adding commit each killed)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s9/board.pid, store copy /tmp/tack-s9/real.db)
+**Notes**: 94 lanes waiting in 14 days: Recommended: 24, a ? 36, Question-for-you 5, planned-stop words 41; chat URL 68 (Request: 41, trailer 27). Rules 2: breakpoint 39, ceiling 26, hard-stop 26 (20 moved). Three fills at 3:1 is the most a 21:1 range allows (four span 27:1): bp, hard-stop, tag; ceiling by outline. 4710: 3 waiting, all ceiling. Detail and 6 decisions: ~/.jjodel-lanes/P-2026-10-21-1025/handoff.md.
+**Prompt document name**: 2026-10-21 11:17
+
+## 2026-10-21 — merge: tack-s9 into alfonso-frontend-jjtl (P-2026-10-21-1141)
+**Prompt**: `claude_2026-10-21_1141_prompt_merge_tack-s9.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s9` at `24334c432` into `alfonso-frontend-jjtl`, merge base `4ecf3c26f`, 2 commits on the branch side.
+**Files touched**: merge `9115d32d7`: 18 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1025_prompt_tack_s9_waiting_cards.md`, `tack/README.md`, `tack/contract/v1/settings.json`, `tack/src/board/api.mjs`, `tack/src/board/board.css`, `tack/src/board/lanes.js`, `tack/src/board/server.mjs`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9115d32d7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked 4710 at 11:26 from the tack-s9 worktree: waiting cards (kind pill ACK, answer, GO; reason line; waiting since; chat link), banner 3 lanes waiting, 3 ceilings, /api/attention in the 4700 shape, 1.8 KB
+**Notes**: Rollback tag `pre-tack-s9` on `1df2d6037` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1141/result.json`.
+**Prompt document name**: 2026-10-21 11:41
+
+## 2026-10-21 — feat: Tack S1, trace-source boundary around lane-run
+**Prompt**: P-2026-10-21-1210: an adapter interface in tack/src/collectors/ with lane-run behind it and the Prompt-ID pattern out of contract/, no behaviour change (parity jjodel byte-identical); a two-run guard test; drop the stale lanes.outcome column if nothing outside the collector and the API reads it.
+**Files touched**: code commit 3e095ad20: tack/src/collectors/{source.mjs,active.mjs,lane-run/config.mjs,lane-run/source.mjs} (new), tack/src/collectors/{lane-run/collect.mjs,layers.mjs}, tack/src/contract/{validate.mjs,linkage.mjs}, tack/contract/v1/{entry.json,unit.json,README.md}, tack/src/board/server.mjs, tack/src/notify/watch.mjs, tack/bin/tack.mjs, tack/test/source.test.mjs (new); this commit: docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1210_prompt_tack_s1_adapter_boundary.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (parity jjodel on a frozen lane and store copy: text and --json cmp identical before and after; tack check on 23 fixtures identical to HEAD; 248 existing tests unchanged plus 5 new, 253 of 253 pass; mutation bench: live false on a last outcome done killed by the two-run test)
+**Out-of-scope changes**: no (17 files, all inside DOVE tack/** plus the inbox and the Status line; above five, RC-11, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, TACK_NOTIFY=off, store /tmp/tack-s8/real.db)
+**Notes**: Item 3 not applied: lanes.outcome is read by metrics/layer3.mjs:62 and :82 (final state of laneFirstShot, which parity jjodel compares, and the outcome metric), so the writer, API field and column stay. Item 2 passed on the first run: lane-run removes exit.txt at launch (lane-run.mjs:532), so the fixture keeps run 1's exit in runs.jsonl. Still importing the collector by path: parity/jjodel.mjs (Jjodel adapter), board/waiting.mjs (lane-folder reader).
+**Prompt document name**: 2026-10-21 12:10
+
+## 2026-10-21 — merge: tack-s1a into alfonso-frontend-jjtl (P-2026-10-21-1246)
+**Prompt**: `claude_2026-10-21_1246_prompt_merge_tack-s1a.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s1a` at `601b73a7a` into `alfonso-frontend-jjtl`, merge base `be844ba6d`, 2 commits on the branch side.
+**Files touched**: merge `8dec8e774`: 17 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1210_prompt_tack_s1_adapter_boundary.md`, `tack/bin/tack.mjs`, `tack/contract/v1/README.md`, `tack/contract/v1/entry.json`, `tack/contract/v1/unit.json`, `tack/src/board/server.mjs`, `tack/src/collectors/active.mjs`, and 9 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8dec8e774` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11427 tests in 398 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked 4710 at 12:34 from the tack-s1a worktree: board 200, /api/attention in the 4700 shape (3 running), /api/lanes 200; parity jjodel byte-identical per the lane
+**Notes**: Rollback tag `pre-tack-s1a` on `99072d5fd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1246/result.json`.
+**Prompt document name**: 2026-10-21 12:46
+
+## 2026-10-21 — feat: Tack v0 closure, v0.1.0, bounded repos output, first run on two foreign repositories
+**Prompt**: P-2026-10-21-1330: bound `tack repos` (one line per repository, toplevels truncated with a count, columns capped at 60), a first-run check with a fresh store from the root of `~/harness-book` and `~/harness-exp/sprotty`, an install and first-run section and the v0 Status line in the README, version 0.1.0 with `tack --version`.
+**Files touched**: code commit daa7c6077: tack/src/cli/table.mjs (new), tack/test/cli-table.test.mjs (new), tack/bin/tack.mjs, tack/package.json, tack/README.md; this commit: docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1330_prompt_tack_v0_closure.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (node --test on tack/test: 257 of 257 pass, 253 existing plus 4 new, privacy tests included; the first-run table below complete for both repositories)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23)
+**Notes**: Item 1 was a real defect, not a guard: on the real store Jjodel's row listed 61 toplevels on one line; it now reads `~/jjodel +60 more`. Each run took about 60 s for the full scan (689 sessions, 7216 commits); nothing under ~/.tack changed, and the board exited 0 on SIGTERM. Finding below, filed as a ticket: a repository with no session is not in the store, so the board falls back to all repositories. README now says so.
+**Prompt document name**: 2026-10-21 13:30
+
+First run, `TACK_STORE=/tmp/tack-v0/<name>.db node tack/bin/tack.mjs board --no-open --port 4711` from the repository root, API read with `?repo=` set to the preselected key as the page does:
+
+| | ~/harness-book | ~/harness-exp/sprotty |
+|---|---|---|
+| preselected | f2dc73809657 (harness-book, 1 worktree, 33 commits) | none: «repository: none here, all repositories» |
+| sessions of the repository | 1 (link direct, no unit) | 0; the page shows all 689 sessions of 5 repositories |
+| cost known / unknown | 1 / 0 | n/a (all repositories: 686 / 3) |
+| layer 1 | 9 of 9 computed | computed over all repositories |
+| layers 2-3 `not-adopted` | 8 of 8 (commits_per_unit, cost_per_unit, resumes_per_unit, outcome, first_shot, cause_tally, regression_rate, out_of_scope_rate) | n/a: all repositories, computed from Jjodel's data |
+| Lanes tab | state `empty`: «No lane-run lanes for this repository» | state `ok`, Jjodel's lanes (no selection) |
+| /api/attention | 200, 1220 bytes, the 4700 shape | 200, 1220 bytes |
+| `git status --porcelain --ignored` before / after | identical (4 lines) | identical (1 line) |
+
+**Ticket** (medium): repositories are found only from session directories, so a git work tree with no Claude Code session (the Sprotty clone) is not in the store and `tack board` started there preselects nothing and shows every repository's data. A first-run user in a fresh repository sees someone else's work. Candidate for v0.1: register the launching work tree and show «no session yet» for it.
+
+## 2026-10-21 — merge: tack-v0 into alfonso-frontend-jjtl (P-2026-10-21-1438)
+**Prompt**: `claude_2026-10-21_1438_prompt_merge_tack-v0.md`, a direct merge by `lane-run merge --direct`, no session: `tack-v0` at `31f34732b` into `alfonso-frontend-jjtl`, merge base `77eba1327`, 2 commits on the branch side.
+**Files touched**: merge `61164a7c8`: 7 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1330_prompt_tack_v0_closure.md`, `tack/README.md`, `tack/bin/tack.mjs`, `tack/package.json`, `tack/src/cli/table.mjs`, `tack/test/cli-table.test.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `61164a7c8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11427 tests in 398 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked the tack-v0 worktree at 13:56: tack --version 0.1.0, README Status line as prescribed, bounded tack repos (~/jjodel +60 more), 4710 200
+**Notes**: Rollback tag `pre-tack-v0` on `213243815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1438/result.json`.
+**Prompt document name**: 2026-10-21 14:38
+
+## 2026-10-21 — fix: Tack v0b, preselect the start work tree when it has no session
+**Prompt**: P-2026-10-21-1500: when the start directory is a git work tree the store does not hold, preselect it as unrecorded instead of all repositories; one empty-state line on Lanes, Sessions, Timeline and Insights and empty API answers for it; tests; README «Install and first run»; re-run the Sprotty first-run check.
+**Files touched**: code commit 82cdc7792: tack/src/board/{api.mjs,server.mjs,board.js}, tack/test/first-run.test.mjs (new), tack/README.md; this commit: docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1500_prompt_tack_v0b_first_run.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 13:30 (P-2026-10-21-1330)
+**Causa**: (c)
+**Regressions**: no (node --test on tack/test: 264 of 264 pass, 257 existing plus 7 new, privacy tests included)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23)
+**Notes**: Key of the unrecorded work tree: its lowest root commit, the key identify() would give it, so a later session turns it into the stored row with no URL change (rescan drops `unrecorded`); a work tree with no commit gets a SHA-1 of its toplevel. /api/attention and the notifier's base repository unchanged. README also corrected in the board section and the /api/repos row, same behaviour.
+**Prompt document name**: 2026-10-21 15:00
+
+First run, `TACK_STORE=/tmp/tack-v0b/sprotty.db node tack/bin/tack.mjs board --no-open --port 4711` from `~/harness-exp/sprotty`, no flag, API read with `?repo=` set to the preselected key as the page does:
+
+| | ~/harness-exp/sprotty |
+|---|---|
+| preselected | 36a4e5574719 (sprotty, `unrecorded`); CLI «repository: sprotty, no recorded session» |
+| scan | 98 s, 696 sessions, 7241 commits, 5 stored repositories (none of them sprotty) |
+| sessions / timeline of the repository | 0 / 0 |
+| metrics | sessions 0; 9 computed (layer 1, over no session), 8 `not-adopted` |
+| Lanes tab | state `empty`: «No Claude Code sessions recorded for sprotty yet.» |
+| keys of the other 5 repositories in the four tab answers | 0 |
+| /api/attention | 200, 1145 bytes, the 4700 shape, unchanged route |
+| `git status --porcelain --ignored` before / after | identical (1 line) |
+| exit on SIGTERM | 0 |
+
+## 2026-10-21 — merge: tack-v0b into alfonso-frontend-jjtl (P-2026-10-21-1558)
+**Prompt**: `claude_2026-10-21_1558_prompt_merge_tack-v0b.md`, a direct merge by `lane-run merge --direct`, no session: `tack-v0b` at `9d69c1647` into `alfonso-frontend-jjtl`, merge base `8f3e52ef3`, 2 commits on the branch side.
+**Files touched**: merge `f46cec60d`: 7 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1500_prompt_tack_v0b_first_run.md`, `tack/README.md`, `tack/src/board/api.mjs`, `tack/src/board/board.js`, `tack/src/board/server.mjs`, `tack/test/first-run.test.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f46cec60d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11507 tests in 400 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked v0b at 15:24 from ~/harness-exp/sprotty on 4712: preselected sprotty unrecorded, sessions/lanes/timeline/metrics empty, 0 keys of other repositories, clone git status unchanged
+**Notes**: Rollback tag `pre-tack-v0b` on `fcd03e0c0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1558/result.json`.
+**Prompt document name**: 2026-10-21 15:58
+
+## 2026-10-21 — ticket: Tack collector shows a stale Outcome after a resumed run dies
+**Ticket**: The Tack lane-run collector (`tack/src/collectors/lane-run/collect.mjs`, around lines 95-109) derives a lane's outcome from the whole `log.jsonl`. After `lane-run resume`, when the new run dies without an Outcome line (usage limit or any non-zero exit), Tack still shows the outcome of the previous run.
+
+`lane-run status` had the same defect (issue #181), fixed by 966f16913, merge bd583958c (P-2026-10-20-0030): the outcome belongs to the latest run only, and a run that dies without one reads `limit` (usage-limit message) or `died` (any other non-zero exit). Tack should take the latest run's offset the same way (`latestRunFrom`, `runFate` in `lane-run.mjs`) or read the status output.
+
+Done when a test with run 1 ending in hard-stop and run 2 dying on the usage limit shows `limit` in Tack, and the parity check with `lane-run status` stays green.
+**Priority**: medium
+**Found in**: P-2026-10-20-0030

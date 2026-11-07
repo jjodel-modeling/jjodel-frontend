@@ -38,8 +38,8 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `from`, `to` | Model references |
 | `where` | Guard |
 | `helper` | Helper definition |
-| `rule` | Called rule definition (Phase 2) |
-| `lazy`, `unique` | Rule modifiers (Phase 2) |
+| `rule` | Called rule definition (contextual, §3.4b) |
+| `lazy`, `unique` | Rule modifiers (contextual, §3.4b) |
 | `abstract`, `extends` | Rule inheritance (Phase 2) |
 | `do` | Imperative block (Phase 4) |
 | `import`, `uses`, `library` | Module system (Phase 5) |
@@ -51,6 +51,14 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `true`, `false`, `null` | Literals (JjEL) |
 
 Keywords are **case-insensitive** at the lexer level.
+
+`rule`, `lazy` and `unique` are **contextual** (P-2026-11-02-2224): the lexer gives them no
+token, since lowercasing would take a class `Rule` or Ecore's feature `unique` away from every
+saved transformation. The parser reads them, lowercase and by value, only at the start of a
+top-level declaration: `rule NAME (`, `unique rule NAME (`, `lazy NAME`, `unique lazy NAME`
+(`unique rule`: P-2026-11-03-2111, R-JTG-16). Everywhere else they are
+identifiers. One form changes reading: a source class called `lazy` with an alias
+(`lazy l -> T`) is now a lazy rule on `l`; `lazy -> T` still maps the class.
 
 ### 2.2 Operators and Punctuation
 
@@ -178,9 +186,10 @@ valueKey         = literal | IDENTIFIER ;
 
 objectCreation   = "{" ( "->" targetType mappingBody | forAllMapping+ ) "}" ;
 
-forAllMapping    = "forall" IDENTIFIER "in" expression
+forAllMapping    = "forall" forAllBinding ( "," forAllBinding )*
                    ( "such" "that" expression )? NEWLINE*
                    "->" targetType mappingBody ;
+forAllBinding    = IDENTIFIER ( "," IDENTIFIER )* "in" expression ;
 ```
 
 **Binding forms:**
@@ -248,6 +257,38 @@ of the source model are iterated unresolved, with one warning per collection.
 This is the opposite direction from trace resolution (§5.3), which maps the same wrapper
 source → **target**. Both coexist and neither changed the other.
 
+#### `forall` over several variables
+
+A `forall` may bind several variables, in two spellings that mix
+(R-FA-1, R-FA-7): `forall q, r in xs` ranges both over `xs`, `forall q in xs, r in ys`
+gives each its collection. The iteration is the **cartesian product**, first variable
+outermost; without a filter the pair `(a, a)` and both orders are present, and excluding
+them is the filter's job. A later collection may read an earlier variable
+(`forall c in classes, a in c.attributes`). Every variable is bound in the `such that`
+and in the body, with the variables of an enclosing `forall` and the `let` bindings in
+scope. The `such that` sees what the body sees (R-JTG-19, P-2026-11-04-0015): with one
+variable, the element's bare names too, so `forall x in xs such that kind == "k"` reads
+`x.kind`. The created objects form **one flat list** in the feature; an empty product creates
+nothing, without a warning. A name bound twice in the same `forall` is a parse error.
+Unlike a one-variable `forall`, the properties of the elements are not bound unqualified.
+With the source text, JjEL is the only parser of a collection, up to `such`, `->`, the comma of the next binding or the end of the line, so it reads what the legacy expression parser cannot, an object literal (`{ hi: q, lo: r }`) among them (P-2026-11-02-2345, P-2026-11-03-1135). Without the source text the collection is the legacy expression.
+
+```jjtl
+-- same collection: every unordered pair of requesters, once
+-> ops {
+    forall q, r in requesters such that r.priority > q.priority -> Neg { ... }
+}
+
+-- one collection each, the second reading the first
+-> columns {
+    forall e in entities, a in e.ownedAttributes -> Column { name := e.name + "_" + a.name }
+}
+```
+
+An element of a collection that is a record built by an expression
+(`{ hi: q, lo: r }`) has its fields lifted like a source reference, so `pr.hi.name`
+reads the source object.
+
 **Property resolution** (4-strategy fallback for reading source values):
 1. Direct property access: `source[path]`
 2. Context variable lookup: `ctx.get(path)` (instance properties are bound as context variables)
@@ -273,6 +314,40 @@ helper formatLabel(name: String, prefix: String) -> String {
 }
 ```
 
+### 3.4b Called and Lazy Rules
+
+> **STATUS: implemented in the executor (P-2026-11-02-2224, slice B).** The app's write-back
+> of several targets per source element is slice B2. Semantics: §5.3.3.
+
+```ebnf
+calledRule = [ "unique" ] "rule" IDENTIFIER "(" [ ruleParam ( "," ruleParam )* ] ")" ruleTail ;
+ruleParam  = IDENTIFIER [ ":" IDENTIFIER ] ;
+lazyRule   = [ "unique" ] "lazy" IDENTIFIER [ IDENTIFIER ] ruleTail ;
+ruleTail   = "->" IDENTIFIER multiplicity? condition? [ "{" mappingBody "}" ]
+           | "=" expression ;                     (* a delegating rule, to the end of the line *)
+classMapping = sourcePattern ( "," sourcePattern )* ruleTail ;
+```
+
+The form follows `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322` (R-JTG-5). Called and lazy
+rules are kept in `TransformationAST.rules`, not in `mappings`: neither takes part in pass-1
+matching. A parameter typed `Env` receives the environment (§5.3.3); other parameter types are
+optional and not checked.
+
+**Delegating rules** (`= expression`) are this lane's addition to the sketch: a rule that
+creates no target of its own and lowers to what the expression lowers to. A source node with
+no target counterpart needs one: `Bind(expr, bindings)` lowers to its `expr`, and a variable
+lowers either to a `Ref` or to the expression bound to it. Any of the three kinds may delegate;
+a delegating rule has no guard, its expression decides.
+
+```jjtl
+rule mkRef(v) -> Ref { name := v.name }
+rule under(e, env: Env) = e
+lazy Add -> Add { left := left  right := right }
+unique lazy Const -> Const { value := value }
+lazy Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
+Main m = m.expr
+```
+
 ### 3.5 Interactive Statements
 
 ```ebnf
@@ -283,11 +358,35 @@ notifyStatement = "notify" "(" expression ( "," NUMBER )? ")" ;
 **Interactive expressions** (usable inside conversion expressions):
 
 ```ebnf
-promptExpr = "prompt" "(" expression ( "," expression )? ")" ;
+promptExpr = "prompt" "(" expression "," ( IDENTIFIER ( "," expression )? | expression ) ")" ;
 inputExpr  = "input" "(" expression "," STRING ( "," ( arrayLiteral | expression ) )? ")" ;
 ```
 
-> **Implementation status:** Parser produces AST nodes. UIBridge interface and React dialog components exist. **Executor does NOT execute alert/notify statements** (silently dropped). **Prompt/Input in expressions return null** via the AST bridge. This is a gap that needs to be closed.
+`prompt` has two forms:
+
+- `prompt(message, default)`: asks for a value of type `EString`, with `default` pre-filled.
+- `prompt(message, Type [, default])`: asks for a value of type `Type`, with an optional `default`.
+
+The second argument is read by its shape. A bare name (an identifier followed by `,` or `)`) is the type; any
+other expression (a string, a number, a dotted path, a call, a concatenation) is the default, and the type is
+`EString`. With three arguments the second must be a bare name. The parser does not check the name against the
+known types. Both parser paths, legacy and JjEL, apply the same rule.
+
+```jjtl
+prefix := prompt("Table prefix:", "tbl_")          -- default "tbl_", type EString
+size   := prompt("Column size:", EInt, 255)        -- type EInt, default 255
+label  := prompt("Label for " + name + "?", EString, name)
+```
+
+A bare name is never a default: `prompt("Label?", name)` asks for a value of type `name`, it does not pre-fill the
+`name` attribute. To pre-fill from a variable or attribute, write the type explicitly, as in the third line above.
+The second argument is required: `prompt(message)` alone is rejected by both paths.
+
+`input` does not share this rule. Its second argument is always a string literal naming the input kind (`"string"`,
+`"number"`, `"boolean"`, `"date"`, `"select"`); the optional third is the default, or the options array for
+`"select"`.
+
+> **Implementation status:** The executor runs all four. `alert` awaits the host dialog; `notify` shows a toast and does not wait. `prompt`, `input` and `confirm` open the host dialog when the call is the whole right-hand side of an attribute mapping, a `let` binding or a conversion: the executor awaits the answer and binds the value entered (for `input`, the default is pre-filled), or `null` when the dialog is cancelled. A call nested inside a larger expression opens no dialog: on both parse paths the whole expression fails with the warning `Expression evaluation failed (JjelExpression): Function 'prompt' is not defined` (`confirm` or `input` named likewise) and the value is `null`, so `"x" + prompt("N", EString)` yields `null`.
 
 ### 3.6 Expressions
 
@@ -380,9 +479,10 @@ Each target instance is a plain JavaScript object:
 | (none) | 1 instance |
 | `[1]` | 1 instance |
 | `[N]` (N > 1) | N instances |
-| `[*]` | **Currently:** 1 instance. **Should:** create instances based on context (e.g., collection size) |
+| `[*]`, `[0..*]` | 1 instance |
+| `[n..*]` (n > 0) | n instances, the lower bound |
 
-> **Known limitation:** `[*]` always creates exactly 1 instance. The semantics of unbounded multiplicity need to be defined.
+The counts are per source instance. An unbounded upper bound fixes no count, so the rule creates its lower bound, at least one (R-JTG-21, P-2026-11-04-0900); no warning.
 
 ### 4.5 Attribute Binding Execution
 
@@ -417,7 +517,8 @@ TraceModel
 ├── sourceModelName: string
 ├── targetModelName: string
 ├── executedAt: Date
-└── links: TraceLink[]
+├── links: TraceLink[]
+└── placements?: TracePlacement[]   # containment placements (§5.3.1), absent when none
 
 TraceLink
 ├── rule: string                    # e.g., "State -> Place"
@@ -435,6 +536,12 @@ TraceLink
 │   ├── invertible: boolean
 │   └── inverseExpression?: string
 └── invertible: boolean             # weakest-link of all bindings
+
+TracePlacement
+├── rule: string                    # the rule whose binding placed the target
+├── target: TraceElementRef
+├── container: TraceElementRef
+└── feature: string                 # the containment feature of the container
 ```
 
 ### 5.2 Trace Resolution
@@ -449,35 +556,216 @@ For reverse lookups:
 
 ### 5.3 Implicit Trace Resolution
 
-> **STATUS: NOT IMPLEMENTED**
+> **STATUS: implemented for references (P-2026-11-02-1742, slice A0) and for containment
+> placement, in the executor (P-2026-11-02-1956, slice A) and in the app's write-back
+> (P-2026-11-02-2024, §9.2). Environments and called rules are PLANNED: part B of
+> `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`, ratified as R-JTG-1..5
+> in `docs/decisions.md`.** Each paragraph below says which of the two it describes.
 
-**Intended behavior (ATL-style):** When an attribute binding assigns a source element (or a reference to one) to a target property, and the target property's type corresponds to a target class in the transformation, the engine should **automatically resolve** via the trace.
+When a binding assigns a source element, or a reference to one, the engine replaces it with
+the target that a rule created for it, found through the trace. No `resolve()` is needed.
 
-**Example:**
 ```jjtl
 Transition -> Transition {
-    source -> source    # source.source is a State; target.source expects a Place
-                        # Engine should auto-resolve State → Place via trace
-}
+    source := source    -- source.source is a State; the target holds the Place
+}                       -- that the rule State -> Place created for it
 ```
 
-**Algorithm (to implement):**
+#### 5.3.1 What is implemented
 
-1. Evaluate the source expression → get a value `v`
-2. If `v` is an object with a `className` or `__type`:
-   a. Check if any class mapping maps that type to a target type
-   b. If yes, look up the trace for `v` → get the corresponding target element
-   c. Assign the target element (not the source element)
-3. If `v` is a collection, apply step 2 to each element
-4. If no trace link found, assign `v` as-is (fallback to direct copy)
+**When.** Every binding value goes through resolution before it is stored: rule-level
+bindings, bindings inside a `let`, and bindings of objects created in a body
+(`-> feature { -> T { ... } }`). A collection is resolved element by element.
 
-**Disambiguation for multiple rules matching the same source type:**
-- Use the first matching trace link (declaration order)
-- If the target property has a declared type, prefer the rule whose target class matches
+**The trace.** Pass 1 creates every target of every matched rule and records it under the
+source element's id and name, with the rule and the target class (§4). Pass 2 evaluates the
+bindings, so resolution finds a target whatever the rule order.
 
-**Endogenous transformations (same metamodel):**
-- When source and target types are the same, implicit resolution is ambiguous
-- Require explicit `resolve()` in this case, or use type context from the target property
+**Value shapes.**
+
+| Value | Resolution |
+|---|---|
+| `{ __ref: id }` (a reference read from the model) | the trace entries for `id` |
+| an object with `className` / `__type` | the rules for that class, then the trace entry for that rule |
+| primitive, `null` | unchanged |
+| array | element by element |
+
+**Binding by identity.** The parent holds the **live** target instance, not a copy. What
+pass 2 binds on that target, before or after the parent, is visible through the parent, and
+two targets may point at each other (`a.b = b`, `b.a = a`). A reference value is stored as
+`{ __ref_result: true, targets: [...] }`, which the write-back turns into pointers (§9.2).
+Every reader of the output tolerates cycles: the write-back reads one level, the trace view
+is depth-bounded, `serializeTraceModel` writes a rule target as `{__type, className, __sourceId}`.
+
+**Ambiguity.** Two rules matching one source element throw, naming both target classes;
+`resolve(e, TargetType)` disambiguates (R-JTG-3). An element of a class with a rule but no
+trace entry (filtered by `where`) throws `Unresolved reference`.
+
+**Fallbacks, reported.** Three cases keep their result and add one warning naming the rule
+and the source element whose binding hit them (R-JTG-2):
+
+| Case | Bound | Warning |
+|---|---|---|
+| an object of a class no rule maps | the source object itself | `... has no rule mapping '<Class>': the source object itself was bound` |
+| a `{ __ref }` to an element no rule maps | `null` (dropped from a collection that also holds resolved targets, with the partial-array warning) | `... points to an element no rule maps: it resolved to null` |
+| several targets of one rule for one source (multiplicity `[n]`) | the first | `... has <n> targets from rule '<rule>': the first was bound` |
+
+**Containment (slice A, P-2026-11-02-1956).** A binding on a containment feature (`composition`
+in the target metamodel) places each rule target it resolves to inside the object that owns the
+feature: the feature holds the **live** target, not a `__ref_result`, a collection element by
+element in order. A value holding no rule target is bound as before, and a fallback of the table
+above keeps its warning: an unmapped `{ __ref }` is dropped, an unmapped embedded object is bound
+as itself. Without a target metamodel no feature is known as a containment and nothing is placed.
+
+- *Roots.* After pass 2 every placed target leaves `roots`. This is recorded, not warned
+  (R-JTG-4): `targetModel.containment` maps each placed target to `{ container, feature }`, and
+  `traceModel.placements` lists `{ rule, target, container, feature }`.
+- *Ownership, decided in the executor.* A second claim on a target by another container, or by
+  another feature of the same one, is an error naming the target and both containers; the
+  second claim is not placed. A containment cycle, self-containment included, is an error naming
+  the elements on it; the walk runs through objects created in a body as well. Both make the
+  run fail (`success: false`) before anything reaches the D-layer.
+- *Assignment.* A second binding of the same feature on the same owner replaces the first and
+  releases its claims. Objects created into that feature by `-> feature { ... }` are kept in
+  source order with the placed targets: created first, then placed, or the reverse.
+- *Identity.* Objects created in a body keep their identity through the bind-time conversion,
+  so one of them can be the container of a placed target.
+- *Order.* Placement happens in pass 2 against targets created in pass 1, so the tree is the
+  same, by identity, whatever the rule order.
+- *References.* A non-containment binding to a placed target is still a `__ref_result` pointer.
+- *Format (P-2026-11-02-2108).* After pass 2 every placed target is marked `__nested: true`, the
+  format of an object created in a body, and `__placed: true`. `__nested` is what the write-back
+  reads; `__placed` keeps it a rule target for the readers that tell the two apart (binding by
+  identity, the trace serializer, which writes it short). It is marked once every binding is
+  made, never at claim time, so no pointer to it depends on rule order. Its trace link, its
+  bindings and the pointers to it are unchanged. `targetModel.containment` stays, for ownership
+  and errors.
+- *Write-back.* The app writes a placed target once, inside its container, never as a root
+  (§9.2). A run that fails on a second claim or a cycle writes nothing.
+
+**Per model.** The trace maps source elements to target elements of one run. An object of the
+target model (`__createdBy: 'JjTL'`) is never resolved as a source element, so `Add -> Add` from
+one model to another is not endogenous: a target returned by `resolve()` is bound as itself.
+
+**Trace key.** Each trace entry carries an environment, and implicit resolution looks entries up
+under (source, rule, environment). Until B the environment is always the empty one.
+
+#### 5.3.2 The frame of A and B (planned)
+
+The terms are those of R-JTG-5 and of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`: called
+rules `rule name(args) -> T`, `lazy` and `unique lazy` rules; an **environment** that is dynamically
+scoped over a rule application and reified as a named parameter of called rules; values held
+in an environment are closures (the expression with the environment of the binding site).
+
+- **Trace key.** A trace entry is keyed by **(source element, rule, environment)**. Never
+  "one target per source": B creates several targets for one source element, one per
+  environment, and A must not be specified in a way B would have to break.
+- **Inherited environment.** Implicit resolution looks up the entry under the **caller's**
+  environment. Until B ships the environment is always empty, so this is vacuous and A0's
+  behaviour is the whole of it.
+- **Containment (A).** Implemented in the executor, §5.3.1 (P-2026-11-02-1956). The placed
+  target is not marked `__nested` at claim time: other bindings may point at it, and marking
+  it then would make the pointer depend on rule order. It is marked `__nested` and `__placed`
+  after pass 2 (P-2026-11-02-2108), and the write-back materializes it with the nested path
+  by that marker alone (§9.2, P-2026-11-02-2024).
+- **Called and lazy rules (B).** A called rule is invoked from a binding or a `forall` body,
+  binds its arguments, and returns the target it creates; it takes no part in pass-1 matching.
+  `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
+  The write-back stops assuming one target per source id before B ships.
+
+**Two rulings on how the planned points relate (R-JTG-6, R-JTG-7; planned, not implemented).**
+
+1. *Containment under A and B (R-JTG-6).* A containment resolves (source, rule, caller's
+   environment) and creates the entry on demand when absent. Under A the environment is empty
+   and pass 1 has created the entry, so it is a lookup; under B a new environment has no entry
+   yet, so it is a fresh subtree. A call of a rule not declared `unique` always creates a fresh
+   subtree, even under an environment seen before, so one expression may be placed twice with
+   the same bindings. The double-claim error (R-JTG-4) applies to implicit resolutions and to
+   `unique` rules.
+2. *Rules for lowering (R-JTG-7).* Rules meant for lowering are declared `lazy`: they never
+   match in pass 1 and create a target only when a resolution or a call reaches the node.
+   Matched rules stay for the elements the transformation maps as such. Containment under A
+   alone therefore does not serve library expressions; that value arrives with B.
+
+#### 5.3.3 Called rules, the environment, lazy rules (B1)
+
+Implemented by P-2026-11-02-2224, P-2026-11-02-2247 and P-2026-11-02-2321, in the executor.
+The app's write-back of several targets per source element is B2 (list below).
+
+- **Calls.** A called rule is a JjEL function. Calling it during an expression yields a
+  demand, which the receiving binding carries out before it resolves its value: the rule is
+  applied, its target created and returned, then placed as any rule target (§5.3.1). Each call
+  applies the rule afresh, unless the rule is `unique`. A delegating rule (`= expression`, §3.4b) returns what its
+  expression lowers to; what is left a source element resolves through the trace.
+- **Environment.** Each application runs under an environment, a chain of frames binding names
+  to closures. It is the caller's, unless a called rule receives one through a parameter typed
+  `Env`. `extendEnv(names, values)` returns a frame over the current environment, every value a
+  closure over the current environment, which is its binding site. `envHas(name)` tests a name;
+  `envLookup(name)` yields the bound value, lowered under the closure's environment and not the
+  caller's, so names are not captured.
+- **Implicit resolution under an environment.** Under a non-empty environment, a source element
+  reached by a binding is lowered by its matched rule under that environment, once per
+  (rule, source, environment), and its targets are traced with that key; environments compare
+  structurally, by the closures they make visible. Under the empty environment the pass-1
+  target answers, as before. A delegating matched rule is applied when a binding first reaches
+  its element, or in pass 2, whichever comes first.
+- **Lazy rules (R-JTG-7).** A lazy rule never matches in pass 1: it applies when a binding
+  reaches a node of its source class, under the environment of that moment. The lazy rules of
+  a class are candidates; the one whose guard holds applies (no guard always holds), and none
+  or several is an error naming the candidates. A class may have both a matched and a lazy rule
+  (R-JTG-18, P-2026-11-04-0015): the lazy one never matches in pass 1, so it does not compete with
+  the matched one under R-JTG-3. Provisional, not ratified (R-JTG-20): a binding that reaches a
+  node of such a class is settled by the type of its feature: the lazy rules whose target fits it, when no matched rule's does; the
+  matched rule's pass 1 target, when no lazy rule's does; an error naming both, when both fit or
+  the feature has no known type (`binding 'f' reaches Cls 'c1', lowered by matched ... and lazy
+  ...`). `resolve()` still finds the matched target only (R-JTG-13). A lazy node nothing reaches creates no target and no root.
+- **`unique`.** A `unique lazy` rule applies once per (rule, source, environment); a later
+  reach under an equal environment returns the same target. A `unique rule` (R-JTG-16,
+  P-2026-11-03-2111) applies once per (rule, arguments, environment): a second call with the
+  same arguments under an equal environment returns the same target. Arguments compare by
+  value key, a source element by its id, any other object by identity; an `Env` argument is
+  left out of the arguments and counts as the environment of the application. Placing that one
+  target twice is the double-claim error of R-JTG-4.
+- **`let` (R-JTG-15).** A `let` holds the value of its expression, computed once, at the
+  binding (P-2026-11-03-2111, #515): the calls and the `envLookup` closures it holds are
+  carried out there, so two uses of the name are the same object, and a `unique` or a fresh
+  rule is applied once per `let`, not once per use. A source element bound by a `let` stays
+  the element: it is not lowered at the `let`, and `$x.name` navigates the source as before.
+- **Containment under B (R-JTG-6).** A call of a rule not `unique`, a reach of a lazy rule not
+  `unique`, and the lookup of a bound value each lower to a fresh subtree, once per `let` that
+  holds them (R-JTG-15), even under an
+  environment seen before: one expression may be placed twice, with the same bindings or with
+  different ones. A bound value whose class has a matched rule is lowered anew by that rule
+  under its binding site's environment, even an empty one, never resolved to the shared pass-1
+  target; that new target is not traced, so a reference to the element still means its pass-1
+  target. Its descendants follow their own rules: matched classes resolve through the trace, so
+  a value to be placed twice is lowered by lazy rules (R-JTG-12). The double-claim error (R-JTG-4)
+  remains for implicit resolutions and `unique` rules. Tested: a bound `Add(Const 5, Const 6)`
+  placed twice with `Const` matched raises one containment conflict per `Const`, and with `Const`
+  lazy places two separate subtrees (`called-lazy-rules.test.ts`, P-2026-11-03-0539).
+- **Non-termination.** More than 256 nested applications (calls, delegations, closures) stop the
+  run with one error naming the application stack, innermost first: rule, source element, and
+  the bindings visible in each frame.
+
+**Left for B2.** Done by P-2026-11-02-2338; item 4 decided by R-JTG-13.
+1. Done. The app's write-back kept one target per source id (the map at
+   `components/project/ProjectEditor.tsx:1809`, as cited by P-2026-11-02-2247): lazy, called and
+   fresh targets can be several per source element. Root targets are now found by the identity
+   of the executor object (`makeRootTargetIndex`, `nestedMaterialization.ts`); `__sourceId` is a
+   fallback only when it names exactly one root, otherwise the pointer is skipped with a warning.
+   A pointer array is deduplicated by target identity, not by source id, so two fresh targets of
+   one source stay two pointers.
+2. Done. The optional `isPlacedIn` of `nestedMaterialization.ts` is removed.
+3. Done, nothing to change. The legacy `trace` Map, which called, lazy and fresh targets do not
+   fill, is read only by `hooks/useJjtlExecutor.ts`, as a fallback when `traceModel.links` is
+   empty; every called, lazy and fresh target has a trace link, so no consumer loses one.
+4. Decided (R-JTG-13, 2026-11-03), nothing to change. `resolve()`, `resolveAll()` and
+   `{ __ref }` lookups find matched targets only, never a lazy node: a lazy node is reached by a
+   binding's value, not by an explicit `resolve()`.
+5. Done. A non-abort error raised under a delegating matched rule in pass 2, a lazy-rule
+   selection error among them, is an error of that element, `Failed to lower <Class 'x'> by rule
+   '<label>': <message>` with the application stack, and the other elements are still lowered;
+   the depth limit still ends the run.
 
 ### 5.4 Per-Binding Invertibility
 
@@ -570,6 +858,21 @@ For each source instance, the executor creates a child `EvaluationContext` with:
 
 This means `name` and `source.name` are equivalent in expressions.
 
+### 7.4 All instances of a type: search `data`
+
+`data` is the whole source array (§4.2: every object of the model, contained ones included), so
+the idiom for "every instance of type T" is a collection search over it, filtered on `className`:
+
+```
+data.filter(t => t.className == "DataType" and t.name == "Integer").first()
+```
+
+This is how Class2Relational finds the Integer type from any element, whatever its container
+(`docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`, W3). There is no
+`T.allInstances` (searched `frontend/src/jjtl/` and `frontend/src/jjel/`, positive control
+`resolveAll`, P-2026-11-03-1434), and none is added for now (#519, low): `data.filter` covers the
+need, and a second spelling would be a language-surface change of its own.
+
 ---
 
 ## 8. Interactive Features
@@ -601,14 +904,19 @@ Three implementations:
 
 ### 8.3 Input Types
 
+The kind is the second argument of `input`, a string literal: `input("Name?", "string")`. Both
+parsers accept exactly the kinds below, compared after lowercasing; any other kind is a parse
+error.
+
 | Type | Widget |
 |---|---|
-| `text` | Text input field |
+| `string` | Text input field |
 | `number` | Numeric input |
 | `boolean` | Checkbox / toggle |
+| `date` | Date picker |
 | `select` | Dropdown from options array |
 
-> **Implementation gap:** The executor silently drops `AlertStatement` and `NotifyStatement` from mapping bodies. `PromptExpression` and `InputExpression` evaluate to `null`. The UIBridge exists but is not wired into the executor.
+> **Implementation status:** The executor runs `AlertStatement`, `NotifyStatement`, `PromptExpression`, `InputExpression` and `ConfirmExpression` through the UIBridge. An `input` call opens the host dialog with its kind, its default pre-filled and, for `select`, its evaluated options, and returns the value entered, or `null` when the dialog is cancelled. The interactive expressions open a dialog only as the whole right-hand side of a binding; see §3.5 for the nested case.
 
 ---
 
@@ -621,6 +929,17 @@ it reads `sourceModel.allSubObjects` **once** per Execute (the accessor rescans 
 store on each access), maps each object to `{ id, name, className, __type, ...features }`,
 wraps reference values as `{ __ref: pointerId }` and enum values as the literal's **name**,
 and computes `_containerId` for contained objects. See §4.2.
+
+The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
+P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
+containment alike, is always a list, `[]` when empty and a one-element list for one value; a
+single-valued feature is the bare value, `null` when empty. A slot with no declared feature keeps
+the shape by count (none `null`, one bare, several a list). Until then the shape was by count for
+every feature, so a many-valued feature with one value reached the rules as a single value:
+`coll.map(...)` failed with `Unknown method 'map'` and a `forall` over it produced nothing. A
+string value repeated in one slot, a Pointer id among them, is kept once on a feature declared
+`unique` (the default) and kept every time on a feature declared `unique=false`
+(P-2026-11-03-1553, #474).
 
 `jjodelConverter.ts` also provides `convertJjodelModelToSource(model)`, which converts
 `LModel.objects` to `SourceElement[]`. It is **not** on the execution path.
@@ -646,17 +965,46 @@ Nested objects (STEP 6c), i.e. what `-> feature { ... }` created:
 
 7. `LValue.addObject(json, className)` on the parent's `$feature` slot. **It opens its own
    TRANSACTION around `DObject.new3`**, so it runs outside STEP 6's, for the same reason as
-   `DVertex.new`. It runs at the top of the STEP 8 timeout, where `lModel.objects` is
-   populated.
-8. The child is created with its **name only**. Its remaining attributes are queued against
-   the **real id `addObject` returned** and written on a further timer, past `addObject`'s
-   own deferred value seeding (`U.UpdatingTimer * 2`).
+   `DVertex.new`, and every call stays top-level. It runs at the top of the STEP 8 timeout,
+   where `lModel.objects` is populated. The walk goes **level by level, to any depth**
+   (`components/project/nestedMaterialization.ts`): roots are found by name as in STEP 8,
+   every object below them by the id `addObject` returned for it.
+8. The slots of an object `addObject` has just created do not answer synchronously (measured
+   at 90-316 ms). Each level polls the slot it writes into, by id, every **50 ms with a cap of
+   3 s per level**; a slot that does not answer leaves its subtree **unplaced**, with a warning.
+9. The child is created with **`{}`**. Its `name` and its remaining attributes are queued
+   against the **real id `addObject` returned** and written on a further timer, past
+   `addObject`'s own deferred value seeding (`U.UpdatingTimer * 2`), once the walk is done.
+   A name in the `addObject` json is refused for a second same-named sibling in one slot, and
+   outright on a class with no `name` attribute (decision R-S1-6): such a class never
+   receives a `name`.
+10. Objects left unplaced are counted and listed in the JjTL output panel
+    (`SystemEvents.JJTL_NESTED_MATERIALIZED`).
+
+Rule targets placed in a containment (slice A, §5.3.1) take the same path; there is no second
+writer:
+
+11. STEP 6 does not create a target listed in `targetModel.containment`: no root DObject, no
+    DVertex, no entry in the source-id map. A feature's children for STEP 6c are its `__nested`
+    objects, one test: the executor marks a placed target `__nested` too (P-2026-11-02-2108),
+    in the feature's order, so a created object and a placed target share one containment.
+    A placed target's own features are walked the same way, to any depth.
+12. A placed target is created with `{}` by `addObject`, polled and capped as above, and its
+    declared attributes are queued by the created id (ticket #445 applies unchanged).
+13. The walk returns the id it created for every executor object. A `__ref_result` held by a
+    created or placed object is queued against that id instead of being dropped; on a key that
+    is not a reference of its class it is warned and dropped.
+14. Pointers are written in a second phase: when STEP 6c runs, every pointer, the roots'
+    included, is written after the last level is created and its attributes seeded. A pointer
+    to a placed target resolves by the id the walk returned; a pointer to a root keeps the
+    `__sourceId` → name path.
 
 **Design decision — children are resolved by id, not by name.** The STEP 8/8b name pool
 stays `lModel.objects` (the roots). Two tables may each own a column called `id`: a name
 lookup could not tell them apart, and widening the pool would only make the rule-level
-lookups ambiguous without serving any case — nothing puts a contained object in the
-reference-target map. This is design, not a limitation.
+lookups ambiguous without serving any case. A pointer to a contained object, a placed target,
+resolves by the id the walk returned for it (item 14), never by name. This is design, not a
+limitation.
 
 **Design decision — enum values travel as strings.** The executor carries an enum value as
 the literal's **name**, which is also how the source side serializes it. `writeAttribute`
@@ -670,7 +1018,9 @@ executor free of Jjodel pointers and confines the D-layer knowledge to the write
 attribute of the target class, nor a resolved reference, nor a nested creation is reported
 with the instance, the feature and the reason. It used to fall between the attribute
 whitelist (`allAttributes`, which excludes references) and the `__ref_result` channel
-without a word.
+without a word. This holds at every depth: a key of a nested object that is neither an
+attribute nor a nested creation nor a resolved reference is warned with its path, and an object
+that could not be placed is reported as above.
 
 ---
 
@@ -679,8 +1029,13 @@ without a word.
 | Situation | Behavior |
 |---|---|
 | Source class not found | Silently skip (no instances to match) |
+| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target |
+| Nested creation of a class not in the target metamodel (`-> feature { -> Ghost { ... } }`, `forall x in xs -> Ghost { ... }`) | **Error** before pass 1, the same as a rule target (R-JTG-17, nested case, ratified 2026-11-04): `Target class 'Ghost' not found in target metamodel (object creation in Table.columns). Nothing is written.`, or `(forall in B)`. No target model. A creation inside a `let` body is checked the same way, at any depth (R-JTG-22), and so is an abstract class; the shape of the creation is not checked there |
+| A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-20, provisional, not ratified; §5.3.3) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |
+| Builtin call that fails inside an expression (`range(null)`, a helper, a called rule) | **Error** on both parse paths, never a warning with `null` (R-FA-11): `Builtin 'range' failed in expression at line L, column C: <reason>`. In a feature or attribute mapping the mapping stops (`Failed to map ...`); in a `where` guard the run stops (`Execution failed: ...`). A call to a name that resolves to nothing (`Function 'f' is not defined`) stays an expression evaluation error |
+| JjEL method that fails inside an expression: a method the value's type does not have (`"4".log2()`), or a library method that throws (`4.toFixed(200)`) | **Error** on both parse paths, as a failing builtin (R-FA-12, extends R-FA-11): `Method 'log2' failed in expression at line L, column C (rule 'Core -> Module', source element 'rv_mc4'): Unknown method 'log2' for type String...`: the location is that of the outermost expression, the rule and the source element those being evaluated when the method failed. The same in a binding, a `where` guard (the run stops), a `forall` collection and a helper body. Out of it, unchanged, a warning with `null`: a method called on null (a missing feature reads as null: `Cannot call method 'log2' on null`) and a call on a model element that has no feature of that name (`c.nofeature()`, a missing feature). A failure inside a lambda passed to a collection method is the lambda's own: it stops only if it is itself a failed builtin or method |
 | Property path not found | Return `null` after trying all 4 strategies |
 | Value mapping: no match | Return `null` |
 | Object creation error | Log warning, assign `null` |
@@ -689,6 +1044,7 @@ without a word.
 | Wrapper body neither `-> Class` nor `forall` | Warning naming the feature, nothing created |
 | `forall` element is an unresolvable `{ __ref }` | One warning per collection, element iterated unresolved |
 | Value that reaches no attribute, reference or feature | Warning naming instance, key and reason |
+| Binding to a feature the target class does not declare, own or inherited (`name := ...` on a class with no `name`) | One warning per binding, before the run, with the metamodel known (#445): `Rule 'B -> Box', binding 'name' at line L, column C: 'name' is not a feature of target class 'Kid'; the value is not written to the model.` Let bodies included. Nothing is created; the executor keeps the value on its object and the write-back writes declared features only |
 
 No exceptions are thrown to the caller. All errors are caught and logged.
 
@@ -736,6 +1092,7 @@ interface ExecutionResult {
 | `forall` in a mapping body | ✅ | `parser/parser.ts`, `executor/executor.ts` |
 | Contained source instances | ✅ | `components/project/ProjectEditor.tsx` |
 | Reference collections dereferenced in `forall` | ✅ | `executor/executor.ts` |
+| `forall` over several variables (cartesian product, flat) | ✅ | `parser/parser.ts`, `executor/executor.ts` |
 | Trace model (build + query) | ✅ | `executor/traceModel.ts` |
 | Per-binding invertibility | ✅ | `executor/executor.ts` lines 678-776 |
 | Bidirectionality analyzer | ✅ | `analyzer/bidirectionality.ts` |
@@ -744,18 +1101,25 @@ interface ExecutionResult {
 | UIBridge interface + React components | ✅ | `executor/UIBridge.ts`, `executor/ReactUIBridge.ts`, `components/dialogs/*` |
 | Monaco syntax highlighting | ✅ | `editor/` |
 | JjOM source model conversion | ✅ | `executor/jjodelConverter.ts` |
+| Called, `unique` called, lazy, `unique lazy` and delegating rules; the environment (B1, §5.3.3); a `let` holds its value (R-JTG-15) | ✅ executor; app write-back B2 | `parser/parser.ts`, `executor/executor.ts` |
 
 ### 12.2 Known Bugs
 
+Each row reviewed against the code on 2026-11-03 (P-2026-11-03-1402) and reproduced by
+`executor/__tests__/spec12-known-bugs.test.ts`, on both parser paths where a parse is involved.
+The verdict leads the description: **real**, **fixed** with its commit, or **stale** with the
+commit that made it so.
+
 | Bug | Description | Severity |
 |---|---|---|
-| `.forAll(...)` never parses, in either lambda form | BOTH lexers lowercase before the keyword lookup (`jjel/lexer/lexer.ts:397-400`, `jjtl/lexer/lexer.ts:330`), so `forAll` becomes the FORALL token and cannot follow a `.`. Measured 2026-09-08 calling JjEL **directly**, so the defect is not scoped to the app path as this row said until then; `useJjtlParser` calling `parse(tokens)` without `source` is a second, independent reason. There is no `forAll` collection builtin either: the boolean quantifier is `coll.all(x => pred)`. See `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` §5.3 | High |
-| 7 test files fail at import | `window is not defined` under `environment: 'node'`: `executor.ts` imports the `joiner` barrel for `U.asNumber` alone, which drags in monaco/jquery/sweetalert2/axios. `forall-mapping.test.ts` is among them, so nine forall tests do not run | High |
-| Multiplicity `[*]` | Always creates 1 instance | Medium |
-| Number type | All numbers bridged as `EInt`, never `EDouble` | Low |
-| Duplicate values | B_1 may receive A_0's attribute values | High |
-| Double execution | React StrictMode double-render causes second execution | Medium |
-| Debug logging | Extensive `console.log` in executor not cleaned up | Low |
+| `.forAll(...)` never parses | **Stale on the app path.** JjEL takes any keyword as a member name since `3aa5993c8` (P-2026-10-21-0011), and both app callers of the JjTL parser pass `source` since `d3d42310c` (P-2026-10-31-1910), so `coll.forAll(x => p)` parses and the evaluator answers `Unknown method 'forAll' for type Array. Did you mean 'all'?`. JjEL has no `forAll` by design: the quantifier is `coll.all(x => pred)` (root `CLAUDE.md` §12.6). Only the legacy path (no `source`), reached by tests alone, still refuses it | — |
+| 7 test files fail at import | **Fixed** in `e784e325d`: `executor.ts` took only `U.asNumber` from the `joiner` barrel and now holds a verbatim copy, so six of the seven load and pass (two stale expectations updated). `ai-prompt-sanitization.test.ts` still fails at import, through `services/AIMatcher`, not the executor. Full suite: import failures 9 → 3 | Low |
+| Multiplicity `[*]` | **Settled** (R-JTG-21, P-2026-11-04-0900). `A -> B[*]` creates one target per source, `[n..*]` creates n, `[n]` creates n; no warning (§4.4). The warning of P-2026-11-04-0015 is removed | — |
+| Number type | **Fixed, never observable.** The `EInt` tag on a bridged number literal was a dead write: the evaluator returns the literal's value and reads no tag, so `w := 3.5` and `v := 2 + 0.25` bound 3.5 and 2.25 on both paths before the change. A decimal literal is now tagged `EDouble` (`e784e325d`) | — |
+| Duplicate values | **Stale for a flat array source**, the shape the app passes: each target receives its own source's values, on both paths. **Real and fixed** for a `{ classes, instances }` source, whose arrays the flat-object loop read a second time, matching every instance twice (`e784e325d`) | — |
+| Double execution | **Stale, by reading only** (no app probe): there is no `<StrictMode>` in `src/` (`index.tsx` renders `<Provider><App/></Provider>`), Execute is a click callback and not an effect, and `handleExecuteTransformation` has carried a re-entry guard since `40fc9ff66` | — |
+| Debug logging | **Fixed** in `e784e325d`: the seven live `console.log` of a run removed, two of them per binding per instance. A run writes nothing to `console.log` | — |
+| Binding to an undeclared feature (#445) | **Fixed by a warning** in `e784e325d`. A nested creation lost `name` on a class with no `name` attribute, silently: the nested write-back writes declared attributes only and exempts `name` from its leftover check (`components/project/nestedMaterialization.ts`, `nestedAttributesOf` and the leftover loop). Now warned once per binding with rule, line and column (§10); nothing is created. The Output panel prints the warnings of a run since P-2026-11-03-1553 (#520), at most 20 lines and a count of the rest, all of them in the Trace tab; seen in the app on Class2Relational | — |
 
 **One ambiguity left by design.** The parser produces two shapes for the same node, and
 the executor tells them apart by `objectCreation.targetClass === targetAttribute`, which
@@ -769,15 +1133,14 @@ message, not silence.
 
 | # | Gap | Description | Priority |
 |---|---|---|---|
-| 1 | **Implicit trace resolution** | Auto-resolve source elements to target via trace | Critical |
+| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place; non-empty environments, lazy rules and fresh subtrees under B are done in the executor (B1, §5.3.3); the app write-back of several targets per source is B2 | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
-| 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
-| 5 | **Reference mapping** | Map reference-typed properties (not just primitives) | High |
+| 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). App write-back: done, placed targets created inside their container by the nested path (§9.2, P-2026-11-02-2024) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
-| 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
-| 9 | **Lazy rules** | `lazy` / `unique lazy` keyword | Phase 2 |
+| 8 | **Called rules** | `rule name(params) -> Type { ... }`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
+| 9 | **Lazy rules** | `lazy` / `unique lazy`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
 | 10 | **Rule inheritance** | `abstract` / `extends` | Phase 2 |
 | 11 | **`do {}` blocks** | Imperative post-binding section | Phase 4 |
 | 12 | **Variables** | `var` declarations in imperative blocks | Phase 4 |
@@ -993,8 +1356,8 @@ type ExpressionAST =
     | NullCoalesceExpressionAST // a ?? b
     | IsTypeExpressionAST     // x is Type
     | LambdaExpressionAST     // x : x.name
-    | PromptExpressionAST     // prompt("message", default)
-    | InputExpressionAST      // input("message", "text", default)
+    | PromptExpressionAST     // prompt("message", default) | prompt("message", Type [, default])
+    | InputExpressionAST      // input("message", "string", default)
     | ArrayLiteralAST         // [1, 2, 3]
     | JjelExpressionWrapperAST // wrapped JjEL expression
 ```
@@ -1046,13 +1409,13 @@ NotifyStatementAST {
 
 - AST bridge: all node type conversions (22 tests)
 - Executor integration: direct mapping, JjEL builtins, value mapping, guards, nested objects, if/then/else, null-safe navigation, multiple instances, trace recording (15 tests)
+- Prompt/Confirm/Input execution, host mocked: `__tests__/jjel-path-interactive.test.ts` — the dialog opens and binds the answer on the JjEL path; the `input` default reaches the host on both paths (P-2026-10-31-2245); a call nested in an expression yields `null` with the same warning on both paths (P-2026-11-01-0110)
 
 ### Not Tested
 
 - Helpers
 - Multiple class mappings in one transformation
-- Multiplicity `[*]`
-- Alert/Notify/Prompt/Input execution
+- Alert/Notify execution
 - Cross-reference resolution
 - Multi-attribute with complex conversions
 - Edge cases for `evaluatePropertyPath`

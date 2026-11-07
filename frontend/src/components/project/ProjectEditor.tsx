@@ -23,15 +23,18 @@ import {
     Log,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../scripts/scriptFiles';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
+import EndpointsWindow, { type EndpointsTab } from './EndpointsWindow';
 import { EcoreService, XMIService, JsonModelService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { NewViewpointDialog } from './NewViewpointDialog';
+import { NewModelDialog } from '../NewModelDialog/NewModelDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
@@ -51,7 +54,35 @@ import {
     buildXmiImportSummary,
     buildErrorImportSummary,
 } from '../import/buildImportSummary';
+import { useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
+import {
+    materializeNested,
+    countSubtree,
+    makeRootTargetIndex,
+    type NestedDeps,
+    type NestedJob,
+    type NestedReferenceSet,
+    type NestedUnplaced,
+    type NestedMaterializationReport,
+    writeNestedAttributeSets,
+    awaitNestedSlots,
+    type NestedUnwritten,
+    type NestedWaitDeps,
+    openRunUndoStep,
+    type RunUndoStep,
+} from './nestedMaterialization';
+import { COMMIT } from '../../redux/action/action';
+import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
+import { serializeFeatureValues } from './jjtlSourceValues';
 import './project-editor.scss';
+
+// The GENERATORS section, lazy: codegen code but setting.ts stays out of the dashboard's eager closure (R-GEN-2).
+// Under the build flag as EditorV2's `CODEGEN_BUILD`: without `VITE_CODEGEN=true` Rollup drops the import (the
+// gate's off mode). tsconfig has no vite/client types, hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+const GeneratorsSection = CODEGEN_BUILD ? React.lazy(() => import('../../codegen/ui/GeneratorsSection')) : null;
 
 
 // Types for contextual menu
@@ -204,6 +235,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     if (!project) return null;
     // An absent target is left out: `.name` on it white-paged the project (P-2026-09-30-1540).
     const metamodels = (project.metamodels || []).filter(m => !!m);
+    const codegenOn = useCodegenEnabled();
     const models = (project.models || []).filter(m => !!m);
     // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
     // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
@@ -232,6 +264,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     );
     const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
     const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
+    // New model dialog (P-2026-10-19-1618): `undefined` when closed, else the metamodel to preselect.
+    const [newModelDialog, setNewModelDialog] = useState<{ metamodelId?: string } | undefined>(undefined);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -281,6 +315,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
     const [envGenConfigs, setEnvGenConfigs] = useState<EnvGenConfigSummary[]>([]);
     const [editingEnvGenId, setEditingEnvGenId] = useState<string | undefined>(undefined);
+    // #186 (R-CFG-5): the Endpoints window's tab, or null while it is closed.
+    const [endpointsTab, setEndpointsTab] = useState<EndpointsTab | null>(null);
 
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
@@ -421,12 +457,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         return () => window.removeEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
     }, []);
 
-    // Environment Generation: listen for open-wizard event from Navbar
+    // Environment Generation: the open-wizard event (the Navbar's «Endpoints» menu, the left bar's
+    // «Configure environment», Tools › «Configure Environment...») opens the Endpoints window, the one
+    // place where the environment is configured, on the tab its detail names, «Editable metaclasses»
+    // by default (R-CFG-4, R-CFG-5, #186). The wizard stays mounted below, unreached.
+    // TODO: cleanup — setEditingEnvGenId and the opening of the wizard have no caller left.
     useEffect(() => {
-        const handler = () => {
-            setEditingEnvGenId(undefined);
-            setShowEnvGenWizard(true);
-        };
+        const handler = (e: Event) =>
+            setEndpointsTab((e as CustomEvent).detail?.tab === 'roles' ? 'roles' : 'metaclasses');
         window.addEventListener(EnvGenEvents.OPEN_WIZARD, handler);
         return () => window.removeEventListener(EnvGenEvents.OPEN_WIZARD, handler);
     }, []);
@@ -443,6 +481,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const handler = () => setShowNewTransformationDialog(true);
         window.addEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
         return () => window.removeEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+    }, []);
+
+    // Open New model dialog on request (OPEN_NEW_MODEL_DIALOG), optionally preselecting
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ metamodelId?: string } | undefined>).detail;
+            setNewModelDialog({ metamodelId: detail?.metamodelId });
+        };
+        window.addEventListener(JjodelEvents.OPEN_NEW_MODEL_DIALOG, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_NEW_MODEL_DIALOG, handler);
     }, []);
 
     // Open New Viewpoint dialog when the project rail requests it
@@ -1119,49 +1167,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         createM2(project);
     };
 
-    // Handle "+ New" button click for models
+    // Handle "+ New" button click for models: open the New model dialog (P-2026-10-19-1618),
+    // preselecting the only metamodel; with none the dialog shows its empty state.
     const handleNewModelClick = () => {
-        if (metamodels.length === 0) {
-            // No metamodels - button should be disabled, but handle just in case
-            return;
-        }
+        setShowMetamodelMenu(false);
+        setNewModelDialog({ metamodelId: metamodels.length === 1 ? metamodels[0].id : undefined });
+    };
 
-        if (metamodels.length === 1) {
-            // Only one metamodel - create model directly
-            createM1(project, metamodels[0]);
-            return;
-        }
-
-        // Multiple metamodels - show selection menu
-        setShowMetamodelMenu(!showMetamodelMenu);
+    const handleNewModelSubmit = (data: { metamodelId: string; name: string }) => {
+        const metamodel = metamodels.find(mm => mm.id === data.metamodelId);
+        setNewModelDialog(undefined);
+        if (metamodel) createM1(project, metamodel, true, data.name || undefined);
     };
 
     // Create model with selected metamodel
+    // TODO: cleanup — the picker no longer opens since the New model dialog (P-2026-10-19-1618).
     const handleCreateModel = (metamodel: LModel) => {
         setShowMetamodelMenu(false);
         createM1(project, metamodel);
     };
 
     // Create a model when the project rail requests it — same flow as this section's
-    // "+ New" button (0 metamodels: no-op; 1: create directly; N: open the picker).
+    // "+ New" button: the New model dialog (P-2026-10-19-1618).
     // Refs mirror the OPEN_TRANSFORMATION listener below: the effect is mounted once,
     // but the handler and the metamodel list change on every render.
     const handleNewModelClickRef = useRef(handleNewModelClick);
     handleNewModelClickRef.current = handleNewModelClick;
+    // TODO: cleanup — read only by the picker scroll this listener no longer does.
     const metamodelCountRef = useRef(metamodels.length);
     metamodelCountRef.current = metamodels.length;
     useEffect(() => {
         const handler = () => {
             handleNewModelClickRef.current();
-            // With N metamodels the picker renders inside this section, which may be
-            // scrolled out of view when the request comes from the rail. Wait a frame so
-            // the dropdown is committed before scrolling to it.
-            if (metamodelCountRef.current > 1) {
-                requestAnimationFrame(() => {
-                    document.getElementById('section-models')
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                });
-            }
         };
         window.addEventListener(JjodelEvents.CREATE_MODEL, handler);
         return () => window.removeEventListener(JjodelEvents.CREATE_MODEL, handler);
@@ -1391,6 +1428,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 return;
             }
             isExecutingTransformation = true;
+            // The run's undo group (#458), opened once the executor has succeeded; closed after the last write.
+            let undoStep: RunUndoStep | null = null;
 
             // console.log('[ProjectEditor] handleExecuteTransformation called', {
             //     sourceModelId,
@@ -1521,29 +1560,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // that freeze the thread during deep copy.
                             // Raw values are either primitives (for attributes) or Pointer
                             // ID strings (for references).
-                            const rawVals: any[] = (() => {
-                                const r = (feature as any).__raw?.values;
-                                return Array.isArray(r) ? r : [];
-                            })();
-                            // Filter empty and deduplicate: DValue.values can contain
-                            // the same Pointer ID twice (e.g., edge created via canvas
-                            // and then via auto-populate, or data corruption).
-                            const seen = new Set<string>();
-                            const meaningful = rawVals.filter((v: any) => {
-                                if (v == null || v === '') return false;
-                                if (typeof v === 'string') {
-                                    if (seen.has(v)) return false;
-                                    seen.add(v);
-                                }
-                                return true;
-                            });
-                            if (meaningful.length === 0) {
-                                result[feature.name] = null;
-                            } else if (meaningful.length === 1) {
-                                result[feature.name] = wrapIfRef(meaningful[0]);
-                            } else {
-                                result[feature.name] = meaningful.map(wrapIfRef);
-                            }
+                            // The shape follows the declared upper bound of the feature
+                            // (jjtlSourceValues.ts): a many-valued feature is always a list,
+                            // whatever the number of values (#473).
+                            // A repeat is kept once unless the feature is declared unique=false (#474).
+                            const featurePtr = (feature as any).__raw?.instanceof;
+                            const featureDecl = featurePtr
+                                ? (store.getState() as any).idlookup?.[featurePtr]
+                                : undefined;
+                            result[feature.name] = serializeFeatureValues(
+                                (feature as any).__raw?.values, featureDecl?.upperBound, wrapIfRef, featureDecl?.unique
+                            );
                         }
                     }
 
@@ -1660,14 +1687,26 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     attributes: Record<string, any>;
                 }> = [];
 
-                // Map __sourceId → objectName: the reliable bridge between executor
-                // target instances and the DObjects created from them.
-                // Each executor target has __sourceId (the Pointer ID of the source
-                // element that produced it). We key by __sourceId so STEP 8b can
-                // resolve reference targets without depending on JS object identity
-                // (which breaks across deep copies) or on .name (which may not be
-                // set if the transformation has no `name := name` binding).
-                const sourceIdToObjectName = new Map<string, string>();
+                // Nested objects that never reach the model, with where and why: reported in
+                // the transformation output panel once STEP 6c ends, not only in the console.
+                const nestedUnplaced: NestedUnplaced[] = [];
+
+                // Root target → objectName: the bridge between executor target instances
+                // and the DObjects created from them. Keyed by the executor object itself
+                // (slice B2): called, lazy and fresh rules may give one source element
+                // several targets, so __sourceId alone no longer names one. The result is
+                // not deep-copied (only the source model is), so a pointer holds the very
+                // object STEP 6 indexed. __sourceId stays a fallback when it names one root.
+                const rootTargets = makeRootTargetIndex();
+
+                // Rule targets a containment binding placed inside a container (slice A,
+                // SPEC §5.3.1): not created as roots here, but by STEP 6c inside their
+                // container, in the feature's order, like an object created in a body. The
+                // executor marks them __nested (P-2026-11-02-2108); `placements` is kept for
+                // ownership. Pointers to them resolve through the ids the walk returns.
+                const placements = result.targetModel?.containment;
+                let nestedCreatedIds = new Map<any, string>();
+                const nestedReferenceSets: NestedReferenceSet[] = [];
 
                 // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
                 // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
@@ -1676,6 +1715,23 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     posX: number;
                     posY: number;
                 }> = [];
+
+                // One undo step for the whole run (#458, R-JTG-14), as a script Apply (R-PLG-5):
+                // the click opens the D-layer history (R-UNDO-2, as createModelFromText does), and
+                // the R-JJD-6 group folds every write of the run, the tab and its canvas included.
+                // Not a TRANSACTION: it wraps no creator (CLAUDE.md rule 12).
+                U.userHasInteracted = true;
+                undoStep = await openRunUndoStep({
+                    begin: () => beginUndoGroup(),
+                    end: endUndoGroup,
+                    flush: async () => {
+                        COMMIT(undefined, false);
+                        await new Promise<void>(resolve => setTimeout(resolve, 0));
+                    },
+                    subscribe: (listener) => store.subscribe(listener),
+                    sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                    now: () => performance.now(),
+                });
 
                 console.time('[TIMING] TRANSACTION total');
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
@@ -1760,6 +1816,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                             for (const instanceData of instances) {
                                 // console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+                                // Written once, inside its container (STEP 6c), never also as a root.
+                                if (placements?.has(instanceData)) continue;
 
                                 let objectName = instanceData.name || `${className}_${instancesCreated}`;
                                 if (usedObjectNames.has(objectName)) {
@@ -1774,10 +1832,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
 
-                                // Map __sourceId → objectName for reference wiring in STEP 8b
-                                if (instanceData.__sourceId) {
-                                    sourceIdToObjectName.set(String(instanceData.__sourceId), objectName);
-                                }
+                                // Index the target → objectName for reference wiring in STEP 8b
+                                rootTargets.add(instanceData, objectName);
 
                                 // Collect for DVertex creation AFTER the TRANSACTION.
                                 // DVertex.new has its own internal TRANSACTION — nesting
@@ -1826,6 +1882,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
 
                                 // Collect nested creations (marked __nested by the executor)
+                                // and the rule targets placed in the same feature, in its order
                                 const domainRefNames = new Set(
                                     (targetClass.allReferences || []).map((r: any) => r.name).filter(Boolean)
                                 );
@@ -1844,6 +1901,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             + `'${className}', so the ${children.length} object(s) created for it cannot be `
                                             + `stored and were dropped.`
                                         );
+                                        nestedUnplaced.push({
+                                            path: `${objectName}.${key}`, count: countSubtree(children),
+                                            reason: `'${key}' is not a reference of '${className}'`,
+                                        });
                                         continue;
                                     }
                                     pendingNestedCreations.push({
@@ -1876,33 +1937,43 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         });
                     }
                     console.timeEnd('[TIMING] DObject creation loop');
-                    console.log('[ProjectEditor] sourceId→name map:', Object.fromEntries(sourceIdToObjectName));
 
                     // console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
                 console.timeEnd('[TIMING] TRANSACTION total');
 
-                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
-                // Scheduled FIRST so tab opens even if DVertex/attribute steps fail.
-                // Delay bumped to 2000ms so it fires after DVertex creation + attribute
-                // setting have settled — otherwise open2 runs while the graph/vertex
+                // STEP 7: Open the tab once the write-back has ended (#475), never before
+                // 2000ms from here — otherwise open2 runs while the graph/vertex
                 // dispatches are still in flight and ReactFlow loops on stale state.
+                // Opened at +2 s, the tab's canvas made a vertex for every object the walk
+                // delivered, level by level, while the walk and the writer were still
+                // running (2,573 vertices for b10_8, CPU 16.2 s against 3.6 s without the
+                // tab: docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md §6 A).
+                // Called by STEP 8 when it ends, failed or not; at once when there is no STEP 8.
+                // The count is the roots plus the objects the walk created.
+                let openOutputTab: (nestedCount?: number) => void = () => {};
                 if (createdDModel) {
                     const modelToOpen = createdDModel;
                     const modelName = uniqueOutputName;
-                    const count = instancesCreated;
+                    const notBefore = performance.now() + 2000;
+                    let opened = false;
 
-                    setTimeout(() => {
-                        try {
-                            // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
-                            DockManager.open2(LModel.fromD(modelToOpen));
-                            U.alert('i', 'Transformation Executed',
-                                `Created model "${modelName}" with ${count} instances.`);
-                            markDirty();
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error opening tab:', e);
-                        }
-                    }, 2000);
+                    openOutputTab = (nestedCount = 0) => {
+                        if (opened) return;
+                        opened = true;
+                        const count = instancesCreated + nestedCount;
+                        setTimeout(() => {
+                            try {
+                                // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+                                DockManager.open2(LModel.fromD(modelToOpen));
+                                U.alert('i', 'Transformation Executed',
+                                    `Created model "${modelName}" with ${count} instances.`);
+                                markDirty();
+                            } catch (e) {
+                                console.error('[ProjectEditor] Error opening tab:', e);
+                            }
+                        }, Math.max(0, notBefore - performance.now()));
+                    };
                 }
 
                 // Yield one frame before creating DVertices. TRANSACTION above is an
@@ -1937,18 +2008,28 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.timeEnd('[TIMING] DVertex creation');
                 }
 
+                // The end of the write-back, for the run's undo step: STEP 8's timer has run and the
+                // chain it started has settled. The timer marks itself at its first line; the `.then`
+                // below reads `writeBackChain` after the timer's synchronous body, where it is assigned.
+                let writeBackChain: Promise<unknown> | undefined;
+                let markWriteBackRan: () => void = () => {};
+                let writeBackEnd: Promise<unknown> = Promise.resolve();
+
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if ((pendingAttributeSets.length > 0 || pendingReferenceSets.length > 0
-                    || pendingChildAttributeSets.length > 0) && createdModelId) {
+                    || pendingChildAttributeSets.length > 0 || pendingNestedCreations.length > 0) && createdModelId) {
                     const modelId = createdModelId;
+                    writeBackEnd = new Promise<void>(resolve => { markWriteBackRan = resolve; }).then(() => writeBackChain);
                     // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
 
                     // Use setTimeout to wait for Redux propagation and rendering
                     setTimeout(() => {
+                        markWriteBackRan();
                         try {
                             const lModel = LPointerTargetable.fromD(modelId) as LModel;
                             if (!lModel) {
                                 console.error(`[ProjectEditor] Could not get LModel for ${modelId}`);
+                                openOutputTab();
                                 return;
                             }
 
@@ -1961,84 +2042,89 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // SetFieldActions (CLAUDE.md §3.3). Same reason DVertex.new is deferred.
                     //
                     // Runs at the top of the STEP 8 timeout, where lModel.objects is known
-                    // to be populated. The child is created with its NAME only; the remaining
-                    // attributes are queued against the real id the primitive returns and
-                    // written on a further timer, past addObject's own deferred seeding.
+                    // to be populated. Level by level, to any depth (nestedMaterialization.ts):
+                    // the slots of a just-created object answer 90-316 ms later (measured,
+                    // docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md §4), so
+                    // each level polls the slots it writes into, by id, before creating. Each
+                    // `addObject` stays a top-level call, never wrapped in a TRANSACTION.
+                    // Roots are resolved by name (R-S1-5); everything below by the id
+                    // `addObject` returned. Every nested object is created with `{}` and gets
+                    // `name` by id with its other attributes on the deferred timer below, so
+                    // same-named siblings and classes without a `name` attribute are created
+                    // too (R-S1-6, docs/decisions.md).
+                    let nestedDone: Promise<void> | null = null;
+                    // The walk's count, kept for the one report sent once its attributes are written (#482).
+                    let nestedCreated: number | null = null;
+                    const reportNested = (created: number, unwritten?: NestedUnwritten) => {
+                        const detail: NestedMaterializationReport = {
+                            modelName: uniqueOutputName, created, unplaced: nestedUnplaced,
+                            ...(unwritten ? { unwritten } : {}),
+                        };
+                        window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_NESTED_MATERIALIZED, { detail }));
+                    };
                     if (pendingNestedCreations.length > 0) {
-                        let nestedCreated = 0;
-                        console.time('[TIMING] nested DObject creation');
-                        try {
-                            const lModelN = lModel;
-                            const rootObjects: LObject[] = (lModelN?.objects || []) as LObject[];
-                            const targetClassesN: LClass[] = targetMetamodel.classes || [];
-
-                            for (const pending of pendingNestedCreations) {
-                                const matches = rootObjects.filter((o: LObject) => o.name === pending.parentName);
-                                if (matches.length !== 1) {
-                                    console.warn(
-                                        `[ProjectEditor] Nested: parent "${pending.parentName}" resolves to `
-                                        + `${matches.length} objects — '${pending.featureName}' left empty.`
-                                    );
-                                    continue;
-                                }
-                                const parent = matches[0];
-                                const slot = (parent as any)['$' + pending.featureName];
-                                if (!slot || typeof slot.addObject !== 'function') {
-                                    console.warn(
-                                        `[ProjectEditor] Nested: feature "$${pending.featureName}" not available on `
-                                        + `"${pending.parentName}" — ${pending.children.length} object(s) dropped.`
-                                    );
-                                    continue;
-                                }
-
-                                for (const child of pending.children) {
-                                    const childClassName = child.__type || child.className;
-                                    const childClass = targetClassesN.find(c => c.name === childClassName);
-                                    if (!childClass) {
-                                        console.warn(`[ProjectEditor] Nested: class "${childClassName}" not found in target metamodel.`);
-                                        continue;
-                                    }
-                                    const childAttrNames = new Set(
-                                        (childClass.allAttributes || []).map((a: any) => a.name).filter(Boolean)
-                                    );
-                                    const childName = typeof child.name === 'string' && child.name
-                                        ? child.name
-                                        : `${childClassName}_${nestedCreated}`;
-                                    try {
-                                        const created = slot.addObject({ name: childName }, childClassName);
-                                        if (!created || !created.id) {
-                                            console.warn(
-                                                `[ProjectEditor] Nested: addObject returned nothing for `
-                                                + `"${pending.parentName}".${pending.featureName} -> ${childClassName}.`
-                                            );
-                                            continue;
-                                        }
-                                        const attrs: Record<string, any> = {};
-                                        for (const [k, v] of Object.entries(child)) {
-                                            if (k === 'name') continue;          // already given to addObject
-                                            if (!childAttrNames.has(k)) continue;
-                                            if (v === undefined || v === null) continue;
-                                            attrs[k] = v;
-                                        }
-                                        if (Object.keys(attrs).length > 0) {
-                                            pendingChildAttributeSets.push({
-                                                objectId: created.id, className: childClassName, attributes: attrs,
-                                            });
-                                        }
-                                        nestedCreated++;
-                                    } catch (e) {
-                                        console.error(
-                                            `[ProjectEditor] Nested: addObject failed for `
-                                            + `"${pending.parentName}".${pending.featureName} -> ${childClassName}:`, e
-                                        );
-                                    }
-                                }
+                        const rootObjects: LObject[] = (lModel?.objects || []) as LObject[];
+                        const targetClassesN: LClass[] = targetMetamodel.classes || [];
+                        const jobs: NestedJob[] = [];
+                        for (const pending of pendingNestedCreations) {
+                            const matches = rootObjects.filter((o: LObject) => o.name === pending.parentName);
+                            if (matches.length !== 1) {
+                                console.warn(
+                                    `[ProjectEditor] Nested: parent "${pending.parentName}" resolves to `
+                                    + `${matches.length} objects — '${pending.featureName}' left empty.`
+                                );
+                                nestedUnplaced.push({
+                                    path: `${pending.parentName}.${pending.featureName}`,
+                                    count: countSubtree(pending.children),
+                                    reason: `parent "${pending.parentName}" resolves to ${matches.length} objects`,
+                                });
+                                continue;
                             }
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
+                            jobs.push({
+                                parentId: matches[0].id, path: pending.parentName,
+                                featureName: pending.featureName, children: pending.children,
+                            });
                         }
-                        console.timeEnd('[TIMING] nested DObject creation');
-                        console.log(`[ProjectEditor] Nested objects created: ${nestedCreated}`);
+                        const nestedDeps: NestedDeps = {
+                            slotOf: (objectId, featureName) => {
+                                const o = LPointerTargetable.fromPointer(objectId) as any;
+                                const slot = o && o['$' + featureName];
+                                return slot && typeof slot.addObject === 'function' ? slot : undefined;
+                            },
+                            classInfo: (className) => {
+                                const cls = targetClassesN.find(c => c.name === className);
+                                if (!cls) return undefined;
+                                return {
+                                    attributeNames: new Set((cls.allAttributes || []).map((a: any) => a.name).filter(Boolean)),
+                                    referenceNames: new Set((cls.allReferences || []).map((r: any) => r.name).filter(Boolean)),
+                                };
+                            },
+                            sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                            now: () => performance.now(),
+                            warn: (message) => console.warn('[ProjectEditor] ' + message),
+                            // Once per level (#486): the level above sits in the open transaction
+                            // block until the interval's commit; committing it here spares the wait.
+                            // The writer's flush below, the settlePendingWrites pattern.
+                            flush: async () => {
+                                await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                COMMIT(undefined, false);
+                                await new Promise<void>(resolve => setTimeout(resolve, 0));
+                            },
+                        };
+                        console.time('[TIMING] nested DObject creation');
+                        nestedDone = materializeNested(jobs, nestedDeps).then(r => {
+                            console.timeEnd('[TIMING] nested DObject creation');
+                            console.log(`[ProjectEditor] Nested objects created: ${r.created} on ${r.levels} level(s)`);
+                            pendingChildAttributeSets.push(...r.attributeSets);
+                            nestedUnplaced.push(...r.unplaced);
+                            if (r.createdIds) nestedCreatedIds = r.createdIds;
+                            nestedReferenceSets.push(...(r.referenceSets || []));
+                            nestedCreated = r.created;
+                        }).catch(e => {
+                            console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
+                        });
+                    } else if (nestedUnplaced.length > 0) {
+                        reportNested(0);
                     }
 
                             // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
@@ -2080,13 +2166,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // target.name for a DEnumLiteral). So a string that names a literal of the
                             // attribute's enum is written as that literal's pointer; anything else is
                             // written as-is.
-                            const writeAttribute = (lObject: LObject, attrName: string, attrValue: any, who: string): void => {
+                            // False when the slot is missing, so the nested writer can count it (#482).
+                            const writeAttribute = (lObject: LObject, attrName: string, attrValue: any, who: string): boolean => {
                                 const feature = (lObject as any)['$' + attrName];
                                 if (!feature) {
                                     console.warn(`[ProjectEditor] Feature "$${attrName}" not found on "${who}"`);
                                     const features = lObject.features || [];
                                     console.warn(`[ProjectEditor] Available features:`, features.map((f: any) => f.name));
-                                    return;
+                                    return false;
                                 }
                                 const meta: any = (lObject as any).instanceof;
                                 const attrMeta = (meta?.allAttributes || []).find((a: any) => a?.name === attrName);
@@ -2095,7 +2182,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     const literal = (attrType.literals || []).find((l: any) => l?.name === attrValue);
                                     if (literal) {
                                         feature.setValueAtPosition(0, literal.id, { isPtr: true });
-                                        return;
+                                        return true;
                                     }
                                     console.warn(
                                         `[ProjectEditor] "${who}".${attrName}: "${attrValue}" is not a literal of `
@@ -2104,6 +2191,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                                 if (Array.isArray(attrValue)) feature.values = attrValue;
                                 else feature.value = attrValue;
+                                return true;
                             };
 
                             for (const pending of pendingAttributeSets) {
@@ -2130,36 +2218,59 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Attributes of the objects STEP 6c created inside a feature.
                             // Resolved by the real id the primitive returned, never by name:
                             // two tables may each own a column called "id".
-                            // Deferred once more: addObject seeds its own json values on a
-                            // timer of U.UpdatingTimer * 2 (600ms) and the child's DValues do
-                            // not exist before that, so writing here would find no $feature.
-                            if (pendingChildAttributeSets.length > 0) {
-                                setTimeout(() => {
-                                    for (const pending of pendingChildAttributeSets) {
-                                        try {
-                                            const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
-                                            if (!lChild) {
-                                                console.warn(
-                                                    `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
-                                                    + `no longer resolves; its attributes were not written.`
-                                                );
-                                                continue;
-                                            }
-                                            const who = `${lChild.name || pending.objectId} (${pending.className})`;
-                                            for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
-                                                try {
-                                                    writeAttribute(lChild, attrName, attrValue, who);
-                                                } catch (e) {
-                                                    console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
-                                                }
-                                            }
-                                        } catch (e) {
-                                            console.error(`[ProjectEditor] Error seeding nested object ${pending.objectId}:`, e);
+                            // Not on a fixed timer (#482): the last level waits in the open
+                            // transaction block for the interval's commit, and a timer stretched
+                            // by long tasks ran before that commit's dispatch (5,119 objects,
+                            // 2,048 `num` lost). The writer flushes the block, waits, bounded, for
+                            // every slot it writes into, and returns what it could not write.
+                            // addObject's own seeding timer (U.UpdatingTimer * 2) iterates the
+                            // json, which the walk always passes empty. `name` travels here with
+                            // the other attributes (R-S1-6).
+                            const nestedChild = (objectId: string): LObject | undefined =>
+                                LPointerTargetable.fromPointer(objectId) as LObject | undefined;
+                            const nestedWaitDeps: NestedWaitDeps = {
+                                // The interval's own call (reducer.ts), made now; one macrotask
+                                // before it lets every addObject TRANSACTION reach its END, one
+                                // after it lets the dispatch, a setTimeout(0), land.
+                                flush: async () => {
+                                    await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                    COMMIT(undefined, false);
+                                    await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                },
+                                missing: (objectId, slots) => {
+                                    const lChild = nestedChild(objectId) as any;
+                                    if (!lChild) return slots;
+                                    return slots.filter(s => !lChild['$' + s]);
+                                },
+                                sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                                now: () => performance.now(),
+                            };
+                            const writeNestedAttributes = async () => {
+                                const r = await writeNestedAttributeSets(pendingChildAttributeSets, {
+                                    ...nestedWaitDeps,
+                                    write: (set, attrName, attrValue) => {
+                                        const lChild = nestedChild(set.objectId);
+                                        if (!lChild) {
+                                            console.warn(
+                                                `[ProjectEditor] Nested: object ${set.objectId} (${set.className}) `
+                                                + `no longer resolves; its ${attrName} was not written.`
+                                            );
+                                            return false;
                                         }
-                                    }
-                                    console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
-                                }, 1000);
-                            }
+                                        const who = `${lChild.name || set.objectId} (${set.className})`;
+                                        try {
+                                            return writeAttribute(lChild, attrName, attrValue, who);
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
+                                            return false;
+                                        }
+                                    },
+                                    warn: (message) => console.warn('[ProjectEditor] ' + message),
+                                });
+                                console.log(`[ProjectEditor] ✅ Nested attribute setting complete`
+                                    + ` (${r.written} written, waited ${Math.round(r.waitedMs)} ms)`);
+                                return r;
+                            };
 
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
 
@@ -2167,80 +2278,142 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Uses setValueAtPosition with isPtr:true (same API the Properties
                             // panel dropdown uses in Info.tsx changeDValue).
                             //
-                            // Lookup strategy: each executor target has __sourceId (the Pointer
-                            // ID of the source element that produced it). sourceIdToObjectName
-                            // maps __sourceId → the DObject name assigned during creation.
-                            // We then find the real DObject via LModel proxy by name to get
-                            // the real Pointer ID.
-                            if (pendingReferenceSets.length > 0) {
-                                console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
-                                for (const pending of pendingReferenceSets) {
-                                    const ro = resolveSeeded(pending.objectName, 'reference seeding');
-                                    if (ro.ambiguous) continue;
-                                    const lObject = ro.found;
-                                    if (!lObject) {
-                                        console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
-                                        continue;
-                                    }
-                                    for (const [refName, refData] of Object.entries(pending.references)) {
-                                        try {
-                                            const feature = (lObject as any)['$' + refName];
-                                            if (!feature) {
-                                                console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${pending.objectName}"`);
-                                                continue;
-                                            }
-                                            const targets = refData.targets || [];
-                                            for (let ri = 0; ri < targets.length; ri++) {
-                                                const target = targets[ri];
-                                                const sourceId = target?.__sourceId;
-                                                const targetName = sourceId
-                                                    ? sourceIdToObjectName.get(String(sourceId))
-                                                    : target?.name;
-                                                if (!targetName) {
-                                                    if (sourceId) {
-                                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${pending.objectName}.${refName}[${ri}])`);
-                                                    } else {
-                                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${pending.objectName}.${refName}[${ri}]`);
-                                                    }
-                                                    continue;
-                                                }
-                                                // The pointer WRITE below is the one the census
-                                                // singles out: an ambiguous target here does not
-                                                // fail, it points somewhere. Skipping leaves the
-                                                // slot empty and declared, which is the honest
-                                                // outcome — a written pointer cannot be told
-                                                // apart from a chosen one afterwards.
-                                                const rt = resolveSeeded(
-                                                    targetName, `reference target for ${pending.objectName}.${refName}[${ri}]`
-                                                );
-                                                if (rt.ambiguous) continue;
-                                                const targetLObj = rt.found;
-                                                if (!targetLObj) {
-                                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${pending.objectName}.${refName}[${ri}]`);
-                                                    continue;
-                                                }
-                                                const targetRealId = targetLObj.id;
-                                                feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
-                                                console.log(`[ProjectEditor] ✅ Ref: ${pending.objectName}.${refName}[${ri}] → ${targetName} (${targetRealId})`);
-                                            }
-                                        } catch (e) {
-                                            console.error(`[ProjectEditor] Error setting ref ${refName} on "${pending.objectName}":`, e);
+                            // Lookup strategy: rootTargets maps each root target, by identity,
+                            // to the DObject name assigned during creation (__sourceId only as
+                            // a fallback naming one root). We then find the real DObject via
+                            // LModel proxy by name to get the real Pointer ID. A target placed
+                            // in a containment is not a root: it resolves by the id STEP 6c's
+                            // walk returned for it.
+                            const resolveTargetId = (target: any, where: string): string | null => {
+                                const createdId = target && typeof target === 'object' ? nestedCreatedIds.get(target) : undefined;
+                                if (createdId) return createdId;
+                                if (target && placements?.has(target)) {
+                                    console.warn(`[ProjectEditor] Ref: target placed in a containment was not created, for ${where}`);
+                                    return null;
+                                }
+                                const { name: targetName, reason } = rootTargets.nameOf(target);
+                                if (!targetName) {
+                                    console.warn(`[ProjectEditor] Ref: ${reason} (for ${where})`);
+                                    return null;
+                                }
+                                // The pointer WRITE below is the one the census
+                                // singles out: an ambiguous target here does not
+                                // fail, it points somewhere. Skipping leaves the
+                                // slot empty and declared, which is the honest
+                                // outcome — a written pointer cannot be told
+                                // apart from a chosen one afterwards.
+                                const rt = resolveSeeded(targetName, `reference target for ${where}`);
+                                if (rt.ambiguous) return null;
+                                if (!rt.found) {
+                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${where}`);
+                                    return null;
+                                }
+                                return rt.found.id;
+                            };
+                            const writePointers = (lObject: LObject, who: string, references: Record<string, { targets: any[] }>): void => {
+                                for (const [refName, refData] of Object.entries(references)) {
+                                    try {
+                                        const feature = (lObject as any)['$' + refName];
+                                        if (!feature) {
+                                            console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${who}"`);
+                                            continue;
                                         }
+                                        const targets = refData.targets || [];
+                                        for (let ri = 0; ri < targets.length; ri++) {
+                                            const targetRealId = resolveTargetId(targets[ri], `${who}.${refName}[${ri}]`);
+                                            if (!targetRealId) continue;
+                                            feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
+                                            console.log(`[ProjectEditor] ✅ Ref: ${who}.${refName}[${ri}] → ${targetRealId}`);
+                                        }
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error setting ref ${refName} on "${who}":`, e);
                                     }
                                 }
+                            };
+                            const writeReferences = () => {
+                                if (pendingReferenceSets.length > 0) {
+                                    console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
+                                    for (const pending of pendingReferenceSets) {
+                                        const ro = resolveSeeded(pending.objectName, 'reference seeding');
+                                        if (ro.ambiguous) continue;
+                                        if (!ro.found) {
+                                            console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
+                                            continue;
+                                        }
+                                        writePointers(ro.found, pending.objectName, pending.references);
+                                    }
+                                }
+                                // Pointers held by objects STEP 6c created, by their real id.
+                                for (const pending of nestedReferenceSets) {
+                                    const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
+                                    if (!lChild) {
+                                        console.warn(
+                                            `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
+                                            + `no longer resolves; its references were not written.`
+                                        );
+                                        continue;
+                                    }
+                                    writePointers(lChild, pending.path, pending.references);
+                                }
                                 console.log(`[ProjectEditor] ✅ Reference setting complete`);
+                            };
+
+                            // Two phases: when STEP 6c runs, every pointer is written after the
+                            // whole tree exists and its attributes are seeded, so a pointer to a
+                            // placed target, or held by a created object, finds both ends.
+                            // One report to the output panel, once the attributes are written,
+                            // with what was not written (#482).
+                            if (nestedDone) {
+                                writeBackChain = nestedDone.then(async () => {
+                                    let unwritten: NestedUnwritten | undefined;
+                                    let attributesDone = pendingChildAttributeSets.length === 0;
+                                    try {
+                                        if (!attributesDone) {
+                                            unwritten = (await writeNestedAttributes()).unwritten;
+                                            attributesDone = true;
+                                        }
+                                        // A pointer holder with no attribute was not in that wait:
+                                        // its reference slots get the same bounded one, which
+                                        // replaces the fixed timer the pointers shared.
+                                        await awaitNestedSlots(nestedReferenceSets.map(s => ({
+                                            objectId: s.objectId, slots: Object.keys(s.references),
+                                        })), nestedWaitDeps);
+                                        writeReferences();
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error writing nested attributes or references:`, e);
+                                        if (!attributesDone) {
+                                            unwritten = {
+                                                objects: pendingChildAttributeSets.length,
+                                                attributes: pendingChildAttributeSets.reduce((n, s) => n + Object.keys(s.attributes).length, 0),
+                                                reason: `the attribute writer failed: ${(e as any)?.message || e}`,
+                                            };
+                                        }
+                                    }
+                                    if (nestedCreated !== null) reportNested(nestedCreated, unwritten);
+                                }).finally(() => openOutputTab(nestedCreated ?? 0));
+                            } else {
+                                if (pendingReferenceSets.length > 0) writeReferences();
+                                openOutputTab();
                             }
 
                         } catch (e) {
                             console.error(`[ProjectEditor] Error in STEP 8:`, e);
+                            openOutputTab();
                         }
                     }, 1000); // 1 second delay — generous, ensures everything is propagated
+                } else {
+                    openOutputTab();
                 }
 
                 // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
                 // Tab opening and attribute setting happen in the background (fire-and-forget)
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
+
+                // Close the run's undo step after STEP 8 and after STEP 7's tab, which opens when the
+                // write-back ends and not before 2000 ms, then renders and writes its canvas.
+                undoStep.close(writeBackEnd, performance.now() + 2000).then(r => console.log(
+                    `[ProjectEditor] Run undo step closed after ${Math.round(r.waitedMs)} ms${r.capped ? ' (cap)' : ''}`));
 
                 // Reset execution guard
                 isExecutingTransformation = false;
@@ -2249,6 +2422,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             } catch (error) {
                 console.error('[ProjectEditor] Error:', error);
                 U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+                undoStep?.close();
                 // Reset execution guard
                 isExecutingTransformation = false;
                 // Return failed result so JjtlDevelopmentEnv can show errors
@@ -2873,6 +3047,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            {/* Generators Section (P-2026-10-30-1515): lazy, with the codegen setting on and outside consumer mode */}
+            {GeneratorsSection && codegenOn && !isConsumerMode() && (
+                <React.Suspense fallback={null}>
+                    <GeneratorsSection
+                        SectionHeader={SectionHeader}
+                        metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name }))}
+                        projectName={project.name || 'project'}
+                    />
+                </React.Suspense>
+            )}
+
             {/* Viewpoints Section */}
             <div className="project-section" id="section-viewpoints">
                 <SectionHeader
@@ -2965,6 +3150,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             {showMegamodelModal && (() => {
                 const megamodel = getRuntimeMegamodel(project.id);
                 if (!megamodel) return null;
+                // Script files (S6b): the store's own array, so the view's layout effect sees the
+                // same reference across renders; undefined when the project has none.
+                const projectScripts = readProjectScripts();
+                const isScript = (id: string) => projectScripts.some(s => s.id === id);
 
                 // Compute artifact stats for rich node cards
                 const artifactStats: ArtifactStats[] = [];
@@ -3025,10 +3214,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             name: vp.name || 'Unnamed',
                             isOverlay: vp.isOverlay,
                         }))}
+                        scripts={projectScripts.length ? projectScripts : undefined}
                         artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
                         onOpenNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                            if (isScript(nodeId)) {
+                                DockManager.openScript(nodeId);
+                            } else if (nodeKind === 'metamodel' || nodeKind === 'model') {
                                 const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
                                 if (lModel) DockManager.open2(lModel);
                             } else if (nodeKind === 'transformation') {
@@ -3037,7 +3229,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
                         }}
                         onDeleteNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel') {
+                            if (isScript(nodeId)) {
+                                deleteProjectScript(nodeId);
+                            } else if (nodeKind === 'metamodel') {
                                 const mm = metamodels.find(m => m.id === nodeId);
                                 if (mm) handleDeleteMetamodel(mm);
                             } else if (nodeKind === 'model') {
@@ -3061,6 +3255,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     m.name = newName;
                                     markDirty();
                                 }
+                            } else if (isScript(nodeId)) {
+                                renameProjectScript(nodeId, newName);
                             } else if (nodeKind === 'transformation') {
                                 handleRenameTransformation(nodeId, newName);
                             }
@@ -3122,6 +3318,21 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
             />
 
+            {/* New Model Dialog */}
+            <NewModelDialog
+                isOpen={!!newModelDialog}
+                onClose={() => setNewModelDialog(undefined)}
+                onSubmit={handleNewModelSubmit}
+                metamodels={metamodels.map(mm => ({
+                    id: mm.id,
+                    name: mm.name || 'Unnamed',
+                    // By `instanceof`: `mm.models` is empty on imported and cloned projects (measured).
+                    modelCount: models.filter(m => m.instanceof?.id === mm.id).length,
+                }))}
+                takenNames={[...metamodels, ...models].map(m => m.name)}
+                initialMetamodelId={newModelDialog?.metamodelId}
+            />
+
             {/* New Viewpoint Dialog */}
             <NewViewpointDialog
                 isOpen={showNewViewpointDialog}
@@ -3137,6 +3348,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
                 existingConfigId={editingEnvGenId}
                 onConfigSaved={() => setEnvGenConfigs(EnvGenPersistence.getAll())}
+            />
+
+            {/* Endpoints window (#186, R-CFG-5): the stand-alone environment, developer only */}
+            <EndpointsWindow
+                tab={endpointsTab}
+                onTabChange={setEndpointsTab}
+                onClose={() => setEndpointsTab(null)}
             />
 
             {/* Unsaved Changes Dialog */}

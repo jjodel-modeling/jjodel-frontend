@@ -159,7 +159,7 @@ try {
     await page.goto(`${URL}/#/project?id=${imported.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await wait(page, 9000);
     await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
-    if (!(await page.locator('.toolbar-viewpoint-trigger:visible').count())) {
+    if (!(await page.locator('.toolbar-viewpoint-trigger:visible:not([disabled])').count())) {
         await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx'); const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
             await dm.default.open2(w.LPointerTargetable.fromPointer(m.id)); return 1;`, undefined, 8000);
     }

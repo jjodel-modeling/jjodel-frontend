@@ -2,6 +2,7 @@
  * JjEL Identifier Provider
  *
  * Suggests:
+ *   - Variables of the forall / exists binding lists before the cursor (util/boundVariables.ts)
  *   - Level 1 collections (classes, attributes, references, packages, enumerations, instances)
  *   - Level 2 context vars  (data, node)
  *   - Class names of the active metamodel — read on-demand from buildJodieJjelVariables(),
@@ -16,6 +17,7 @@ import type { Suggestion } from '../../../jjscript/autocomplete/types';
 import type { JjelAutocompleteContext } from '../context';
 import { buildJodieJjelVariables } from '../../../components/Jodie/jodieJjelContext';
 import { STATE_RESERVED } from '../../stateReserved';
+import { boundVariablesBefore } from '../util/boundVariables';
 
 interface BuiltinIdentDef {
     name: string;
@@ -78,6 +80,20 @@ export function getJjelIdentifierSuggestions(context: JjelAutocompleteContext): 
 
     const filter = currentWord;
     const out: Suggestion[] = [];
+
+    // Variables of the forall / exists binding lists before the cursor (R-FA): every name, x and y alike.
+    for (const name of boundVariablesBefore(context.input.substring(0, context.wordStart))) {
+        if (!matchesPrefix(name, filter)) continue;
+        out.push({
+            text: name,
+            displayText: name,
+            type: 'value',
+            description: 'Bound variable',
+            priority: 95,
+            icon: 'bi-braces',
+            metadata: { jjelKind: 'variable' },
+        });
+    }
 
     // Level 1 collections — bumped slightly higher in 'after-forall-in' state since the
     // user is almost always reaching for one of these.

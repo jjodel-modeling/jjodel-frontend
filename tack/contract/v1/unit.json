@@ -7,10 +7,10 @@
   "additionalProperties": false,
   "properties": {
     "contract": { "const": 1 },
-    "unit":     { "type": "string", "pattern": "^P-\\d{4}-\\d{2}-\\d{2}-\\d{4}(-[a-z0-9]{1,8})?$" },
+    "unit":     { "type": "string", "description": "a unit id, in the id syntax of the trace source (ids.unit, src/collectors/active.mjs)" },
     "opened":   { "type": "string", "format": "date-time" },
     "title":    { "type": "string", "maxLength": 200 },
-    "conversation": { "type": "string", "pattern": "^C-\\d{4}-\\d{2}-\\d{2}-\\d{4}$" },
+    "conversation": { "type": "string", "description": "a conversation id, in the id syntax of the trace source" },
     "stream":   { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "depends":  { "type": "array", "items": { "$ref": "#/properties/unit" }, "uniqueItems": true },
     "sessions": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true }

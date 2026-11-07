@@ -30,6 +30,7 @@ export const PREDICATE_KIND_OPTIONS: { value: PredicateKind; label: string }[] =
     { value: 'exists', label: 'Exists (not empty)' },
     { value: 'empty', label: 'Is empty' },
     { value: 'isKind', label: 'Is of type…' },
+    { value: 'simActive', label: 'Sim active (run in progress)' },
     { value: 'literal', label: 'Always true/false' },
 ];
 
@@ -54,6 +55,8 @@ export function forPredicateKind(kind: PredicateKind, classNames: string[] = [])
             return { op: 'isKind', class: classNames[0] ?? '' };
         case 'literal':
             return { op: 'literal', value: true };
+        case 'simActive':
+            return { op: 'simActive' };
         default:
             // The six comparators share the same operand shape.
             if (COMPARATOR_KINDS.includes(kind)) {

@@ -1,0 +1,754 @@
+// Text tab (R-TXT-23, slice T2b, P-2026-11-02-0040) — loaded with the opener's lazy chunk only.
+//
+// A header over Monaco: the model and the language, a read-only mark, the Text / EBNF toggle and the close; in «new»
+// mode the model's name, the reading's status and «Create model» instead of the mark and the toggle. The header
+// keeps one height and the toggle one width in both views, so switching moves nothing but the editor's text.
+//
+// Design-system tokens only, none defined here (rule 28). Cyan marks focus only.
+
+.textual-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: inherit;
+
+    &__bar {
+        display: flex;
+        flex: 0 0 32px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    &__name {
+        overflow: hidden;
+        font-weight: 600;
+        text-overflow: ellipsis;
+    }
+
+    &__language {
+        color: var(--color-text-tertiary);
+
+        &::before {
+            content: '·';
+            margin-right: 6px;
+        }
+    }
+
+    &__readonly {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        color: var(--color-text-tertiary);
+        line-height: 18px;
+        white-space: nowrap;
+    }
+
+    &__spacer {
+        flex: 1;
+    }
+
+    &__style {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+    }
+
+    &__style-select {
+        height: 22px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-primary);
+        font: inherit;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            color: var(--color-text-tertiary);
+            cursor: not-allowed;
+        }
+    }
+
+    &__modes {
+        display: inline-flex;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    &__mode,
+    &__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 8px;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    // One width for both entries: the active one changes colour, never weight.
+    &__mode {
+        min-width: 56px;
+
+        & + & {
+            border-left: 1px solid var(--color-border-secondary);
+        }
+
+        &--active,
+        &--active:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__close {
+        width: 22px;
+        padding: 0;
+        border-radius: 4px;
+    }
+
+    // «new» mode (slice T2c, P-2026-11-02-0045): the model's name, the reading's status and «Create model».
+    &__model-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-text-tertiary);
+
+        input {
+            width: 160px;
+            height: 22px;
+            padding: 0 6px;
+            border: 1px solid var(--color-border-secondary);
+            border-radius: 4px;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 11px;
+
+            &:focus-visible {
+                outline: 2px solid var(--color-canvas-accent);
+                outline-offset: -2px;
+            }
+        }
+    }
+
+    &__status {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-text-tertiary);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__create {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 10px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.6;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    &__body {
+        flex: 1;
+        min-height: 0;
+
+        &--layered {
+            position: relative;
+        }
+
+        .monaco-editor,
+        .monaco-editor.focused {
+            outline: none !important;
+        }
+
+        // Step B2 (P-2026-11-04-0146): the global `.monaco-scrollable-element { left: 30px !important }` of
+        // skeleton.scss shifted the hover's content 30 px inside a box sized to it, so the last 30 px were clipped.
+        // Monaco already fits the box to its content up to its own max width; the code spans take the editor's font.
+        .monaco-hover .monaco-scrollable-element {
+            left: 0 !important;
+        }
+
+        .monaco-hover code {
+            padding: 0;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: inherit;
+        }
+    }
+
+    &__message {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 12px 16px;
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    // The notation's issues (syntax annotations, case notices), one line each, under the bar (T4a-2).
+    &__issues {
+        flex: 0 0 auto;
+        max-height: 96px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 4px 12px;
+        list-style: none;
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: 11px;
+    }
+
+    &__issue {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 1px 0;
+        color: var(--color-text-tertiary);
+
+        &--error {
+            color: var(--color-error-text);
+        }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
+    }
+
+    // Step T6b (P-2026-11-03-0021): the editable text and the EBNF share the body, one over the other, so the toggle
+    // keeps a pending edit; the text under the EBNF is hidden, not unmounted.
+    &__layer {
+        position: absolute;
+        inset: 0;
+
+        &--hidden {
+            visibility: hidden;
+        }
+    }
+
+    // The model changed under a pending edit: one line in the bar, the text kept.
+    &__stale {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-warning-text);
+        white-space: nowrap;
+    }
+
+    // Lane L1b (P-2026-11-05-0921): the EBNF mode's draft in the bar, in place of the read-only mark; the bar keeps its
+    // 32 px and the state its width, so a change of the draft moves nothing.
+    &__draft {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    &__draft-state {
+        min-width: 96px;
+        color: var(--color-text-tertiary);
+
+        &--dirty {
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__draft-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            color: var(--color-text-disabled);
+            cursor: default;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--primary:not(:disabled) {
+            border-color: var(--color-canvas-accent);
+            color: var(--color-text-primary);
+        }
+    }
+
+    // The editable literals of the EBNF: a tint and a dotted underline, never padding, margin or border, which would move
+    // the glyphs Monaco measures. The linked ones are the origin under the pointer or being edited.
+    &__island {
+        border-radius: 2px;
+        background: var(--color-accent-subtle);
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+        cursor: pointer;
+
+        &--linked {
+            background: var(--color-selection-bg);
+        }
+
+        // A finding: a wavy underline and no tint, which would paint over the marker's squiggle.
+        &--error,
+        &--notice {
+            background: transparent;
+            text-decoration-style: wavy;
+        }
+
+        &--error {
+            text-decoration-color: var(--color-error-text);
+        }
+
+        &--notice {
+            text-decoration-color: var(--color-warning-text);
+        }
+    }
+
+    // The input laid over a literal (a Monaco content widget): the editor's font, the reason under it, an overlay.
+    &__literal-widget {
+        position: relative;
+        z-index: 10;
+    }
+
+    &__literal-input {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 2px;
+        outline: 2px solid var(--color-canvas-accent);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 13px;
+    }
+
+    &__literal-widget--refused &__literal-input {
+        outline-color: var(--color-error-text);
+    }
+
+    &__literal-reason {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+        padding: 2px 6px;
+        border: 1px solid var(--color-error-text);
+        border-radius: 4px;
+        background: var(--color-error-bg);
+        color: var(--color-error-text);
+        font-size: 11px;
+        white-space: nowrap;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    &__stale-reload {
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    // The matches and deletions to confirm: over the bottom of the editor, so the text does not move when it shows.
+    &__confirm {
+        position: absolute;
+        right: 16px;
+        bottom: 8px;
+        left: 16px;
+        z-index: 5;
+        max-height: 40%;
+        overflow-y: auto;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__confirm-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__confirm-rows {
+        width: 100%;
+        border-collapse: collapse;
+
+        th,
+        td {
+            padding: 2px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--color-text-tertiary);
+            font-weight: 400;
+        }
+
+        td .bi {
+            margin-right: 4px;
+        }
+    }
+
+    &__confirm-row--flagged td {
+        color: var(--color-warning-text);
+    }
+
+    // Step B2 (P-2026-11-04-0125): the outline left of the text, its toggle in the bar, the breadcrumb above the text.
+    &__outline-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &--on,
+        &--on:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    &__nav {
+        display: flex;
+        height: 100%;
+        min-height: 0;
+    }
+
+    &__main {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    &__editor {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__crumbs {
+        display: flex;
+        flex: 0 0 24px;
+        align-items: center;
+        min-width: 0;
+        padding: 0 8px;
+        overflow: hidden;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-primary);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    &__crumb-item {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+    &__crumb-sep,
+    &__crumb-sep:hover {
+        margin: 0 2px;
+        color: var(--color-text-disabled);
+        font-size: 11px;
+    }
+
+    &__crumb {
+        max-width: 200px;
+        height: 20px;
+        padding: 0 4px;
+        overflow: hidden;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--group {
+            color: var(--color-text-tertiary);
+            font-style: italic;
+        }
+
+        &[aria-current='location'] {
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__outline {
+        display: flex;
+        flex: 0 0 224px;
+        flex-direction: column;
+        min-height: 0;
+        border-right: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-secondary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+        }
+    }
+
+    &__outline-filter {
+        display: flex;
+        flex: 0 0 32px;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        padding: 0 8px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        color: var(--color-text-tertiary);
+
+        input {
+            flex: 1;
+            min-width: 0;
+            height: 22px;
+            padding: 0 6px;
+            border: 1px solid var(--color-border-secondary);
+            border-radius: 4px;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 11px;
+
+            &:focus-visible {
+                outline: 2px solid var(--color-canvas-accent);
+                outline-offset: -2px;
+            }
+        }
+    }
+
+    &__outline-list {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    &__outline-row {
+        position: absolute;
+        right: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding-right: 8px;
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &--group {
+            color: var(--color-text-secondary);
+        }
+
+        &--recovered {
+            color: var(--color-text-disabled);
+        }
+
+        &--selected,
+        &--selected:hover {
+            background: var(--color-selection-bg);
+            box-shadow: inset 2px 0 0 var(--color-selection-bar);
+        }
+    }
+
+    &__outline-twisty {
+        display: inline-flex;
+        flex: 0 0 16px;
+        align-items: center;
+        justify-content: center;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+    }
+
+    &__outline-icon,
+    &__outline-icon:hover {
+        flex: 0 0 auto;
+        color: var(--color-text-tertiary);
+    }
+
+    &__outline-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__outline-detail {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-text-tertiary);
+        text-overflow: ellipsis;
+    }
+
+    &__outline-unclosed,
+    &__outline-unclosed:hover {
+        flex: 0 0 auto;
+        margin-left: auto;
+        color: var(--color-warning-text);
+    }
+
+    &__outline-empty {
+        padding: 8px;
+        color: var(--color-text-tertiary);
+    }
+}

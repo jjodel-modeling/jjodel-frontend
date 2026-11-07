@@ -1341,7 +1341,9 @@ body[data-active-tab="manager"] .properties-tree-overlay {
     // Flush with the viewport edge (D-UI-1). This supersedes the 8px gutter of the
     // F2 floating overlay, which the comment here used to call ratified: the rail is
     // no longer a card floating on the canvas, it is a side of the window.
-    right: 0;
+    // R-JJD-1: with Jjodie docked the window side of the canvas is the dock's left edge
+    // (D-UI-1 read as "flush with the window side of the canvas", A4).
+    right: var(--jj-jodie-dock-width, 0px);
     // Stop flush against the top edge of the status bar, with no gap. L'altezza
     // arriva da tokens/_layout.scss, non ricopiata. top+bottom bound the column
     // height; width stays inline.

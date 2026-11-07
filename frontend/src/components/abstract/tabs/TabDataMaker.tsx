@@ -4,6 +4,7 @@ import MetamodelTab from './MetamodelTab';
 import ModelTab from './ModelTab';
 import DocumentationTab from './DocumentationTab';
 import InstanceManagerTab from './InstanceManagerTab';
+import ScriptTab, { ScriptTabTitle } from './ScriptTab';
 import { managerTabId } from './instanceManagerModel';
 // Viewpoint editing is handled inline in the right-panel "Viewpoints" tab —
 // no dedicated dock tab is created.
@@ -57,6 +58,21 @@ class TabDataMaker {
             group: 'models',
             closable: true,
             content: <InstanceManagerTab modelid={model.id} key={tabId} />
+        };
+    }
+
+    /**
+     * The editor of a project script file (S6a, R-JJD-5). Prefixed `jjs_` for the reason given at
+     * `instanceManager()`: the entry id must not collide with any other tab id.
+     */
+    static script(script: { id: string; name: string }): TabData {
+        const tabId = `jjs_${script.id}`;
+        return {
+            id: tabId,
+            title: <ScriptTabTitle scriptId={script.id} name={script.name} />,
+            group: 'models',
+            closable: true,
+            content: <ScriptTab scriptId={script.id} key={tabId} />
         };
     }
 

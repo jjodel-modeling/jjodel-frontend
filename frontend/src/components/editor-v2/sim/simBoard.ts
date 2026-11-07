@@ -490,6 +490,7 @@ function domainText(domain: Domain): string {
         case 'boolean': return 'boolean';
         case 'range': return `${domain.min}..${domain.max}`;
         case 'enum': return `{${domain.literals.join(', ')}}`;
+        case 'word': return `${domain.signed ? 'signed' : 'unsigned'} word`;
     }
 }
 
@@ -584,6 +585,7 @@ function domainLength(domain: Domain): number | null {
         case 'boolean': return 'false'.length;
         case 'range': return Math.max(String(domain.min).length, String(domain.max).length);
         case 'enum': return domain.literals.length > 0 ? Math.max(...domain.literals.map(l => l.length)) : null;
+        case 'word': return null;
     }
 }
 

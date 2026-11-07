@@ -132,6 +132,8 @@
           "additionalProperties": false,
           "properties": {
             "lane_question": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_breakpoint": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_ceiling": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
             "lane_hard_stop": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
             "lane_blocked": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
             "gate_red": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },

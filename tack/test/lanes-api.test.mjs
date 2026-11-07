@@ -88,7 +88,7 @@ test('lanesApi: tiles, attention and the state lists on a mixed fixture', (t) =>
   const a = api(db, laneRoot);
   assert.equal(a.state, 'ok');
   const spendToday = (NOW - 7 * H >= day.getTime() ? 2 : 0) + (NOW - 8 * H >= day.getTime() ? 3 : 0);
-  assert.deepEqual(a.tiles, { running: 2, waiting: 1, blocked: 2, done24: 2, resolved24: 1, spendToday });
+  assert.deepEqual(a.tiles, { running: 2, waiting: 1, waitingBy: { question: 1, breakpoint: 0, ceiling: 0, 'hard-stop': 0 }, blocked: 2, done24: 2, resolved24: 1, spendToday });
   assert.deepEqual(ids(a.attention.waiting), ['P-2026-01-08-0800']);
   assert.deepEqual(ids(a.attention.blocked), ['P-2026-01-08-0600', 'P-2026-01-08-0900']);
   assert.equal(a.attention.staleCount, 1);

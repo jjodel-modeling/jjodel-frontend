@@ -88,3 +88,14 @@ Worker (`jjodel-ai-proxy`), the only copy of it; see its README before moving or
 | `Navbar.tsx` + `navbar.scss` | App bar (header row 1). |
 | `Toolbar.tsx` | Toolbar (header row 2). |
 | `Info.tsx` + `info.scss` | Properties panel. |
+
+### 19.6 AI layer
+
+| File | Role |
+|------|------|
+| `services/ai/` | AI provider module (#196): registry, stores, catalog cache; no `joiner`, no UI (CLAUDE.md §16). |
+| `services/ai/index.ts` | Public surface of the module. |
+| `components/common/ProviderModelSelector.tsx` | `preferredProviderId` / `preferredModelId` per feature, and the provider + model dropdown. |
+| `components/common/providerVisuals.ts` | UI-side provider table: logo, colours, initial, key placeholder, key URL. |
+| `components/Jodie/types.ts` | Jodie chat and console types (`ChatMessage`, `ConsoleEntry`, `CONSOLE_MODES`). |
+| `types/documentation.ts` | Generated documentation types (`ProjectDocumentation`, `DocumentationStatus`). |

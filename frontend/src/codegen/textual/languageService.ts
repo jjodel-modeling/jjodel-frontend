@@ -1,0 +1,624 @@
+/**
+ * The language service of the Text tab (step B1, R-TXT-34 step B, R-TXT-38; design in
+ * docs/discovery/discovery_2026-11-03_textual_language_service.md, recommended design items 1, 2, 7, 8): one analysis per
+ * text version, derived from the parser's lossless tree (step A) and the metamodel, with no Monaco import, so that the
+ * bench can run it. The Monaco adapter (ui/textualMonaco.ts) turns its answers into the providers' shapes.
+ *
+ * One walk of the tree gives: the semantic tokens with their roles, the document symbols (full range and name range,
+ * nesting, the recovered and unclosed flags, and an `unknown container` group where the parser read orphans inside a
+ * skipped block), the folding ranges of blocks, lists and runs of comments, and the inverse index of the references.
+ * Definition, references and hover are queries on that walk. Nothing names a metamodel: classes, features, keywords and
+ * literals come from the grammar and the metamodel.
+ *
+ * A broken text is analysed as it parsed: its recovered objects show here, for display only, and are never applied
+ * (R-TXT-21 (8)). Identity across versions (`displayMatch`) is not computed here: it is quadratic (finding F4), and no
+ * query of B1 needs a model id.
+ */
+
+import type { ConcreteGrammar } from './concreteGrammar';
+import { applyCase } from './concreteGrammar';
+import type { TextAttribute, TextClass, TextEnumeration, TextFeature, TextMetamodel, TextReference } from './metamodel';
+import { isOuterRef } from './metamodel';
+import type { ItemNode, ListNode, ObjectNode, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
+import { commentsOf } from './parser';
+import { pathKeyword } from './printer';
+import { featureTable } from './textMatch';
+
+/** What a token is for highlighting. `feature` is a feature's keyword, `keyword` any other word of the notation. */
+export type SemanticRole = 'type' | 'feature' | 'keyword' | 'name' | 'string' | 'number' | 'value' | 'literal' | 'reference' | 'comment';
+/** The legend's order: a role's index is its token type in the encoding. */
+export const SEMANTIC_ROLES: readonly SemanticRole[] = ['type', 'feature', 'keyword', 'name', 'string', 'number', 'value', 'literal', 'reference', 'comment'];
+
+/** `declaration`: an object's name. `unresolved`: a reference that names nothing and keeps no target. `outer`: `@"id"`. */
+export type SemanticModifier = 'declaration' | 'unresolved' | 'outer';
+/** The legend's order: a modifier's index is its bit in the encoding. */
+export const SEMANTIC_MODIFIERS: readonly SemanticModifier[] = ['declaration', 'unresolved', 'outer'];
+
+/** `[start, end)` offsets of the text. */
+export interface TextRange {
+    readonly start: number;
+    readonly end: number;
+}
+
+export interface SemanticToken extends TextRange {
+    readonly role: SemanticRole;
+    readonly modifiers: readonly SemanticModifier[];
+}
+
+/** An object of the text as an outline shows it, or the group of the objects read inside a skipped block. */
+export interface TextSymbol extends TextRange {
+    readonly kind: 'object' | 'unknown';
+    /** The parsed object's id (`TextParseResult.objects`); absent on the `unknown container` group. */
+    readonly id?: string;
+    readonly cls?: string;
+    /** The object's name, its class when it has none; `unknown container` for the group. */
+    readonly name: string;
+    readonly named: boolean;
+    /** The feature of the enclosing object it is read in; absent at the top and in the group. */
+    readonly feature?: string;
+    /** The name token, else the class keyword, else the first token: what a symbol selects. */
+    readonly nameStart: number;
+    readonly nameEnd: number;
+    /** In `TextParseResult.recovered`: not read in full, a reference naming nothing, a block left open, or read as an orphan. */
+    readonly recovered: boolean;
+    /** Read in full, but its block or an enclosing one is left open (`TextParseResult.unclosed`). */
+    readonly unclosed: boolean;
+    readonly children: readonly TextSymbol[];
+}
+
+/** 1-based lines, as Monaco takes them: the lines after `startLine` up to `endLine` fold. */
+export interface FoldRange {
+    readonly startLine: number;
+    readonly endLine: number;
+    readonly kind?: 'comment';
+}
+
+export interface TextHover extends TextRange {
+    /** Markdown paragraphs. */
+    readonly contents: readonly string[];
+}
+
+export interface TextAnalysis {
+    readonly tokens: readonly SemanticToken[];
+    readonly symbols: readonly TextSymbol[];
+    readonly folds: readonly FoldRange[];
+    /** The tokens as Monaco's semantic tokens: five numbers per token per line (line delta, column delta, length, role, modifier bits). */
+    encodedTokens(): Uint32Array;
+    /** The name range of the object the reference at `offset` names; null elsewhere, and for a reference outside the text. */
+    definitionAt(offset: number): TextRange | null;
+    /** The references to the object named or declared at `offset`, in text order, its name first when asked. */
+    referencesAt(offset: number, includeDeclaration: boolean): TextRange[];
+    hoverAt(offset: number): TextHover | null;
+}
+
+/** The unknown-container group's name (R-TXT-36). */
+export const UNKNOWN_CONTAINER = 'unknown container';
+
+interface MutableSymbol {
+    kind: 'object' | 'unknown';
+    id?: string;
+    cls?: string;
+    name: string;
+    named: boolean;
+    feature?: string;
+    start: number;
+    end: number;
+    nameStart: number;
+    nameEnd: number;
+    /** The rank of the token `nameStart` came from: 0 the name, 1 the class keyword, 2 the first token, 3 none yet. */
+    nameRank: number;
+    recovered: boolean;
+    unclosed: boolean;
+    children: MutableSymbol[];
+}
+
+/** A token read by the parser, with where it sits: what the queries look up by offset. */
+interface TokenInfo {
+    readonly token: SyntaxToken;
+    readonly role?: SemanticRole;
+    readonly object: ObjectNode | null;
+    readonly item: ItemNode | ListNode | null;
+    readonly ref: RefNode | null;
+}
+
+const code = (s: string): string => '`' + s.replace(/`/g, "'") + '`';
+
+function bounds(f: TextFeature, decl: TextAttribute | TextReference | undefined): string {
+    if (decl?.lower === undefined && decl?.upper === undefined) return f.many ? 'many-valued' : 'single-valued';
+    const upper = decl.upper ?? (f.many ? -1 : 1);
+    return code(`[${decl.lower ?? 0}..${upper < 0 ? '*' : upper}]`);
+}
+
+/**
+ * The analysis of `text` as `parsed` read it with `grammar`, against the metamodel `mm`. The parse must carry its tree
+ * (every `parseText` result does); without one the analysis is empty.
+ */
+export function analyzeText(text: string, parsed: TextParseResult, grammar: ConcreteGrammar, mm: TextMetamodel): TextAnalysis {
+    const lineStarts = [0];
+    for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) lineStarts.push(i + 1);
+    /** The 0-based line of an offset. */
+    const lineOf = (off: number): number => {
+        let lo = 0;
+        let hi = lineStarts.length - 1;
+        while (lo < hi) {
+            const m = (lo + hi + 1) >> 1;
+            if (lineStarts[m] <= off) lo = m; else hi = m - 1;
+        }
+        return lo;
+    };
+
+    const byId = new Map(parsed.objects.map(o => [o.id, o]));
+    const infos: TokenInfo[] = [];
+    const tokens: SemanticToken[] = [];
+    const top: MutableSymbol[] = [];
+    const symbolOf = new Map<string, MutableSymbol>();
+    const folds: FoldRange[] = [];
+    const refsTo = new Map<string, TextRange[]>();
+
+    const fold = (start: number, end: number, closed: boolean): void => {
+        const a = lineOf(start);
+        const b = lineOf(Math.max(start, end - 1));
+        // A closed body keeps its close visible; an open one folds to its last token.
+        const last = closed ? b - 1 : b;
+        if (last > a) folds.push({ startLine: a + 1, endLine: last + 1 });
+    };
+
+    const roleOf = (t: SyntaxToken, parent: SyntaxNode, index: number, ref: RefNode | null): { role?: SemanticRole; modifiers: SemanticModifier[] } => {
+        switch (t.role) {
+            case 'class': return { role: 'type', modifiers: [] };
+            case 'keyword': {
+                // A feature's keyword opens its item; any other word of the notation is a keyword of the style.
+                const opens = parent.kind === 'item' && parent.children.findIndex(c => c.kind === 'token') === index;
+                return { role: opens ? 'feature' : 'keyword', modifiers: [] };
+            }
+            case 'name': return { role: 'name', modifiers: ['declaration'] };
+            case 'value': return { role: t.k === 'STR' ? 'string' : t.k === 'INT' || t.k === 'FLOAT' ? 'number' : 'value', modifiers: [] };
+            case 'literal': return { role: 'literal', modifiers: [] };
+            case 'reference': {
+                const r = ref?.ref;
+                if (r?.outer) return { role: 'reference', modifiers: ['outer'] };
+                // A token kept by R-TXT-35 names nothing in the text and is no error: the diff keeps its target.
+                const unresolved = !r || (r.to === undefined && r.error !== undefined);
+                return { role: 'reference', modifiers: unresolved ? ['unresolved'] : [] };
+            }
+            // A word the style uses as punctuation (a block opened by `begin`) reads as a keyword.
+            case 'punctuation': return t.k === 'ID' ? { role: 'keyword', modifiers: [] } : { modifiers: [] };
+            default: return { modifiers: [] };
+        }
+    };
+
+    const walk = (n: SyntaxNode, object: ObjectNode | null, sym: MutableSymbol | null, into: MutableSymbol[], item: ItemNode | ListNode | null, ref: RefNode | null): void => {
+        let here = into;
+        if (n.kind === 'object') {
+            const o = byId.get(n.id);
+            const name = typeof o?.slots.name === 'string' ? o.slots.name : '';
+            const s: MutableSymbol = {
+                kind: 'object', id: n.id, cls: n.cls, name: name || n.cls, named: name !== '',
+                ...(item && sym ? { feature: item.feature } : {}),
+                start: n.start, end: n.end, nameStart: n.start, nameEnd: n.start, nameRank: 3,
+                recovered: n.state !== 'complete' || !!n.orphan, unclosed: n.state === 'unclosed', children: [],
+            };
+            into.push(s);
+            symbolOf.set(n.id, s);
+            object = n;
+            sym = s;
+            here = s.children;
+            item = null;
+        } else if (n.kind === 'item' || n.kind === 'list') {
+            item = n;
+            if (n.kind === 'list') {
+                const last = n.children[n.children.length - 1];
+                fold(n.start, n.end, !!last && last.kind === 'token' && last.role === 'punctuation' && last.v === grammar.style.list.close);
+            }
+        } else if (n.kind === 'block') {
+            fold(n.start, n.end, n.closed);
+        } else if (n.kind === 'ref') {
+            ref = n;
+            const to = n.ref?.to;
+            if (typeof to === 'string' && n.ref) {
+                const at = { start: n.ref.start, end: n.ref.end };
+                const list = refsTo.get(to);
+                if (list) list.push(at); else refsTo.set(to, [at]);
+            }
+        } else if (n.kind === 'error' && n.children.some(c => c.kind === 'object')) {
+            // R-TXT-36: the objects read inside a skipped block sit in a group where the block was.
+            const g: MutableSymbol = {
+                kind: 'unknown', name: UNKNOWN_CONTAINER, named: false, start: n.start, end: n.end,
+                nameStart: n.start, nameEnd: n.start, nameRank: 0, recovered: true, unclosed: false, children: [],
+            };
+            into.push(g);
+            here = g.children;
+            item = null;
+        }
+        n.children.forEach((c, i) => {
+            if (c.kind !== 'token') { walk(c, object, sym, here, item, ref); return; }
+            if (!c.role) return;
+            const { role, modifiers } = roleOf(c, n, i, ref);
+            infos.push({ token: c, ...(role ? { role } : {}), object, item, ref });
+            if (role) tokens.push({ start: c.start, end: c.end, role, modifiers });
+            if (sym && object && sym.id === object.id) {
+                const rank = c.role === 'name' ? 0 : c.role === 'class' ? 1 : 2;
+                if (rank < sym.nameRank) { sym.nameStart = c.start; sym.nameEnd = c.end; sym.nameRank = rank; }
+            }
+        });
+    };
+
+    const tree = parsed.tree;
+    if (tree) walk(tree, null, null, top, null, null);
+
+    // The comments, merged into the tokens in text order; a run of own-line comments folds.
+    const comments = tree ? commentsOf(tree, grammar) : [];
+    if (comments.length) {
+        const merged: SemanticToken[] = [];
+        let k = 0;
+        for (const c of comments) {
+            while (k < tokens.length && tokens[k].start < c.start) merged.push(tokens[k++]);
+            merged.push({ start: c.start, end: c.end, role: 'comment', modifiers: [] });
+        }
+        while (k < tokens.length) merged.push(tokens[k++]);
+        tokens.length = 0;
+        tokens.push(...merged);
+        let run: { a: number; b: number } | null = null;
+        const flush = (): void => { if (run && run.b > run.a) folds.push({ startLine: run.a + 1, endLine: run.b + 1, kind: 'comment' }); run = null; };
+        for (const c of comments) {
+            const a = lineOf(c.start);
+            const ownLine = text.slice(lineStarts[a], c.start).trim() === '';
+            if (!ownLine) { flush(); continue; }
+            const b = lineOf(Math.max(c.start, c.end - 1));
+            if (run && a === run.b + 1) run.b = b;
+            else { flush(); run = { a, b }; }
+        }
+        flush();
+    }
+    folds.sort((x, y) => x.startLine - y.startLine || y.endLine - x.endLine);
+
+    let encoded: Uint32Array | null = null;
+    const encodedTokens = (): Uint32Array => {
+        if (encoded) return encoded;
+        const data: number[] = [];
+        let pl = 0;
+        let pc = 0;
+        const push = (line: number, col: number, length: number, role: number, bits: number): void => {
+            data.push(line - pl, line === pl ? col - pc : col, length, role, bits);
+            pl = line;
+            pc = col;
+        };
+        for (const t of tokens) {
+            const role = SEMANTIC_ROLES.indexOf(t.role);
+            const bits = t.modifiers.reduce((b, m) => b | (1 << SEMANTIC_MODIFIERS.indexOf(m)), 0);
+            // A token never spans a line in Monaco: a block comment is cut at each line end.
+            let from = t.start;
+            let line = lineOf(from);
+            while (from < t.end) {
+                const next = line + 1 < lineStarts.length ? lineStarts[line + 1] : Infinity;
+                const to = Math.min(t.end, next - 1);
+                if (to > from) push(line, from - lineStarts[line], to - from, role, bits);
+                from = next;
+                line++;
+            }
+        }
+        encoded = new Uint32Array(data);
+        return encoded;
+    };
+
+    /** The read token at `offset`: the one starting there, else the one it is inside or just after. */
+    const infoAt = (offset: number): TokenInfo | null => {
+        let lo = 0;
+        let hi = infos.length - 1;
+        let found = -1;
+        while (lo <= hi) {
+            const m = (lo + hi) >> 1;
+            if (infos[m].token.start <= offset) { found = m; lo = m + 1; } else hi = m - 1;
+        }
+        const i = found >= 0 ? infos[found] : null;
+        return i && offset <= i.token.end ? i : null;
+    };
+
+    const nameRange = (s: MutableSymbol): TextRange => ({ start: s.nameStart, end: s.nameEnd });
+
+    /** The object declared at `offset` (its name or class keyword), or named by the reference there. */
+    const targetAt = (offset: number): string | null => {
+        const i = infoAt(offset);
+        if (!i) return null;
+        if (i.ref) {
+            const to = i.ref.ref?.to;
+            return typeof to === 'string' ? to : null;
+        }
+        return i.object && (i.token.role === 'name' || i.token.role === 'class') ? i.object.id : null;
+    };
+
+    const parentOf = new Map<MutableSymbol, MutableSymbol>();
+    const link = (ss: readonly MutableSymbol[], parent?: MutableSymbol): void => {
+        for (const s of ss) {
+            if (parent) parentOf.set(s, parent);
+            link(s.children, s);
+        }
+    };
+    link(top);
+
+    const classes = new Map<string, TextClass>(mm.classes.map(c => [c.name, c]));
+    const enums = new Map<string, TextEnumeration>(mm.enumerations.map(e => [e.name, e]));
+    const featuresOf = featureTable(mm);
+    const featureOf = (cls: string, name: string): TextFeature | undefined => featuresOf(cls).find(f => f.name === name);
+    const declOf = (f: TextFeature): TextAttribute | TextReference | undefined => {
+        const owner = classes.get(f.owner);
+        return f.kind === 'attribute' ? owner?.attributes?.find(a => a.name === f.name) : owner?.references?.find(r => r.name === f.name);
+    };
+
+    const featureHover = (cls: string, name: string): string[] => {
+        const f = featureOf(cls, name);
+        if (!f) return [code(name)];
+        const decl = declOf(f);
+        const kind = f.kind === 'attribute' ? 'attribute' : f.kind === 'containment' ? 'containment' : 'reference';
+        const order = f.ordered === undefined ? '' : f.ordered ? ', ordered' : ', unordered';
+        return [`${code(f.name)} : ${code(f.type)} ${bounds(f, decl)}`, `${kind} of ${code(f.owner)}${order}`, ...(decl?.doc ? [decl.doc] : [])];
+    };
+
+    const classHover = (cls: string): string[] => {
+        const c = classes.get(cls);
+        const supers = c?.supers?.length ? `, extends ${c.supers.map(code).join(', ')}` : '';
+        return [`${c?.isAbstract ? 'abstract class' : 'class'} ${code(cls)}${supers}`, ...(c?.doc ? [c.doc] : [])];
+    };
+
+    const objectHover = (s: MutableSymbol | undefined, cls: string): string[] => {
+        const parent = s ? parentOf.get(s) : undefined;
+        const where = !s ? [] : s.feature && parent ? [`in ${code(s.feature)} of ${code(parent.name)}`] : [];
+        const state = !s || !s.recovered ? [] : [s.unclosed ? 'its block or an enclosing one is left open: shown, never applied'
+            : 'recovered from a broken text: shown, never applied'];
+        return [`**${s?.named ? s.name : cls}**${s?.named ? ` : ${code(cls)}` : ''}`, ...classHover(cls), ...where, ...state];
+    };
+
+    const hoverAt = (offset: number): TextHover | null => {
+        const i = infoAt(offset);
+        if (!i || !i.object) return null;
+        const t = i.token;
+        const cls = i.object.cls;
+        if (i.ref) {
+            const r = i.ref.ref;
+            const at = { start: r?.start ?? i.ref.start, end: r?.end ?? i.ref.end };
+            const head = featureHover(cls, i.ref.feature);
+            const to = r?.to;
+            let target: string;
+            if (isOuterRef(to)) target = `names ${code(to.outer)}, an object outside the text`;
+            else if (typeof to === 'string') {
+                const s = symbolOf.get(to);
+                target = s ? `names **${s.name}**${s.named ? ` : ${code(s.cls ?? '')}` : ''}, line ${lineOf(s.nameStart) + 1}` : `names ${code(to)}`;
+            } else if (r && !r.error) target = 'names nothing in the text: it keeps the target it was printed for';
+            else target = `names nothing in the text${r?.error ? `: ${r.error.message}` : ''}`;
+            return { ...at, contents: [target, ...head] };
+        }
+        const range = { start: t.start, end: t.end };
+        switch (i.role) {
+            case 'type': case 'name': return { ...range, contents: objectHover(symbolOf.get(i.object.id), cls) };
+            case 'literal': {
+                const f = i.item ? featureOf(cls, i.item.feature) : undefined;
+                const e = f ? enums.get(f.type) : undefined;
+                const lit = e?.literals.find(l => applyCase(l, grammar.literalCase) === t.v) ?? t.v;
+                const doc = e?.literalDocs?.[lit];
+                return {
+                    ...range,
+                    contents: [`${code(lit)} : enumeration ${code(e?.name ?? '?')}`, ...(e ? [`literals ${e.literals.map(code).join(', ')}`] : []),
+                        ...(doc ? [doc] : []), ...(e?.doc ? [e.doc] : [])],
+                };
+            }
+            default: return i.item ? { ...range, contents: featureHover(cls, i.item.feature) } : null;
+        }
+    };
+
+    const done = ({ nameRank: _, children, ...s }: MutableSymbol): TextSymbol => ({ ...s, children: children.map(done) });
+
+    return {
+        tokens,
+        symbols: top.map(done),
+        folds,
+        encodedTokens,
+        definitionAt: offset => {
+            const i = infoAt(offset);
+            const to = i?.ref?.ref?.to;
+            const s = typeof to === 'string' ? symbolOf.get(to) : undefined;
+            return s ? nameRange(s) : null;
+        },
+        referencesAt: (offset, includeDeclaration) => {
+            const id = targetAt(offset);
+            if (id === null) return [];
+            const s = symbolOf.get(id);
+            return [...(includeDeclaration && s ? [nameRange(s)] : []), ...(refsTo.get(id) ?? [])];
+        },
+        hoverAt,
+    };
+}
+
+/**
+ * A node of the outline (step B2, R-TXT-39 (1), (2); design in docs/discovery/discovery_2026-11-04_textual_b2_outline_hover.md,
+ * recommended design items 1 and 2): an object, the group of a feature the text prints a keyword for, or the
+ * `unknown container` group of the objects read inside a skipped block.
+ */
+export interface OutlineNode extends TextRange {
+    /** The path of labels from the top, unique: what keeps a node's expansion across versions of the text. */
+    readonly key: string;
+    readonly kind: 'object' | 'group' | 'unknown';
+    /** The parsed object's id; objects only. */
+    readonly id?: string;
+    readonly cls?: string;
+    /** A name; for an unnamed object rule C4', with ` [k]` when siblings collide; a group's keyword as printed. */
+    readonly label: string;
+    /** Secondary text: a named object's class, the feature an unnamed object's label comes from, a group's object count. */
+    readonly detail: string;
+    readonly named: boolean;
+    /** An object's feature in its container, a group's own feature; absent at the top and in the unknown group. */
+    readonly feature?: string;
+    /** The name token, else the class keyword, else the first token; a group's keyword: what a click selects. */
+    readonly selectStart: number;
+    readonly selectEnd: number;
+    /** As `TextSymbol.recovered` and `TextSymbol.unclosed`; false on groups. */
+    readonly recovered: boolean;
+    readonly unclosed: boolean;
+    readonly children: readonly OutlineNode[];
+}
+
+export interface TextOutline {
+    readonly nodes: readonly OutlineNode[];
+    /** The nodes from the top down to the innermost one holding `offset`; empty outside every node. */
+    pathAt(offset: number): OutlineNode[];
+}
+
+interface MutableOutline {
+    key: string;
+    kind: OutlineNode['kind'];
+    id?: string;
+    cls?: string;
+    label: string;
+    detail: string;
+    named: boolean;
+    feature?: string;
+    start: number;
+    end: number;
+    selectStart: number;
+    selectEnd: number;
+    selectRank: number;
+    recovered: boolean;
+    unclosed: boolean;
+    /** The index the object's path segment prints: within its feature, or among the top objects of its class. */
+    k: number;
+    children: MutableOutline[];
+}
+
+const LABEL_MAX = 24;
+const cut = (v: string): string => (v.length > LABEL_MAX ? `${v.slice(0, LABEL_MAX - 1)}…` : v);
+const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Rule C4' (R-TXT-39 (2)): the value an unnamed object is told apart by, from its own single values in text order. The
+ * first one written as a name (a reference by name, an enum literal), else the first attribute value as printed
+ * (strings keep their quotes, cut at 24 characters); null when there is neither, and the label falls to `Class[k]`.
+ */
+function distinguishing(text: string, o: ObjectNode): { value: string; feature: string } | null {
+    let name: { value: string; feature: string } | null = null;
+    let value: { value: string; feature: string } | null = null;
+    const walk = (n: SyntaxNode): void => {
+        for (const c of n.children) {
+            if (name) return;
+            if (c.kind === 'token' || c.kind === 'object' || c.kind === 'list') continue;
+            if (c.kind === 'item' && c.feature !== 'name' && !c.children.some(x => x.kind === 'object' || x.kind === 'block')) {
+                const ref = c.children.find((x): x is RefNode => x.kind === 'ref');
+                const tok = c.children.find((x): x is SyntaxToken => x.kind === 'token' && (x.role === 'value' || x.role === 'literal'));
+                if (ref) {
+                    const written = text.slice(ref.start, ref.end);
+                    // A path or `@"id"` is readable as a path, poor as a label: rule C4' drops that tier.
+                    if (PLAIN_NAME.test(written)) name = { value: written, feature: c.feature };
+                } else if (tok?.role === 'literal') name = { value: tok.raw, feature: c.feature };
+                else if (tok && !value) value = { value: tok.raw, feature: c.feature };
+            }
+            walk(c);
+        }
+    };
+    walk(o);
+    return name ?? value;
+}
+
+/**
+ * The outline of `text` as `parsed` read it: the objects in text order, nested as the text nests them. An `item` that
+ * holds a keyword token itself and contains objects is a group node labelled with that keyword, so a grouped containment
+ * gives two levels and an inline one, printing no keyword, none (R-TXT-39 (1)). Unnamed objects are labelled by rule C4'.
+ */
+export function textOutline(text: string, parsed: TextParseResult, grammar: ConcreteGrammar): TextOutline {
+    const byId = new Map(parsed.objects.map(o => [o.id, o]));
+    const top: MutableOutline[] = [];
+    const seen = new Map<string, number>();
+    const nextK = (key: string): number => {
+        const k = seen.get(key) ?? 0;
+        seen.set(key, k + 1);
+        return k;
+    };
+
+    const walk = (n: SyntaxNode, object: ObjectNode | null, at: MutableOutline | null, into: MutableOutline[], feature: string | null, unknown: boolean): void => {
+        let here = into;
+        let group: MutableOutline | null = null;
+        if (n.kind === 'object') {
+            const o = byId.get(n.id);
+            const name = typeof o?.slots.name === 'string' ? o.slots.name : '';
+            const kw = pathKeyword(grammar, n.cls);
+            const k = nextK(object ? `${object.id}.${feature}` : `${unknown ? 'unknown' : 'top'}.${n.cls}`);
+            const value = name ? null : distinguishing(text, n);
+            const s: MutableOutline = {
+                key: '', kind: 'object', id: n.id, cls: n.cls,
+                label: name || (value ? `${kw} ${cut(value.value)}` : `${kw}[${k}]`),
+                detail: name ? kw : value?.feature ?? '', named: name !== '',
+                ...(object && feature !== null ? { feature } : {}),
+                start: n.start, end: n.end, selectStart: n.start, selectEnd: n.start, selectRank: 3,
+                recovered: n.state !== 'complete' || !!n.orphan, unclosed: n.state === 'unclosed', k, children: [],
+            };
+            into.push(s);
+            object = n;
+            at = s;
+            here = s.children;
+            feature = null;
+        } else if (n.kind === 'item' || n.kind === 'list') {
+            feature = n.feature;
+            const kw = n.kind === 'item' ? n.children.find((c): c is SyntaxToken => c.kind === 'token' && c.role === 'keyword') : undefined;
+            if (kw) {
+                group = {
+                    key: '', kind: 'group', label: kw.raw, detail: '', named: false, feature: n.feature, start: n.start, end: n.end,
+                    selectStart: kw.start, selectEnd: kw.end, selectRank: 0, recovered: false, unclosed: false, k: 0, children: [],
+                };
+                here = group.children;
+            }
+        } else if (n.kind === 'error' && n.children.some(c => c.kind === 'object')) {
+            // R-TXT-36, as in `analyzeText`: the objects read inside a skipped block sit in a group where the block was.
+            const g: MutableOutline = {
+                key: '', kind: 'unknown', label: UNKNOWN_CONTAINER, detail: '', named: false, start: n.start, end: n.end,
+                selectStart: n.start, selectEnd: n.start, selectRank: 0, recovered: true, unclosed: false, k: 0, children: [],
+            };
+            into.push(g);
+            here = g.children;
+            object = null;
+            feature = null;
+            unknown = true;
+        }
+        for (const c of n.children) {
+            if (c.kind !== 'token') { walk(c, object, at, here, feature, unknown); continue; }
+            if (!c.role || !at || !object || at.id !== object.id) continue;
+            const rank = c.role === 'name' ? 0 : c.role === 'class' ? 1 : 2;
+            if (rank < at.selectRank) { at.selectStart = c.start; at.selectEnd = c.end; at.selectRank = rank; }
+        }
+        // A keyword item holding no object is a single value, not a group. R-TXT-44 (3): the items of one per-item keyword
+        // feature, which the grammar reads one after the other, share the group of the first.
+        const last = into[into.length - 1];
+        if (group && group.children.length && last?.kind === 'group' && last.feature === group.feature && last.label === group.label) {
+            last.children.push(...group.children);
+            last.end = group.end;
+        } else if (group && group.children.length) into.push(group);
+    };
+    if (parsed.tree) walk(parsed.tree, null, null, top, null, false);
+
+    const count = (s: MutableOutline): number => s.children.reduce((a, c) => a + (c.kind === 'object' ? 1 : count(c)), 0);
+    const finish = (ss: MutableOutline[], parent: string): OutlineNode[] => {
+        const labels = new Map<string, number>();
+        for (const s of ss) if (s.kind === 'object' && !s.named) labels.set(s.label, (labels.get(s.label) ?? 0) + 1);
+        const keys = new Map<string, number>();
+        return ss.map(s => {
+            // R-TXT-39 (2), the chat's answer: the index only where two unnamed siblings read the same.
+            if (s.kind === 'object' && !s.named && (labels.get(s.label) ?? 0) > 1) s.label = `${s.label} [${s.k}]`;
+            if (s.kind === 'group') s.detail = String(count(s));
+            const base = `${parent}/${s.kind === 'group' ? `${s.feature}:` : ''}${s.label}`;
+            const dup = keys.get(base) ?? 0;
+            keys.set(base, dup + 1);
+            const { selectRank: _r, k: _k, children, ...rest } = s;
+            const key = dup ? `${base}#${dup}` : base;
+            return { ...rest, key, children: finish(children, key) };
+        });
+    };
+    const nodes = finish(top, '');
+
+    const pathAt = (offset: number): OutlineNode[] => {
+        const out: OutlineNode[] = [];
+        let level: readonly OutlineNode[] = nodes;
+        for (;;) {
+            const hit = level.find(s => s.start <= offset && offset < s.end) ?? level.find(s => s.end === offset && s.start < offset);
+            if (!hit) return out;
+            out.push(hit);
+            level = hit.children;
+        }
+    };
+    return { nodes, pathAt };
+}

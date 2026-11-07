@@ -9,6 +9,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JjScriptEvents } from '../../events/registry';
+import { JJSCRIPT_HIGHLIGHT_STYLE, jjscriptAstGenerator } from '../editor/jjscriptHighlighter';
 import './ScriptBlock.scss';
 import { RunSummaryDialog, type RunSummaryData, type RunSummaryErrorRow } from './RunSummaryDialog';
 import { projectFigures, type ProjectFigures } from './runFigures';
@@ -185,6 +186,8 @@ const scriptBlockTheme = {
         fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace",
         fontSize: '13px',
     },
+    // The script editor's token colours (P-2026-10-25-1020).
+    ...JJSCRIPT_HIGHLIGHT_STYLE,
 };
 
 // ============================================
@@ -1215,7 +1218,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     {renderLineNumbers()}
                     <div className="script-block__code">
                         <SyntaxHighlighter
-                            language="bash"
+                            language="jjscript"
+                            astGenerator={jjscriptAstGenerator}
                             style={scriptBlockTheme}
                             showLineNumbers={false}
                             wrapLines={true}

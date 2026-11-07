@@ -5,19 +5,43 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 6 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector, the metrics of all three layers (`tack metrics`), the board with its Lanes, Sessions,
-Timeline and Insights views (`tack board`), the Jjodel log importer (`tack import jjodel-log`), the lane-run
-adapter and the parity check against Jjodel's lane board (`tack parity jjodel`) exist.
+Status: v0: validated on the author's repositories (Jjodel, harness-book, a Sprotty clone without sessions); external pilot pending.
+
+## Install and first run
+
+Tack needs Node >= 24 and nothing else: no `npm install`, no build step. From a clone of this repository:
+
+```
+node tack/bin/tack.mjs board        # or: cd tack && node bin/tack.mjs board
+node tack/bin/tack.mjs --version
+```
+
+Run it from the root of the repository you want to look at. The first run reads every Claude Code transcript
+under `~/.claude/projects` into `~/.tack/store.db` (about a minute for 700 sessions), then serves the board
+on `http://127.0.0.1:4710/` and opens it. Nothing is written in the repository.
+
+A repository that follows none of the conventions below still gets layer 1: its sessions, cost, context and
+commits. Every layer-2 and layer-3 metric shows `not adopted` with the field that would enable it, and the
+Lanes tab says «No lane-run lanes for this repository». A repository with no Claude Code session at all is not
+in the store, because repositories are found from session directories. Started from such a repository, the board
+preselects its work tree anyway, marked `no recorded session` in the picker, and every tab (Lanes, Sessions,
+Timeline, Insights) shows one line, «No Claude Code sessions recorded for <name> yet.», and no data of any other
+repository. «All repositories» stays selectable in the picker. Started outside a git work tree, the board
+preselects nothing and shows all repositories.
 
 ## Three data layers
 
-1. **Transcripts and git**: sessions, cost, context, commits. Needs nothing from the repository.
+1. **Transcripts and git**: sessions, cost, context, commits. Requires only Claude Code transcripts on this
+   machine and a git work tree; nothing from the repository.
 2. **Identity**: a unit-of-work id (`P-YYYY-MM-DD-HHmm`) linking a prompt, its sessions and its
-   commits, via the trailer `Unit: <id>` (canonical) or the subject suffix `(P-...)` (alias).
-3. **Self-assessment log**: one append-only file, `.tack/log.jsonl`, one JSON entry per line.
+   commits, via the trailer `Unit: <id>` (canonical) or the subject suffix `(P-...)` (alias). Requires the id in
+   commit messages, or leading the first message of a session.
+3. **Self-assessment log**: one append-only file, `.tack/log.jsonl`, one JSON entry per line. Requires that file
+   (or an import), and for the Lanes tab a lane-run folder on this machine.
 
 Layers 2 and 3 are optional; panels that need them say "not adopted" instead of drawing empty charts.
+
+Lane folders are read through one trace-source boundary (`src/collectors/source.mjs`); lane-run is the only adapter today.
 
 ## `tack check`
 
@@ -84,9 +108,10 @@ exactly `git log --all` of its clones.
 **Commit within the hour** (proximity, not authorship) is computed at query time, not stored: `yes`
 when any commit of the session's repository, by any author, has a commit time between the session's
 first event and one hour after its last event; `no` otherwise; `unknown` when the repository is
-missing. `repos` prints, per repository: key (12 chars), toplevels, remote host, commits, commits
-with a unit id per form, Claude co-authored commits, sessions, sessions with a commit within the
-hour; then the missing cwds grouped by reason.
+missing. `repos` prints one line per repository: key (12 chars), the first toplevel and a count of the
+others (`/Users/x/repo +3 more`), remote host, commits, commits with a unit id per form, Claude co-authored
+commits, sessions, sessions with a commit within the hour; then the missing cwds grouped by reason. Each
+column is as wide as its widest cell and at most 60 characters; a longer cell keeps its tail behind «…».
 
 ### Linking a session whose directory is gone
 
@@ -214,8 +239,10 @@ tack board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
 
 Runs an incremental `scan`, then serves a page on `http://127.0.0.1:4710/` (bound to 127.0.0.1 only)
 and opens it with the platform command (`open`, `xdg-open`) unless `--no-open`. Started inside a git work
-tree, it preselects that repository, by root commit, so a linked worktree selects its main repository;
-elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
+tree whose repository has a session in the store, it preselects that repository, by root commit, so a linked
+worktree selects its main repository; inside a work tree the store does not hold, it preselects that work tree as
+unrecorded (key: its lowest root commit, the key the store would give it) and every tab answers empty for it;
+outside a git work tree it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
 nothing is written in the repository, only the store is.
 
 The page is static files served from memory (`src/board/page.html`, `board.css`, `board.js`, `charts.js`,
@@ -233,6 +260,14 @@ The page is static files served from memory (`src/board/page.html`, `board.css`,
   lane closes only on a commit naming its Prompt-ID after it ended (the tooltip says so); past 72 h it is
   counted, not listed. Phase progress and architect-chat tokens are shown disabled with their reason: not
   tracked in v0. The page refreshes every 20 s while it is shown and the browser tab is visible.
+  Slice 9: a card per waiting lane sits above the running cards, longest waiting first: Prompt-ID and title,
+  the wait as a pill (`GO` for a breakpoint, `answer` for a question, `ACK` for a ceiling, `hard-stop`),
+  the reason (for a question its text, for a stop the first sentence of the closing message naming it, at most
+  300 characters), the `Recommended:` line set apart, waiting since (relative and absolute), and the chat that
+  must answer, linked when a URL resolves (the prompt's `Request:` line, else the `Claude-Session:` trailer of
+  the commit that added it) and plain text otherwise. The text is read from the lane's `log.jsonl` when the
+  page asks (`src/board/waiting.mjs`, memoised by the log's size) and never written to the store. A banner
+  «N lanes waiting» scrolls to the cards; with exactly one waiting lane, the banner shows its card.
 - **Sessions** lists one row per session, newest first, with a summary strip and filters. The column
   «Unit / branch» shows the session's unit (layer 2, above), the branch otherwise.
 - **Timeline** draws one lane per repository (per branch when one repository is selected) on a Day or Week
@@ -257,11 +292,12 @@ JSON API, all GET except the rescan:
 
 | Endpoint | Returns |
 |---|---|
-| `/api/repos` | the preselected key and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
+| `/api/repos` | the preselected key, `unrecorded` (the start work tree when the store does not hold it: key, name, toplevel; else null) and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
 | `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch, unit and its source (layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
 | `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, or `not-adopted`); cost per day also by model family |
 | `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
-| `/api/lanes?repo=` | `state` and `reason`; with `ok`, the tiles, `attention` (`waiting`, `blocked`, `staleCount`), `running`, `last24`, `byState`, `adoptions`, `medianByKind`; `updatedMs` and the `closure` rule always |
+| `/api/lanes?repo=` | `state` and `reason`; with `ok`, the tiles, `attention` (`waiting`, `blocked`, `staleCount`, `staleOldest`), `waitingCards` (each with `wait`: `kind`, `pill`, `reason`, `recommended`, `chatUrl`, `since`), `running`, `last24`, `byState`, `adoptions`, `medianByKind`; `updatedMs` and the `closure` rule always |
+| `/api/attention` | the shape of Jjodel's lane board route for the menu bar app (`frontend/scripts/lane-board/README.md`, «The menu bar app's routes»): `v`, `now`, `stale`, `board`, `waiting`, `blocked`, `running`, `staleCount`, `staleOldest`, `items[]`, `runningItems[]`; all repositories, under 2 KB, no CORS header. `phase` and `left` are empty (not tracked) |
 | `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
 | `POST /api/rescan` | runs the incremental scan again and returns the new last scan |
 
@@ -299,9 +335,11 @@ tack settings [--repo <dir>]   # every key, its effective value and the level it
 
 The notifier is a set of rules over what the collectors already store; nothing hooks into lane-run.
 The catalogue is `CATALOGUE` in `src/notify/notifier.mjs`. On by default: `lane_question`,
-`lane_hard_stop`, `lane_blocked`, `gate_red`, `context_hard`, `cz_ask`, `lane_silent`, `retention`.
+`lane_breakpoint`, `lane_ceiling`, `lane_hard_stop`, `lane_blocked`, `gate_red`, `context_hard`, `cz_ask`, `lane_silent`, `retention`.
 Off by default: `lane_done`, `lane_started`, `merge_completed`, `daily_spend`, `host_load`,
-`unpushed`. `merge_conflict` is listed but disabled in v0. Each row has `enabled`, a `scope` (`all`,
+`unpushed`. `merge_conflict` is listed but disabled in v0. A lane that ends `Outcome: hard-stop` fires one of three
+events by its stop kind (slice 9): `lane_breakpoint` (a planned stop, waits for a GO), `lane_ceiling` (the context
+ceiling, handoff written) or `lane_hard_stop` (unplanned). Each row has `enabled`, a `scope` (`all`,
 `fronts` or `chats`) and its `channels`.
 
 An occurrence is sent once, on its rising edge: it is claimed in `notify_events`, so a poll never
@@ -353,6 +391,21 @@ for a merge), `title` (its first `# ` line, at most 200 characters), `work_ms` (
 `worktree`, `resolved` (`resolved.txt` exists) and `adoptions` (the items of the «Decisions taken
 (unattended)» section of the last closing message; the text is not kept). The migration marks every lane
 for one re-read.
+
+### Store schema 8
+
+Schema 8 adds four `lanes` columns for the three kinds of stop. `stop_kind` is `breakpoint`, `ceiling` or
+`hard-stop` for a lane whose last turn ended `Outcome: hard-stop`, else null. By order: a `Stop: planned |
+ceiling | unplanned` line in the last result wins; else `handoff.md` present and the result naming the
+context ceiling or a handoff is a ceiling; else a `## HARD STOP` section of the prompt (prompt.txt, or
+`input-1.md` when that file is gone) that is not «None» and that the lane is a discovery for, or the result
+says it reached, is a breakpoint; a prompt with no `## HARD STOP` section at all (not one that says «None»)
+and a result naming a planned stop (Phase 1, a visual check, a committed report) is a breakpoint too (stop rules 2,
+slice 9); else a hard-stop. `resumes` and `auto_resumes` count the resume messages
+and those starting with `[auto]` after an optional `[P-...]` bracket (the chat's mark for a resume sent in
+`/lane auto`; earlier resumes carry none and get no pill); no message text is kept. `stop_scanned` holds the version of
+the stop rules a lane was scanned under (`STOP_RULES`; a lane scanned under an older one is scanned again): a lane read before schema 8 is scanned once, by UPDATE, keeping its other
+columns. The lane-run output and the `Outcome:` token are unchanged.
 
 ## Tests
 
