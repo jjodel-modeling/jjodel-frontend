@@ -7,14 +7,16 @@
 import { describe, it, expect } from 'vitest';
 import { commentsOf, parseText, parserNameLookups, tokenizeText } from '../parser';
 import type { ObjectNode, SyntaxElement, SyntaxNode, SyntaxToken, TextNode } from '../parser';
-import { grammarOf } from './corpus';
+import { BOX, CASES as CASES_SPEC, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
 import { printTextModel, printerNameLookups } from '../printer';
-import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
+import { libraryObjects, mutantsOf, probeTokens, tolerantCases } from './tolerantCorpus';
 import { nearleyGrammarOf, parseCount } from './oracle';
 import { planTextEdit } from '../textDiff';
 import { displayMatch } from '../textMatch';
 import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet } from './boolCorpus';
+import { portGrammar, PORT_PASCAL, PORT_TEXT_CLIKE, PORT_TEXT_PASCAL } from './portCorpus';
+import type { ConcreteGrammar } from '../concreteGrammar';
 
 const CASES = tolerantCases();
 
@@ -402,4 +404,164 @@ describe('(viii) linear name resolution in the printer (P-2026-11-03-2220)', () 
         // A guard against a blow-up, not a budget.
         expect(ms).toBeLessThan(1000);
     });
+});
+
+describe('(ix) D3a: structured fixes on parse errors (P-2026-11-06-2328; report §4.3, decision D6)', () => {
+    const LIB = CASES[0];
+    const text = printTextModel(LIB.g, libraryObjects(2, 2)).text;
+    const fixed = (t: string, g = LIB.g) => parseText(t, g, { fixes: true });
+    const apply = (t: string, f: { start: number; end: number; text: string }): string => t.slice(0, f.start) + f.text + t.slice(f.end);
+
+    it('(1) a token the repair inserted: the fix inserts it where it is missing, and the text reads again in full', () => {
+        const fixture = grammarOf(FIXTURE);
+        const cases: [string, string, ReturnType<typeof grammarOf>][] = [
+            [text.replace('Library city {', 'Library city'), 'insert "{"', LIB.g],
+            [text.replace('Member reader0 {}', 'Member reader0'), 'insert "{}"', LIB.g],
+            [text.slice(0, text.lastIndexOf('\n')), 'insert "}"', LIB.g],
+            ['Part a {\n  peers b]\n}\nPart b {}\n', 'insert "["', fixture],
+            ['Part a {\n  peers [b\n}\nPart b {}\n', 'insert "]"', fixture],
+        ];
+        for (const [broken, title, g] of cases) {
+            const r = fixed(broken, g);
+            expect(r.errors.length, broken).toBe(1);
+            const fix = r.errors[0].fix ?? [];
+            expect(fix.map(f => f.title), broken).toEqual([title]);
+            expect(fix[0].start).toBe(fix[0].end);
+            const again = parseText(apply(broken, fix[0]), g);
+            expect(again.errors, apply(broken, fix[0])).toEqual([]);
+            expect(again.recovered).toEqual([]);
+        }
+        expect(apply(text.replace('Library city {', 'Library city'), fixed(text.replace('Library city {', 'Library city')).errors[0].fix![0])).toBe(text);
+        expect(apply(text.slice(0, text.lastIndexOf('\n')), fixed(text.slice(0, text.lastIndexOf('\n'))).errors[0].fix![0])).toBe(text);
+    });
+
+    it('(2) an unknown reference: one fix per near name among the targets, nearest first, written as the printer writes it', () => {
+        const broken = text.replace('borrowedBy reader1', 'borrowedBy reder1');
+        const r = fixed(broken);
+        expect(r.errors.map(e => e.message)).toEqual(['no object of type Member is named "reder1"']);
+        const fix = r.errors[0].fix ?? [];
+        expect(fix.map(f => f.text)).toEqual(['reader1', 'reader0']);
+        expect(fix.map(f => f.title)).toEqual(['replace with "reader1"', 'replace with "reader0"']);
+        expect(broken.slice(fix[0].start, fix[0].end)).toBe('reder1');
+        expect(apply(broken, fix[0])).toBe(text);
+        // A name of a class outside the targets is no candidate: "book1" is a Book, and no Member is named near it.
+        const other = fixed(text.replace('borrowedBy reader1', 'borrowedBy book1'));
+        expect(other.errors.map(e => e.message)).toEqual(['no object of type Member is named "book1"']);
+        expect('fix' in other.errors[0]).toBe(false);
+    });
+
+    it('(2) a near name carried by two targets is written as their paths, never `@"id"`; so is an ambiguous name', () => {
+        const twice = text.replace('Member reader0 {}', 'Member reader1 {}');
+        for (const broken of [twice.replace('borrowedBy reader1', 'borrowedBy reder1'), twice]) {
+            const r = fixed(broken);
+            expect(r.errors.length, broken).toBe(1);
+            const fix = r.errors[0].fix ?? [];
+            expect(fix.map(f => f.text)).toEqual(['Library[0].members[0]', 'Library[0].members[1]']);
+            fix.forEach((f, k) => {
+                const again = parseText(apply(broken, f), LIB.g);
+                expect(again.errors).toEqual([]);
+                const ref = again.refs!.find(x => x.feature === 'borrowedBy')!;
+                expect(again.objects.find(o => o.id === ref.to)!, f.text).toBe(again.objects.filter(o => o.cls === 'Member')[k]);
+            });
+        }
+    });
+
+    it('(3) a misspelled keyword or literal where the expected set holds a near one: the fix replaces it', () => {
+        const cases: [string, string, string][] = [
+            ['borrowedBy', 'borowedBy', 'borrowedBy'],
+            ['Library', 'Libary', 'Library'],
+            ['FICTION', 'FICTON', 'FICTION'],
+        ];
+        for (const [from, bad, word] of cases) {
+            const broken = text.replace(from, bad);
+            const e = fixed(broken).errors[0];
+            expect(e.message, bad).toMatch(/^expected /);
+            const start = text.indexOf(from);
+            expect(e.fix, bad).toEqual([{ title: `replace with "${word}"`, start, end: start + bad.length, text: word }]);
+            expect(apply(broken, e.fix![0])).toBe(text);
+        }
+    });
+
+    it('(3) a style word of the Pascal base, misspelled, is replaced by the near one the parse expected', () => {
+        const pascal = tolerantCases('pascal')[0];
+        const print = printTextModel(pascal.g, libraryObjects(2, 2)).text;
+        const close = print.lastIndexOf(pascal.g.style.blockClose[0]);
+        const word = pascal.g.style.blockClose[0];
+        expect(word).toMatch(/^\w{3,}$/);
+        const broken = `${print.slice(0, close)}${word.slice(0, -1)}${print.slice(close + word.length)}`;
+        const fix = fixed(broken, pascal.g).errors.flatMap(e => e.fix ?? []).filter(f => f.text === word);
+        expect(fix.length, broken).toBeGreaterThan(0);
+        expect(apply(broken, fix[0])).toBe(print);
+    });
+
+    it('(4) without `fixes`, no error carries a fix', () => {
+        const r = parseText(text.replace('Library city {', 'Library city'), LIB.g);
+        expect(r.errors.length).toBe(1);
+        expect('fix' in r.errors[0]).toBe(false);
+    });
+
+    it('(4) an error with no fixable shape carries none, fixes asked: a far word, a far name, a stray character, a repeat', () => {
+        const fixture = grammarOf(FIXTURE);
+        const cases: [string, ConcreteGrammar, string][] = [
+            [`${text}\njunk\n`, LIB.g, 'expected "Library", "Book" or "Member"; found name "junk"'],
+            [text.replace('borrowedBy reader1', 'borrowedBy zzz'), LIB.g, 'no object of type Member is named "zzz"'],
+            ['Part a { § }', fixture, 'unexpected character "§"'],
+            ['Part a {\n  size 1\n  size 2\n}\n', fixture, '"size" is given twice'],
+        ];
+        for (const [broken, g, message] of cases) {
+            const r = fixed(broken, g);
+            expect(r.errors.map(e => e.message), broken).toContain(message);
+            expect(r.errors.filter(e => e.message === message).every(e => !('fix' in e)), broken).toBe(true);
+        }
+    });
+});
+
+/** Every key `fix` dropped, at any depth: the result of a parse as it is without fixes asked. */
+const withoutFixes = (v: unknown): unknown => (Array.isArray(v) ? v.map(withoutFixes)
+    : v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'fix').map(([k, x]) => [k, withoutFixes(x)])) : v);
+const fixCount = (v: unknown): number => (Array.isArray(v) ? v.reduce((n: number, x) => n + fixCount(x), 0)
+    : v !== null && typeof v === 'object' ? Object.entries(v).reduce((n, [k, x]) => n + (k === 'fix' ? 1 : 0) + fixCount(x), 0) : 0);
+
+describe('(x) D3a, CLAUDE.md §5: fixes change nothing but the fixes', () => {
+    /** The textual corpus: every spec print in two styles, the port and the boolean sheets, the seven probe cases in three bases; each text with its truncations and deletions. */
+    const corpus = (): { readonly label: string; readonly g: ConcreteGrammar; readonly text: string }[] => {
+        const out: { label: string; g: ConcreteGrammar; text: string }[] = [];
+        const add = (label: string, g: ConcreteGrammar, t: string): void => {
+            out.push({ label, g, text: t });
+            for (const k of probeTokens(t, g.style)) {
+                out.push({ label: `${label}, trunc at ${k.end}`, g, text: t.slice(0, k.end) });
+                out.push({ label: `${label}, delete at ${k.start}`, g, text: t.slice(0, k.start) + t.slice(k.end) });
+            }
+        };
+        const specs = [['diamond', DIAMOND], ['non-diamond', NON_DIAMOND], ['garage', GARAGE], ['box', BOX], ['cases', CASES_SPEC], ['inner', INNER], ['fixture', FIXTURE]] as const;
+        for (const [name, spec] of specs) {
+            for (const [sn, style] of [['c-like', undefined], ['lower', LOWER]] as const) {
+                const g = grammarOf(spec, style);
+                add(`${name}, ${sn}`, g, printTextModel(g, objectsOf(spec)).text);
+            }
+        }
+        add('port, c-like', portGrammar(), PORT_TEXT_CLIKE);
+        add('port, pascal', portGrammar(PORT_PASCAL), PORT_TEXT_PASCAL);
+        const gbool = boolGrammar(BOOL_CLIKE);
+        BOOL_PRINTS.forEach(([read], k) => add(`bool ${k}`, gbool, boolSheet(read)));
+        for (const base of ['clike', 'pascal', 'indent'] as const) {
+            for (const c of tolerantCases(base)) add(`${c.name}, ${base}`, c.g, printTextModel(c.g, c.objects).text);
+        }
+        return out;
+    };
+
+    it('on the whole textual corpus, a parse with fixes asked equals the parse without, but for the fixes; and only it has any', () => {
+        let compared = 0;
+        let offered = 0;
+        for (const { label, g, text } of corpus()) {
+            const base = parseText(text, g);
+            expect(fixCount(base), label).toBe(0);
+            const withFixes = parseText(text, g, { fixes: true });
+            expect(withoutFixes(withFixes), label).toEqual(withoutFixes(base));
+            offered += withFixes.errors.filter(e => e.fix).length;
+            compared++;
+        }
+        expect(compared).toBeGreaterThan(1000);
+        expect(offered, 'no fix offered on the corpus: the comparison is vacuous').toBeGreaterThan(100);
+    }, 120_000);
 });

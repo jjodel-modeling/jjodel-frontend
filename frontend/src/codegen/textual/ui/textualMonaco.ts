@@ -2,7 +2,8 @@
  * The Monaco side of the Text tab (step B1, R-TXT-38; design in docs/discovery/discovery_2026-11-03_textual_language_service.md):
  * the language `jjodel-textual` with six providers on the language service (semantic tokens, document symbols, folding
  * ranges, definition, references, hover), a Monarch tokenizer for the EBNF tab, and one light theme (D-UI-15). Step D lane
- * D2c adds the seventh, completion (docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §3.3 C4).
+ * D2c adds the seventh, completion (docs/discovery/discovery_2026-11-06_textual_d_writing_aids.md §3.3 C4), and lane D3b
+ * the eighth, the code actions of the parse errors' fixes (same report §4).
  *
  * A Monaco theme is global: the theme here is the JjScript theme (`vs`, the JjTL colours on the `.jjscript` tokens) plus
  * the rules of the text and of the EBNF, so a JjScript editor beside the tab keeps its colours. The semantic token types
@@ -21,7 +22,7 @@ import { analyzeText, completionsAt, SEMANTIC_MODIFIERS, SEMANTIC_ROLES } from '
 import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
 import { parseText } from '../parser';
-import type { ParseOptions, TextParseResult } from '../parser';
+import type { ParseOptions, TextParseError, TextParseResult } from '../parser';
 import { STYLE_CATALOG } from '../style';
 import type { NotationStyle } from '../style';
 
@@ -126,11 +127,14 @@ export interface TextualSession {
 }
 
 const sessions = new Map<Monaco.editor.ITextModel, TextualSession>();
+/** D3b: the errors of a session's current version parsed with D3a's fixes, asked by the code actions only. */
+const fixedErrors = new Map<Monaco.editor.ITextModel, () => readonly TextParseError[]>();
 let changed: Monaco.Emitter<void> | null = null;
 
 /** Opens the session of a Text tab's model: the providers answer on the models that have one. */
 export function openTextualSession(model: Monaco.editor.ITextModel, input: TextualSessionInput): TextualSession {
     let cache: { readonly version: number; readonly value: TextualReading | null } | null = null;
+    let fixed: { readonly version: number; readonly errors: readonly TextParseError[] } | null = null;
     const session: TextualSession = {
         current: () => {
             const version = model.getVersionId();
@@ -147,13 +151,27 @@ export function openTextualSession(model: Monaco.editor.ITextModel, input: Textu
         },
         invalidate: () => {
             cache = null;
+            fixed = null;
             changed?.fire();
         },
         dispose: () => {
-            if (sessions.get(model) === session) sessions.delete(model);
+            if (sessions.get(model) === session) {
+                sessions.delete(model);
+                fixedErrors.delete(model);
+            }
         },
     };
     sessions.set(model, session);
+    // One more parse per version, and only when a code action is asked: the fixes' second parse (D3a (3)) stays off the
+    // typing path.
+    fixedErrors.set(model, () => {
+        const version = model.getVersionId();
+        if (fixed && fixed.version === version) return fixed.errors;
+        const base = input.base();
+        const errors = base ? parseText(model.getValue(), base.grammar, { keep: input.keep(), fixes: true }).errors : [];
+        fixed = { version, errors };
+        return errors;
+    });
     return session;
 }
 
@@ -292,6 +310,28 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             };
         },
     });
+
+    // Step D lane D3b (decision D6): a parse error marker's D3a fixes as quick fixes, text edits only, applied by the typing
+    // pause like any edit. A marker is the error at its start with its message, as `setMarkers` in TextualTab.tsx sets it;
+    // any other marker (a conformance warning, say) has none.
+    monaco.languages.registerCodeActionProvider(TEXTUAL_LANGUAGE_ID, {
+        provideCodeActions: (model, _range, context) => {
+            const errors = fixedErrors.get(model)?.() ?? [];
+            const length = model.getValue().length;
+            const actions = context.markers.flatMap(marker => {
+                const at = model.getOffsetAt({ lineNumber: marker.startLineNumber, column: marker.startColumn });
+                const e = errors.find(x => x.fix && Math.min(x.start, length) === at && x.message === marker.message);
+                return (e?.fix ?? []).map((f, i): Monaco.languages.CodeAction => ({
+                    title: f.title,
+                    kind: 'quickfix',
+                    diagnostics: [marker],
+                    isPreferred: i === 0,
+                    edit: { edits: [{ resource: model.uri, versionId: model.getVersionId(), textEdit: { range: rangeOf(model, f), text: f.text } }] },
+                }));
+            });
+            return { actions, dispose: () => {} };
+        },
+    }, { providedCodeActionKinds: ['quickfix'] });
 
     monaco.editor.defineTheme(TEXTUAL_THEME_ID, {
         base: 'vs',
