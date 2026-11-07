@@ -94,3 +94,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato: chat RC-23 on the 0628 crops of the same code 8328662df (layout switch A-B-A and reload 3/3 at every step, container switch 0 failures; crop_2_B nodes at B positions, light theme)
 **Notes**: Merge tree `6314007db` equal to the merge-tree measure; probes 12/12 once. Branch vitest count not run in `/Users/alfonso/jjodel-w-mtlk` (no node_modules there; writing forbidden): the new file's 19 tests counted at `9353e859e` and confirmed 19/19 on the merge. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 07:48
+
+## 2026-11-07 — fix: problem producers clear only on the last unmount of a model
+**Prompt**: `claude_2026-11-07_0833_prompt_multi_tab_l4b_problem_producers.md`, lane L4b: a ref count per (producer, model) in `problems/registry.ts`, so closing one tab no longer erases the badges of another tab on the same model (discovery §4.2).
+**Files touched**: `fd90572de`: `problems/__tests__/producerMounts.test.ts` (new); `65e74534d`: `problems/registry.ts`, `ConformanceProblemSync.tsx`, `SimCheckProblemSync.tsx`, `ValidationFreshnessSync.tsx`; this commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates: typecheck exit 0, build exit 0, check:docs 5/5; vitest 542 files, 14591 passed, 4 files red: the 3 known `window` imports and `irCollapsedRender` (Chromium close hook timeout), 13/13 green alone. The two-tab path is not reachable until L6, so no app check.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (reachable from L6)
+**Notes**: Counted per producer AND model: one editor releases its producers in sequence, a shared count would never reach zero on the first. Uniqueness has no unmount cleanup, unchanged. The three effects now key on [modelid] (Conformance was []), so an in-place model switch clears the old model at its last release. The last conformance instance also clears entries owned by the model it did not write. Mutation bench in `65e74534d`: 4 mutations, all killed.
+**Prompt document name**: 2026-11-07 08:33

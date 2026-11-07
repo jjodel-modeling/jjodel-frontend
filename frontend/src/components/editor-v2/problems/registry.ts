@@ -297,6 +297,39 @@ export function getProblemIdsOwnedBy(kind: NodeProblemKind, ownerModelId: string
     return out;
 }
 
+// --- Producer mounts --------------------------------------------------------
+
+/**
+ * Mount count per producer and model (multi-tab L4b, P-2026-11-07-0833). Every `EditorV2`
+ * mounts its own producers (EditorV2.tsx:5121-5124), and two tabs on one model write the same
+ * ids, which is right; clearing the model's entries on every unmount was not, because closing
+ * one tab erased the badges of the other (discovery_2026-11-06_multi_tab_viewpoints.md §4.2).
+ *
+ * Keyed by producer AND model: one editor releases its producers one after another, and a count
+ * shared by the producers would not reach zero on the first release. The precedent is the ref
+ * count of `installScriptPreviewListener` (preview/scriptPreviewStore.ts).
+ */
+const producerMounts = new Map<string, number>();
+
+/**
+ * Count one mount of `producer` on `modelId`. The release returned runs `clear` only when the
+ * count returns to zero, so the clear of the last instance to unmount is the one that runs. A
+ * release run twice counts once.
+ */
+export function acquireProducerMount(producer: NodeProblemKind, modelId: string, clear: () => void): () => void {
+    const key = `${producer}\u0000${modelId}`;
+    producerMounts.set(key, (producerMounts.get(key) ?? 0) + 1);
+    let done = false;
+    return () => {
+        if (done) return;
+        done = true;
+        const left = (producerMounts.get(key) ?? 1) - 1;
+        if (left > 0) { producerMounts.set(key, left); return; }
+        producerMounts.delete(key);
+        clear();
+    };
+}
+
 export function getActiveOverlayProblemId(): string | null {
     return activeOverlayProblemId;
 }
