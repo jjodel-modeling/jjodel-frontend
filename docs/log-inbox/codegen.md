@@ -2295,7 +2295,7 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; crops checked by the chat
+**Smoke visivo**: passato — agent app check 6/6 PASS on the port corpus, real keystrokes, crops d1-1..4 in ~/.jjodel-lanes/P-2026-11-06-2301/; visual GO pending
 **Notes**: Tests red first (5 of 22). 4 mutants killed: no comment-run merge, collapsed span counts, any comment asks, deletion-only pause. Commented objects keep their span in the decorations, so a later pause still asks (seen in app after an edit and after Cancel). Gates: typecheck 0; build 0; check:docs 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files all tests pass alone but `afterAll` browser close timed out (harness).
 **Prompt document name**: 2026-11-06 23:01
 
@@ -2449,7 +2449,7 @@ Approved as a ticket by Alfonso, 2026-11-07 03:39.
 **Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; crops checked by the chat
+**Smoke visivo**: passato — crop `~/.jjodel-lanes/P-2026-11-07-0344/text-tab-cpu-no-warning.png`, light, scale 1; visual GO pending
 **Notes**: Two new tests red on HEAD; five pinned tests gain the `set h.name` line (listed in the commit bodies). Gates: typecheck 0; vitest 3 baseline import reds, 14505 passed, no timing red; build, check:docs, check:codegen-lazy exit 0. Probe 10/10 PASS: raw slots `["cpu"]`, `["result"]`, `["ready"]`, conformance empty, XMI names, no page errors. Causa from the report: a wrong assumption that the handle names the slot; the report names no originating prompt. B1 (console) stays for N1's ticket.
 **Prompt document name**: 2026-11-07 03:44
 
