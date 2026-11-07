@@ -223,3 +223,31 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no UI path; nucleus only, covered by tests; chat GO)
 **Notes**: Trunk tip moved to `44ecca1f1` (docs only, another chat) after the prompt; accepted as first parent. Probes 6/6 once, control R-DCN-24 absent; no union resolution. Branch count not run in `/Users/alfonso/jjodel-w-dcn-l44b` (no node_modules; writing forbidden): 2 new tests counted at `2cb5cca14` (16 to 18), matched on the merge. Tip run had one laneRun.test.ts timeout under load, green alone. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
 **Prompt document name**: 2026-11-07 17:56
+
+## 2026-11-07 — feat: DCN well-formedness W1..W4, W6 as node problems of kind dcn
+**Prompt**: DCN L2.4 (P-2026-11-07-1825, stopped at the context ceiling; continued by P-2026-11-07-1900): pure module of W1..W4, W6, R-DCN-13, R-DCN-16 on the drone, the `dcn` problems producer and its sync, tests, mutation bench, gates, browser probe with Drone crops.
+**Files touched**: eb96cbb10 — `frontend/src/model/dcn/dcnWellFormedness.ts` (new), `dcn/__tests__/dcnWellFormedness.test.ts` (new); `frontend/src/components/editor-v2/problems/registry.ts`, `dcnToProblems.ts` (new), `DcnProblemSync.tsx` (new), `__tests__/dcnToProblems.test.ts` (new); `frontend/src/components/editor-v2/EditorV2.tsx`; LIR 12019b986; docs commit — this entry and the Status of both prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-07 18:25
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (crops ~/.jjodel-lanes/P-2026-11-07-1900/crops read by the chat 2026-11-07: W6 of the probe-made `reset` in its overlay, Drone clean)
+**Notes**: Module written before its test (prompt: tests first). One test fixed: a guard on a same-viewpoint class is also the W2 self-loop, the test reads W1 alone. The bag needs `simProfile` «Dynamic classification», else `runBag` turns the dcn roles off. Bench 33/33 killed. Gates: typecheck 0, targeted 1796/1796, full run at baseline (3 known files), build 0, check:docs. Probe 9/9 PASS; the export gives only the 3 Alert W1 below. Second ceiling stop, at the probe.
+**Prompt document name**: 2026-11-07 19:00
+
+## 2026-11-07 — ticket: the conformance validator parses DCN bodies outside the DCN action mode
+**Ticket**: The conformance validator parses `Operation.body` and `Monitor.body` without the DCN action mode, so every DCN body such as `self.power := 0` gets a `type_mismatch` warning. When the metamodel binds the dcn roles it must parse them in DCN mode (`parseAction(text, { dcn: true })`, as `dcnWellFormedness.ts` does).
+**Priority**: medium
+**Found in**: P-2026-11-07-1900
+
+## 2026-11-07 — ticket: a W1 guard on a class of the same viewpoint always raises a W2 self-loop
+**Ticket**: Under the self-loop rule of W2 (spec §5, P-2026-11-07-1825), `self.in(V::D')` in an expression of a class of V is an edge V -> V, so the W1 guard on a same-viewpoint class (Flying reading `plugged` of Charging) always gives W2; the guard only works across viewpoints. W2 edges also come from bodies and monitors, not only invariants. Spec §5 to settle.
+**Priority**: medium
+**Found in**: P-2026-11-07-1900
+
+## 2026-11-07 — ticket: W1 on the Alert invariants of the drone export, association ends not reachable from self
+**Ticket**: On `dcn-drone.jjodel` the invariants of Safe, Moderate and Adverse read `self.ownedSensors`, an association end owned by the association, not a feature of WeatherAssessmentUnit: three W1 errors (measured by the L2.4 probe). For L2.5/L4.5: make association ends reachable from `self`, or change the export.
+**Priority**: medium
+**Found in**: P-2026-11-07-1825

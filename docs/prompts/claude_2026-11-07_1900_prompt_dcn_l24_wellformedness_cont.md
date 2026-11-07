@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1900
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · eb96cbb10 · verifica visiva passata 2026-11-07 (chat C-2026-11-06-2159) · log entry in docs/log-inbox/dcn.md
 Lane: full (continuation of P-2026-11-07-1825, stopped at the context ceiling; `editor-v2/problems/`, LIR 12019b986 already committed; launched with the critical-zone go-ahead of Alfonso, 2026-11-07 18:21 «via» on L2.4)
 Corregge: 2026-11-07 18:25 (stopped at the soft context ceiling with two new files and one modified, uncommitted, RC-51)
 Worktree: ~/jjodel-w-dcn-l24, branch dcn-l24, at the commit that adds this prompt on top of 12019b986

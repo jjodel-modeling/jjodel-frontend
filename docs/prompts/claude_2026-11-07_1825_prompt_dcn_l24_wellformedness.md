@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1825
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · LIR 12019b986, code eb96cbb10 (continued by P-2026-11-07-1900 after the context ceiling) · verifica visiva passata 2026-11-07 (chat C-2026-11-06-2159) · log entry in docs/log-inbox/dcn.md
 Lane: full (touches `editor-v2/problems/`, CLAUDE.md §3.1: Layer Impact Report owed; launched with the critical-zone go-ahead of Alfonso, 2026-11-07 18:21 «via» on L2.4)
 Depends: R-DCN-3, R-DCN-10, R-DCN-13, R-DCN-16, R-DCN-17, R-DCN-21, R-DCN-23; L2.3 (`dcnStcFromRoles`), L3.2 (`ClassificationTest`), L4.2 (`compileDcn`); spec §5; discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §6 (lane L2.4)
 Worktree: ~/jjodel-w-dcn-l24, branch dcn-l24, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
