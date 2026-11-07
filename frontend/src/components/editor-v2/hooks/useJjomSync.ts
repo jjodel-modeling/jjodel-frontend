@@ -45,7 +45,8 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
-import { vertexChildrenHash } from '../sync/vertexSnapshot';
+import { elementSnapshotsOf, snapshotUnchanged } from '../sync/vertexSnapshot';
+import { getLayoutKeyOf } from '../viewpoint/layout/vertexLayoutAdapter';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
@@ -1143,29 +1144,11 @@ export function useJjomSync(
     // For each ID in subElements, select state.idlookup[id].
     // Custom comparator ensures we only trigger when an individual
     // D-object reference changes (not when unrelated objects change).
-    const elementSnapshots = useSelector((state: DState) => {
-        if (subElementIds.length === 0) return null;
-        const result = new Map<string, any>();
-        for (const id of subElementIds) {
-            const elem = state.idlookup[id];
-            if (elem) {
-                result.set(id, elem);
-                const modelId = (elem as any).model;
-                if (modelId && typeof modelId === 'string') {
-                    const modelElem = state.idlookup[modelId] as any;
-                    if (modelElem) {
-                        result.set(`model:${id}`, modelElem);
-                        // Content hash of everything else the vertex's node renders
-                        // (children, slot features and types, reference target names,
-                        // ghost ancestry). A single number entry per vertex — avoids
-                        // infinite re-render loops. See sync/vertexSnapshot.ts.
-                        result.set(`ch:${id}`, vertexChildrenHash(state.idlookup as any, modelElem));
-                    }
-                }
-            }
-        }
-        return result;
-    }, mapReferenceEqual);
+    // Plus, per element with a model element, a content hash of everything else the
+    // vertex's node renders, the layout key in force included (R-MT-19): a single number
+    // entry per vertex — avoids infinite re-render loops. See sync/vertexSnapshot.ts.
+    const elementSnapshots = useSelector((state: DState) =>
+        elementSnapshotsOf(state.idlookup as any, subElementIds, getLayoutKeyOf(state)), mapReferenceEqual);
 
     // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
     // Called by the init push, by the flush after its patches, and by its own poll.
@@ -1397,13 +1380,7 @@ export function useJjomSync(
         for (const id of subElementIds) {
             if (!prevIds.has(id)) continue;
 
-            const dElement = elementSnapshots.get(id);
-            const prevD = prevElements.get(id);
-            const currModel = elementSnapshots.get(`model:${id}`);
-            const prevModel = prevElements.get(`model:${id}`);
-            const currHash = elementSnapshots.get(`ch:${id}`);
-            const prevHash = prevElements.get(`ch:${id}`);
-            const unchanged = prevD === dElement && prevModel === currModel && currHash === prevHash;
+            const unchanged = snapshotUnchanged(prevElements, elementSnapshots, id);
 
             if (isCanvasUpdated(id)) { // anti-bounce (drag positions only)
                 // Its old entries stay in prevElements (below), so the re-run scheduled after

@@ -196,3 +196,46 @@ export function vertexChildrenHash(L: Lookup, modelElem: any): number {
     }
     return h;
 }
+
+/**
+ * The snapshot selector 2 of `useJjomSync` returns on every dispatch (R-MT-19, P-2026-11-07-0430).
+ * Per id of the graph's subElements: the D-object; for an element with a model element, that
+ * D-object under `model:<id>` and a number under `ch:<id>`. The number is `vertexChildrenHash`, and
+ * for a vertex also the layout key in force: `jjomVertexToRFNode` reads position and size under
+ * that key (`effectiveLayoutOf`), and a layout switch changes no D-object, so without the term
+ * every vertex compared equal and kept the previous key's position. In the number, not in a
+ * per-run flag, so the hook's anti-bounce carry-over, which keeps a skipped vertex's old entries,
+ * keeps the old key too. Edges carry no key: the sync keeps their handles from the cache, so a
+ * re-transform under a new key would patch nothing (`__tests__/vertexSnapshotLayoutKey.test.ts`).
+ * `null` for an empty graph.
+ */
+export function elementSnapshotsOf(L: Lookup, ids: readonly string[], layoutKey: string): Map<string, any> | null {
+    if (ids.length === 0) return null;
+    const keyTerm = mixStr(0, layoutKey);
+    const result = new Map<string, any>();
+    for (const id of ids) {
+        const elem = L[id];
+        if (elem) {
+            result.set(id, elem);
+            const modelId = elem.model;
+            if (modelId && typeof modelId === 'string') {
+                const modelElem = L[modelId];
+                if (modelElem) {
+                    result.set(`model:${id}`, modelElem);
+                    let h = vertexChildrenHash(L, modelElem);
+                    // The vertex test of `isVertexClassName` (useJjomSync).
+                    if (typeof elem.className === 'string' && elem.className.includes('Vertex')) h = mixNum(h, keyTerm); // term:layoutKey
+                    result.set(`ch:${id}`, h);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+/** The sync's skip test: D-object, model element and number all equal to the last run's. */
+export function snapshotUnchanged(prev: Map<string, any>, curr: Map<string, any>, id: string): boolean {
+    return prev.get(id) === curr.get(id)
+        && prev.get(`model:${id}`) === curr.get(`model:${id}`)
+        && curr.get(`ch:${id}`) === prev.get(`ch:${id}`);
+}
