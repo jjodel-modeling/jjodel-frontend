@@ -43,6 +43,7 @@ import { toJjelStateAccess } from './guardContext';
 import type { SimDcnBinding, SimSnapshot } from './guardContext';
 import { stateAccess } from './netStep';
 import { checkGuardSubset } from './subsetChecker';
+import type { SubsetOptions } from './subsetChecker';
 import type { CompiledNet, SimState, SimValue } from './netTypes';
 
 /** What an output compiles against: the run's declarations and places; the snapshot when a run exists. */
@@ -95,7 +96,8 @@ const RESERVED: readonly string[] = STATE_RESERVED.readOnlyAttributes;
 const defective = (source: string, code: OutputDefectCode, short: string, detail: string = short): CompiledOutput =>
     ({ source, expr: null, defect: { code, short, detail } });
 
-export function compileOutput(text: string, scope: OutputScope): CompiledOutput {
+/** `options.dcn`: an output or a watch of the DCN nucleus, where `x.in(V::D)` is accepted (subsetChecker.ts `SubsetOptions`). */
+export function compileOutput(text: string, scope: OutputScope, options?: SubsetOptions): CompiledOutput {
     if (text.trim() === '') return defective(text, 'empty', 'no expression');
     const parsed = parseExpressionStrict(text);
     if (parsed.errors.length > 0 || !parsed.expression) {
@@ -103,7 +105,7 @@ export function compileOutput(text: string, scope: OutputScope): CompiledOutput 
         return defective(text, 'parse', e ? `parse error ${e.line}:${e.column}` : 'parse error', e ? `parse error ${e.line}:${e.column} ${e.message}` : 'parse error, no expression');
     }
     const expr = parsed.expression;
-    const error = checkGuardSubset(expr, text).find(d => d.severity === 'error');
+    const error = checkGuardSubset(expr, text, options).find(d => d.severity === 'error');
     if (error) {
         return error.code === 'E-NODE'
             ? defective(text, 'node', 'reads node', 'E-NODE: `node` is presentation state: an output reads σ only (R-SIM-18).')
