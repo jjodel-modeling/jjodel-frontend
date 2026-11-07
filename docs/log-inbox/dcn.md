@@ -264,3 +264,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (resolution adds no behaviour; the crops of P-2026-11-07-1900 stand)
 **Notes**: One conflict, registry.ts, by union: 'instantiation' then 'dcn', the dcn paragraph renumbered the eighth. EditorV2.tsx and the inboxes merged clean. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after. Full run: the 3 known import reds plus 32 in bashGuard.test.ts, caused by MERGE_HEAD during the merge; 160/160 after the commit. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536, prose in Corregge, Causa), identical to the trunk's.
 **Prompt document name**: 2026-11-07 19:45
+
+## 2026-11-07 — merge: dcn-l24 into alfonso-frontend-jjtl (P-2026-11-07-1953)
+**Prompt**: `claude_2026-11-07_1953_prompt_merge_dcn-l24.md`, lane full (merge, RC-14): `dcn-l24` at `fa3559653` into the trunk, one `--no-ff` merge commit of the explicit sha, gates, then this entry and the Status flip after the GO.
+**Files touched**: merge `6a2c07153` (base `03bc50239`, trunk tip `6e92c6ebf`): the 12 files of the branch, no resolution; this commit: this entry and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: check:addonly PASS, typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 564 passed files, 15062 passed and 2 skipped (expected 15032 + 30), hooks 21 files 967/967, build exit 0, check:agents green, check:scripts PASS, check:docs 4/5 (B below).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat C-2026-11-06-2159, crops of P-2026-11-07-1900; unattended, Alfonso in the morning digest)
+**Notes**: Zero conflicts, staged tree equal to merge-tree 966386ac6; five inbox probes once each. The branch tree has no node_modules, so its vitest could not run there without writing in it: the 30 new tests were counted on the two new test files (7 + 23, no .each), and the merged run matched. check:docs B red on multi-tab.md:201 (P-2026-11-07-1536), already red on the base, untouched here, accepted by the chat.
+**Prompt document name**: 2026-11-07 19:53
