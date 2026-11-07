@@ -40,6 +40,8 @@ import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
+import { reprintChanged } from '../textReprint';
+import type { ReprintResult } from '../textReprint';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { identityOf, matchObjects } from '../textMatch';
@@ -281,6 +283,39 @@ export interface TextSync {
     /** P-2026-11-03-2326: the agreed text's object spans and reference tokens, kept with the agreement. */
     readonly spans?: readonly ObjectSpan[];
     readonly refs?: readonly RefSpan[];
+    /** E1b (R-TXT-54 E10): the print `model` was agreed as, for T10's splice. */
+    readonly printed?: AgreedPrint;
+}
+
+/** E1b: the old print of an agreement: its object spans, its reference tokens, and the grammar it was printed in. */
+export interface AgreedPrint {
+    readonly grammar: ConcreteGrammar;
+    readonly spans: readonly ObjectSpan[];
+    readonly refs: readonly RefSpan[];
+}
+
+export function agreedPrint(base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): AgreedPrint {
+    return { grammar: base.grammar, spans: base.spans, refs: base.refs ?? [] };
+}
+
+/**
+ * T10, lane E1b (R-TXT-20, R-TXT-54 E10): the text a change of the model's print puts in place of the agreed one, with
+ * its spans and reference tokens. When the agreed text is not the bare print, `reprintChanged` keeps the typed text of
+ * every object whose print did not change; else, or when it cannot splice safely, the whole new print, as before.
+ * `carried` is what the agreed text carries; `text` and `base` are the changed model's print.
+ */
+export function modelReprint(sync: TextSync, carried: { readonly spans: readonly ObjectSpan[]; readonly refs?: readonly RefSpan[] }, text: string,
+    base: Pick<EditBase, 'grammar' | 'spans' | 'refs'>): ReprintResult & { readonly spliced: boolean } {
+    const full = { text, spans: base.spans, refs: base.refs ?? [], spliced: false };
+    if (sync.text === sync.model || !sync.printed) return full;
+    const r = reprintChanged({
+        grammar: base.grammar,
+        previous: sync.printed.grammar,
+        typed: { text: sync.text, spans: carried.spans, refs: carried.refs ?? [] },
+        old: { text: sync.model, spans: sync.printed.spans, refs: sync.printed.refs },
+        next: { text, spans: base.spans, refs: base.refs ?? [] },
+    });
+    return r ? { ...r, spliced: true } : full;
 }
 
 /**
@@ -1235,20 +1270,27 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         undoKeyRef.current?.set(!!editor && !!syncRef.current && editor.getValue() === syncRef.current.text);
     };
 
-    /** The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. */
-    const reprint = (r: ModelReading): void => {
+    /**
+     * The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. T10 (E1b):
+     * an agreed text the editor holds is spliced, keeping the typed text of the unchanged objects; `full` reprints the
+     * whole print. `setValue` either way, so the text before never sits on the editor's undo stack (E3).
+     */
+    const reprint = (r: ModelReading, full = false): void => {
         const editor = editorRef.current;
         if (!editor || !r.base) return;
         pause.cancel();
         armedRef.current = null;
         clipRef.current = null;
         heldRef.current = false;
+        const sync = syncRef.current;
+        const typed = sync && !full ? agreedEvidence(sync, editor.getValue()) ?? (editor.getValue() === sync.text ? { spans: carriedSpans(), refs: carriedRefs() } : null) : null;
+        const next = sync && typed ? modelReprint(sync, typed, r.view.text, r.base) : { text: r.view.text, spans: r.base.spans, refs: r.base.refs ?? [] };
         const viewState = editor.saveViewState();
-        syncRef.current = { text: r.view.text, model: r.view.text };
-        if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
+        syncRef.current = { text: next.text, model: r.view.text, printed: agreedPrint(r.base) };
+        if (editor.getValue() !== next.text) editor.setValue(next.text);
         if (viewState) editor.restoreViewState(viewState);
-        setDecorations(r.base.spans);
-        setRefDecorations(r.base.refs ?? []);
+        setDecorations(next.spans);
+        setRefDecorations(next.refs);
         agree();
         setMarkers(null);
         staleRef.current = false;
@@ -1320,13 +1362,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         // The applied text is the new agreement: as typed, with the spans of its objects in the new model, and its reference
         // tokens rewritten to the new print's (R-TXT-35).
         const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
-        syncRef.current = { text, model: after.view.text };
+        syncRef.current = { text, model: after.view.text, ...(after.base ? { printed: agreedPrint(after.base) } : {}) };
         const editor = editorRef.current;
         // R-TXT-44: the names the app gave show at once, and the next edit reads them (the stuck edit of P-2026-11-04-1447).
         // Only the names the model holds after the run (C2c): a cleared slot reads nameless (R-TXT-45).
         const named = after.base ? namedByModel(plan, after.base.grammar, after.base.objects) : [];
         if (after.base && editor?.getValue() === text && namedReprint({ named }, after.view.text, text) !== null) {
-            reprint(after);
+            reprint(after, true);
             setStatus({ kind: 'applied', failed: failedLines, named: named.length });
             return;
         }
@@ -1496,7 +1538,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             editor.onDidFocusEditorText(() => monaco.editor.setTheme(ui.TEXTUAL_THEME_ID));
         }
         const r = readRef.current;
-        syncRef.current = { text: editor.getValue(), model: r.view.text };
+        syncRef.current = { text: editor.getValue(), model: r.view.text, ...(r.base ? { printed: agreedPrint(r.base) } : {}) };
         if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
@@ -1602,7 +1644,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         <i className="bi bi-exclamation-triangle" aria-hidden="true" />
                         The model changed: your text is kept, not applied
                         <button type="button" className="textual-tab__stale-reload" title="Replace the text with the model's"
-                                onClick={() => reprint(readRef.current)}>
+                                onClick={() => reprint(readRef.current, true)}>
                             Reprint
                         </button>
                     </span>

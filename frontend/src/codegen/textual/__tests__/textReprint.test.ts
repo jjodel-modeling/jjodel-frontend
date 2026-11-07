@@ -7,19 +7,31 @@
  *
  * Every case asserts print-parse equality: the spliced text reads back as the new print. Each test name says which
  * mutant kills it; the bench is in the commit body.
+ *
+ * Lane E1b (P-2026-11-07-0346): the Text tab's reprint branch, `modelReprint`, splices from the agreement it keeps (the
+ * typed text, the old print and the old print's spans) and falls back to the whole print. The tab's imports that reach
+ * the store are mocked, as textualTab.test.ts does.
  */
 
 import { readFileSync } from 'node:fs';
 import lz from 'async-lz-string';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
+
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { TextObject } from '../metamodel';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import type { RefSpan } from '../printer';
-import { PASCAL_STYLE } from '../style';
+import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
 import { reprintChanged } from '../textReprint';
 import type { PrintedText } from '../textReprint';
+import { agreedPrint, modelReprint } from '../ui/TextualTab';
+import type { TextSync } from '../ui/TextualTab';
 import { GARAGE, grammarOf } from './corpus';
 import { objectsOf } from './spec';
 import type { ClassSpec, ObjSpec, Spec } from './spec';
@@ -346,5 +358,71 @@ describe('reprintChanged falls back to the full reprint (null)', () => {
     it('not when the typed text is the bare print: the result is the new print', () => {
         const r = reprintChanged({ grammar: G, typed: carried(G, OLD, OLD.text), old: OLD, next });
         expect(r).toEqual({ text: next.text, spans: next.spans, refs: next.refs });
+    });
+});
+
+// ---- E1b: the Text tab's reprint branch (P-2026-11-07-0346) --------------------------------------------------------
+
+/** The agreement the tab keeps after a print or an application: the typed text and its spans, the old print and its own. */
+const agreement = (typed: PrintedText, old: PrintedText, g: ConcreteGrammar = G): TextSync =>
+    ({ text: typed.text, model: old.text, spans: typed.spans, refs: typed.refs, printed: agreedPrint({ grammar: g, spans: old.spans, refs: old.refs }) });
+
+/** The reading of the changed model, as the tab passes it. */
+const baseOf = (g: ConcreteGrammar, p: PrintedText) => ({ grammar: g, spans: p.spans, refs: p.refs });
+
+describe('modelReprint, the Text tab\'s reprint branch (E1b)', () => {
+    it('a diagram-side attribute change keeps the comments typed elsewhere: the splice, its spans and tokens (mutant: the branch always reprints the whole print)', () => {
+        const next = printed(G, editing(OBJECTS, 'e0', { power: 7 }));
+        const r = modelReprint(agreement(TYPED, OLD), TYPED, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        expect(r.text).toBe(replaced(TYPED_TEXT, ['Engine {\n  power 0\n}', 'Engine {\n  power 7\n}']));
+        readsAsPrint(G, r.text, next, r.spans);
+        expect(r.refs).toEqual(reprintChanged({ grammar: G, typed: TYPED, old: OLD, next })!.refs);
+    });
+
+    it('a rename keeps every comment (mutant: the old print read from the new reading)', () => {
+        const next = printed(G, editing(OBJECTS, 'c2', { name: 'gamma' }));
+        const r = modelReprint(agreement(TYPED, OLD), TYPED, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        readsAsPrint(G, r.text, next, r.spans);
+        for (const c of COMMENTS) expect(r.text).toContain(c);
+        expect(r.text).toContain('Car gamma { /* second */\n');
+    });
+
+    it('R4, pinned: a comment between two attributes of a changed object moves to the object\'s head', () => {
+        const typed = carried(G, OLD, replaced(OLD.text, ['      power 90\n      note', '      power 90\n      // between\n      note']));
+        const next = printed(G, editing(OBJECTS, 'e1', { power: 120 }));
+        const r = modelReprint(agreement(typed, OLD), typed, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        expect(r.text).toBe(replaced(next.text, ['    Engine {\n', '    // between\n    Engine {\n']));
+    });
+
+    it('the bare print agreed: the whole new print, as today (mutant: a splice of the bare print)', () => {
+        const typed = carried(G, OLD, OLD.text);
+        const next = printed(G, editing(OBJECTS, 'e1', { power: 120 }));
+        expect(modelReprint(agreement(typed, OLD), typed, next.text, baseOf(G, next))).toEqual({ text: next.text, spans: next.spans, refs: next.refs, spliced: false });
+    });
+
+    it('an agreement without its old print: the whole new print (mutant: a splice without the old spans)', () => {
+        const next = printed(G, editing(OBJECTS, 'e1', { power: 120 }));
+        const { printed: _gone, ...sync } = agreement(TYPED, OLD);
+        expect(modelReprint(sync, TYPED, next.text, baseOf(G, next))).toEqual({ text: next.text, spans: next.spans, refs: next.refs, spliced: false });
+    });
+
+    it('a splice that cannot be made (a carried span lost): the whole new print, as today (mutant: the null result kept)', () => {
+        const typed = { ...TYPED, spans: TYPED.spans.filter(s => s.id !== 'w2') };
+        const next = printed(G, editing(OBJECTS, 'e1', { power: 120 }));
+        expect(modelReprint(agreement(typed, OLD), typed, next.text, baseOf(G, next))).toEqual({ text: next.text, spans: next.spans, refs: next.refs, spliced: false });
+    });
+
+    it('a style change with the same comments: the old print read in its own grammar, a comment kept (mutant: the previous grammar dropped)', () => {
+        const eq = grammarOf(GARAGE, { ...CLIKE_STYLE, assign: ['='] });
+        const old = printed(eq, OBJECTS);
+        const typed = carried(eq, old, replaced(old.text, ['Gear w {\n', '// a gear\nGear w {\n']));
+        const next = printed(G, OBJECTS);
+        const r = modelReprint(agreement(typed, old, eq), typed, next.text, baseOf(G, next));
+        expect(r.spliced).toBe(true);
+        readsAsPrint(G, r.text, next, r.spans);
+        expect(r.text).toContain('// a gear\nGear w {\n');
     });
 });
