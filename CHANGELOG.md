@@ -53,7 +53,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 
 ## [3.1.2] - 2026-11-07
 
-The production build of `staging`, on top of 3.1.1. Projects keep format 2.230.
+A patch on top of 3.1.1 with one fix, released from `release/3.1.2-patch` (PR #210). Projects keep format 2.230.
 
 ### Fixed
 
