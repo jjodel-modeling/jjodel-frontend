@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1215
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · 5d86470c9 · bench 14/14 killed · verifica visiva non applicabile (no visual check owed)
 Lane: full (changes the JjEL action grammar and an exported AST union)
 Depends: R-DCN-12, R-SIM-17, R-SIM-40; the languages concern section «Dynamic classification in JjEL»; discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §3.4
 Worktree: ~/jjodel-w-dcn-l34, branch dcn-l34, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
