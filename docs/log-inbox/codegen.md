@@ -3165,3 +3165,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe 18/18 on 3548 from the DOM, `npm run smoke` GREEN (12 passed, 3 skipped), crops 1-chip, 2-default-view, 3-same-form in ~/.jjodel-lanes/P-2026-11-08-1239/; Alfonso's GO pending (critical zone)
 **Notes**: Regression: the row as dictated did not parse (a `)` in the quote, `evidence: measured in C2f`), so two register tests were red from f0ecce336 to 5541ea46b. Chips and default-view rows carry no index: two different unnamed Ports read alike (measured). Comments at jjomTransformers.ts:369 and IRFormField.tsx:153 still say `: <Class>` (out of scope). Vitest: 15344 passed, the 3 baseline import reds; irCollapsedRender, irSelectionRing red once each, green alone.
 **Prompt document name**: 2026-11-08 12:39
+
+## 2026-11-08 — merge: textual-c2g-align into alfonso-frontend-jjtl (P-2026-11-08-1330)
+**Prompt**: `claude_2026-11-08_1330_prompt_merge_textual-c2g-align.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2g-align` at `e0997544f` into `alfonso-frontend-jjtl`, merge base `3d0cc984d`, 5 commits on the branch side.
+**Files touched**: merge `ae7a149aa`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/lir_2026-11-08_c2g_unnamed_label_align.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1239_prompt_textual_c2g_align.md`, `frontend/src/components/editor-v2/utils/__tests__/namelessRefTarget.test.ts`, `frontend/src/components/editor-v2/utils/namelessTargetLabel.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ae7a149aa` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15385 tests in 584 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: C2g crops 1-chip, 2-default-view, 3-same-form in ~/.jjodel-lanes/P-2026-11-08-1239/ checked by the chat
+**Notes**: Rollback tag `pre-textual-c2g-align` on `4dd7f8b2a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1330/result.json`.
+**Prompt document name**: 2026-11-08 13:30
