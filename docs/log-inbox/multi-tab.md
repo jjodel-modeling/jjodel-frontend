@@ -307,3 +307,16 @@ active log is not touched by this lane.
 **Priority**: medium
 **Found in**: P-2026-11-08-0808
 **Detail**: docs/discovery/discovery_2026-11-08_l6_second_tab.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l6 (P-2026-11-08-1156)
+**Prompt**: `claude_2026-11-08_1156_prompt_multi-tab-l6_take_trunk.md`: the trunk at `34a511ffb` into `multi-tab-l6`, one merge commit, `--no-ff`, before the branch's own merge (RC-14). Merge base `f64bd6592`, 74 commits on the trunk side, 8 on the branch side.
+**Files touched**: merge `7b4a75718`: the 45 files of the trunk side against the first parent (`git diff --name-only 7b4a75718^1 7b4a75718`), none by hand; both sides: `frontend/src/components/abstract/DockManager.tsx`, auto-merged, read top to bottom. Closure commit: this inbox and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on `7b4a75718`: typecheck exit 0; typecheck:scripts exit 0; vitest 15366 passed, 3 skipped, 584 files, the 3 files red at import (trunk 15328 + 38 of the branch); hooks 967; build exit 0; check:docs 5/5; check:scripts and check:addonly PASS. The visual probes were not rerun on the merge commit.
+**Out-of-scope changes**: no — above five files only as the merge the prompt names (RC-11), listed by the command in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok to the 0852 and 1003 crops, taken before the merge; no probe rerun on `7b4a75718`, the trunk merge lane reruns them.
+**Notes**: Vitest took three runs: at load 113-146 `tolerant.test.ts` broke its wall-clock guards (1726 and 1086 ms against 1000; 60 against 50 ms) and `irCollapsedRender` a hook timeout; both files green alone twice, run 3 green. `frontend/node_modules` absent: temporary symlink to the shared one (P14), removed after the gates. A hook run overran the tool timeout, stopped, rerun in the foreground. check:docs is 5/5 here, the prompt said 4/4.
+**Prompt document name**: 2026-11-08 11:56

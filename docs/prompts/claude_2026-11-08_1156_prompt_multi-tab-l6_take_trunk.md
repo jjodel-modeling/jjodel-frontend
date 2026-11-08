@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1156
 Chat: C-2026-11-07-0425
 Request: https://claude.ai/code/session_01DQt9R2jWxTfKXT19Kf4HUW (Alfonso 2026-11-08 11:56 «ok» on the L6 crops, merge as is; beside-layout polish deferred to L6b)
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane multi-tab-l6 · 7b4a75718 · verifica visiva passata 2026-11-08 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-mtl6`, branch `multi-tab-l6`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-mtl6`, branch `multi-tab-l6`, `git log -1` is the commit that adds this file (its parent `59c96355b`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-08-1156 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
