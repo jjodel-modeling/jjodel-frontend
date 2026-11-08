@@ -3,6 +3,9 @@
  * of an edited text is. Pure, on plain objects (metamodel.ts), so it tests without the app.
  *
  * The evidence, strongest first:
+ * 0. The id in the text (step T8a; R-TXT-18, R-TXT-55 F9), the `@id` comment at the end of the object's head line
+ *    (`textIdsOf`): the model object of that id and class. An id the model does not hold, or holds for another class, is
+ *    no evidence; an id on two objects pairs neither of them by id, with a warning.
  * 1. The previous print's spans (R-TXT-22), as the editor carries them over the edit (decorations): a parsed object
  *    whose span overlaps a model object's carried span by at least half of their union, same class, is that object.
  *    A span collapsed to nothing (a cut) is no evidence.
@@ -28,7 +31,7 @@ import type { SyntaxNode, TextNode, TextParseResult } from './parser';
 import { ID_COMMENT_TAG } from './printer';
 import type { ObjectSpan } from './printer';
 
-export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
+export type MatchEvidence = 'id' | 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
 
 export interface ObjectMatch {
     /** The parsed object's id. */
@@ -49,6 +52,16 @@ export interface TextMatch {
     readonly created: readonly string[];
     /** The model objects no parsed object matches, in model order. */
     readonly deleted: readonly string[];
+    /** T8a: one per id the text repeats; absent when there is none. */
+    readonly warnings?: readonly MatchWarning[];
+}
+
+/** T8a (R-TXT-18): an id written on several objects of the text, which pairs none of them by id. */
+export interface MatchWarning {
+    readonly id: string;
+    /** The parsed objects that carry it, in text order. */
+    readonly text: readonly string[];
+    readonly message: string;
 }
 
 /** R-TXT-21 (7): the cascade's thresholds, to be calibrated in step T8. */
@@ -144,6 +157,8 @@ export interface MatchInput {
     readonly previous?: readonly ObjectSpan[];
     /** Parsed objects whose container is unknown (orphans of a broken parse): never matched by step 2. */
     readonly unplaced?: ReadonlySet<string>;
+    /** T8a: the id each parsed object's head comment carries (`textIdsOf`); absent or empty when the text has none. */
+    readonly ids?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -199,6 +214,26 @@ export function matchObjects(input: MatchInput): TextMatch {
     const toModel = new Map<string, ObjectMatch>();
     const taken = new Set<string>();
     const accept = (m: ObjectMatch): void => { toModel.set(m.text, m); taken.add(m.model); };
+
+    // 0. Ids in the text (T8a): an id on two objects is no evidence for either, and a warning.
+    let warnings: MatchWarning[] | undefined;
+    if (input.ids?.size) {
+        const holders = new Map<string, TextObject[]>();
+        for (const t of parsed.objects) {
+            const id = input.ids.get(t.id);
+            if (id === undefined) continue;
+            const ts = holders.get(id);
+            if (ts) ts.push(t); else holders.set(id, [t]);
+        }
+        for (const [id, ts] of holders) {
+            if (ts.length > 1) {
+                (warnings ??= []).push({ id, text: ts.map(t => t.id), message: `The id ${id} is written on ${ts.length} objects: none of them keeps it.` });
+                continue;
+            }
+            const m = modelById.get(id);
+            if (m && m.cls === ts[0].cls && !taken.has(m.id)) accept({ text: ts[0].id, model: m.id, by: 'id', uncertain: false });
+        }
+    }
 
     // 1. Spans (R-TXT-22).
     if (input.previous?.length) {
@@ -282,6 +317,7 @@ export function matchObjects(input: MatchInput): TextMatch {
         matches: parsed.objects.flatMap(t => { const m = toModel.get(t.id); return m ? [m] : []; }),
         created: parsed.objects.filter(t => !toModel.has(t.id)).map(t => t.id),
         deleted: model.filter(m => !taken.has(m.id)).map(m => m.id),
+        ...(warnings ? { warnings } : {}),
     };
 }
 

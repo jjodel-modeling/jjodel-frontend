@@ -6,17 +6,19 @@
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import type { ConcreteGrammar } from '../concreteGrammar';
-import type { TextObject } from '../metamodel';
+import type { TextMetamodel, TextObject } from '../metamodel';
 import { parseText } from '../parser';
 import type { SyntaxNode } from '../parser';
 import { printTextModel } from '../printer';
+import type { ObjectSpan } from '../printer';
 import { CLIKE_STYLE } from '../style';
-import { textIdsOf } from '../textMatch';
+import { matchObjects, textIdsOf } from '../textMatch';
+import type { MatchInput } from '../textMatch';
 import { BOOL_CLIKE, BOOL_PASCAL, boolGrammar, boolObjects } from './boolCorpus';
 import { BOX, CASES, DIAMOND, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
 import { PORT_PASCAL, portGrammar, portObjects } from './portCorpus';
 import { FIXTURE, objectsOf } from './spec';
-import { libraryObjects, tolerantCases } from './tolerantCorpus';
+import { LIBRARY_MM, libraryObjects, tolerantCases } from './tolerantCorpus';
 
 const withIds = (g: ConcreteGrammar): ConcreteGrammar => ({ ...g, style: { ...g.style, printIds: true } });
 
@@ -138,5 +140,67 @@ describe('T8a reader', () => {
         const pg = tolerantCases('pascal')[0].g;
         const pt = printTextModel(withIds(pg), libraryObjects(1, 0)).text;
         expect(Object.values(ids(pt, pg))).toEqual(['lib', 'b0']);
+    });
+});
+
+describe('T8a evidence 0: the id in the text', () => {
+    const lib = tolerantCases('clike')[0];
+    const g = lib.g;
+    const model = libraryObjects(6, 3);
+    const printed = printTextModel(withIds(g), model).text;
+
+    const run = (text: string, extra: Partial<MatchInput> = {}, readIds = true) => {
+        const r = parseText(text, g);
+        expect(r.errors).toEqual([]);
+        const input: MatchInput = { mm: LIBRARY_MM as TextMetamodel, grammar: g, model, parsed: { objects: r.objects, spans: r.spans }, ...extra };
+        return { r, m: matchObjects(readIds ? { ...input, ids: textIdsOf(r.tree!, g) } : input) };
+    };
+    const pair = (res: ReturnType<typeof run>, name: string) => {
+        const t = res.r.objects.find(o => o.slots.name === name)!;
+        return res.m.matches.find(x => x.text === t.id);
+    };
+
+    it('pairs an object across a rename, certain', () => {
+        const res = run(printed.replace('Book book1 ', 'Book novel1 '));
+        expect(pair(res, 'novel1')).toMatchObject({ model: 'b1', by: 'id', uncertain: false });
+        expect(res.m.created).toEqual([]);
+        expect(res.m.deleted).toEqual([]);
+        expect(res.m.warnings).toBeUndefined();
+    });
+
+    it('wins over the name, and over the carried spans', () => {
+        // The two books swap their ids: the name says book1 is b1, the id says b2.
+        const text = printed.replace('// @id b1\n', '// @id XX\n').replace('// @id b2\n', '// @id b1\n').replace('// @id XX\n', '// @id b2\n');
+        expect(pair(run(text), 'book1')).toMatchObject({ model: 'b2', by: 'id' });
+        expect(pair(run(text), 'book2')).toMatchObject({ model: 'b1', by: 'id' });
+        const spans: readonly ObjectSpan[] = printTextModel(withIds(g), model).spans;
+        expect(pair(run(text, { previous: spans }), 'book1')).toMatchObject({ model: 'b2', by: 'id' });
+    });
+
+    it('falls back to the cascade on an id the model does not hold, or of another class', () => {
+        // The member gives its id up to the book, so that it is written once.
+        const res = run(printed.replace(/ \/\/ @id m0$/m, '').replace('// @id b1\n', '// @id nowhere\n').replace('// @id b2\n', '// @id m0\n'));
+        expect(pair(res, 'book1')).toMatchObject({ model: 'b1', by: 'name' });
+        expect(pair(res, 'book2')).toMatchObject({ model: 'b2', by: 'name' });
+        expect(pair(res, 'reader0')).toMatchObject({ model: 'm0', by: 'name' });
+        expect(res.m.warnings).toBeUndefined();
+    });
+
+    it('a repeated id pairs none of its objects by id and warns once, naming it', () => {
+        const res = run(printed.replace('// @id b2\n', '// @id b1\n').replace('// @id b3\n', '// @id b1\n').replace('Book book1 ', 'Book novel1 '));
+        expect(pair(res, 'novel1')?.by).not.toBe('id');
+        expect(pair(res, 'book2')).toMatchObject({ model: 'b2', by: 'name' });
+        expect(pair(res, 'book3')).toMatchObject({ model: 'b3', by: 'name' });
+        expect(res.m.warnings).toHaveLength(1);
+        expect(res.m.warnings![0].id).toBe('b1');
+        expect(res.m.warnings![0].message).toMatch(/b1/);
+    });
+
+    it('a file with no ids matches exactly as without the reader', () => {
+        const plain = printTextModel(g, model).text.replace('Book book1 ', 'Book novel1 ');
+        expect(run(plain).m).toEqual(run(plain, {}, false).m);
+        const spans = printTextModel(g, model).spans;
+        expect(run(plain, { previous: spans }).m).toEqual(run(plain, { previous: spans }, false).m);
+        expect(run(plain).m.warnings).toBeUndefined();
     });
 });
