@@ -1843,13 +1843,22 @@ function NavbarComponent(props: AllProps) {
                 // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
                 // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
                 // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
+                // A model tab opened beside another (R-MT-24, P-2026-11-08-1608) the same way; the target of a Refactoring
+                // tab (`jjs_`, P-2026-10-25-0040) and a metamodel are not: that split has no entry of its own in the strip.
+                const besideModels = !String(activeId || '').startsWith('jjs_');
                 const walkBeside = (node: any): void => {
                     if (!node || node === modelsPanel) return;
                     if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
                     const shown = node.activeId || node.tabs[0]?.id;
                     node.tabs.forEach((tab: any) => {
                         const id = tab.id || '';
-                        if (!id.startsWith('codegen_tpl_')) return;
+                        if (!id.startsWith('codegen_tpl_')) {
+                            const raw = besideModels ? ((state as any).idlookup?.[modelOfTabId(id)]) : null;
+                            if (raw?.className === 'DModel' && !raw.isMetamodel) {
+                                tabList.push({ id, title: raw.name || 'Unnamed', type: 'model', active: id === shown, closable: tab.closable !== false, beside: true });
+                            }
+                            return;
+                        }
                         const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
                         if (typeof named !== 'string' || !named) return;
                         tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
