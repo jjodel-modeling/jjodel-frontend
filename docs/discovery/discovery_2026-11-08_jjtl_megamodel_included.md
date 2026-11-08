@@ -86,3 +86,30 @@ The decision asks for an edge «from the included model to the generated model o
 
 1. Should an included model also get a `sourceOf` edge, for full parity with the primary? Phase 2 draws `instanceInputOf` only, per «one edge».
 2. Should `instanceInputOf` stay hidden by default, now that it carries the provenance of a multi-source run?
+
+## 7. Addendum, 2026-11-08: the probe falsifies H7, the stop condition holds
+
+Measured on the uncommitted phase 2 tree over `7cf79d345`, in the browser, with one real run from the dialog on a primary and two included models. The verdict of H7 in §1 and the third row of §4 are superseded by this section.
+
+**What holds, measured.** The record lists two included ids, without the primary. The kind is hidden by default (0 edges drawn), and shows 3 once turned on: one `instanceInputOf`, two `instanceInputOf (included)`. All three lie inside the canvas, with distinct source ends (y 235, 405, 575) and distinct target ends (y 307, 333, 359). The three source models are on separate rows, and the three label pills do not overlap each other. No page error.
+
+**What fails, measured.** `routePoints` was executed on the measured ends. It puts the vertical run of an edge at `(p1.x + p2.x) / 2` (`frontend/src/components/megamodel/MegamodelEdge.ts:176`: `const mid = (p1.x + p2.x) / 2;`), so all three share x = -60:
+
+| Edge | Vertical run, y |
+|---|---|
+| primary | 235 to 307 |
+| included 1 | 333 to 405 |
+| included 2 | 359 to 575 |
+
+Included 1 and included 2 coincide for **46 canvas units** (y 359 to 405). Item 5 asks for edges «not overlapping», so it is not met. Keeping them apart needs a per-edge channel, which is a new routing rule: the third stop condition.
+
+The crop also shows a defect the checks did not cover. The pill of `instanceInputOf (included)` is 182.4 wide against a column gap of 120 (`megamodelLayout.ts:18`), while the plain pill is 112. It overruns both columns, and on the middle row the node `model_1 (1)` hides its first letter.
+
+The same channel is not new: the `inputOf` of the metamodel and the primary's `instanceInputOf` already run together at x = -60 in the crop (read from the crop, not computed).
+
+**A probe assertion that failed for its own reasons.** `two pills` read 4 names: the 2 pills and their copies in the hidden ruler (`frontend/src/jjtl/components/IncludedModelsCombobox.tsx:277`). The record of the same run holds 2. Not rerun.
+
+**State.** Items 1 to 4 pass: 51 tests in the two files, typecheck exit 0. Mutations: removing the new loop fails 6 tests, removing the duplicate guard fails 2. The full suite, the build and `check:docs` did not run. The code is not committed, because item 5 makes the view a condition of the commit.
+
+3. Add a per-edge channel to the router so that the edges come apart, or accept the shared channel as the existing behaviour of the view?
+4. Shorten the included pill, or move it, given that the text asked for does not fit the column gap?
