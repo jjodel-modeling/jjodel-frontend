@@ -45,6 +45,7 @@ import { toast } from '../../components/Toast';
 import { useDashboardFileDrag } from './useDashboardFileDrag';
 import { DropImportPanel, useDropImport } from './DropImportPanel';
 import type { DropImportToast } from './DropImportPanel';
+import { recordingImports } from './recentImports';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
@@ -259,7 +260,7 @@ type ProjectDashboardProps = {
     project?: LProject;
 }
 
-const raiseDropImportToast = ({ projectId, ...detail }: DropImportToast) => toast({
+export const raiseDropImportToast = ({ projectId, ...detail }: DropImportToast) => toast({
     ...detail,
     action: projectId === undefined ? undefined : {
         label: 'Open project',
@@ -271,7 +272,7 @@ function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
     const fileDrag = useDashboardFileDrag(active);
-    const dropImport = useDropImport(ProjectsApi.importFromText, toasts => toasts.forEach(raiseDropImportToast));
+    const dropImport = useDropImport(recordingImports(ProjectsApi.importFromText), toasts => toasts.forEach(raiseDropImportToast));
 
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.

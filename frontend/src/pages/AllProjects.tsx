@@ -6,6 +6,9 @@ import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, R, SetRootFieldAction, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
+import {raiseDropImportToast} from './components/Dashboard';
+import {dropImportView} from './components/DropImportPanel';
+import {recordingImports} from './components/recentImports';
 
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
@@ -66,12 +69,8 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     }, [isDropping]);
 
     function importFiles(files: FileList){
-        importJjodelFiles(files, ProjectsApi.importFromText).then(results => {
-            for (const result of results) {
-                if (result.ok) continue;
-                if (result.reason === 'failed') U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
-                else Log.ee('invalid file', result.file.name);
-            }
+        importJjodelFiles(files, recordingImports(ProjectsApi.importFromText)).then(results => {
+            dropImportView({ files: results.map(result => result.file), results }).toasts.forEach(raiseDropImportToast);
         });
     }
 
