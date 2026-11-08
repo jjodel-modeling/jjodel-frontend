@@ -243,3 +243,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the gates and the clean reading of the auto-merged EditorV2.tsx; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 18:58, stands)
 **Notes**: Probes 48/48 once, R-MT-25 absent; union removes 0 lines vs either parent. EditorV2.tsx read whole (5423 lines) by an explorer subagent: disjoint regions, no duplicate. No node_modules here: temporary symlink to ~/jjodel/frontend/node_modules for the gates, removed after (P14). Trunk moved during the gates to docs-only `819c700b5`; the merge stays on `5c15e491e`.
 **Prompt document name**: 2026-11-08 00:12
+
+## 2026-11-08 — merge: multi-tab-l5 into alfonso-frontend-jjtl (P-2026-11-08-0055)
+**Prompt**: `claude_2026-11-08_0055_prompt_merge_multi-tab-l5.md`, lane full (merge, RC-14): `multi-tab-l5` at `5bcafa843` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `5c15e491e`, 8 branch commits, zero conflicts measured.
+**Files touched**: merge `46554f772`: the 16 files of the branch side, no union resolution (index tree `2bab2be03` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `46554f772`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts and check:addonly PASS, hooks 967/967; vitest 568 files, 15100 passed and 2 skipped (15102 as expected: trunk tip 15084 + 18), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 2026-11-07 18:58, and the take-trunk gates on `f2b5d1934` stand for this code)
+**Notes**: Probes 5/5 once. Files on both sides: none; governance files on the branch: none. Branch's 18 new tests counted from its test diff: vitest cannot start in the branch tree (no node_modules), not written there. Trunk-tip vitest at load ~112 had 5 timing-bound reds (timeouts, 50 ms budget, Chromium layout); all passed on the merge at load ~16. Lane board untouched, not restarted; 3001 up, not restarted.
+**Prompt document name**: 2026-11-08 00:55
