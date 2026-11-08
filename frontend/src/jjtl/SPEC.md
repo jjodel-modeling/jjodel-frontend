@@ -113,7 +113,7 @@ transformation  = "transformation" IDENTIFIER NEWLINE*
 modelList       = IDENTIFIER ( "," IDENTIFIER )* ;
 ```
 
-**Current implementation:** Single model per `from`/`to`. Multi-model is Phase 1 future work.
+**Current implementation:** Single model per `from`/`to`. Multi-model is Phase 1 future work. Several source models of the one `from` metamodel need no grammar: they are a list handed to the executor (§4.2).
 
 **Example:**
 ```jjtl
@@ -460,6 +460,19 @@ on a contained class that was silently empty now produces output, and `source` /
 
 Each contained object carries `_containerId`, the id of the object that owns it through
 a containment feature; `parent` resolves through it (§7.3).
+
+**Several source models of one metamodel (R-JTG-26).** The source may also be a list of
+models, each an array of objects: an array whose items are **all** arrays. The signature of
+`execute` does not change, and an array mixing objects and arrays stays a single model.
+The objects are united in list order before pass 1, so rules, the trace, implicit
+resolution, `resolve()` and `data` see one array, and a reference (`{ __ref: id }`) can
+point into another model of the list. A list of one model is that model. There is no
+grammar for it: `from` still names one metamodel, and a typed `from A, B` is a later step.
+
+Ids must be unique across the models, because the trace keys a source element by id: when
+two models hold the same id the run stops before pass 1 with `success: false`, no target
+model, and one error naming up to five shared ids with the models that hold them (models
+are counted from 1). A repeated id inside one model is not checked, as in a single model.
 
 ### 4.3 Guard Evaluation
 
@@ -948,6 +961,12 @@ it reads `sourceModel.allSubObjects` **once** per Execute (the accessor rescans 
 store on each access), maps each object to `{ id, name, className, __type, ...features }`,
 wraps reference values as `{ __ref: pointerId }` and enum values as the literal's **name**,
 and computes `_containerId` for contained objects. See §4.2.
+
+That conversion reads one model today. The executor also accepts a list of models of one
+metamodel (§4.2), each converted the same way; selecting several in the run dialog is
+R-JTG-27, not implemented. Jjodel ids are global, so models of one project do not clash; a
+root of one model keeps no `_containerId`, and a reference into another model is an ordinary
+`{ __ref: id }`.
 
 The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
 P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
