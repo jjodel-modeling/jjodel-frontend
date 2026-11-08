@@ -275,3 +275,16 @@ active log is not touched by this lane.
 **Priority**: medium
 **Found in**: P-2026-11-08-0131
 **Detail**: docs/discovery/lir_2026-11-07_l4_populate_owner.md
+
+## 2026-11-08 — merge: multi-tab-l4 into alfonso-frontend-jjtl (P-2026-11-08-0737)
+**Prompt**: `claude_2026-11-08_0737_prompt_merge_multi-tab-l4.md`, lane full (merge, RC-14): `multi-tab-l4` at `d2b184780` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `db65de069`, 6 branch commits, zero conflicts measured.
+**Files touched**: merge `0046f604a`: the 9 files of the branch side (`syncState.ts`, `useJjomSync.ts`, two tests, the LIR, three prompts, `docs/log-inbox/multi-tab.md`), no union resolution (index tree `7d6f75649` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0046f604a`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts and check:addonly PASS, hooks 967/967 (967 + 0); vitest 574 files, 15184 passed and 2 skipped (as expected: trunk tip 15165 + 19), 0 failed tests; files red: the known 3 `window` imports, and two Chromium `afterAll` close timeouts (`irCollapsedRender`, `irSelectionRing`) at load 86, both green alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (the merge writes no code of its own; the critical-zone code it carries has the branch's LIR, `f888be09f`, `docs/discovery/lir_2026-11-07_l4_populate_owner.md`)
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; Alfonso's Ok 2026-11-08 07:37 on the 0150 crops, and the 0150 and 0245 measurements on the same code)
+**Notes**: Probes 17/17 once. Files on both sides: none; governance files on the branch: none. The 19 new tests counted on the merge from the two added files, byte-equal to d2b184780: vitest cannot start in the branch tree (no node_modules), not written there; a first static count said 18. Trunk-tip vitest at load 32: the 3 import reds plus an irCollapsedRender close timeout, 13/13 alone. check:docs 5/5, not the prompt's 4/4. Lane board unchanged, not restarted; 3001 up, not restarted.
+**Prompt document name**: 2026-11-08 07:37
