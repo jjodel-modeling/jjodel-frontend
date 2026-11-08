@@ -7537,7 +7537,7 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   plain or null-safe, whose receiver is a demand: the run stops, same wording. A property read on a demand
   (`envLookup(n).name`) does not stop the run and reads `null`, as R-FA-12 leaves a read on a missing feature (measured:
   no warning is logged). Extends R-JTG-25, which stays unchanged. Evidence: `demand-as-value.test.ts`.
-- **R-JTG-31** (2026-11-08, provisional, unattended, evidence: measured, verified: none, reversible: trunk):
+- **R-JTG-31** (2026-11-08, ratified by Alfonso 2026-11-08 10:22, registered by P-2026-11-08-0836, evidence: measured, verified: none, reversible: trunk):
   taken by P-2026-11-08-0836. The list of source models of R-JTG-26 reaches the executor as an array of arrays of objects (an array whose items are
   all arrays): no change to the signature of `execute`, an array mixing objects and arrays stays a single model. The
   trace's `modelName` stays the one metamodel name for every source element, not one per model as the report's S3 had
