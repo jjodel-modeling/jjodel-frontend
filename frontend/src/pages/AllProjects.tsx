@@ -55,24 +55,49 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         };
     }, [handleOpenCreateDialog]);
 
-    function dropConfirm(e: React.DragEvent<HTMLElement>){
-        e.preventDefault();
-        e.stopPropagation();
-        // console.log('dropevent', {e});
+    // Esc closes the import modal
+    useEffect(() => {
+        if (!isDropping) return;
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setDropping(false);
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isDropping]);
 
-        importJjodelFiles(e.dataTransfer.files, ProjectsApi.importFromText).then(results => {
+    function importFiles(files: FileList){
+        importJjodelFiles(files, ProjectsApi.importFromText).then(results => {
             for (const result of results) {
                 if (result.ok) continue;
                 if (result.reason === 'failed') U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
                 else Log.ee('invalid file', result.file.name);
             }
         });
+    }
+
+    function dropConfirm(e: React.DragEvent<HTMLElement>){
+        e.preventDefault();
+        e.stopPropagation();
+        // console.log('dropevent', {e});
+
+        importFiles(e.dataTransfer.files);
         //let file = e.dataTransfer.getData('file');
         setDropping(false);
     }
 
+    function filesChosen(e: React.ChangeEvent<HTMLInputElement>){
+        if (e.target.files?.length) importFiles(e.target.files);
+        // After importFiles, which copies the list synchronously: this empties it. Lets the same file be chosen twice.
+        e.target.value = '';
+    }
+
     function mouseleave(e: any){ // should use onDragLeave but it is flashing
         setDropping(false);
+    }
+
+    function backdropClick(e: React.MouseEvent<HTMLElement>){
+        // Clicks inside the panel bubble here too: closing on those would unmount the input before its change fires.
+        if (e.target === e.currentTarget) setDropping(false);
     }
 
     function dropPreviewContainer(e: React.DragEvent<any>){
@@ -91,16 +116,23 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     return(<Try>
         <>
         {isDropping ? 
-            <div className={'project-dropping-container'} onClick={mouseleave} onDragOver={dropPreviewContainer}>
-                <div className={'project-dropping-area droparea'} onDrop={dropConfirm} onDragOver={dropPreview}>
-                    <div className={'icon'}><i className="bi bi-cloud-upload"></i></div>
-                    <div className={'body'}>Drop the file to import a .Jjodel project</div>   
-                    <div className={'or'}>or</div>  
-                    <button className={'dark'} onClick={ProjectsApi.import}>select project</button>
+            <div className={'project-dropping-container'} onClick={backdropClick} onDragOver={dropPreviewContainer}>
+                <div className={'project-dropping-area droparea'} role="dialog" aria-modal="true" aria-labelledby="project-dropping-title" onDrop={dropConfirm} onDragOver={dropPreview}>
+                    <div className={'project-dropping-header'}>
+                        <h2 id="project-dropping-title" className={'project-dropping-title'}>Import project</h2>
+                        <button type="button" className={'project-dropping-close'} aria-label="Close" onClick={mouseleave}><i className="bi bi-x-lg"></i></button>
+                    </div>
+                    <label className={'project-dropping-zone'}>
+                        <input className={'project-dropping-input'} type="file" accept=".jjodel" multiple onChange={filesChosen} />
+                        <span className={'icon'}><i className="bi bi-cloud-upload"></i></span>
+                        <span className={'body'}>Drop .jjodel files here</span>
+                        <span className={'or'}>or browse your computer</span>
+                    </label>
+                    <p className={'project-dropping-hint'}>You can also drop files directly on the Projects page, without opening this dialog.</p>
                     <div className={'select-file'}>
-                        <button className={'light'} onClick={mouseleave}>cancel</button>
-                    </div>  
-                </div> 
+                        <button type="button" className={'light'} onClick={mouseleave}>Cancel</button>
+                    </div>
+                </div>
             </div>
             : null
         }
@@ -129,7 +161,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         </Button>
                     </div>
                 </div>
-                <Catalog projects={projects} onNewProject={handleOpenCreateDialog} />
+                <Catalog projects={projects} onNewProject={handleOpenCreateDialog} onImportFile={ProjectsApi.import} />
             </div>
         </Dashboard>
 

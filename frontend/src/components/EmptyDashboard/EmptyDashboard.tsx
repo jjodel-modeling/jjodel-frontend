@@ -4,10 +4,13 @@ import { DevModeLabel } from '../DevModeLabel/DevModeLabel';
 
 interface EmptyDashboardProps {
   onNewProject: () => void;
+  /** Shows the import button and the drop copy; only the pages that accept a drop pass it. */
+  onImportFile?: () => void;
 }
 
 export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
-  onNewProject
+  onNewProject,
+  onImportFile
 }) => {
   return (
     <div className="empty-projects">
@@ -35,15 +38,27 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
       <p className="empty-projects__sub">
         Create your first metamodel project and start building
         domain-specific languages in the browser.
+        {onImportFile ? ' Or drop .jjodel files on this page to import them.' : null}
       </p>
 
-      <button
-        className="empty-projects__cta"
-        onClick={onNewProject}
-      >
-        <i className="bi bi-plus" />
-        New project
-      </button>
+      <div className="empty-projects__actions">
+        <button
+          className="empty-projects__cta"
+          onClick={onNewProject}
+        >
+          <i className="bi bi-plus" />
+          New project
+        </button>
+        {onImportFile ? (
+          <button
+            className="empty-projects__cta empty-projects__cta--secondary"
+            onClick={onImportFile}
+          >
+            <i className="bi bi-download" />
+            Import .jjodel file
+          </button>
+        ) : null}
+      </div>
 
       <div className="empty-projects__links">
         <a
