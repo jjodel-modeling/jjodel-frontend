@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1800
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · eeb5f10c4 · log entry in docs/log-inbox/codegen.md · Alfonso's visual GO pending
 Lane: full, core change (frontend/src/redux/reducer/reducer.ts), two-phase Phase 2 with Layer Impact Report
 Depends: discovery P-2026-11-08-1719, report docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md (on this branch, b41af1105); #682 Phase 2 (d79d51f90)
 Worktree: ~/jjodel-w-undotabb, branch undo-tab-graphs-b (from disc-682b-tab-graphs b41af1105, own node_modules)

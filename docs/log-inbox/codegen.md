@@ -3212,3 +3212,40 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: #682 crops 1-create-undo, 2-move-undo, 3-container in ~/.jjodel-lanes/P-2026-11-08-1202/ checked by the chat; smoke control of P-2026-11-08-1313: control green, HEAD green twice after one cold page.goto timeout
 **Notes**: Rollback tag `pre-undo-682-create-entry` on `445cb8f42` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1344/result.json`.
 **Prompt document name**: 2026-11-08 13:44
+
+## 2026-11-08 — ticket: undo: an M2 tab open writes a layout entry of its own
+**Ticket**: An M2 tab open adds an undo entry of its own: 2 `SetField ... layoutByViewpoint` about 299 ms after the populate, consistent with the open-time ELK pass of `EditorV2.tsx:635-636`; the chain through `handleAutoLayout` was not traced. Measured with option B in place: `CASE=m2`, dispatch `C2`, stack 3>4, so one Undo reverts only a layout. An M1 tab with no vertices has none. Left out of P-2026-11-08-1800 by decision 2.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: undo: a vertex-only populate merges into the entry below
+**Ticket**: A tab open that adds vertices to graphs that already exist still takes the legacy merge: the delta has `vertexs` and no `graphs`, so option B does not cover it. Measured before and after option B (`CASE=r1`, same result): `vertexs:1>2` merges into the entry below (`d3>3`); the Undo of that entry reverts root `vertexs` 2>1 while `DVertex` stays at 2, so one record is out of the root array. No rebuild, no growth, Redo restores it. Left out of P-2026-11-08-1800 by decision 3.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: tabs: the graph rebuild guard of ModelTab is dead
+**Ticket**: The rebuild guard of `ModelTab.tsx:33-34` is dead (and the same at `MetamodelTab.tsx:152-155`, read only): `Constructors.DGraph_makeID(model.id)` makes a fresh id at each call, so `DPointerTargetable.pendingCreation[graphid]` is never set for it and two mounted tabs on a model with no graph can both create one. With option B the Undo that triggered it no longer reverts `graphs` (`CASE=m1two`, 4 `DGraph`, 0 orphans, no second classic graph). Two tabs mounting at once on a model with no graph was not run.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: sync: the v2-flow graph id is written twice in root graphs
+**Ticket**: A clean tab open leaves the v2-flow graph id twice in root `graphs`: `[g4, g5, g5]`, measured again with option B on `CASE=m2`, `m1` and `m1two`. `useJjomSync.ts:815` adds it with `SetRootFieldAction.new('graphs', graphId, '+=', true)` after `DGraph.new`, which appears to have added it already (root 4>6 with one `DGraph` added). No consumer of root `graphs` was checked for the duplicate.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — fix(undo): a graph-only delta writes no undo entry (P-2026-11-08-1800)
+**Prompt**: `claude_2026-11-08_1800_prompt_undo_tab_graphs_option_b.md`, option B of discovery P-2026-11-08-1719 (Alfonso 17:58): a delta that lengthens root `graphs` and writes no model root writes no undo entry; tests, gates, app check, four tickets.
+**Files touched**: six, all declared: `docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md` in 0cc6165c5; `frontend/src/redux/reducer/reducer.ts` and `frontend/src/redux/reducer/__tests__/undoGroup.test.ts` in eeb5f10c4; uncommitted (RC-17): this inbox and the Status lines of the prompts of 18:00 and 17:19.
+**Outcome**: ✅ completed. `undoGroup.test.ts` 59 passed, 7 red before the code, mutation bench 15 of 15 killed (commit message). Typecheck exit 0; build exit 0; check:docs exit 0; full vitest: the 3 baseline import reds plus `irCollapsedRender.test.ts` (Chromium `afterAll` timeout under load), 13 of 13 alone. App probe port 3800, exit 0, no page errors: M2, M1, two tabs, empty stack: `DGraph` 4, orphans 0 at every Undo and Redo, no rebuild dispatch; deeper Undos on M1: the Undo of the model's creation leaves its 2 graphs as orphans (decision 4), Redo back to 4, 0; transformation path: one entry, one Undo removes model and graph, same as before the fix.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown (tests, smoke and probe show none; the transformation was driven by its real calls from the page, not through the UI, and Alfonso's visual GO is pending)
+**Out-of-scope changes**: no (six files, above five, listed in Files touched and in the prompt)
+**Layer Impact Report**: produced (docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md)
+**Smoke visivo**: passato — `npm run smoke` on this tree's Vite, port 3800: RED once 10/1/0 (`page.goto` timeout on the first state after a Vite restart), then GREEN 12/0/3 warm; crops 1-m1-undo and 2-two-tabs viewed by the lane on a model with no elements, so they show the tabs and not a populated canvas; Alfonso's GO pending
+**Notes**: Guard off the group route and off a group's tail, as the prompt asked: a tab opened with a group's entry on top still composes into it (test pins it). Transformation measured with the real calls from the page, not through the UI. Without a group the same creation merges into the entry below, unchanged. Smoke cold RED on page.goto, then GREEN warm. Limits and measures: LIR. Tickets #789 to #792.
+**Prompt document name**: 2026-11-08 18:00

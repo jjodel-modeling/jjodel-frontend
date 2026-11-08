@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1719
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · discovery · b41af1105 · report docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md · closed by P-2026-11-08-1800
 Lane: discovery (read-only, no source change, report and hard stop)
 Depends: #682 Phase 2 merged (d79d51f90), its LIR docs/discovery/lir_2026-11-08_canvas_create_undo_682.md and log entry
 Worktree: ~/jjodel-w-disc682b, branch disc-682b-tab-graphs (from trunk 2df3c9a32, own node_modules)
