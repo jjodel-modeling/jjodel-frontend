@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2157
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 3cc93959d
 Lane: full, critical (D-layer writes: new DModel, objects, references, possibly DVertex; launched with `--critical-zone-goahead P-2026-11-08-2157`)
 Go-ahead: Alfonso 2026-11-08 18:21 «Go su tutto» on R-DCN-30, which names this write lane and its Layer Impact Report
 Depends: lane 4 P-2026-11-08-2124 (`planSnapshot` in sim/simSnapshot.ts, 73476ef3f) on dcn-s5; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §B

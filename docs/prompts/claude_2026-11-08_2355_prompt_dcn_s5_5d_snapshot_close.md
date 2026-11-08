@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2355
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · 50fe1ccbc
 Lane: full, critical (snapshot writer; launched with `--critical-zone-goahead P-2026-11-08-2355`)
 Go-ahead: Alfonso 2026-11-08 18:21 «Go su tutto» on R-DCN-30
 Corregge: 2026-11-08 23:50 (P-2026-11-08-2320 stopped at the context ceiling: writer and probe 23/23 committed, SN-24 not run, closure owed)

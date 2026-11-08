@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2216
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · aa2c628f8
 Lane: full, critical (continuation of P-2026-11-08-2157, stopped at the context ceiling after the LIR; launched with `--critical-zone-goahead P-2026-11-08-2216`)
 Go-ahead: Alfonso 2026-11-08 18:21 «Go su tutto» on R-DCN-30
 Corregge: 2026-11-08 22:12 (P-2026-11-08-2157 stopped at the ceiling with only the LIR committed)

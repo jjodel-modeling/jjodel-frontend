@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2320
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 50fe1ccbc
 Lane: full, critical (DVertex creation for the snapshot's views; launched with `--critical-zone-goahead P-2026-11-08-2320`)
 Go-ahead: Alfonso 2026-11-08 18:21 «Go su tutto» on R-DCN-30 (snapshot write lane with its Layer Impact Report); the layout copy is decided by the chat at 23:20, unattended, because the Step 2bis grid hides dji's rows (crop of P-2026-11-08-2216)
 Corregge: 2026-11-08 23:15 (P-2026-11-08-2216 stopped at the ceiling: probe 20/20, uncommitted; the opened snapshot overlaps temp on dji)
