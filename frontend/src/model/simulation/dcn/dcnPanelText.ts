@@ -20,12 +20,16 @@
  */
 
 import type { DcnEntry } from './dcnCompile';
+import { DCN_TICK_EVENT } from './dcnCompile';
 import type { DcnClassification, DcnStepModel } from './dcnStep';
 import { DCN_SYNC_SELECTOR } from './dcnStep';
 import type { CompiledNet, HaltReason, SimState, StepOutcome } from '../netTypes';
 
 /** The heading of the σ line of a DCN run. */
 export const DCN_PANEL_HEADING = 'Classification';
+
+/** The Tick input as the panel names it; its event id stays `DCN_TICK_EVENT` in tests, probes and the trace. */
+export const DCN_TICK_LABEL = 'Tick';
 
 /** An id to the name the panel prints. */
 export type DcnNameOf = (id: string) => string;
@@ -105,6 +109,7 @@ export function dcnCandidateLabel(
     m: DcnStepModel, transitionId: string, nameOf: DcnNameOf, c: DcnClassification | null, values?: readonly DcnArgument[],
 ): string {
     if (transitionId === DCN_SYNC_SELECTOR) return 'sync';
+    if (transitionId === DCN_TICK_EVENT) return DCN_TICK_LABEL;
     const e = m.model.compiled.entries.get(transitionId);
     if (e === undefined) return nameOf(transitionId);
     if (e.kind === 'tick') return `tick: ${classRef(e, nameOf)} ${nameOf(e.element)}`;

@@ -158,6 +158,11 @@ describe('dcnPanelText: the candidate labels (decision 5, R-DCN-22)', () => {
         expect(dcnCandidateLabel(MODEL, 'dji', nameOf, null)).toBe('dji');
     });
 
+    it('the Tick input reads Tick, its event id stays dcn-tick (mutant: the raw id printed)', () => {
+        expect(DCN_TICK_EVENT).toBe('dcn-tick');
+        expect(dcnCandidateLabel(MODEL, DCN_TICK_EVENT, nameOf, null)).toBe('Tick');
+    });
+
     it('a redefinition by itself names its class', () => {
         expect(dcnCandidateLabel(MODEL, 't_Flying_takeOff', nameOf, null)).toBe('dji.takeOff() in Mode::Flying');
     });
