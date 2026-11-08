@@ -402,3 +402,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 16:06
 
 **Ticket** (medium): a bare argument name in a DCN body (`self.chargeRate := rate`) still halts with `'rate' does not exist`: the evaluation context is built in `dcnStep.ts` (`actions`), outside this lane's scope; `self.[rate]` works. A multi-valued attribute slot (not a link) still shows its first value: σ holds one and `dcnCompile.ts` was out of scope. A DCN argument named as a slot of its instance is not readable through `self.[...]` (σ is kept).
+
+## 2026-11-08 — test: DCN drone fixture fills the empty slots, exports regenerated (P-2026-11-08-1652)
+**Prompt**: `claude_2026-11-08_1652_prompt_dcn_l47_drone_data.md`, lane full: a value for `dji.power`, `dji.vmax` and every sensor slot, initial state still Charging and Safe; both exports, screenshots and `dcn-drone.json` regenerated; run probe once on the new export, no defects line, Ready within 20 Ticks.
+**Files touched**: de1ff2fb8 `frontend/scripts/probe/dcn-drone-fixture.ts`, `docs/discovery/assets/dcn-drone/` (class-level and object-level png, `dcn-drone.json`); 11f6f1c0b `frontend/scripts/probe/dcn-drone-run.ts`; outside the repo `~/jjodel-demo-exports/dcn/dcn-drone.jjodel`, `dcn-drone-objects.jjodel`; docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 03:29 (the empty-slot finding in its log entry, «15 defects»)
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (seven repo files, all in the DOVE of the prompt: the fixture, the run probe, three assets, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crop 1-reset read by the lane, no defects line; the chat to read it)
+**Notes**: Fixture 26/26 (O-6 new), dcn and instantiation problems zero, conformant. Defaults: power 0, unit, status OK, presence false. Slots: vmax 15, temp 20, wind 3, humidity 45, rain 0. Run probe 9/9, seed 4242: L47-1 no defects line (control: panel text, not a defective run), L47-2 Charging and Safe, Ready on Tick 20. Status committed per the prompt, ahead of the chat's check (P13). Object screenshot copied from DCN_CROPS. Crops in ~/.jjodel-lanes/P-2026-11-08-1652/crops/.
+**Prompt document name**: 2026-11-08 16:52
