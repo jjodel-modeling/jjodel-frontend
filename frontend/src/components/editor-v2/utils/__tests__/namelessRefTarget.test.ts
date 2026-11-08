@@ -100,7 +100,7 @@ const isBrokenChip = (v: string) => displayValue(v) === v;
 describe('D4 — jjomTransformers: a nameless target resolves', () => {
     it("a target whose name is '' is not broken", () => {
         const r = rowOf(['p_nameless'], [{ id: 'p_nameless', name: '', instanceof: { name: 'Port' } }]);
-        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '', label: ': Port' }]);
+        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '', label: 'Port (unnamed)' }]);
     });
 
     it('a named target, as before (control)', () => {
@@ -122,9 +122,10 @@ describe('D4 — jjomTransformers: a nameless target resolves', () => {
 });
 
 describe('D4 — IRFormField.displayValue: a nameless target is not a broken chip', () => {
-    // R-TXT-47 D6 (C2e) changed the label from '' to `: <Class>`; the chip stays not broken.
-    it('a pointer to a nameless object labels `: <Class>` and is not broken', () => {
-        expect(displayValue('p_nameless')).toBe(': Port');
+    // R-TXT-47 D6 (C2e) changed the label from '' to a class label, `<Class> (unnamed)` since
+    // R-TXT-59; the chip stays not broken.
+    it('a pointer to a nameless object labels `<Class> (unnamed)` and is not broken', () => {
+        expect(displayValue('p_nameless')).toBe('Port (unnamed)');
         expect(isBrokenChip('p_nameless')).toBe(false);
     });
 
@@ -137,18 +138,18 @@ describe('D4 — IRFormField.displayValue: a nameless target is not a broken chi
 });
 
 /**
- * R-TXT-47 D5 (C2d, P-2026-11-05-0148) — a nameless target is labelled `: <Class>` on the
- * default view, as its own header reads, instead of an empty slot drawn as a dash.
+ * R-TXT-47 D5 (C2d, P-2026-11-05-0148), amended by R-TXT-59 — a nameless target is labelled
+ * `<Class> (unnamed)` on the default view, instead of an empty slot drawn as a dash.
  * Report: `docs/discovery/discovery_2026-11-05_textual_c2_syntax_form.md` §3.3.
  */
 const PORT = { name: 'Port' };
 
-describe('D5 — jjomTransformers: a nameless target carries the label `: <Class>`', () => {
+describe('D5 — jjomTransformers: a nameless target carries the label `<Class> (unnamed)`', () => {
     it('three nameless Ports: three labels, the names stay empty, the row is not blank', () => {
         const r = rowOf(['p1', 'p2', 'p3'], ['p1', 'p2', 'p3'].map(id => ({ id, name: '', instanceof: PORT })));
-        expect(r.refTargets).toStrictEqual(['p1', 'p2', 'p3'].map(id => ({ id, name: '', label: ': Port' })));
-        expect(r.values).toEqual([': Port', ': Port', ': Port']);
-        expect(r.value).toBe(': Port, : Port, : Port');
+        expect(r.refTargets).toStrictEqual(['p1', 'p2', 'p3'].map(id => ({ id, name: '', label: 'Port (unnamed)' })));
+        expect(r.values).toEqual(['Port (unnamed)', 'Port (unnamed)', 'Port (unnamed)']);
+        expect(r.value).toBe('Port (unnamed), Port (unnamed), Port (unnamed)');
     });
 
     it('the memory of names is fed the empty name, never the label', () => {
@@ -162,9 +163,9 @@ describe('D5 — jjomTransformers: a nameless target carries the label `: <Class
         expect(r.values).toEqual(['Port_1']);
     });
 
-    it('a nameless target without a readable metaclass falls back to `: Object`', () => {
+    it('a nameless target without a readable metaclass falls back to `Object (unnamed)`', () => {
         const r = rowOf(['p1'], [{ id: 'p1', name: '' }]);
-        expect(r.refTargets[0].label).toBe(': Object');
+        expect(r.refTargets[0].label).toBe('Object (unnamed)');
     });
 
     it('a deleted nameless target keeps the broken path, with no label', () => {
@@ -187,10 +188,10 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
         targets,
     }));
 
-    it('a reference pill shows `: Port` as its text and title', () => {
-        const html = paint([{ id: 'p1', name: '', label: ': Port' }]);
-        expect(html).toContain('</i>: Port</span>');
-        expect(html).toContain('title="Go to : Port"');
+    it('a reference pill shows `Port (unnamed)` as its text and title', () => {
+        const html = paint([{ id: 'p1', name: '', label: 'Port (unnamed)' }]);
+        expect(html).toContain('</i>Port (unnamed)</span>');
+        expect(html).toContain('title="Go to Port (unnamed)"');
     });
 
     it('a singleton pill target takes the label in its title', () => {
@@ -198,10 +199,10 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
             decision: { kind: 'refPill', reason: 'test' },
             values: [''],
             variant: 'row',
-            targets: [{ id: 'p1', name: '', label: ': Port' }],
+            targets: [{ id: 'p1', name: '', label: 'Port (unnamed)' }],
             pillTargets: new Map([['p1', 'Port']]),
         }));
-        expect(html).toContain('title="Go to : Port"');
+        expect(html).toContain('title="Go to Port (unnamed)"');
     });
 
     it('a named target still shows its name (control)', () => {
@@ -212,14 +213,14 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
 });
 
 /**
- * R-TXT-47 D6 (C2e, P-2026-11-06-2041) — the same `: <Class>` label on the IR form, through
+ * R-TXT-47 D6 (C2e, P-2026-11-06-2041), amended by R-TXT-59 — the same label on the IR form, through
  * the one helper both readers call. Report: `docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md`
  * §3.3: the three readers of `displayValue`, rendered with the `joiner` barrel mocked.
  */
 describe('D6 — namelessTargetLabel, the helper', () => {
-    it('a nameless target reads `: <Class>`, without a metaclass `: Object`', () => {
-        expect(namelessTargetLabel({ name: '', instanceof: { name: 'Port' } })).toBe(': Port');
-        expect(namelessTargetLabel({ name: '' })).toBe(': Object');
+    it('a nameless target reads `<Class> (unnamed)`, without a metaclass `Object (unnamed)`', () => {
+        expect(namelessTargetLabel({ name: '', instanceof: { name: 'Port' } })).toBe('Port (unnamed)');
+        expect(namelessTargetLabel({ name: '' })).toBe('Object (unnamed)');
     });
 
     it('a named target and a missing one have no label', () => {
@@ -228,7 +229,7 @@ describe('D6 — namelessTargetLabel, the helper', () => {
     });
 });
 
-describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => {
+describe('D6 — IRFormField: a nameless target is labelled `<Class> (unnamed)`', () => {
     const fieldOf = (over: any) => ({
         slotId: 's', name: 'inputs', widget: 'chips', derivedWidget: 'chips', typeName: 'Port',
         lowerBound: 0, upperBound: -1, isMultivalued: true, isRequired: false, isEnum: false,
@@ -242,26 +243,26 @@ describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => 
         [...html.matchAll(/<span class="ir-chipinput__pill([^"]*)">.*?<span class="ir-chipinput__pill-text" title="([^"]*)">([^<]*)<\/span>/g)]
             .map(m => ({ broken: m[1].includes('--broken'), title: m[2], text: m[3] }));
 
-    it('the chip input: `: Port` beside a named chip and a broken one, unchanged', () => {
+    it('the chip input: `Port (unnamed)` beside a named chip and a broken one, unchanged', () => {
         const html = paint(fieldOf({}), { widget: 'chips' });
         expect(pillTexts(html)).toEqual([
             { broken: false, title: 'Port_1', text: 'Port_1' },
-            { broken: false, title: ': Port', text: ': Port' },
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
             { broken: true, title: 'p_gone', text: 'p_gone' },
         ]);
     });
 
-    it('a read-only single value set to a nameless target reads `: Port`, not «empty»', () => {
+    it('a read-only single value set to a nameless target reads `Port (unnamed)`, not «empty»', () => {
         const one = (v: string) => paint(fieldOf({ isMultivalued: false, isReadOnly: true, upperBound: 1, values: [v] }));
-        expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">: Port</div>');
+        expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port (unnamed)</div>');
         expect(one('p_named')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port_1</div>');
         expect(one('p_gone')).toContain('<div class="ir-field__readonly" id="ir-field-s">p_gone</div>');
     });
 
-    it('the rows of a read-only list keep the nameless target, as `: Port`', () => {
+    it('the rows of a read-only list keep the nameless target, as `Port (unnamed)`', () => {
         const html = paint(fieldOf({ isReadOnly: true }));
         const rows = [...html.matchAll(/<div class="ir-field__row">([^<]*)<\/div>/g)].map(m => m[1]);
-        expect(rows).toEqual(['Port_1', ': Port', 'p_gone']);
+        expect(rows).toEqual(['Port_1', 'Port (unnamed)', 'p_gone']);
     });
 });
 
@@ -281,6 +282,12 @@ describe('C2f — unnamedTargetLabels, the labels of one list', () => {
 
     it('one unnamed target reads `<Class> (unnamed)`, with no index', () => {
         expect(unnamedTargetLabels([unnamed('n1')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('R-TXT-59: the first of a class reads what namelessTargetLabel reads, so the surfaces cannot drift', () => {
+        for (const t of [unnamed('n1'), unnamed('g1', 'Gate'), { id: 'x', name: '' }]) {
+            expect(unnamedTargetLabels([t])[0]).toBe(namelessTargetLabel(t));
+        }
     });
 
     it('unnamed targets of one class: the first bare, the later ones numbered', () => {
