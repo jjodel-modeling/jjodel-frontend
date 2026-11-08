@@ -1413,3 +1413,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Priority**: high
 **Found in**: P-2026-11-08-0125
 **Detail**: docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md
+
+## 2026-11-08 — docs: closure of the blocked jjtl-kernel-gaps merge
+**Prompt**: P-2026-11-08-0229, direct merge of `jjtl-kernel-gaps` (docs only, discovery P-2026-11-08-0125), landed as `e7605a490`, reported blocked by `check:docs`.
+**Files touched**: the merge prompt's `Status:` line, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The red check is Check C on an entry of another front, `docs/log-inbox/dcn.md:320` (Notes of 505 characters, merge P-2026-11-08-0154), already on the trunk before this merge. This branch adds docs only. Left to the owner of that front; `lane-run go` refuses a blocked merge, so this closure is by hand.
+**Prompt document name**: 2026-11-08 02:29
