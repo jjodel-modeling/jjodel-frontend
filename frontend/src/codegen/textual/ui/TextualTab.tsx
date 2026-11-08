@@ -48,8 +48,10 @@ import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, 
 import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
 import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
-import { deletedObjects, planTextEdit } from '../textDiff';
+import { CONFIRMABLE, deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
+import { exportText, planTextImport, textFileName, textImportRows } from '../textFile';
+import type { TextImport } from '../textFile';
 import { identityOf, matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, storedSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
@@ -451,6 +453,27 @@ export function planEdit(base: EditBase, text: string, carried: readonly ObjectS
         ...(confirmed ? { confirmed } : {}),
     });
     return { parsed, plan };
+}
+
+/** T8b (R-TXT-55 F10): what an imported file's plan asks of the Text tab: a refusal, no change, or the confirm panel's rows. */
+export type ImportStep =
+    | { readonly kind: 'refused'; readonly reasons: readonly string[] }
+    | { readonly kind: 'unchanged' }
+    | { readonly kind: 'confirm'; readonly rows: readonly ConfirmRow[] };
+
+/** The panel's rows are its own (the uncertain matches, the flagged deletions), then the file's certain changes. */
+export function importStep(base: Pick<EditBase, 'mm' | 'grammar' | 'objects' | 'unprinted'>, imported: TextImport,
+                           referencedElsewhere?: ReadonlySet<string>): ImportStep {
+    const { plan, parsed } = imported;
+    if (!plan.lines && !needsConfirmation(plan)) return { kind: 'refused', reasons: plan.refusals.map(r => r.message) };
+    if (plan.lines && plan.lines.length === 0) return { kind: 'unchanged' };
+    return {
+        kind: 'confirm',
+        rows: [
+            ...confirmRows({ plan, parsed, mm: base.mm, grammar: base.grammar, model: base.objects, ...(referencedElsewhere ? { referencedElsewhere } : {}) }),
+            ...textImportRows(base, imported, referencedElsewhere),
+        ],
+    };
 }
 
 /**
@@ -1184,6 +1207,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
     const [confirm, setConfirm] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    // T8b: an imported file's text and its rows, until confirmed; the file input behind the Import action.
+    const [imported, setImported] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    const importInputRef = useRef<HTMLInputElement>(null);
     // L1b (R-TXT-49 D3): the syntax draft, owned here and shared by the Syntax form and the EBNF mode; only where Save
     // can write it. Without a writer the EBNF stays the stored one, read only.
     const editableSyntax = !!(writeSyntax && metamodelId && read.input);
@@ -1475,6 +1501,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         staleRef.current = false;
         setStale(false);
         setConfirm(null);
+        setImported(null);
         setStatus({ kind: 'synced' });
         updateUndoKey();
     };
@@ -1690,6 +1717,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         read: () => readEdit(),
         content: changes => {
             if (rewritingRef.current) return;
+            setImported(null);
             trackClip(changes);
             updateUndoKey();
             const editor = editorRef.current;
@@ -1762,6 +1790,50 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         if (!confirm || !editor || editor.getValue() !== confirm.text) { setConfirm(null); return; }
         setConfirm(null);
         readEdit(['uncertain', 'referenced']);
+    };
+
+    /** T8b (R-TXT-17): the model's text with the ids of its objects, downloaded as a file named after the model. */
+    const onExportText = (): void => {
+        const base = readRef.current.base;
+        if (!base) return;
+        const text = exportText(base.grammar, base.objects);
+        void import('../../../joiner').then(j => j.U.download(textFileName(modelName), text));
+    };
+
+    /** T8b (R-TXT-18, R-TXT-55 F10): a file's text planned against the model, shown in the confirm panel before it applies. */
+    const onImportFile = (file: File): void => {
+        void file.text().then(text => {
+            const r = readRef.current;
+            if (!r.base) return;
+            const ev = evidence(r.base);
+            const step = importStep(r.base, planTextImport(r.base, text, ev), ev.referencedElsewhere);
+            setImported(step.kind === 'confirm' ? { text, rows: step.rows } : null);
+            setStatus(step.kind === 'confirm' ? { kind: 'confirm' } : step);
+        });
+    };
+
+    /** T8b: the confirmed file, planned again on the model as it is now, applied in one undo step (`applyTextEdit`). */
+    const onImportConfirm = async (): Promise<void> => {
+        const r = readRef.current;
+        const text = imported?.text;
+        setImported(null);
+        if (!r.base || text === undefined) return;
+        const { plan } = planTextImport(r.base, text, evidence(r.base), CONFIRMABLE);
+        if (!plan.lines) { setStatus({ kind: 'refused', reasons: plan.refusals.map(x => x.message) }); return; }
+        setStatus({ kind: 'applying' });
+        let failed = 0;
+        try {
+            failed = (await applyTextEdit(modelId, plan)).failed;
+        } catch {
+            failed = plan.lines.length;
+        }
+        // A change from outside the editor: an agreed text is reprinted, a pending edit is kept (`onModelPrint`).
+        const editor = editorRef.current;
+        const sync = syncRef.current;
+        if (editor && sync && editor.getValue() === sync.text) {
+            reprint(modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId), true);
+            setStatus({ kind: 'applied', failed });
+        } else setStatus({ kind: 'stale' });
     };
 
     // Point 4: the model changed from elsewhere.
@@ -1923,6 +1995,21 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         </select>
                     </label>
                 )}
+                {mode === 'text' && model && !failed && read.base && (
+                    <>
+                        <button type="button" className="textual-tab__outline-toggle" aria-label="Export the text"
+                                title="Download the text, with the ids of its objects" onClick={onExportText}>
+                            <i className="bi bi-download" aria-hidden="true" />
+                        </button>
+                        <button type="button" className="textual-tab__outline-toggle" aria-label="Import a text"
+                                title="Read a text file and confirm its changes to the model" disabled={status.kind === 'applying'}
+                                onClick={() => { setImported(null); importInputRef.current?.click(); }}>
+                            <i className="bi bi-upload" aria-hidden="true" />
+                        </button>
+                        <input ref={importInputRef} type="file" accept=".txt,text/plain" hidden
+                               onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onImportFile(f); }} />
+                    </>
+                )}
                 {mode === 'text' && model && !failed && (
                     <button type="button" className={'textual-tab__outline-toggle' + (outlineOpen ? ' textual-tab__outline-toggle--on' : '')}
                             aria-pressed={outlineOpen} title={outlineOpen ? 'Hide the outline' : 'Show the outline'}
@@ -1996,7 +2083,10 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                                             draft={syntaxDraft} />
                             </div>
                         )}
-                        {mode === 'text' && confirm && confirm.rows.length > 0 && (
+                        {mode === 'text' && imported && imported.rows.length > 0 && (
+                            <TextConfirmPanel rows={imported.rows} busy={status.kind === 'applying'} onConfirm={() => { void onImportConfirm(); }} />
+                        )}
+                        {mode === 'text' && !imported && confirm && confirm.rows.length > 0 && (
                             <TextConfirmPanel rows={confirm.rows} busy={status.kind === 'applying'} onConfirm={onConfirm} />
                         )}
                         {mode === 'text' && status.kind === 'guard' && (
