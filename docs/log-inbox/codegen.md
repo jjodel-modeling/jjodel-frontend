@@ -3152,3 +3152,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: C2f crops 1-before, 2-field, 3-list in ~/.jjodel-lanes/P-2026-11-08-0843/; GO visivo di Alfonso 2026-11-08 11:59
 **Notes**: Rollback tag `pre-textual-c2f-labels` on `34a511ffb` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1201/result.json`.
 **Prompt document name**: 2026-11-08 12:01
+
+## 2026-11-08 — fix(editor-v2): C2g, one label for unnamed reference targets (P-2026-11-08-1239)
+**Prompt**: `claude_2026-11-08_1239_prompt_textual_c2g_align.md`: a nameless reference target reads `<Class> (unnamed)` on the default view and the IR chip too (R-TXT-59, amends R-TXT-47 D5 and D6). Decision row, LIR, the helper change with tests red first, gates, app check with crops.
+**Files touched**: `f0ecce336` docs/decisions.md, docs/discovery/lir_2026-11-08_c2g_unnamed_label_align.md; `05dadce29` editor-v2/utils/namelessTargetLabel.ts, editor-v2/utils/__tests__/namelessRefTarget.test.ts; `5541ea46b` docs/decisions.md; this entry and the Status of P-2026-11-08-1239 (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: docs/discovery/lir_2026-11-08_c2g_unnamed_label_align.md
+**Smoke visivo**: passato: probe 18/18 on 3548 from the DOM, `npm run smoke` GREEN (12 passed, 3 skipped), crops 1-chip, 2-default-view, 3-same-form in ~/.jjodel-lanes/P-2026-11-08-1239/; Alfonso's GO pending (critical zone)
+**Notes**: Regression: the row as dictated did not parse (a `)` in the quote, `evidence: measured in C2f`), so two register tests were red from f0ecce336 to 5541ea46b. Chips and default-view rows carry no index: two different unnamed Ports read alike (measured). Comments at jjomTransformers.ts:369 and IRFormField.tsx:153 still say `: <Class>` (out of scope). Vitest: 15344 passed, the 3 baseline import reds; irCollapsedRender, irSelectionRing red once each, green alone.
+**Prompt document name**: 2026-11-08 12:39
