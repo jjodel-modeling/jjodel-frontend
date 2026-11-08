@@ -1,6 +1,6 @@
 # Textual syntax, lane T8a: object ids in the text as structured comments, and the id as first evidence of the match
 
-Prompt-ID: P-2026-11-08-0057
+Prompt-ID: P-2026-11-08-0121
 Chat: C-2026-11-03-1037
 Front: codegen
 Status: da eseguire
@@ -9,7 +9,7 @@ Depends: D5 (comments by owner, merged), R-TXT-55 (F8, F9), R-TXT-18 and R-TXT-2
 Worktree: ~/jjodel-w-textt8a, branch textual-t8a-ids (from the trunk tip at launch, own node_modules)
 Request: Alfonso 2026-11-08 00:24 «decidi tu» (the chat chose to continue with F2, then T8)
 
-Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No CLAUDE.md 3.1 critical-zone file, no core outside frontend/src/codegen/textual/, no new dependency. Every reply opens with [P-2026-11-08-0057 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; never cat a whole gate log, grep its summary lines. Each item: test red first, its own commit (RC-51, code first). If you near the context ceiling, write ~/.jjodel-lanes/P-2026-11-08-0057/handoff.md (what is committed, what is left, the next command) before anything else.
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No CLAUDE.md 3.1 critical-zone file, no core outside frontend/src/codegen/textual/, no new dependency. Every reply opens with [P-2026-11-08-0121 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; never cat a whole gate log, grep its summary lines. Each item: test red first, its own commit (RC-51, code first). If you near the context ceiling, write ~/.jjodel-lanes/P-2026-11-08-0121/handoff.md (what is committed, what is left, the next command) before anything else.
 
 ## COSA
 
