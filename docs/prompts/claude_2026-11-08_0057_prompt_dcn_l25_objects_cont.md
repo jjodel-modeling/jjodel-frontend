@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0057
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · f097a2847
 Lane: full (continuation of P-2026-11-08-0011, stopped at the context ceiling; probe fixture and measures only, no frontend/src)
 Corregge: 2026-11-08 00:42 (P-2026-11-08-0011 stopped at the context ceiling, AM-8, with the fixture rewritten and uncommitted)
 Worktree: ~/jjodel-w-dcn-l25, branch dcn-l25, at the commit that adds this prompt on top of 2a433667e

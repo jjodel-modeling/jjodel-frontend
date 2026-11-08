@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0011
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · f097a2847
 Lane: full (probe; R-OI S2/S3a/S3b are on the trunk since cbc392c69)
 Depends: R-DCN-3, R-DCN-19, R-DCN-20, R-DCN-24; L2.1, L2.2 (`frontend/scripts/probe/dcn-drone-fixture.ts`); discovery docs/discovery/discovery_2026-11-06_dcn_foundations.md §6 (lane L2.5)
 Worktree: ~/jjodel-w-dcn-l25, branch dcn-l25, from the trunk at the commit that adds this prompt (P14 symlink to ~/jjodel/frontend/node_modules, removed at the end)
