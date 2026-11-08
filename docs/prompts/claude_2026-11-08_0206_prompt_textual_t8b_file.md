@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0206
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 6f5207c66 (pure, red first, bench 2/2), ca62444fa (red first) · gates green (vitest: 3 import reds baseline) · app check 13/13 ALL PASS, crops in ~/.jjodel-lanes/P-2026-11-08-0206/ · log entry in docs/log-inbox/codegen.md, uncommitted (RC-17)
 Lane: full (pure file module, two toolbar actions in the Text tab, tests; app check with crops)
 Depends: T8a (ids in the text, merged), D, E, F (merged), R-TXT-55 (F8, F9, F10), R-TXT-21 (8)
 Worktree: ~/jjodel-w-textt8b, branch textual-t8b-file (from trunk c8153d84a, own node_modules)

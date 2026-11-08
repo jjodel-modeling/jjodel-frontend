@@ -2991,3 +2991,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: non applicabile, T8a has no visual change (ids off by default)
 **Notes**: Rollback tag `pre-textual-t8a-ids` on `90cd28003` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0152/result.json`.
 **Prompt document name**: 2026-11-08 01:52
+
+## 2026-11-08 — feat(codegen): T8b, Export and Import of the text in the Text tab (P-2026-11-08-0206)
+**Prompt**: `claude_2026-11-08_0206_prompt_textual_t8b_file.md` (R-TXT-55 F8 to F10, R-TXT-21 (8)): pure `textFile.ts` (export with `printIds` on for the file only, import plan with no carried spans), Export and Import in the Text tab's toolbar through the existing confirm panel and `applyTextEdit`.
+**Files touched**: `frontend/src/codegen/textual/textFile.ts` (new), `__tests__/textFile.test.ts` (new) in 6f5207c66; `ui/TextualTab.tsx`, the test in ca62444fa; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 13/13 ALL PASS, crops in `~/.jjodel-lanes/P-2026-11-08-0206/`
+**Notes**: Tests red first (module missing; importStep 4 of 17). Bench 2 mutants, 2 killed. Ids reach matchObjects through the plan input that diffText hands it whole; textDiff.ts untouched. App: 10 @id comments for 10 objects, measured from the downloaded file; rename by id, one row; one undo step, one Cmd+Z restores. Gates: typecheck 0; vitest 3 baseline import reds, 15139 passed; build 0; codegen-lazy ALL GREEN.
+**Prompt document name**: 2026-11-08 02:06
