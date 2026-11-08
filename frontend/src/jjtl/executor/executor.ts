@@ -412,6 +412,40 @@ class JjtlEvaluationContext extends EvaluationContext {
     }
 }
 
+/**
+ * The JjEL evaluator of a run: a demand used as the operand of an operator stops the run
+ * (P-2026-11-08-0740). A demand is carried out only where a binding places it; as an operand
+ * JjEL sees the marker object, and `+` wrote `"[object Object]_w"` or `null` with
+ * `success true`. Operands are marked when their operator node is evaluated, before them,
+ * so the check is structural; JjEL reaches every subexpression through `evaluate`.
+ */
+class JjtlJjelEvaluator extends JjelEvaluator {
+    private readonly operands = new WeakMap<JjelExpression, string>();
+
+    constructor(private readonly demandSource: (value: unknown) => string | undefined) {
+        super();
+    }
+
+    evaluate(expr: JjelExpression, ctx?: EvaluationContext): JjelValue {
+        if (expr.type === 'Binary') {
+            this.operands.set(expr.left, `an operand of '${expr.operator}'`);
+            this.operands.set(expr.right, `an operand of '${expr.operator}'`);
+        } else if (expr.type === 'Unary') {
+            this.operands.set(expr.operand, `the operand of '${expr.operator}'`);
+        }
+        const value = super.evaluate(expr, ctx);
+        if (value !== null && typeof value === 'object') {
+            const use = this.operands.get(expr);
+            const source = use !== undefined ? this.demandSource(value) : undefined;
+            if (source !== undefined) {
+                throw new JjtlBuiltinError(source, `its result, a demand, is ${use}; a demand is carried out only ` +
+                    'where a binding places it; bind it with let, or read a bound value with envValue');
+            }
+        }
+        return value;
+    }
+}
+
 /** Key under which a delegating rule's error carries the application stack of its throw. */
 const APPLICATION_STACK = Symbol('jjtlApplicationStack');
 
@@ -573,7 +607,10 @@ type CreationShape =
 export class JjtlExecutor {
     private ast: TransformationAST;
     private context!: ExecutionContext;
-    private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
+    private jjelEvaluator: JjelEvaluator = new JjtlJjelEvaluator(value => {
+        const demand = this.demandOf(value);
+        return demand?.kind === 'call' ? demand.rule.ruleName ?? 'a called rule' : demand ? 'envLookup' : undefined;
+    });
     private errors: string[] = [];
     private warnings: string[] = [];
     // Target classes referenced by mappings that don't exist in the target
