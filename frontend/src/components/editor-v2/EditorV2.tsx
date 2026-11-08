@@ -838,6 +838,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
     const railFitViewOptions = useFitViewOptions();
     const fitViewOptions = useMemo(() => paneUnderRail ? railFitViewOptions : { padding: 0.2, maxZoom: 1 }, [paneUnderRail, railFitViewOptions]);
+    // A pane entering a split refits once, to its own visible area (E2, P-2026-11-08-2025): when it has nodes, two
+    // frames on, so that the dock's layout and React Flow's measure of the new size have landed. Later resizes do not refit.
+    const wasInCanvasSplitRef = useRef(false);
+    const splitFitDueRef = useRef(false);
+    const hasNodes = nodes.length > 0;
+    useEffect(() => {
+        if (inCanvasSplit !== wasInCanvasSplitRef.current) splitFitDueRef.current = inCanvasSplit;
+        wasInCanvasSplitRef.current = inCanvasSplit;
+        if (!splitFitDueRef.current || !hasNodes) return;
+        splitFitDueRef.current = false;
+        let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => fitViewRef.current?.()); });
+        return () => cancelAnimationFrame(frame);
+    }, [inCanvasSplit, hasNodes]);
 
     const {
         activeEditorId,
@@ -5149,6 +5162,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
                 fitViewOptions={fitViewOptions}
+                // A split's canvas is narrow, so its fit goes below the default floor; 0.5 is that default, spelled out because the store skips an undefined prop (D6).
+                minZoom={inCanvasSplit ? 0.05 : 0.5}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
