@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
-    classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, propertyPlan, selectionTakesProperty,
+    classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, generalizationSlot, propertyPlan, selectionTakesProperty,
     type ClassElementPlan,
 } from '../instantiate';
 
@@ -121,6 +121,77 @@ describe('an attribute of the selected class', () => {
 
     it('is refused without a class selected', () => {
         expect(propertyPlan(uml(), 'M1', 'Property', 'lib')).toEqual({ error: 'the selection takes no attribute' });
+    });
+});
+
+describe('the defaults of a new attribute', () => {
+    /** The UML subset with multiplicity, visibility, the type role and a String PrimitiveType in the Package. */
+    const typed = () => {
+        const d = uml();
+        const attr = (name: string, type?: string) => {
+            d[`a_${name}`] = { className: 'DAttribute', id: `a_${name}`, name, father: 'Property', type };
+            d.Property.attributes.push(`a_${name}`);
+        };
+        d.public = { id: 'public', name: 'public' };
+        d.private = { id: 'private', name: 'private' };
+        d.VisibilityKind = { id: 'VisibilityKind', name: 'VisibilityKind', literals: ['private', 'public'] };
+        attr('lower'); attr('upper'); attr('visibility', 'VisibilityKind');
+        d.r_Property_type = { className: 'DReference', id: 'r_Property_type', name: 'type', father: 'Property', type: 'Classifier' };
+        d.Property.references.push('r_Property_type');
+        d.PrimitiveType = { className: 'DClass', id: 'PrimitiveType', name: 'PrimitiveType', extends: ['Classifier'], abstract: false, attributes: [], references: [] };
+        d.String = { className: 'DObject', id: 'String', name: 'String', instanceof: 'PrimitiveType', father: 'lib.packaged', features: [] };
+        d['lib.packaged'].values.push('String');
+        const bindings = JSON.parse(d.MM._state.ontoBindings);
+        bindings.bindings[0].featureType = 'r_Property_type';
+        d.MM._state.ontoBindings = JSON.stringify(bindings);
+        return d;
+    };
+    const seedOf = (d: Record<string, Rec>) => (propertyPlan(d, 'M1', 'Property', 'Book') as { seed: Record<string, unknown> }).seed;
+
+    it('is 1..1, public and typed by the String PrimitiveType', () => {
+        expect(seedOf(typed())).toEqual({ name: 'property1', lower: 1, upper: 1, visibility: 'public', type: 'String' });
+    });
+
+    it('is untyped when the model has no String PrimitiveType', () => {
+        const d = typed();
+        d.String.instanceof = 'Class';
+        expect(seedOf(d)).not.toHaveProperty('type');
+    });
+
+    it('is untyped when the binding declares no featureType', () => {
+        const d = typed();
+        const bindings = JSON.parse(d.MM._state.ontoBindings);
+        delete bindings.bindings[0].featureType;
+        d.MM._state.ontoBindings = JSON.stringify(bindings);
+        expect(seedOf(d)).not.toHaveProperty('type');
+    });
+});
+
+describe('the slot of a generalization drawn at the class level (R-OI-22)', () => {
+    const atLevel = (level: string | undefined) => {
+        const d = uml();
+        d.VP = { id: 'VP', _state: level ? { ontoLevel: level } : {} };
+        return d;
+    };
+
+    it('is generalization.via of its source, at `class`', () => {
+        expect(generalizationSlot(atLevel('class'), 'VP', 'Generalization', 'Book')).toEqual({ ownerId: 'Book', feature: 'generalizations' });
+    });
+
+    it('is left to the shared edge path at any other level', () => {
+        expect(generalizationSlot(atLevel('instance'), 'VP', 'Generalization', 'Book')).toBeNull();
+        expect(generalizationSlot(atLevel(undefined), 'VP', 'Generalization', 'Book')).toBeNull();
+    });
+
+    it('is left to the shared edge path with no declared binding', () => {
+        const d = atLevel('class');
+        d.MM._state = {};
+        expect(generalizationSlot(d, 'VP', 'Generalization', 'Book')).toBeNull();
+    });
+
+    it('takes no edge object of another metaclass, and no source that holds none', () => {
+        expect(generalizationSlot(atLevel('class'), 'VP', 'Association', 'Book')).toBeNull();
+        expect(generalizationSlot(atLevel('class'), 'VP', 'Generalization', 'lib')).toBeNull();
     });
 });
 

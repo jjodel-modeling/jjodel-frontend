@@ -293,20 +293,72 @@ export function classElementPlan(lookup: Record<string, any>, modelId: string, m
     return { modelId, metaclass, ownerId: slot?.owner ?? null, childKey: slot?.reference.name ?? null, seed };
 }
 
+/** A property's plan: a class element whose seed also holds the numbers of its multiplicity. */
+export type PropertyPlan = Omit<ClassElementPlan, 'seed'> & { seed: Record<string, string | number> };
+
 /** A property of the selected class, in the record's `featureContainer`, or why it cannot be made. Pure. */
-export function propertyPlan(lookup: Record<string, any>, modelId: string, metaclassId: string, ownerId: string | null | undefined): ClassElementPlan | { error: string } {
+export function propertyPlan(lookup: Record<string, any>, modelId: string, metaclassId: string, ownerId: string | null | undefined): PropertyPlan | { error: string } {
     if (!selectionTakesProperty(lookup, modelId, ownerId)) return { error: 'the selection takes no attribute' };
     const get: DGet = id => lookup[id];
-    const container = memoBindings(get, modelId).find(b => b.name === OBJECT_RECORD)?.featureContainer;
+    const record = memoBindings(get, modelId).find(b => b.name === OBJECT_RECORD);
+    const container = record?.featureContainer;
     const childKey = isId(container) ? get(container)?.name : undefined;
     const metaclass = get(metaclassId)?.name;
     if (!isId(childKey) || !isId(metaclass)) return { error: 'the feature container does not resolve' };
     const seed: Record<string, string> = hasFeatureNamed(get, metaclassId, 'name') ? { name: instanceName(get, modelId, metaclass) } : {};
-    return { modelId, metaclass, ownerId: ownerId!, childKey, seed };
+    return { modelId, metaclass, ownerId: ownerId!, childKey, seed: { ...seed, ...propertyDefaults(get, modelId, metaclassId, record?.featureType) } };
+}
+
+/**
+ * The UML defaults of a new attribute, each only where the metaclass has the feature: multiplicity 1..1, visibility
+ * `public`, and for the binding's `featureType` the model's `String` PrimitiveType, untyped when it has none. Pure.
+ */
+function propertyDefaults(get: DGet, modelId: string, metaclassId: string, featureType: unknown): Record<string, string | number> {
+    const seed: Record<string, string | number> = {};
+    for (const bound of ['lower', 'upper']) if (hasFeatureNamed(get, metaclassId, bound)) seed[bound] = 1;
+    const visibility = featureNamed(get, metaclassId, 'visibility');
+    const literals: unknown[] = (visibility !== undefined ? get(get(visibility)?.type)?.literals : undefined) ?? [];
+    const open = literals.find(l => isId(l) && get(l)?.name === 'public');
+    if (isId(open)) seed.visibility = open;
+    const typeKey = isId(featureType) ? get(featureType)?.name : undefined;
+    if (isId(typeKey) && hasFeatureNamed(get, metaclassId, typeKey)) {
+        const primitive = modelObjectIds(get, modelId).find(id => get(id)?.name === 'String' && get(get(id)?.instanceof)?.name === 'PrimitiveType');
+        if (primitive !== undefined) seed[typeKey] = primitive;
+    }
+    return seed;
+}
+
+/**
+ * The slot a new generalization goes in when the class view's edge drag draws it, at a tab at `class` with a declared
+ * binding: `generalization.via` of its source, the specific classifier (R-OI-22). `null` anywhere else, and the edge
+ * path shared by every notation decides. Pure.
+ */
+export function generalizationSlot(
+    lookup: Record<string, any>, viewpointId: string | null | undefined, edgeClassId: string, sourceId: string,
+): { ownerId: string; feature: string } | null {
+    const get: DGet = id => lookup[id];
+    if (ontoLevelOf(get, viewpointId) !== 'class') return null;
+    const modelId = modelOf(get, sourceId);
+    const generalization = modelId !== undefined ? objectRecord(get, modelId)?.generalization as { via?: string } | undefined : undefined;
+    const via = generalization?.via;
+    const feature = isId(via) ? get(via)?.name : undefined;
+    if (!isId(via) || !isId(feature)) return null;
+    const view = ontoReadView(get);
+    const source = view.metaclassOf(sourceId);
+    const owner = view.ownerOf(via);
+    const accepted = get(via)?.type;
+    return source !== undefined && owner !== undefined && isId(accepted) && view.conformsTo(source, owner) && view.conformsTo(edgeClassId, accepted)
+        ? { ownerId: sourceId, feature }
+        : null;
 }
 
 /** True when the M2 class `classId`, or one of its ancestors, has a feature named `name`. */
 function hasFeatureNamed(get: DGet, classId: string, name: string): boolean {
+    return featureNamed(get, classId, name) !== undefined;
+}
+
+/** The feature named `name` of the M2 class `classId` or of one of its ancestors. */
+function featureNamed(get: DGet, classId: string, name: string): string | undefined {
     const seen = new Set<string>();
     const stack = [classId];
     while (stack.length > 0) {
@@ -314,10 +366,10 @@ function hasFeatureNamed(get: DGet, classId: string, name: string): boolean {
         if (seen.has(c)) continue;
         seen.add(c);
         const cls = get(c);
-        for (const f of [...(cls?.attributes ?? []), ...(cls?.references ?? [])]) if (get(f)?.name === name) return true;
+        for (const f of [...(cls?.attributes ?? []), ...(cls?.references ?? [])]) if (get(f)?.name === name) return f;
         for (const s of cls?.extends ?? []) if (isId(s)) stack.push(s);
     }
-    return false;
+    return undefined;
 }
 
 /** The classifier name with its first letter lowered, then the first integer from 1 no object of the model has. */
@@ -804,6 +856,7 @@ interface WriteModules {
     joiner: typeof import('../../../joiner');
     ir: typeof import('../viewpoint/ir/irResolveCore');
     readCtx: typeof import('../viewpoint/ir/irReadCtxLproxy');
+    containment: typeof import('../viewpoint/ir/irContainment');
     layoutKey: typeof import('../viewpoint/layout/vertexLayoutAdapter');
     layout: typeof import('../viewpoint/layout/vertexLayout');
 }
@@ -829,7 +882,7 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  * write never lands; nothing when no layout has a size or a position to take.
  */
 async function layoutInstanceNode(
-    m: WriteModules, get: DGet, instance: string, slots: number | null, until: number, placeAt?: InstancePlacement, growOnly = false,
+    m: WriteModules, get: DGet, instance: string, slots: number | 'rows' | null, until: number, placeAt?: InstancePlacement, growOnly = false,
     viewpoint?: string | null,
 ): Promise<string | null> {
     const state: any = m.joiner.store.getState();
@@ -849,7 +902,9 @@ async function layoutInstanceNode(
         const view = compiled?.kind === 'vertex' && (compiled.ir as SizedViewIR).visible !== false ? compiled.ir as SizedViewIR : null;
         if (!target.active && !view) continue;
         // `null` for a class-level element: its box hugs its rows, which a fixed size would clip as they are added.
-        const size = slots === null ? null : instanceBoxSize(view, slots);
+        // `'rows'` for the owner of a new row: the box of the rows its view draws now, the new one included.
+        const count = slots === 'rows' ? (view ? m.containment.rowRenderedChildren(compiled!, readCtx, instance, lookup).length : null) : slots;
+        const size = count === null ? null : instanceBoxSize(view, count);
         const point = placeAt?.(target.layoutKey) ?? null;
         if (!size && !point) continue;
         patches.push({
@@ -868,7 +923,8 @@ async function layoutInstanceNode(
     const grown = (vid: string, layoutKey: string, patch: typeof patches[number]['patch']) => {
         if (!growOnly || patch.w === undefined || patch.h === undefined) return patch;
         const now = m.layout.readVertexLayout(get(vid), layoutKey);
-        const w = now.isResized ? Math.max(now.w, patch.w) : patch.w;
+        // A new row asks for height only: a box already drawn keeps its width.
+        const w = now.isResized ? (slots === 'rows' ? now.w : Math.max(now.w, patch.w)) : patch.w;
         const h = now.isResized ? Math.max(now.h, patch.h) : patch.h;
         return now.isResized && w === now.w && h === now.h ? null : { ...patch, w, h };
     };
@@ -945,16 +1001,17 @@ const flightSlot = (instance: string) => (slot: string, feature: string): void =
 
 /** The modules of the write half, loaded on first use. */
 async function writeModules() {
-    const [joiner, adapter, ir, readCtx, layoutKey, layout, history] = await Promise.all([
+    const [joiner, adapter, ir, readCtx, containment, layoutKey, layout, history] = await Promise.all([
         import('../../../joiner'),
         import('./createAdapter'),
         import('../viewpoint/ir/irResolveCore'),
         import('../viewpoint/ir/irReadCtxLproxy'),
+        import('../viewpoint/ir/irContainment'),
         import('../viewpoint/layout/vertexLayoutAdapter'),
         import('../viewpoint/layout/vertexLayout'),
         import('../../../redux/reducer/reducer'),
     ]);
-    const modules: WriteModules = { joiner, ir, readCtx, layoutKey, layout };
+    const modules: WriteModules = { joiner, ir, readCtx, containment, layoutKey, layout };
     const get: DGet = id => (joiner.store.getState() as any)?.idlookup?.[id];
     return { modules, createInstance: adapter.createInstance, history, get };
 }
@@ -1025,11 +1082,11 @@ async function instantiateNow(
  * Make one class-level element and, with `placeAt`, put its node there (R-OI-21, R-OI-22): one undo entry, in the queue of
  * `instantiate`. Only the position is written. `viewpoint` as in `instantiate`.
  */
-export function createClassElement(plan: ClassElementPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
+export function createClassElement(plan: ClassElementPlan | PropertyPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
     return queued(() => createClassElementNow(plan, placeAt, viewpoint));
 }
 
-async function createClassElementNow(plan: ClassElementPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
+async function createClassElementNow(plan: ClassElementPlan | PropertyPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
     const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
     inFlight++;
@@ -1045,6 +1102,12 @@ async function createClassElementNow(plan: ClassElementPlan, placeAt?: InstanceP
         await waitSeeded(get, [[made.id, plan.seed]], result, until);
         const laid = await layoutInstanceNode(modules, get, made.id, null, until, placeAt, false, viewpoint);
         if (laid) result.problems.push(laid);
+        // An attribute draws as a row of its owner's node: the owner's box holds it, grow-only, in this group (R-OI-16).
+        const container = memoBindings(get, plan.modelId).find(b => b.name === OBJECT_RECORD)?.featureContainer;
+        if (plan.ownerId !== null && isId(container) && get(container)?.name === plan.childKey) {
+            const grown = await layoutInstanceNode(modules, get, plan.ownerId, 'rows', until, undefined, true, viewpoint);
+            if (grown) result.problems.push(grown);
+        }
     } finally {
         history.endUndoGroup();
         inFlight--;

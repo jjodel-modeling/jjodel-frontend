@@ -43,7 +43,7 @@ import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
     compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
-    resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
+    resolveDropTarget, slotAccepts, slotRefOf, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
 } from './viewpoint/ir/irMembership';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -78,7 +78,7 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption } from './hooks/instantiate';
+import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, generalizationSlot, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption, type PropertyPlan } from './hooks/instantiate';
 import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
 import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
@@ -2376,7 +2376,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // The edge object belongs where its source's container chain says (R-GV-8, spec addendum §6.1;
                     // S3): a SequenceFlow in its Process's flowElements, not at the root. SetField-only, no creator.
                     const idl = (store.getState() as any).idlookup ?? {};
-                    const owner = ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
+                    // At `class` with a declared binding a Generalization is owned by its specific classifier
+                    // (R-OI-22); every other notation and level keeps the container chain.
+                    const classSlot = generalizationSlot(idl, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+                    const owner = classSlot
+                        ? slotRefOf(idl, classSlot.ownerId, classSlot.feature)
+                        : ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
                     const edgeObjectId: string | undefined = lObject?.id;
                     if (owner && edgeObjectId && slotAccepts(idl, owner, match.edgeClass.id)) {
                         TRANSACTION('graphVertex edge object owner', () => {
@@ -3333,7 +3338,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     runLinkRef.current = runLink;
 
     // A class-level element (R-OI-21): one undo entry, the queue of instantiate, the plan read at the gesture.
-    const runClassPlan = useCallback((plan: ClassElementPlan | { error: string }, click?: { x: number; y: number }) => {
+    const runClassPlan = useCallback((plan: ClassElementPlan | PropertyPlan | { error: string }, click?: { x: number; y: number }) => {
         if ('error' in plan) { console.warn('[EditorV2] class element:', plan.error); return; }
         void createClassElement(plan, click ? placementAt(click) : undefined, viewpointIdRef.current).then(result => {
             if (!result.ok) console.warn('[EditorV2] class element:', result.problems);
