@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1230
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · e92b7d2cc (combobox), d4c331168 (probe fixes), 08384ff6e (SPEC), a7b5a12a2 (decisions), 6d99cd048 (report)
 Lane: full (continues P-2026-11-08-1200 after its context ceiling; unattended)
 Depends: P-2026-11-08-1200
 Worktree: ~/jjodel-w-includepills, branch jjtl-include-pills (the same tree, with its uncommitted combobox)

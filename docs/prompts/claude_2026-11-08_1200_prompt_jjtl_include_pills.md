@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1200
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · c7b2df61a (report), ac9ee73cf (envLookup); combobox and closure in P-2026-11-08-1230
 Lane: full (unattended, Alfonso delegated the open choices to the chat on 2026-11-08 11:55)
 Depends: P-2026-11-08-1120 (merged on trunk as 1828934f1)
 Worktree: ~/jjodel-w-includepills, branch jjtl-include-pills (fresh from alfonso-frontend-jjtl)
