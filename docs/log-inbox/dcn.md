@@ -486,3 +486,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 20:42
 
 **Ticket** (medium): the panel Classification chips do not follow the viewed step at step back (R-SIM-106): with the timeline at step 0 the card reads Charging while the chips read `dji.Mode = Flying` (probe MEAS `card step back`, `panelChips`).
+
+## 2026-11-08 — merge: dcn-s5 into alfonso-frontend-jjtl (P-2026-11-08-2122)
+**Prompt**: `claude_2026-11-08_2122_prompt_merge_dcn-s5.md`, lane full (merge; 1 conflict measured): bring `dcn-s5` at bf8fc1454 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 4a75388f7; re-measure, probes, union of `docs/log-inbox/dcn.md`, gates, hard stop for the chat's GO.
+**Files touched**: 0a8e21f10 (merge), 22 files — `frontend/src/components/editor-v2/sim/` (`SimNodeRunState.tsx`, `simNodeRunState.scss`, `simBridge.ts`, `simDcnRuns.ts`, `simRunState.ts`, `__tests__/simBridge.test.ts`), `viewpoint/ir/__tests__/irActivityRender.test.ts`, `frontend/src/model/simulation/dcn/dcnCanvasState.ts` and its test, `frontend/scripts/probe/dcn-drone-fixture.ts`, `dcn-drone-run.ts`, three assets in `docs/discovery/assets/dcn-drone/`, `docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md`, five prompts, `docs/decisions.md`, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 4 failed | 584 passed files, 15543 passed, 0 failed and 3 skipped (15546, expected 15522 + 24): the known 3 red at import and one load flake accepted in the GO; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 22, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-2042, crops read by the chat 20:58)
+**Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 57); all probes as expected. Full vitest: 1 load flake (`irCollapsedRender` afterAll timeout, load about 65), green alone twice, untouched by the branch, red on the trunk tip too, accepted in the GO. Branch vitest not run (no node_modules; writing forbidden): 24 new tests counted, total matched. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change).
+**Prompt document name**: 2026-11-08 21:22

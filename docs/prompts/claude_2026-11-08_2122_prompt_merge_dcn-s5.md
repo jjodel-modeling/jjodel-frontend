@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-2122
 Chat: C-2026-11-06-2159
 Request: https://claude.ai/code/session_01DQt9R4H8ma8MFTYqMZbPso (merge of dcn-s5 launched by chat C-2026-11-06-2159)
 Lane: full (merge; 1 conflict: `docs/log-inbox/dcn.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane merge · 0a8e21f10 · verifica visiva passata 2026-11-08 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-08-2122 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
