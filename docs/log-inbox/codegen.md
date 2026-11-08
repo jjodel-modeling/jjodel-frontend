@@ -3139,3 +3139,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe 13/13 on 3547 from the DOM, crops 1-before, 2-field, 3-list in ~/.jjodel-lanes/P-2026-11-08-0843/; GO visivo di Alfonso 2026-11-08 11:59
 **Notes**: Written by the chat: the session stopped at the context ceiling before its log entry (handoff.md). namelessTargetLabel keeps `: Class` for its two other callers (R-TXT-47 D5, D6); the new export is unnamedTargetLabels, so IR chips and these widgets still differ. A dangling list row reads blank. Gates: typecheck 0, vitest 15227 passed with the 3 import reds, build 0, check:docs 5/5, smoke GREEN.
 **Prompt document name**: 2026-11-08 08:43
+
+## 2026-11-08 — merge: textual-c2f-labels into alfonso-frontend-jjtl (P-2026-11-08-1201)
+**Prompt**: `claude_2026-11-08_1201_prompt_merge_textual-c2f-labels.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2f-labels` at `5173fe284` into `alfonso-frontend-jjtl`, merge base `f4dc218c3`, 6 commits on the branch side.
+**Files touched**: merge `29fcd307f`: 9 files from the branch side (`docs/discovery/lir_2026-11-08_nameless_reference_labels.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0818_prompt_textual_c2f_labels.md`, `docs/prompts/claude_2026-11-08_0843_prompt_textual_c2f_critical.md`, `frontend/src/components/editor-v2/utils/__tests__/namelessRefTarget.test.ts`, `frontend/src/components/editor-v2/utils/namelessTargetLabel.ts`, `frontend/src/components/editor-v2/viewpoint/ir/widgets/ListWidget.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/widgets/ReferencePicker.tsx`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `29fcd307f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15346 tests in 579 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: C2f crops 1-before, 2-field, 3-list in ~/.jjodel-lanes/P-2026-11-08-0843/; GO visivo di Alfonso 2026-11-08 11:59
+**Notes**: Rollback tag `pre-textual-c2f-labels` on `34a511ffb` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1201/result.json`.
+**Prompt document name**: 2026-11-08 12:01

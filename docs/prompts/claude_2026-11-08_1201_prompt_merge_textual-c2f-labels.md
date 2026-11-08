@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1201
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-c2f-labels launched by chat C-2026-11-03-1037)
 Lane: full (merge; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane merge · 29fcd307f · verifica visiva passata 2026-11-08 (C2f crops 1-before, 2-field, 3-list in ~/.jjodel-lanes/P-2026-11-08-0843/; GO visivo di Alfonso 2026-11-08 11:59)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-08-1201 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
