@@ -101,3 +101,19 @@ On Alfonso's «Procedi con tutto in lane auto» (07:36) the chat ran the remaini
 - Text tab: highlight on open for selected nodes outside the viewport (needs a selection query, not the DOM).
 
 No lane of this chat running, no scheduled check left. Next on Alfonso's go: C2f GO and label decision, #682 option choice, the candidate tickets.
+
+## Update 2026-11-08 (midday)
+
+Alfonso 11:59: «GO» on C2f; on #682 a container create is one Undo step, «decidi tu» on the rest; 12:26 «allinea tutto su `Port (unnamed)` con una lane separata». All merged and pushed.
+
+- C2f, critical zone (P-2026-11-08-0843): merged 29fcd307f with Alfonso's visual GO. The log entry was written by the chat (the session stopped at the context ceiling). Card #746 of the superseded P-2026-11-08-0818 stays open: lane-run resolve accepts only blocked lanes.
+- C2g, one unnamed label (P-2026-11-08-1239, merge ae7a149aa): R-TXT-59 amends R-TXT-47 D5 and D6, `<Class> (unnamed)` everywhere; unnamedTargetLabels now reuses namelessTargetLabel. Known: chips and default view carry no index (two unnamed Ports both read Port (unnamed) there); stale comments at jjomTransformers.ts:369 and IRFormField.tsx:153-154 still say `: <Class>`. The first row header did not parse (decisionsQuery, docsDigest red between two lane commits, Regressions: yes).
+- #682 Phase 2 (P-2026-11-08-1202 and 1313, merge d79d51f90): a create opens its own undo entry, also inside the 450 ms window; graph-only deltas compose only into a create's entry (narrower than §7: the wider shape deleted a tab's graph on undo); classs, enumerators and packages included; container create one step. Tests 40, mutation 12/12, probe A to J. Smoke: control green, HEAD red once on a cold page.goto timeout, then green twice; merged by the chat on that evidence. Ticket #764 (sender stack index, reducer.ts:1292). Limit: undo below a tab open still leaves duplicate graphs (old merge path, not measured before the fix).
+- Multi-tab L6 is on the trunk (bc4b137cd), merged by the multi-tab chat.
+
+### Candidate tickets added
+
+- C2g: index on IR chips and default-view labels when two unnamed targets of one class read the same; stale `: <Class>` comments.
+- #682: duplicate graphs after undo below a tab open.
+
+No lane of this chat running, no scheduled check left.
