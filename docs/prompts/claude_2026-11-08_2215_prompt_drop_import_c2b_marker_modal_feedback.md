@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01DQt9R79sHuFgu9doZgQErw (Alfonso, «ok 
 Front: maintenance
 Depends: P-2026-11-08-1845, P-2026-11-08-2015, P-2026-11-08-2040, P-2026-11-08-2115, P-2026-11-08-2145
 Lane: full (six files counting the test, visible change on the project cards)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane dashboard-drop-import · fbddf536a · verifica visiva passata 2026-11-08 (chat, sui crop, RC-23)
 
 Rule 19: this prompt names six files (five plus one test). The chat confirms that count here, inside the scope
 Alfonso ratified; a seventh file is a stop.

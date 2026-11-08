@@ -80,3 +80,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 21:45
 
 **Ticket** (found here, not fixed): the toast stack paints over the Quick Tip card, same corner, measured on the crops and independent of this lane. Below about 680 px wide the panel can meet the toast column, which goes full width at 480 px; not handled. The panel title stays "Importing N projects" once settled, as the prompt words it; an item for Alfonso.
+
+## 2026-11-08 — feat(dashboard): imported card marker and modal feedback (P-2026-11-08-2215)
+**Prompt**: lane C2b of the dashboard drop import: recent-imports module with injectable clock, "Imported" bar and badge on gallery cards and list rows without layout shift, dashboard and modal imports recorded, modal raising lane C2a's toasts, tests with mutation bench, CDP probe and crops.
+**Files touched**: `frontend/src/pages/components/recentImports.ts` (new), `frontend/src/pages/components/__tests__/recentImports.test.ts` (new), `frontend/src/pages/components/Project.tsx`, `frontend/src/pages/components/project-card.scss`, `frontend/src/pages/components/Dashboard.tsx`, `frontend/src/pages/AllProjects.tsx` (fbddf536a); this inbox entry and the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no — six files, the prompt's own list, confirmed there under Rule 19
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 3/3 sui crop (RC-23); sonda della corsia 35/35, porta 3064, offline, light
+**Notes**: Lifetime 6 s. Bench 19 of 20 killed; the survivor, notify before delete, is equivalent: `has` reads the time. Modal: its failure alert and invalid-file console line became lane C2a's toasts. A first full vitest also failed laneRun, laneRunDirect and budget under load 25; all passed alone and in the full rerun, only the 3 known red. Console: the `{}` fixture and React's `key` warning from `props.key` in list mode. Online path not run, hence Regressions unknown. Typecheck 0, build 0.
+**Prompt document name**: 2026-11-08 22:15
+
+**Ticket** (found here, not fixed): the empty state's import button (`ProjectsApi.import`) neither marks the card nor raises these toasts, outside item 3 of the prompt. The toast also paints over the "Support Jjodel" card, same corner as the Quick Tip, seen on the modal crop. Right after an import in list mode every row sat 12 px off its settled top, settled within 1 s; marked and unmarked rows alike, cause not isolated.
