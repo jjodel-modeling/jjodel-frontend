@@ -44,6 +44,9 @@ import {
     clearCanvasEdgePair,
     clearCanvasEdgePairs,
     isSingletonSuppressed,
+    acquirePopulateOwner,
+    releasePopulateOwner,
+    isPopulateOwner,
 } from '../sync/syncState';
 import { elementSnapshotsOf, snapshotUnchanged, layoutKeyOnlyChange, rekeyedNode } from '../sync/vertexSnapshot';
 import { getLayoutKeyOf, getLayoutKeyFor } from '../viewpoint/layout/vertexLayoutAdapter';
@@ -514,6 +517,23 @@ export function useJjomSync(
         return h;
     });
 
+    // ── Populate owner (multi-tab L4, R-MT-17) ───────────────────────
+    // With several instances mounted on one model, the first mounted owns the
+    // populate below and hands it over on unmount; the others render only. This
+    // effect is declared before the populate effect so that it runs first in every
+    // commit. A model switch releases the old model without clearing anything (the
+    // unmount effect never cleared on a switch); the unmount effect releases the
+    // held model and clears the registries on the last release.
+    // See docs/discovery/lir_2026-11-07_l4_populate_owner.md.
+    const populateTokenRef = useRef<object>({});
+    const heldModelRef = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        if (heldModelRef.current === modelid) return;
+        if (heldModelRef.current !== undefined) releasePopulateOwner(heldModelRef.current, populateTokenRef.current);
+        heldModelRef.current = modelid;
+        if (modelid !== undefined) acquirePopulateOwner(modelid, populateTokenRef.current);
+    }, [modelid]);
+
     // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
     const justCreatedGraphRef = useRef(false);
@@ -521,12 +541,17 @@ export function useJjomSync(
     useEffect(() => {
         if (!modelid || creatingGraphRef.current) return;
 
+        // A non-owner runs the analysis below and keeps the canvas-only halves of the
+        // stale-edge deletes; every D-layer write of the run is the owner's (L4).
+        const ownsPopulate = isPopulateOwner(modelid, populateTokenRef.current);
+
         // If no v2-flow graph exists yet, create one (even for empty metamodels).
         // Previously we waited for modelClassCount > 0, which caused a chicken-
         // and-egg problem: the graph is needed for JjOM mode, but JjOM mode is
         // needed to create classes, which populate classCount. We only wait for
         // classCount when the graph already exists (for incremental population).
         const needsNewGraph = !hasGraph;
+        if (needsNewGraph && !ownsPopulate) return;
         if (!needsNewGraph && modelClassCount === 0 && modelObjectCount === 0) return;
 
         // ── Determine what needs to be created ──────────────────────────
@@ -772,8 +797,10 @@ export function useJjomSync(
         // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
         // so they must NOT be wrapped in an outer TRANSACTION (nesting
         // causes x/y coordinates to be lost).
-        creatingGraphRef.current = true;
-        justCreatedGraphRef.current = true;
+        if (ownsPopulate) {
+            creatingGraphRef.current = true;
+            justCreatedGraphRef.current = true;
+        }
         // The open settle gate waits for what this run creates.
         const openGate = openGateFor(modelid);
         const recordCreated = (id: string | undefined) => { if (id && !openGate.done) openGate.created.push(id); };
@@ -790,7 +817,7 @@ export function useJjomSync(
             }
 
             // Step 2: Create missing vertices
-            if (missingClassifiers.length > 0) {
+            if (ownsPopulate && missingClassifiers.length > 0) {
                 const existingCount = vertexIdByModelId.size;
                 const COLS = layout.cols;
                 const COL_W = layout.colWidth;
@@ -817,7 +844,7 @@ export function useJjomSync(
             // JjScript and JjTL transformations create DObject instances directly,
             // without creating their corresponding DVertex in the flow graph. This
             // step ensures every DObject in the model is represented in the graph.
-            if (missingObjectsCount > 0) {
+            if (ownsPopulate && missingObjectsCount > 0) {
                 const existingCount = vertexIdByModelId.size;
                 const COLS = layout.cols;
                 const COL_W = layout.colWidth;
@@ -893,7 +920,7 @@ export function useJjomSync(
                             return !(endClassId && currentSupIds.has(endClassId));
                         });
                         if (staleExtendEdges.length > 0) {
-                            TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
+                            if (ownsPopulate) TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
                                 for (const pe of staleExtendEdges) {
                                     const staleRaw = idlookup[pe.edgeId];
                                     if (staleRaw) DeleteElementAction.new(staleRaw);
@@ -922,7 +949,7 @@ export function useJjomSync(
                     const tgtVertex = vertexIdByModelId.get(supId);
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
                         const ek = `${srcVertex}→${tgtVertex}`;
-                        if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                        if (ownsPopulate && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
                             recordCreated(DVoidEdge.new2(
                                 undefined, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
@@ -978,7 +1005,7 @@ export function useJjomSync(
                             // DeleteElementAction cascades via pointedBy, which
                             // maintains the edgesIn/edgesOut reciprocals (same as the
                             // reconcile extras delete and syncDeleteEdge).
-                            TRANSACTION('Delete stale DReference edge (cross-metamodel retarget)', () => {
+                            if (ownsPopulate) TRANSACTION('Delete stale DReference edge (cross-metamodel retarget)', () => {
                                 for (const staleId of crossDecision.deleteEdgeIds) {
                                     const staleRaw = idlookup[staleId];
                                     if (staleRaw) DeleteElementAction.new(staleRaw);
@@ -1012,7 +1039,7 @@ export function useJjomSync(
                         // hasCanvasEdgePair is pair-based and would block siblings,
                         // so it's not consulted here — race-window protection is
                         // provided by the idlookup scan above.
-                        if (!existingEdgeKeys.has(ek)) {
+                        if (ownsPopulate && !existingEdgeKeys.has(ek)) {
                             recordCreated(DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
@@ -1051,7 +1078,7 @@ export function useJjomSync(
                         //
                         // Atomicity is verified by the §4.6 smoke test, not by
                         // unit tests (no mock-store harness exists for this layer).
-                        TRANSACTION('Reconcile DReference edge endpoint', () => {
+                        if (ownsPopulate) TRANSACTION('Reconcile DReference edge endpoint', () => {
                             if (decision.retargetNeeded) {
                                 // `as any` casts match the existing convention in
                                 // this file (e.g. `graphId: any` at the
@@ -1082,7 +1109,7 @@ export function useJjomSync(
             // doesn't have an edge yet. This makes reference values written by
             // JjTL transformations (or by STEP 8b in ProjectEditor) visible as
             // edges in the flow diagram.
-            if (missingM1EdgeCount > 0) {
+            if (ownsPopulate && missingM1EdgeCount > 0) {
                 // Re-read store in case Step 2 just created vertices
                 const freshLookup = store.getState()?.idlookup;
                 if (freshLookup) {
@@ -1621,11 +1648,17 @@ export function useJjomSync(
             if (openGateRef.current.timer !== undefined) clearTimeout(openGateRef.current.timer);
             openGateRef.current.timer = undefined;
             openGateRef.current.active = false;
-            clearAllCanvasUpdated();
-            clearSyncModes();
-            clearDropCreated();
-            clearEdgeRefIds();
-            clearCanvasEdgePairs();
+            // The registries are module-level and shared by every instance: they clear
+            // only when the last instance of the held model unmounts (L4, R-MT-17).
+            const heldModel = heldModelRef.current;
+            heldModelRef.current = undefined;
+            if (heldModel === undefined || releasePopulateOwner(heldModel, populateTokenRef.current)) {
+                clearAllCanvasUpdated();
+                clearSyncModes();
+                clearDropCreated();
+                clearEdgeRefIds();
+                clearCanvasEdgePairs();
+            }
             rfNodeCache.current.clear();
             rfEdgeCache.current.clear();
             prevElementsRef.current.clear();

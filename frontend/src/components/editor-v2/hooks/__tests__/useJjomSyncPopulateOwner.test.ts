@@ -228,6 +228,22 @@ describe('useJjomSync: two instances on one model, one populate owner', () => {
         expect(edgesFor('r1').map(e => [e.s, e.t])).toEqual([['vA', 'vB']]);
     });
 
+    it('an M1 object added after both mounted (JjScript, JjTL) gives one vertex', () => {
+        openMetamodel({
+            mm: { id: 'mm', className: 'DModel', packages: ['p'], objects: ['o0'] },
+            o0: { id: 'o0', className: 'DObject', name: 'o0', father: 'mm', model: 'mm', features: [] },
+            vo0: { id: 'vo0', className: 'DVertex', model: 'o0', father: 'g', graph: 'g', x: 0, y: 0, w: 200, h: 120 },
+        }, ['vo0']);
+        mount(); mount(); settle();
+        expect(writes.vertices).toEqual([]);
+        patch({
+            mm: { ...lookup().mm, objects: ['o0', 'o1'] },
+            o1: { id: 'o1', className: 'DObject', name: 'o1', father: 'mm', model: 'mm', features: [] },
+        });
+        commit();
+        expect(writes.vertices).toEqual(['o1']);
+    });
+
     it('a reference retarget is reconciled once: three writes, not six', () => {
         openMetamodel({
             A: { id: 'A', className: 'DClass', references: ['r1'], extends: [] },
