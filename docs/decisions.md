@@ -7507,6 +7507,31 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   same error as for rule and nested targets, nothing is written. Only the shape of the creation stays unchecked in a
   let body. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900, `06ce85232`). Rewritten 2026-11-04 (P-2026-11-04-1442):
   the first text said the abstract class stayed unchecked and the amendment said the opposite; this text keeps the amendment.
+- **R-JTG-23** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  `envValue(name[, env])` returns the value bound to `name` as bound, never a demand: a string a string, an integer an
+  integer, a source element the element. The second argument, an `extendEnv` marker, is the environment read instead of
+  the current one. Extends R-JTG-11; `envLookup` stays unchanged. Evidence: §3.3 and §3.4 (4) of
+  `docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md`, `env-value.test.ts`.
+- **R-JTG-24** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  an unbound name in `envValue` stops the run as R-FA-11 asks of a failing builtin, naming the rule and the source
+  element (R-FA-13); `envHas` is the test. `envLookup` keeps `null` for an unbound name. Evidence: `env-value.test.ts`.
+- **R-JTG-25** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  a demand (of a called rule or of `envLookup`) used as a value in an expression stops the run, worded as R-FA-12
+  (rule and source element); before, `envLookup(n) + "_w"` wrote `"[object Object]_w"` and `envLookup("w") + 1` wrote
+  `null`, with `success true`. A demand that a binding places stays legal. Implemented for the operands of binary and
+  unary operators. Extends R-FA-11. Evidence: cases A and C of the report's §3.3, `demand-as-value.test.ts`.
+- **R-JTG-26** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  several source models start as several models of one metamodel: their objects are united in pass 1 and the trace
+  keys by source id as now; typed `from A, B` is a later step. Not implemented (slices S3, S4 of the report, §4).
+- **R-JTG-27** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the run dialog keeps a primary source model plus an «also include» list of further models of the same metamodel.
+  Not implemented (slice S4 of the report).
+- **R-JTG-28** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  matching on supertypes follows R-JTG-3: of the rules whose source class is the instance's class or a supertype, the
+  most specific wins; two of equal specificity are an error naming both. Not implemented (slice S5 of the report, §5).
+- **R-JTG-29** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the dynamic visibility of a caller's JjEL variables inside a helper body (report §3.2) is to be closed, after a lane
+  measures what relies on it. Not implemented.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
