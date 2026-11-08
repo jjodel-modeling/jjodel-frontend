@@ -1559,3 +1559,16 @@ Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closur
 **Smoke visivo**: passato — probe, unattended, 33/33; three crops viewed. The list over the primary select is a perceptual judgement left to Alfonso.
 **Notes**: Typecheck and build exit 0; full vitest 15328 passed, 3 skipped, only the 3 known files failing at import. The upward list stops at the hint's box (394.5). Evidence and decisions D1 to D7: the report. The cause of the checkbox is `.form-group input` and `.form-group label`, measured on the running dialog; the file holding them was not located.
 **Prompt document name**: 2026-11-08 11:20
+
+## 2026-11-08 — merge: jjtl-multi-source-app into alfonso-frontend-jjtl (P-2026-11-08-1147)
+**Prompt**: `claude_2026-11-08_1147_prompt_merge_jjtl-multi-source-app.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-multi-source-app` at `1afa8ebb4` into `alfonso-frontend-jjtl`, merge base `e88ab3d06`, 7 commits on the branch side.
+**Files touched**: merge `1828934f1`: 12 files from the branch side (`docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1026_prompt_jjtl_multi_source_app.md`, `docs/prompts/claude_2026-11-08_1120_prompt_jjtl_multi_source_app_close.md`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/components/ExecuteTransformationDialog.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1828934f1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15331 tests in 579 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: S4: run dialog with Also include, crops checked by the chat
+**Notes**: Rollback tag `pre-jjtl-multi-source-app` on `e88ab3d06` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1147/result.json`.
+**Prompt document name**: 2026-11-08 11:47
