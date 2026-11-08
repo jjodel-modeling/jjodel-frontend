@@ -19,7 +19,7 @@ import type { ConcreteGrammar } from '../concreteGrammar';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { TextParseResult } from '../parser';
 import { CONFIRMABLE, deletedObjects, planRows } from '../textDiff';
-import type { Pairing, PlanCounts, TextEditPlan } from '../textDiff';
+import type { Pairing, PlanCounts, PlanRow, TextEditPlan } from '../textDiff';
 import { identityOf } from '../textMatch';
 
 /** One line of the panel. */
@@ -45,11 +45,27 @@ export interface ConfirmInput {
     readonly referencedElsewhere?: ReadonlySet<string>;
 }
 
-const labelOf = (g: ConcreteGrammar, o: TextObject | undefined): string => {
+const labelOf = (g: ConcreteGrammar, o: TextObject | undefined, index: number | null = null): string => {
     if (!o) return '?';
     const name = identityOf(g, o);
-    return name === null ? `${o.cls} (unnamed)` : `${o.cls} ${name}`;
+    return name === null ? `${o.cls} (unnamed)${index === null ? '' : ` ${index}`}` : `${o.cls} ${name}`;
 };
+
+/**
+ * Lane TABFIX (P-2026-11-08-0859): per entry, in text order, the class of an unnamed object (null for a named one), its
+ * index among the unnamed of its class, null when it is the only one: the label takes an index only where it would repeat.
+ */
+export function homonymIndexes(classes: readonly (string | null)[]): (number | null)[] {
+    const totals = new Map<string, number>();
+    for (const c of classes) if (c !== null) totals.set(c, (totals.get(c) ?? 0) + 1);
+    const seen = new Map<string, number>();
+    return classes.map(c => {
+        if (c === null || totals.get(c)! < 2) return null;
+        const n = (seen.get(c) ?? 0) + 1;
+        seen.set(c, n);
+        return n;
+    });
+}
 
 /** Whether the plan's refusals are all confirmable, and there is one at least: the panel's condition. */
 export function needsConfirmation(plan: TextEditPlan): boolean {
@@ -88,17 +104,27 @@ export function panelRows(input: ConfirmInput): { readonly rows: ConfirmRow[]; r
     const textById = new Map(input.parsed.objects.map(o => [o.id, o]));
     const planned = planRows({ diff: plan.diff, mm: input.mm, grammar: g, model: input.model, parsed: input.parsed,
         ...(input.referencedElsewhere ? { referencedElsewhere: input.referencedElsewhere } : {}) });
+    // TABFIX: the index follows the text, not the rows, which list the creations and the deletions apart; a deletion, which
+    // has no place in the text, comes after, in model order. A pair's two cells read one index.
+    const textAt = new Map(input.parsed.objects.map((o, i) => [o.id, i]));
+    const modelAt = new Map(input.model.map((o, i) => [o.id, i]));
+    const place = (r: PlanRow): number => (r.kind === 'delete' ? input.parsed.objects.length + (modelAt.get(r.model) ?? 0) : textAt.get(r.text) ?? 0);
+    const unnamed = (r: PlanRow): string | null => [r.kind === 'delete' ? undefined : textById.get(r.text), r.kind === 'create' ? undefined : modelById.get(r.model)].find(o => o && identityOf(g, o) === null)?.cls ?? null;
+    const inText = [...planned.rows].sort((a, b) => place(a) - place(b));
+    const indexes = homonymIndexes(inText.map(unnamed));
+    const indexOf = new Map(inText.map((r, k) => [r, indexes[k]]));
     const rows = planned.rows.map((r): ConfirmRow => {
+        const n = indexOf.get(r) ?? null;
         switch (r.kind) {
             case 'uncertain': {
                 const why = r.by === 'homonym' ? 'same name, paired by order' : r.by === 'rename' ? 'renamed' : 'same name, elsewhere in the model';
                 const reason = !r.ticked ? 'not paired: created and deleted' : r.features.length ? `${why}, changes ${r.features.join(', ')}` : why;
-                return { old: labelOf(g, modelById.get(r.model)), new: labelOf(g, textById.get(r.text)), reason, flagged: false,
+                return { old: labelOf(g, modelById.get(r.model), n), new: labelOf(g, textById.get(r.text), n), reason, flagged: false,
                     pairing: { text: r.text, model: r.model, score: r.score, ticked: r.ticked } };
             }
-            case 'change': return { old: labelOf(g, modelById.get(r.model)), new: labelOf(g, textById.get(r.text)), reason: `changed: ${r.features.join(', ')}`, flagged: false };
-            case 'create': return { old: '—', new: labelOf(g, textById.get(r.text)), reason: 'created', flagged: false };
-            case 'delete': return { old: labelOf(g, modelById.get(r.model)), new: null, reason: r.flagged ? 'deleted, referenced from another model' : 'deleted', flagged: r.flagged };
+            case 'change': return { old: labelOf(g, modelById.get(r.model), n), new: labelOf(g, textById.get(r.text), n), reason: `changed: ${r.features.join(', ')}`, flagged: false };
+            case 'create': return { old: '—', new: labelOf(g, textById.get(r.text), n), reason: 'created', flagged: false };
+            case 'delete': return { old: labelOf(g, modelById.get(r.model), n), new: null, reason: r.flagged ? 'deleted, referenced from another model' : 'deleted', flagged: r.flagged };
         }
     });
     return { rows, counts: planned.counts };

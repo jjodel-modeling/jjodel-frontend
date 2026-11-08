@@ -3099,3 +3099,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: non applicabile, tests only (T8d calibration bench)
 **Notes**: Rollback tag `pre-textual-t8d-calibration` on `d1daf6d2f` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0845/result.json`.
 **Prompt document name**: 2026-11-08 08:45
+
+## 2026-11-08 — fix(codegen): TABFIX, three Text tab candidate tickets (P-2026-11-08-0859)
+**Prompt**: `claude_2026-11-08_0859_prompt_textual_tab_fixes.md`: JjEL warnings survive a reprint, E2b highlight on open over an existing canvas selection, an index for unnamed homonyms in the T8c confirm panel.
+**Files touched**: `55ac2cc03` ui/TextualTab.tsx, __tests__/jjelIslands.test.ts; `c53f1419d` selectionSync.ts, ui/TextualTab.tsx, __tests__/selectionSync.test.ts; `eb6c08382` ui/TextConfirmPanel.tsx, __tests__/textDiff.test.ts (all under frontend/src/codegen/textual/); uncommitted: this entry, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — the JjEL recheck also runs on the first print on open, beyond "after a reprint"; file in scope, behaviour not. Six files, listed above, all inside the prompt's DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe 19/19 PASS on 3859 (DemoESM, red before the fixes), read from Monaco's markers, decorations and the DOM; crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/, checked by the session
+**Notes**: Selection read from `.react-flow__node.selected` (the event has no pull form): a node out of view is not in the DOM and is not read. No visibility hook: a hidden tab stays mounted and the listener covers it (not run in the app). Also rechecked on text brought back to agreed. Bench 19/19 killed. Gates: typecheck 0; vitest 3 baseline import reds; build 0; check:docs 0; codegen-lazy ALL GREEN.
+**Prompt document name**: 2026-11-08 08:59

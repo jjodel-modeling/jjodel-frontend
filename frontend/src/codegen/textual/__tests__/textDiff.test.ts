@@ -20,7 +20,7 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan } from '../printer';
 import { textualNotation } from '../syntaxRecord';
 import { diffText, planRows, planTextEdit } from '../textDiff';
-import TextConfirmPanel, { panelRows } from '../ui/TextConfirmPanel';
+import TextConfirmPanel, { homonymIndexes, panelRows } from '../ui/TextConfirmPanel';
 import type { TextConfirmPanelProps } from '../ui/TextConfirmPanel';
 import type { DiffOp, ObjectRef, PlanInput } from '../textDiff';
 import { defaultedSlots, referencedElsewhere } from '../textApply';
@@ -1085,5 +1085,68 @@ describe('applyTextEdit', () => {
         expect(await applyTextEdit('M', plan)).toEqual({ applied: 6, failed: 0 });
         expect(run.calls).toHaveLength(before + 1);
         expect(run.calls[before].script.split('\n')).toEqual(['set root.files -= readme', 'set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
+    });
+});
+
+describe('the index of unnamed homonyms in the confirm panel (lane TABFIX, P-2026-11-08-0859)', () => {
+    it('no homonyms: nothing indexed (dies on an index given to every entry)', () => {
+        expect(homonymIndexes([])).toEqual([]);
+        expect(homonymIndexes([null, null])).toEqual([null, null]);
+        expect(homonymIndexes(['Item'])).toEqual([null]);
+    });
+
+    it('two and three of a class read 1, 2 and 1, 2, 3 (dies on the count from 0, on the threshold at three)', () => {
+        expect(homonymIndexes(['Item', 'Item'])).toEqual([1, 2]);
+        expect(homonymIndexes(['Item', 'Item', 'Item'])).toEqual([1, 2, 3]);
+    });
+
+    it('two classes each with one: no index; each class counts on its own (dies on one counter for all classes)', () => {
+        expect(homonymIndexes(['Item', 'Tag'])).toEqual([null, null]);
+        expect(homonymIndexes(['Item', 'Tag', 'Item', 'Tag'])).toEqual([1, 1, 2, 2]);
+    });
+
+    it('named objects are untouched and do not count (dies on a named entry counted)', () => {
+        expect(homonymIndexes([null, 'Item', null])).toEqual([null, null, null]);
+        expect(homonymIndexes(['Item', null, 'Item'])).toEqual([1, null, 2]);
+    });
+
+    const itemsOf = (replacements: readonly (readonly [string, string])[]): [string, string | null][] => {
+        const { c, parsed, plan } = editAnon(replacements);
+        return panelRows({ plan, parsed, mm: c.mm, grammar: c.g, model: c.objects }).rows
+            .filter(r => r.old.startsWith('Item') || r.new?.startsWith('Item')).map(r => [r.old, r.new]);
+    };
+
+    it('one row keeps its label (dies on an index without a homonym)', () => {
+        expect(itemsOf([['size 10', 'size 20']])).toEqual([['Item (unnamed)', 'Item (unnamed)']]);
+    });
+
+    it('two rows read the same index in both cells (dies on the cells numbered apart, on the label not read)', () => {
+        expect(itemsOf([['size 10', 'size 20'], ['size 12', 'size 22']])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+        ]);
+    });
+
+    it('the index follows the text, not the rows: a creation written first reads 1, listed after the change (dies on the row order)', () => {
+        expect(itemsOf([['items {', 'items {\n    Item {\n      size 5\n    }'], ['size 12', 'size 22']])).toEqual([
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+            ['—', 'Item (unnamed) 1'],
+        ]);
+    });
+
+    it('uncertain pairings of unnamed objects read their index too, in both cells (dies on the pair rows left out)', () => {
+        const { c, parsed, plan } = editAnon([['size 10', 'size 20'], ['size 11', 'size 21']], { lost: ['i0', 'i1'] });
+        const rows = panelRows({ plan, parsed, mm: c.mm, grammar: c.g, model: c.objects }).rows.filter(r => r.pairing);
+        expect(rows.map(r => [r.old, r.new])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+        ]);
+    });
+
+    it('a deletion has no place in the text and comes after (dies on a deletion ordered first)', () => {
+        expect(itemsOf([['size 10', 'size 20'], [ITEM(12), '']])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', null],
+        ]);
     });
 });
