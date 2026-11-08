@@ -66,3 +66,16 @@ On Alfonso's «decidi tu» (2026-11-08 00:02) the chat closed the three open poi
 Every lane of this round is now on the trunk: F1a, F1b, F1c, F1d, F1e, E2b, D3c. No lane running, no scheduled check left.
 
 Next, on Alfonso's go: F2 (tracing, TEXTUAL_REVEAL), T8b after checking T8a, the tickets D2d, C2f, #682, E3 low, and the three candidate tickets above.
+
+## Update 2026-11-08 (night)
+
+On Alfonso's «decidi tu» (00:24) the chat continued with F2 and T8. All on the trunk and pushed.
+
+- F2, generated line to model line (P-2026-11-08-0027): new event TEXTUAL_REVEAL; a click on a generated span reveals and highlights the object or feature line in the Text tab without moving the caret; with the canvas echoing the same element the feature line wins (dedup by id). Merge 3da1b61e7, closure 90cd28003.
+- T8a, ids in the text (P-2026-11-08-0121): a style option prints `@id` comments on object head lines, off by default; the id is evidence 0 of the match, a repeated id pairs neither object and warns. printIds is not saved in the syntax record. Merge 94a55a92d, closure c8153d84a.
+- T8b, Export and Import (P-2026-11-08-0206): two toolbar actions in the Text tab; the export carries one `@id` per object; an import goes through the confirm panel and applies in one undo step. Merge 0322b765f, closure 3146847ed.
+- Two more Prompt-ID collisions, both refused by lane-run this time: 0057 with the dcn chat at start (T8a renumbered to 0121), 0151 with the instance-of chat at merge (retried at 0152). Evidence for ticket #720.
+
+New candidate ticket: the import confirm panel has no Cancel button (it closes on typing, a model change or a new Import).
+
+No lane running, no scheduled check left. Next on Alfonso's go: T8c (re-import dialog), T8d (calibration), tickets D2d, C2f, #682, E3 low, and the candidate tickets above.
