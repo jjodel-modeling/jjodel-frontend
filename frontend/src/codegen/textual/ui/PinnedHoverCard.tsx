@@ -36,6 +36,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const anchorRef = useRef<Monaco.IPosition | null>(null);
     const wantsFocusRef = useRef(false);
+    const hoverOptionRef = useRef<Monaco.editor.IEditorHoverOptions | null>(null);
     const host = useMemo(() => document.createElement('div'), []);
 
     const limitsNow = (): CardLimits => {
@@ -58,6 +59,11 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
         };
     }, [host, monaco]);
 
+    const restoreHover = (): void => {
+        if (hoverOptionRef.current) editor.updateOptions({ hover: hoverOptionRef.current });
+        hoverOptionRef.current = null;
+    };
+
     /** Focus inside the card would otherwise fall to the page with it. */
     const closeRef = useRef((): void => {});
     closeRef.current = () => {
@@ -65,6 +71,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
         if (root?.contains(root.ownerDocument.activeElement)) editor.focus();
         anchorRef.current = null;
         wantsFocusRef.current = false;
+        restoreHover();
         setCard(null);
     };
 
@@ -78,6 +85,9 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
             if (!cardLineInView(anchor.lineNumber, editor.getVisibleRanges(), editor.getLayoutInfo().height)) return;
             anchorRef.current = anchor;
             wantsFocusRef.current = true;
+            // Monaco's hover stays over the card while the pointer is on it; with these two off, the pointer's next move hides it.
+            hoverOptionRef.current ??= editor.getOption(monaco.editor.EditorOption.hover);
+            editor.updateOptions({ hover: { enabled: false, sticky: false } });
             setLimits(limitsNow());
             setCard(next);
         };
@@ -123,11 +133,15 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
             editor.onDidScrollChange(check),
             editor.onDidChangeHiddenAreas(check),
             editor.onDidLayoutChange(() => { check(); setLimits(limitsNow()); }),
+            // A microtask: Monaco's own listener has to see this move with the hover still off.
+            editor.onMouseMove(e => { if (!rootRef.current?.contains(e.target.element)) queueMicrotask(restoreHover); }),
         ];
         return () => subscriptions.forEach(s => s.dispose());
     }, [editor, monaco, open]);
 
     useEffect(() => { closeRef.current(); }, [notation]);
+
+    useEffect(() => restoreHover, [editor]);
 
     // Listeners on the node, not React props: the editor around the card must not see these keys or this wheel.
     useEffect(() => {
