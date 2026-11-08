@@ -419,7 +419,7 @@ class JjtlEvaluationContext extends EvaluationContext {
  * `success true`. Operands are marked when their operator node is evaluated, before them,
  * so the check is structural; JjEL reaches every subexpression through `evaluate`. The
  * receiver of a method call is marked the same way (P-2026-11-08-0835); a property read on
- * a demand is not, and stays a warning with `null` (R-FA-12).
+ * a demand is not, and reads `null` (R-FA-12).
  */
 class JjtlJjelEvaluator extends JjelEvaluator {
     private readonly operands = new WeakMap<JjelExpression, string>();
