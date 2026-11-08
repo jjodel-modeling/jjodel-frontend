@@ -18,9 +18,8 @@ import type { TextParseResult } from './parser';
 import { printTextModel } from './printer';
 import type { UnprintedObject } from './printer';
 import { planTextEdit } from './textDiff';
-import type { ApplyRefusal, DiffOp, PlanInput, TextEditPlan } from './textDiff';
+import type { ApplyRefusal, DiffOp, Pairing, PlanInput, TextEditPlan } from './textDiff';
 import { identityOf, textIdsOf } from './textMatch';
-import type { MatchInput } from './textMatch';
 import type { ConfirmRow } from './ui/TextConfirmPanel';
 
 /** What the import plans against: the model as the Text tab prints it. */
@@ -56,19 +55,20 @@ export function textFileName(modelName: string): string {
     return `${modelName || 'model'}.txt`;
 }
 
-/** A file's text planned against the model, with no carried spans; `confirmed` as in the Text tab's panel. */
+/** A file's text planned against the model, with no carried spans; `confirmed` and `unpaired` (T8c) as in the Text tab's panel. */
 export function planTextImport(base: TextImportBase, text: string, evidence: TextImportEvidence = {},
-                               confirmed?: readonly ApplyRefusal['code'][]): TextImport {
+                               confirmed?: readonly ApplyRefusal['code'][], unpaired?: readonly Pairing[]): TextImport {
     const parsed = parseText(text, base.grammar);
     const ids = parsed.tree ? textIdsOf(parsed.tree, base.grammar) : new Map<string, string>();
-    // `diffText` hands its input to `matchObjects` whole, so the ids reach the match through the plan's input.
-    const input: PlanInput & Pick<MatchInput, 'ids'> = {
+    // The ids are the diff input's evidence 0 (`DiffInput.ids`), which `diffText` hands to `matchObjects`.
+    const input: PlanInput = {
         mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: [],
         ...(ids.size ? { ids } : {}),
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
         ...(evidence.reserved ? { reserved: evidence.reserved } : {}),
         ...(confirmed ? { confirmed } : {}),
+        ...(unpaired?.length ? { unpaired } : {}),
     };
     return { text, parsed, plan: planTextEdit(input), ids };
 }

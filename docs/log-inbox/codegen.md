@@ -3043,3 +3043,18 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: D2d crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/ checked by the chat
 **Notes**: Rollback tag `pre-textual-d2d-suggest` on `bcd38ed2e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0803/result.json`.
 **Prompt document name**: 2026-11-08 08:03
+
+## 2026-11-08 — feat(codegen): T8c, the re-import dialog in the confirm panel (P-2026-11-08-0739)
+**Prompt**: `claude_2026-11-08_0739_prompt_textual_t8c_dialog.md` (R-TXT-55 F10) and its continuation `claude_2026-11-08_0802_prompt_textual_t8c_continuation.md` after the context ceiling: plan rows with scores, an unticked pairing applied as create plus delete, explicit `ids` field; the panel with counts, a checkbox and score per uncertain row, cross-model deletes in red, Cancel; one component for edit and re-import.
+**Files touched**: `frontend/src/codegen/textual/textDiff.ts`, `__tests__/textDiff.test.ts` in 66c612ab3; `ui/TextConfirmPanel.tsx`, `ui/TextualTab.tsx`, `textFile.ts` in acf1391ee; uncommitted: this entry, the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — the untick wiring in `ui/TextualTab.tsx` and `textFile.ts` (re-plan on tick, optional `unpaired` param of `planEdit` and `planTextImport`) goes beyond the DOVE's "ids field and Cancel wiring"; files in scope, function not.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe ALL PASS (run t8c-probe2), crops 1-counts, 2-uncertain, 3-untick, 4-cancel in `~/.jjodel-lanes/P-2026-11-08-0739/`
+**Notes**: Red first both commits; bench1 8/8, bench2 6/6 killed. Probe run 1 failed 1-counts by a probe bug (export lacks a trailing newline, the added Event fell into the last @id comment); fixed in probe.mjs, rerun ALL PASS. App: untick deletes by id and creates one Transition, one undo step; Cancel leaves model and undo stack unchanged. Gates: typecheck 0; vitest 3 baseline import reds, 2 load reds green alone (irCollapsedRender, laneBoard); build 0; check:docs 0; codegen-lazy ALL GREEN.
+**Prompt document name**: 2026-11-08 07:39
+
+**Ticket** (candidate, low): nameless homonyms all read `Transition (unnamed)` in the panel's model and text cells, so the user tells the rows apart only by order and score; a distinguishing label (e.g. event and next state) is a lane of its own.
