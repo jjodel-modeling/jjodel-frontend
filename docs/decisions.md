@@ -7953,44 +7953,44 @@ twelve questions of the discovery), `docs/discovery/discovery_2026-11-08_express
 front `plugins`. Measured case: `ddr4_closed_v.xmi` from the Micron prototype, 4269 objects of which 4020 fold under 246
 roots, 249 nodes left.
 
-- **R-EXP-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: measured, reversible: trunk).
+- **R-EXP-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk).
   **The expression catalog is the first plugin of R-PLG, made of data interpreted by the host.** It runs no plugin code
   and does not engage the R-PLG-2 worker: render needs the text synchronously. It amends R-PLG-11: instance-of follows
   on the same catalog format. Stored JjGen templates are budgeted JjEL, not `new Function`, so the unrun R-PLG-6 lane
   does not block it.
-- **R-EXP-2** (2026-11-08, ratified 23:39). **Roles:** infix {symbol, precedence, assoc, operands}, n-ary, unary,
+- **R-EXP-2** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Roles:** infix {symbol, precedence, assoc, operands}, n-ary, unary,
   literal, reference, call, conditional, case, bracket, pattern; a per-metaclass template is the escape hatch for what the
   roles do not cover.
-- **R-EXP-3** (2026-11-08, ratified 23:39). **The binding lives on the metamodel**, as a versioned record list in its
+- **R-EXP-3** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The binding lives on the metamodel**, as a versioned record list in its
   `_state`, key `exprBinding`, like `ontoBindings`; an unknown version is refused, unknown keys are preserved. It travels
   with the metamodel (the intent of R-VAL-10).
-- **R-EXP-4** (2026-11-08, ratified 23:39). **A viewpoint activates the fold; it does not own the binding.** This
+- **R-EXP-4** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A viewpoint activates the fold; it does not own the binding.** This
   corrects the chat's wording of 23:02 («the viewpoint declares the binding»).
-- **R-EXP-5** (2026-11-08, ratified 23:39, verified: measured). **The unit of folding is a slot, closed downward**
+- **R-EXP-5** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk). **The unit of folding is a slot, closed downward**
   (`Register.next`, `Wire.expr`, `Property.expr`, ...); a metaclass alone does not decide, because a class such as
   `ForEach` is both a design element and an expression.
-- **R-EXP-6** (2026-11-08, ratified 23:39). **The printer takes `parens: minimal | always` on the binding**, with a
+- **R-EXP-6** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The printer takes `parens: minimal | always` on the binding**, with a
   per-row override, and a sharing pass that names repeated subexpressions (`D1`, `D2`, ...).
-- **R-EXP-7** (2026-11-08, ratified 23:39). **Text is computed in one batch and memoised** on D-record identity; render
+- **R-EXP-7** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Text is computed in one batch and memoised** on D-record identity; render
   reads it and never calls a template per node.
-- **R-EXP-8** (2026-11-08, ratified 23:39, verified: measured). **For the Brief metamodel the reference is
+- **R-EXP-8** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk). **For the Brief metamodel the reference is
   `brief_view.py`, with `parens: always`**, held by a golden test on the 246 slots of `ddr4_closed_v`; `syncrtl-text.md`
   becomes the SyncRTL metamodel's own binding. «Decision 34» of the Micron prototype has no record; `brief_view.py` is
   normative until one appears. A change of the kernel view is followed by flipping the binding.
-- **R-EXP-9** (2026-11-08, ratified 23:39). **A problem or a selection on a folded object maps to its owner**, the
+- **R-EXP-9** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A problem or a selection on a folded object maps to its owner**, the
   message prefixed with the slot (`Register.next:`).
-- **R-EXP-10** (2026-11-08, ratified 23:39). **The first slice hides folded nodes and keeps their vertex records**;
+- **R-EXP-10** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The first slice hides folded nodes and keeps their vertex records**;
   removing them comes later, only if a measure asks for it, under a Layer Impact Report.
-- **R-EXP-11** (2026-11-08, ratified 23:39). **Automatic binding proposes and never chooses** among candidates
+- **R-EXP-11** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Automatic binding proposes and never chooses** among candidates
   (protocol of `profileBinder`).
-- **R-EXP-12** (2026-11-08, ratified 23:39). **A missing or invalid binding degrades explicitly** (R-PLG-7): the objects
+- **R-EXP-12** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A missing or invalid binding degrades explicitly** (R-PLG-7): the objects
   stay nodes and authoring says why.
-- **R-EXP-13** (2026-11-08, ratified 23:39). **Implementation choices of the discovery's questions 7, 8, 11, 12:** a new
+- **R-EXP-13** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Implementation choices of the discovery's questions 7, 8, 11, 12:** a new
   `TextSource` union member `{from:'expression', slot}` is allowed (additive, compiler-checked, rule 11); a small
   separate printer now, converging with `printer.ts` and `textSyntax` when editing arrives (R-TXT); parameters and
   properties as rows come in a later slice, not the first; no Ecore mirror of the binding yet, the Brief binding ships as
   a JSON import.
-- **R-EXP-14** (2026-11-08, ratified 23:39). **Slices in order:** S1 DDR4 readable (binding codec, printer, batch memo,
+- **R-EXP-14** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Slices in order:** S1 DDR4 readable (binding codec, printer, batch memo,
   slot fold by hide, `TextSource` kind, viewpoint activation, JSON import, golden test); S2 problems and selection on the
   owner; S3 expand and collapse with local layout; S4 removal of folded vertices, only on a measure, critical zone; S5
   rows for parameters and properties; S6 automatic binding and a binding panel (R-PLG-3); S7 editing through R-TXT.
