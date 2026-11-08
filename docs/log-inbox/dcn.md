@@ -344,3 +344,18 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 03:15
 
 **Ticket** (medium): `withInputs` (simRunState.ts:303) overlays only the values the net declares `input: true`; the arguments of a DCN invocation (entries[].inputs, element = the transition id) are not declared, so a value given for `dji.charge(rate)` is asked but may not reach the action. Not measured; the drone visual check uses `takeOff()`, which has no arguments.
+
+## 2026-11-08 — fix: a DCN run freezes its model, class shell flags read the stored field (P-2026-11-08-0345)
+**Prompt**: `claude_2026-11-08_0345_prompt_dcn_l45e_freeze.md`: Reset of the drone refused the run («The model cannot be frozen: an L proxy at ...superTypes.0.isAbstract»); root cause first, then the fix, probe acceptance, gates. The cause sat in `eval.ts`, outside DOVE: hard stop with a question, the chat (C-2026-11-06-2159) widened DOVE to the flag reads.
+**Files touched**: 53606f71c `frontend/scripts/probe/dcn-drone-run.ts`; 969670d5b `docs/discovery/discovery_2026-11-08_dcn_freeze_proxy.md`; db9d66ddf `frontend/src/jjscript/executor/commands/eval.ts`, `frontend/src/jjscript/executor/__tests__/classShellFlags.test.ts` (new); this entry; Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 03:40 (P-2026-11-08-0329, the drone run report)
+**Causa**: (c)
+**Regressions**: no. Gates at db9d66ddf: typecheck exit 0, typecheck:scripts exit 0, vitest 3 failed (the 3 known import reds) | 568 passed files, 15148 passed tests, build exit 0, check:docs exit 0
+**Out-of-scope changes**: yes (`eval.ts` and its new test were outside the prompt's DOVE; widened by the chat before the change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (probe acceptance, crops by the re-run of P-2026-11-08-0329)
+**Notes**: The chat widened DOVE to eval.ts (flag reads only). The fix is shared: the same builder serves Petri, DCN, JjScript eval and validation. Red test first (4/4 red, path Association.superTypes.0.isPartial); bench 8/8 killed. Probe: L45d-1 and L45d-2 pass, Reset Running, σ0 classified Mode=Charging, Alert=Safe; then it aborts on its own locator (/^tick/ vs the label dcn-tick). Detail: discovery_2026-11-08_dcn_freeze_proxy.md.
+**Prompt document name**: 2026-11-08 03:45
+
+**Ticket** (medium): `dcn-drone-run.ts` presses the tick with `/^tick/i`, but the DCN inputs row labels it `dcn-tick` (MEAS `inputs row`), so the probe aborts after L45d-2 with a 30 s click timeout. Causa line: a latent bug in the shared builder (`isAbstract`/`isInterface`/`isPartial` have no getter and resolve to a same-named child); `cls.partial` falls back to the child again when the D field is unset (read, not measured).
