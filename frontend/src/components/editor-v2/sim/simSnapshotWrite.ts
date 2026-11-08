@@ -12,9 +12,11 @@
  *   `syncCreateObject`, then `syncCreateCompositionLink`. Through `DObject.new`, with
  *   no outer TRANSACTION, not `addObject`: its uniqueness gate would refuse the
  *   `Slot_0` of a second instance while every object is still a root.
- * - No DVertex and no DVoidEdge here: on open, Step 2bis of `useJjomSync` gives a
- *   vertex to every object without one, and no tab is opened (Rule 21 is why this
- *   is not `createM1`).
+ * - The snapshot keeps the source's layout (P-2026-11-08-2320): one DVertex per object
+ *   with a source vertex, its seed and its records per viewpoint copied, with no outer
+ *   TRANSACTION (Rule 12). No DVoidEdge here. On open, Step 2bis of `useJjomSync` gives a
+ *   vertex to every object still without one, and no tab is opened (Rule 21 is why
+ *   this is not `createM1`).
  * - One write per slot: σ replaces what the model wrote before anything is sent,
  *   so no write depends on the order of two others to the same path.
  *
@@ -26,6 +28,7 @@ import { compileDcn } from '../../../model/simulation/dcn/dcnCompile';
 import type { DcnSlot } from '../../../model/simulation/dcn/dcnCompile';
 import type { OntoBinding } from '../../../model/ontological/bindingCodec';
 import type { SimValue } from '../../../model/simulation/netTypes';
+import type { VertexLayout } from '../viewpoint/layout/vertexLayout';
 import { dcnInputOf } from '../problems/dcnToProblems';
 import { collectModelObjectIds } from './simBridge';
 import { dcnRunOf } from './simDcnRuns';
@@ -47,6 +50,8 @@ export interface SnapshotWriteHost {
     createModel(name: string, metamodelId: string): string;
     /** A new root of `modelId`. Returns its id; the store may not have it yet. */
     createObject(classId: string, modelId: string, name: string | undefined): string;
+    /** A vertex of `objectId` in the graph of the new model. Returns its id. Absent: no vertex is made, Step 2bis lays the snapshot out. */
+    createVertex?(objectId: string, layout: SnapshotVertexLayout): string;
     /** Runs writes of slots only, no creator, as one store update. */
     batch(writes: () => void): void;
     writeReference(slotId: string, ids: readonly string[]): void;
@@ -55,6 +60,22 @@ export interface SnapshotWriteHost {
     endUndoGroup(): void;
     sleep(ms: number): Promise<void>;
     now(): number;
+}
+
+/** What a vertex of the snapshot copies from the source's: the seed and the records per viewpoint (`vertexLayout.ts`). */
+export interface SnapshotVertexLayout {
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+    readonly isResized: boolean;
+    readonly layoutByViewpoint?: Readonly<Record<string, VertexLayout>>;
+}
+
+export interface SnapshotVertexCopy {
+    /** The key of the object in the plan. */
+    readonly key: string;
+    readonly layout: SnapshotVertexLayout;
 }
 
 export interface SnapshotWriteResult {
@@ -120,7 +141,9 @@ function holds(raw: unknown, expected: readonly unknown[]): boolean {
  * Executes `plan` as a new M1 model of `metamodelId`, one undo entry. Never rejects:
  * what did not happen is in `problems`, and `ok` is false.
  */
-export async function writeSnapshot(plan: SnapshotPlan, metamodelId: string, host?: SnapshotWriteHost): Promise<SnapshotWriteResult> {
+export async function writeSnapshot(
+    plan: SnapshotPlan, metamodelId: string, host?: SnapshotWriteHost, vertices: readonly SnapshotVertexCopy[] = [],
+): Promise<SnapshotWriteResult> {
     const h = host ?? await liveHost();
     const problems: string[] = [];
     let modelId: string | null = null;
@@ -165,6 +188,17 @@ export async function writeSnapshot(plan: SnapshotPlan, metamodelId: string, hos
             // Its own deadline: a slot that never came has spent `until`, and what was sent must still land inside the group.
             const landedUntil = h.now() + SNAPSHOT_DEADLINE_MS;
             if (!(await settle(h, landed, landedUntil))) problems.push('some values never landed');
+            // One by one, no outer TRANSACTION (Rule 12), as Step 2bis.
+            const made: string[] = [];
+            for (const { key, layout } of vertices) {
+                const object = ids.get(key);
+                if (h.createVertex && object !== undefined && lookup[object]) made.push(h.createVertex(object, layout));
+            }
+            const drawn = () => {
+                const now = h.lookup();
+                return made.every(id => !!now[id]);
+            };
+            if (!(await settle(h, drawn, landedUntil))) problems.push('some vertices never landed');
             await quiet(h, landedUntil);
         } else {
             problems.push('the new model never reached the store');
@@ -217,6 +251,49 @@ export function snapshotInputOf(
     };
 }
 
+/** The layout of every vertex of the `v2-flow` graph of `modelId`, by object id. */
+export function sourceVertexLayouts(lookup: Lookup, modelId: string): Map<string, SnapshotVertexLayout> {
+    const layouts = new Map<string, SnapshotVertexLayout>();
+    for (const v of Object.values(lookup)) {
+        if (v?.className !== 'DVertex' || typeof v.model !== 'string') continue;
+        const graph = lookup[v.graph];
+        if (graph?.model !== modelId || graph.graphStyle !== 'v2-flow') continue;
+        const records = v.layoutByViewpoint && Object.keys(v.layoutByViewpoint).length > 0 ? v.layoutByViewpoint : undefined;
+        layouts.set(v.model, { x: v.x, y: v.y, w: v.w, h: v.h, isResized: !!v.isResized, ...(records ? { layoutByViewpoint: records } : {}) });
+    }
+    return layouts;
+}
+
+/**
+ * The vertices `plan` copies, by plan key. A create names no source id: it takes the
+ * source object with its owner, class and name, in the plan's order, owners first.
+ * An object the plan added matches nothing and is left to Step 2bis.
+ */
+export function vertexCopiesOf(
+    plan: SnapshotPlan, objects: readonly SnapshotSourceObject[], layouts: ReadonlyMap<string, SnapshotVertexLayout>,
+): SnapshotVertexCopy[] {
+    const known = new Set(objects.map(o => o.id));
+    const identity = (owner: string | null, classId: string, name: unknown) => JSON.stringify([owner, classId, name ?? null]);
+    const sources = new Map<string, string[]>();
+    for (const o of objects) {
+        const id = identity(o.owner !== null && known.has(o.owner) ? o.owner : null, o.classId, o.name);
+        sources.set(id, [...(sources.get(id) ?? []), o.id]);
+    }
+    const sourceOf = new Map<string, string>();
+    const copies: SnapshotVertexCopy[] = [];
+    for (const op of plan.operations) {
+        if (op.op !== 'create') continue;
+        if (op.ownerKey !== null && !sourceOf.has(op.ownerKey)) continue;
+        const owner = op.ownerKey === null ? null : sourceOf.get(op.ownerKey) as string;
+        const source = sources.get(identity(owner, op.classId, op.name))?.shift();
+        if (source === undefined) continue;
+        sourceOf.set(op.key, source);
+        const layout = layouts.get(source);
+        if (layout) copies.push({ key: op.key, layout });
+    }
+    return copies;
+}
+
 function refused(reason: string): SnapshotWriteResult {
     return { ok: false, modelId: null, name: null, unwritten: [], problems: [reason] };
 }
@@ -239,14 +316,17 @@ export async function saveRunSnapshot(modelId: string, step: number, host?: Snap
     if (!roles) return refused('the binding does not name the slot roles');
     const compiled = compileDcn({ modelId, stc: found.stc, binding: found.binding, view: found.view, features: found.features });
     const sigma: ReadonlyMap<string, ReadonlyMap<string, SimValue>> = config.state.attrs;
-    const plan = planSnapshot(snapshotInputOf(lookup, modelId, step, sigma, roles, compiled.slots));
-    return writeSnapshot(plan, String(lookup[modelId]?.instanceof ?? ''), h);
+    const input = snapshotInputOf(lookup, modelId, step, sigma, roles, compiled.slots);
+    const plan = planSnapshot(input);
+    return writeSnapshot(plan, String(lookup[modelId]?.instanceof ?? ''), h, vertexCopiesOf(plan, input.objects, sourceVertexLayouts(lookup, modelId)));
 }
 
 /** The store, loaded on first use. */
 async function liveHost(): Promise<SnapshotWriteHost> {
     const [joiner, history] = await Promise.all([import('../../../joiner'), import('../../../redux/reducer/reducer')]);
-    const { Constructors, DGraph, DModel, DObject, LPointerTargetable, LProject, SetFieldAction, SetRootFieldAction, TRANSACTION, store } = joiner;
+    const { Constructors, DGraph, DModel, DObject, DVertex, GraphSize, LPointerTargetable, LProject, SetFieldAction, SetRootFieldAction, TRANSACTION, store } = joiner;
+    // Kept from the creation: `DGraph_makeID` counts, a second call names another graph.
+    let graphId = '';
     return {
         lookup: () => (store.getState() as any)?.idlookup ?? {},
         // The sequence of `ProjectEditor.tsx` (DModel.new, DGraph.new, the registrations); DModel.new applies `uniqueModelName`.
@@ -257,6 +337,7 @@ async function liveHost(): Promise<SnapshotWriteHost> {
                 const dModel = DModel.new(name, metamodelId as any, false, true);
                 modelId = dModel.id;
                 const dGraph = DGraph.new(0, dModel.id, undefined, undefined, Constructors.DGraph_makeID(dModel.id));
+                graphId = dGraph.id;
                 SetFieldAction.new(dGraph.id, 'graphStyle' as any, 'v2-flow', '', false);
                 SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
                 SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
@@ -265,6 +346,12 @@ async function liveHost(): Promise<SnapshotWriteHost> {
             return modelId;
         },
         createObject: (classId, modelId, name) => DObject.new(classId as any, modelId as any, DModel, name, true).id,
+        createVertex: (objectId, layout) => {
+            const vertex = DVertex.new(0, objectId as any, graphId as any, graphId as any, undefined, new GraphSize(layout.x, layout.y, layout.w, layout.h));
+            if (layout.isResized) SetFieldAction.new(vertex.id, 'isResized' as any, true, '', false);
+            if (layout.layoutByViewpoint) SetFieldAction.new(vertex.id, 'layoutByViewpoint' as any, { ...layout.layoutByViewpoint }, '+=', false);
+            return vertex.id;
+        },
         batch: writes => { TRANSACTION('Save snapshot: write values', writes); },
         writeReference: (slotId, ids) => { (LPointerTargetable.fromPointer(slotId as any) as any).values = [...ids]; },
         writeAttribute: (slotId, values) => {

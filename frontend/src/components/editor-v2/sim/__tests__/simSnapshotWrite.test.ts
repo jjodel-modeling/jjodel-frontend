@@ -7,9 +7,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { saveRunSnapshot, snapshotInputOf, snapshotRolesOf, writeSnapshot } from '../simSnapshotWrite';
-import type { SnapshotWriteHost } from '../simSnapshotWrite';
-import type { SnapshotOperation, SnapshotPlan, SnapshotRoles, SnapshotUnwritten } from '../simSnapshot';
+import { saveRunSnapshot, snapshotInputOf, snapshotRolesOf, sourceVertexLayouts, vertexCopiesOf, writeSnapshot } from '../simSnapshotWrite';
+import type { SnapshotVertexLayout, SnapshotWriteHost } from '../simSnapshotWrite';
+import { planSnapshot } from '../simSnapshot';
+import type { SnapshotOperation, SnapshotPlan, SnapshotRoles, SnapshotSourceObject, SnapshotUnwritten } from '../simSnapshot';
 import type { OntoBinding } from '../../../../model/ontological/bindingCodec';
 
 type Lookup = Record<string, any>;
@@ -28,6 +29,10 @@ interface FakeOptions {
     readonly slotsLagMs?: number;
     /** A store change this long after the batch of writes has landed, with nothing to wait on. */
     readonly lateChangeMs?: number;
+    /** A host that makes vertices; `drop`: sent, never in the store. */
+    readonly vertices?: 'draw' | 'drop';
+    /** Objects of this class are asked for and never reach the store. */
+    readonly neverLands?: string;
 }
 
 function fakeHost(options: FakeOptions) {
@@ -35,6 +40,7 @@ function fakeHost(options: FakeOptions) {
     let t = 0;
     let changedAt = 0;
     let created = 0;
+    let drawn = 0;
     const log: string[] = [];
     const ended: Array<{ at: number; changedAt: number; pending: number; lookup: Lookup }> = [];
     const queue: Array<{ at: number; apply: (l: Lookup) => void }> = [];
@@ -62,6 +68,7 @@ function fakeHost(options: FakeOptions) {
             if (classId === options.throwOnCreate) throw new Error('create failed');
             const id = `o${++created}`;
             log.push(`create ${id} ${classId} ${name ?? ''}`.trim());
+            if (classId === options.neverLands) return id;
             const slots = Object.entries(options.classes[classId] ?? {});
             const addSlots = (l: Lookup) => {
                 l[id] = { id, features: slots.map(([feature]) => `${id}.${feature}`) };
@@ -74,6 +81,14 @@ function fakeHost(options: FakeOptions) {
             }
             return id;
         },
+        ...(options.vertices ? {
+            createVertex(objectId: string, layout: SnapshotVertexLayout) {
+                const id = `v${++drawn}`;
+                log.push(`vertex ${objectId} ${layout.x},${layout.y}`);
+                if (options.vertices === 'draw') send(l => { l[id] = { id, model: objectId }; });
+                return id;
+            },
+        } : {}),
         batch(writes) {
             log.push('batch');
             writes();
@@ -322,5 +337,96 @@ describe('snapshotInputOf', () => {
         const root = input.objects.find(o => o.id === 'root');
         expect(root?.classId).toBe('cls');
         expect(root?.name).toBe('dji');
+    });
+});
+
+describe('the layout of the snapshot', () => {
+    const box = (x: number): SnapshotVertexLayout => ({ x, y: 20, w: 200, h: 120, isResized: false });
+    const source = (id: string, classId: string, name: string | undefined, owner: string | null): SnapshotSourceObject => (
+        { id, classId, name, owner, attributes: [], references: [] });
+    const created = (key: string, classId: string, name: string, ownerKey: string | null): SnapshotOperation => ({ op: 'create', key, classId, name, ownerKey });
+    const roles: SnapshotRoles = { slotClass: 'S', slotContainer: 'sc', definingFeature: 'df', valueHolder: 'vh', featureType: 'ft', valueKinds: [] };
+    const planned = (objects: SnapshotSourceObject[]) => planSnapshot({ modelName: 'm', step: 1, objects, roles, sigma: new Map(), slots: new Map() });
+    const copyAt = (copies: ReturnType<typeof vertexCopiesOf>, key: string) => copies.find(c => c.key === key)?.layout.x;
+
+    it('reads the v2-flow graph of the model only (dropping either graph test takes the other vertex)', () => {
+        const lookup: Lookup = {
+            flow: { model: 'm', graphStyle: 'v2-flow' },
+            classic: { model: 'm', graphStyle: '' },
+            other: { model: 'x', graphStyle: 'v2-flow' },
+            v1: { className: 'DVertex', model: 'o1', graph: 'flow', x: 1, y: 2, w: 3, h: 4, isResized: false },
+            v2: { className: 'DVertex', model: 'o2', graph: 'classic', x: 9, y: 9, w: 9, h: 9 },
+            v3: { className: 'DVertex', model: 'o3', graph: 'other', x: 9, y: 9, w: 9, h: 9 },
+            v4: { className: 'DVoidEdge', model: 'o4', graph: 'flow', x: 9, y: 9, w: 9, h: 9 },
+        };
+        expect([...sourceVertexLayouts(lookup, 'm').entries()]).toEqual([['o1', { x: 1, y: 2, w: 3, h: 4, isResized: false }]]);
+    });
+
+    it('copies the seed, isResized and the records; an empty dictionary is no record', () => {
+        const record = { x: 60, y: 2600, w: 200, h: 120, isResized: false };
+        const lookup: Lookup = {
+            g: { model: 'm', graphStyle: 'v2-flow' },
+            v1: { className: 'DVertex', model: 'o1', graph: 'g', x: 50, y: 6650, w: 200, h: 120, isResized: true, layoutByViewpoint: { vp: record } },
+            v2: { className: 'DVertex', model: 'o2', graph: 'g', x: 1, y: 2, w: 3, h: 4, layoutByViewpoint: {} },
+        };
+        const layouts = sourceVertexLayouts(lookup, 'm');
+        expect(layouts.get('o1')).toEqual({ x: 50, y: 6650, w: 200, h: 120, isResized: true, layoutByViewpoint: { vp: record } });
+        expect(layouts.get('o2')).toEqual({ x: 1, y: 2, w: 3, h: 4, isResized: false });
+    });
+
+    it('maps through the keys of a real plan when a child precedes its owner (matching by position in the input swaps them)', () => {
+        const objects = [source('c1', 'Slot', 's', 'B'), source('B', 'C', 'b', 'model'), source('A', 'C', 'a', 'model'), source('c2', 'Slot', 't', 'A')];
+        const plan = planned(objects);
+        const keyOf = (name: string) => (plan.operations.find(op => op.op === 'create' && op.name === name) as { key: string }).key;
+        const layouts = new Map([['c1', box(1)], ['B', box(2)], ['A', box(3)], ['c2', box(4)]]);
+        const copies = vertexCopiesOf(plan, objects, layouts);
+        expect(copies).toHaveLength(4);
+        expect([copyAt(copies, keyOf('s')), copyAt(copies, keyOf('b')), copyAt(copies, keyOf('a')), copyAt(copies, keyOf('t'))]).toEqual([1, 2, 3, 4]);
+    });
+
+    it('keeps two namesakes under two owners apart (dropping the owner from the identity swaps them)', () => {
+        const objects = [source('b', 'C', 'b', 'model'), source('a', 'C', 'a', 'model'), source('s1', 'Slot', 'Slot_0', 'a'), source('s2', 'Slot', 'Slot_0', 'b')];
+        const operations = [created('kb', 'C', 'b', null), created('ka', 'C', 'a', null), created('ksb', 'Slot', 'Slot_0', 'kb'), created('ksa', 'Slot', 'Slot_0', 'ka')];
+        const copies = vertexCopiesOf(plan(operations), objects, new Map([['s1', box(1)], ['s2', box(2)]]));
+        expect([copyAt(copies, 'ksa'), copyAt(copies, 'ksb')]).toEqual([1, 2]);
+    });
+
+    it('gives no copy to an object with no source vertex, to one the plan added, or to what the plan added under it', () => {
+        const objects = [source('a', 'C', 'a', 'model'), source('b', 'C', 'b', 'model'), source('c', 'C', 'c', 'model')];
+        const operations = [created('ka', 'C', 'a', null), created('add', 'C', 'new', null), created('under', 'C', 'b', 'add'), created('kb', 'C', 'b', null), created('kc', 'C', 'c', null)];
+        const copies = vertexCopiesOf(plan(operations), objects, new Map([['a', box(1)], ['b', box(3)], ['new', box(2)]]));
+        expect(copies.map(c => c.key)).toEqual(['ka', 'kb']);
+    });
+
+    it('tells siblings apart by name and by class when the plan orders them otherwise (dropping either from the identity swaps them)', () => {
+        const objects = [source('n1', 'C', 'a', 'model'), source('n2', 'C', 'b', 'model'), source('c1', 'D', 'z', 'model'), source('c2', 'E', 'z', 'model')];
+        const operations = [created('kn2', 'C', 'b', null), created('kn1', 'C', 'a', null), created('kc2', 'E', 'z', null), created('kc1', 'D', 'z', null)];
+        const copies = vertexCopiesOf(plan(operations), objects, new Map([['n1', box(1)], ['n2', box(2)], ['c1', box(3)], ['c2', box(4)]]));
+        expect(['kn1', 'kn2', 'kc1', 'kc2'].map(k => copyAt(copies, k))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('makes the vertices inside the undo group, out of the batch, and closes after they land (moving the loop in the batch or past the wait fails)', async () => {
+        const { host, log, ended } = fakeHost({ classes: CLASSES, vertices: 'draw' });
+        const result = await writeSnapshot(plan([create('k1', 'A', 'x'), attr('k1', 'f', [3])]), 'mm', host, [{ key: 'k1', layout: box(7) }]);
+        expect(result.ok).toBe(true);
+        expect(log.indexOf('vertex o1 7,20')).toBeGreaterThan(log.indexOf('batch end'));
+        expect(log.indexOf('vertex o1 7,20')).toBeLessThan(log.indexOf('end'));
+        expect(ended[0].lookup.v1).toEqual({ id: 'v1', model: 'o1' });
+        expect(ended[0].pending).toBe(0);
+    });
+
+    it('reports a vertex that never lands (a missing wait reports nothing)', async () => {
+        const { host } = fakeHost({ classes: CLASSES, vertices: 'drop' });
+        const result = await writeSnapshot(plan([create('k1', 'A', 'x')]), 'mm', host, [{ key: 'k1', layout: box(7) }]);
+        expect(result.ok).toBe(false);
+        expect(result.problems).toEqual(['some vertices never landed']);
+    });
+
+    it('leaves the layout to Step 2bis for a host with no createVertex, and for an object that never landed', async () => {
+        const without = fakeHost({ classes: CLASSES });
+        expect((await writeSnapshot(plan([create('k1', 'A', 'x')]), 'mm', without.host, [{ key: 'k1', layout: box(7) }])).ok).toBe(true);
+        const lost = fakeHost({ classes: CLASSES, vertices: 'draw', neverLands: 'A' });
+        await writeSnapshot(plan([create('k1', 'A', 'x')]), 'mm', lost.host, [{ key: 'k1', layout: box(7) }]);
+        expect(lost.log.filter(l => l.startsWith('vertex'))).toEqual([]);
     });
 });
