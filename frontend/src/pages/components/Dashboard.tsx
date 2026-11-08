@@ -42,6 +42,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import { importJjodelFiles } from '../../api/persistance/jjodelImport';
+import { useDashboardFileDrag } from './useDashboardFileDrag';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
@@ -259,7 +260,7 @@ type ProjectDashboardProps = {
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
-    const [isDragging, setIsDragging] = useState(false);
+    const fileDrag = useDashboardFileDrag(active);
 
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.
@@ -269,28 +270,24 @@ function GenericDashboard(props: DashProps): any {
         }));
     }, []);
 
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        fileDrag.trackDrag('dragenter', e);
+    };
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        const items = e.dataTransfer.items;
-        if (items.length > 0) {
-            const item = items[0];
-            if (item.kind === 'file') {
-                setIsDragging(true);
-            }
-        }
+        fileDrag.trackDrag('dragover', e);
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
-        // Only set to false if leaving the container (not entering a child)
-        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
-            setIsDragging(false);
-        }
+        fileDrag.trackLeave(e);
     };
 
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
-        setIsDragging(false);
+        fileDrag.trackDrop();
 
         // preventDefault stays on every page, so a drop never leaves the app; only All Projects imports.
         if (active !== 'All') return;
@@ -312,14 +309,15 @@ function GenericDashboard(props: DashProps): any {
     return (<>
         <Navbar />
         <div
-            className={`dashboard-container ${layoutClass} ${isDragging ? 'is-dragging' : ''}`}
+            className={`dashboard-container ${layoutClass} ${fileDrag.active ? 'is-dragging' : ''}`}
             tabIndex={-1}
+            onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
+            <div ref={fileDrag.contentRef} className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
                 {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row.
                     Templates and Explore render a centered ComingSoonPlaceholder with its own title,
                     so we suppress the top-bar Title here to avoid duplication. */}
@@ -335,12 +333,11 @@ function GenericDashboard(props: DashProps): any {
             </div>
 
             {/* Drop Overlay */}
-            {isDragging && (
-                <div className="drop-overlay">
-                    <div className="drop-zone">
-                        <i className="bi bi-cloud-arrow-up" />
-                        <p>Drop .jjodel file to import</p>
-                    </div>
+            {fileDrag.active && fileDrag.overlayBox && (
+                <div className="dashboard-drop-overlay" style={fileDrag.overlayBox} aria-hidden="true">
+                    <div className="dashboard-drop-overlay__icon"><i className="bi bi-upload" /></div>
+                    <div className="dashboard-drop-overlay__title">Drop to import</div>
+                    <div className="dashboard-drop-overlay__text">Release to add the project to your library. Only .jjodel files are imported, anything else is skipped.</div>
                 </div>
             )}
         </div>
