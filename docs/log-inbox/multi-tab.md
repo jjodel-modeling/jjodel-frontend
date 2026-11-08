@@ -348,3 +348,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (app probes at 1600 and 1280, L6c 24/24 four runs; Alfonso's visual check due; L6d 45/45 four runs, Alfonso's visual GO 2026-11-08 21:55)
 **Notes**: Typecheck 0, build 0, check:docs 0, vitest 12 files 147 passed. 1729, from Alfonso's look at the 1633 crops: the rail stood between the tabs; `0189a0928` puts its column after the last panel, at the window's edge. Split 3/3 at 1600 and 1280; single tab and Refactoring split same as 1633; demo 15/15. The divider was not dead (1608's probe). R-MT-26 kept every control. Tables and limits: `discovery_2026-11-08_l6b_beside_layout.md`. L6c: `discovery_2026-11-08_l6c_single_palette.md`.
 **Prompt document name**: 2026-11-08 17:29
+
+## 2026-11-08 — merge: multi-tab-l6b into alfonso-frontend-jjtl (P-2026-11-08-2223)
+**Prompt**: `claude_2026-11-08_2223_prompt_merge_multi-tab-l6b.md`, lane full (merge; zero conflicts measured): bring `multi-tab-l6b` at bc55c840b into the trunk with one `--no-ff` merge commit of the explicit sha, merge base f081ad4f2; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 5a9887622 (merge), 22 files — `frontend/src/components/abstract/DockManager.tsx`, `abstract/style.scss`, `editor-v2/EditorV2.scss`, `EditorV2.tsx`, `Toolbar.tsx`, `hooks/useCanvasSplit.ts`, `panels/PalettePanel.tsx`, `utils/canvasSplit.ts` and its test, `editors/properties-with-tree-view.scss`, `pages/components/Navbar.tsx`, three discovery notes (L6b, L6c, L6e), seven prompts, `docs/log-inbox/multi-tab.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 586 passed files, 15565 passed, 0 failed and 3 skipped (15568, expected 15546 + 22): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 22, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat smoke 23:02: 3001 serves the trunk, index, EditorV2.tsx and DockManager.tsx transform with 200; Alfonso's visual GO on the same code on 3061 at 21:55)
+**Notes**: No conflict, no union; all probes as expected. Trunk tip full vitest: 2 load reds under concurrent runs (laneRun timeout, outline 10 ms), both green alone; none on the merge. The first trunk hook run went to the background on timeout: stopped, re-run in the foreground. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change). Rule 16: active log read only at closure. Tip moved after the merge by docs-only 6fea9e8e2 (P-2026-11-08-2230), another chat.
+**Prompt document name**: 2026-11-08 22:23
