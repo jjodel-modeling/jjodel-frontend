@@ -168,6 +168,8 @@ export const IncludedModelsCombobox: React.FC<IncludedModelsComboboxProps> = ({
         onAdd(option.id);
         setQuery('');
         setHighlight(0);
+        // The last one: nothing is left to offer, and removing a pill must not bring the list back
+        if (availableOptions(candidates, selected, '').length === 1) setIsOpen(false);
     };
 
     const remove = (id: string) => {

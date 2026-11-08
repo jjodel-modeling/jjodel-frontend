@@ -170,7 +170,7 @@ $transition-fast: 150ms ease;
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    height: var(--form-input-height);
+    height: 38px; // What the primary select above it measures: Bootstrap's .form-select, not --form-input-height
     padding: 0 $spacing-md 0 $spacing-sm;
     overflow: hidden;
     background: var(--form-input-bg);
