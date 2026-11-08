@@ -41,6 +41,8 @@ import { useValidationFreshness } from './problems/ValidationFreshnessSync';
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
 
 interface ToolbarProps {
+    /** The inactive pane of a split: every control disabled, tooltips kept (P-2026-11-08-2045). */
+    commandsDisabled?: boolean;
     snapEnabled: boolean;
     onToggleSnap: () => void;
     // TODO: cleanup — `onFitView` has had no call site since the fit button left the
@@ -232,6 +234,7 @@ const AlignIcons = {
 };
 
 function Toolbar({
+    commandsDisabled,
     snapEnabled,
     onToggleSnap,
     onFitView,
@@ -845,6 +848,8 @@ function Toolbar({
 
     return (
         <div className="editor-v2-toolbar">
+            {/* The inactive pane of a split disables every control at once; display: contents leaves the toolbar's layout as it is. */}
+            <fieldset className="editor-v2-toolbar__commands" disabled={!!commandsDisabled}>
             {/* ── Actions / Alignment group (swaps in-place) ── */}
             {selectedCount >= 2 && onAlignLeft ? (
                 <div className="toolbar-group toolbar-group--align">
@@ -1330,6 +1335,7 @@ function Toolbar({
                     </div>
                 </div>
             )}
+            </fieldset>
         </div>
     );
 }

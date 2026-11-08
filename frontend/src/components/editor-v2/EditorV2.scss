@@ -28,6 +28,11 @@
     }
 }
 
+// Where the active pane's palette lands in a split (multi-tab L6c): no box of its own, the palette stays a flex child of the editor.
+.editor-v2-palette-slot {
+    display: contents;
+}
+
 .editor-v2__main {
     flex: 1;
     display: flex;
@@ -343,6 +348,16 @@
 // only wrong about it INSIDE this bar. Hence the descendant selector — (0,2,0) beats
 // their (0,1,0), which is what lets one `!important` override another — and hence no
 // edit to two sheets whose other consumers are fine as they are.
+// Wraps the toolbar's controls so the inactive pane of a split can disable them at once; adds no box of its own.
+.editor-v2-toolbar__commands {
+    display: contents;
+
+    &:disabled button {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+}
+
 .editor-v2-toolbar {
     // The groups themselves must be able to shrink before anything inside them can.
     .toolbar-group,
@@ -1171,6 +1186,145 @@ html[data-mode="advanced"] .editor-v2-toolbar {
     }
 }
 
+// ── Two canvases side by side (R-MT-24, P-2026-11-08-1608) ──
+//
+// The ladder of "Canvas zone under pressure" has floors, and half a window is below them:
+// measured at 1600 with the rail at 400, 38 pairs of controls overlapped. So in this split
+// only the bar is a size container (nowhere else: a single tab and the Refactoring split
+// never match) and under 1100px, the hard content plus the rail cell, every word goes and
+// its `title` stays: the group labels, the two dropdowns down to their chevron, the
+// viewpoint's name, the validation state. No control goes (R-MT-26): what still does not fit
+// scrolls inside the bar, and the right pane's rail cell stays over the rail while it does.
+// A rule on the bar itself cannot sit in the query, which only reaches the container's
+// descendants.
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) {
+    .editor-v2-toolbar {
+        container: jj-beside-bar / inline-size;
+        gap: 2px;
+        padding: 0 12px 0 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+    }
+
+    // Under the last pane the rail is the cell's column, so the cell does not scroll away:
+    // it covers what passes behind it, and that part of the bar is out of the scrollport.
+    > .dock-panel:last-child {
+        .editor-v2-toolbar {
+            scroll-padding-right: var(--jj-rail-width, 0px);
+        }
+
+        .toolbar-rail-cell {
+            position: sticky;
+            // Sticky measures from inside the scroller's padding: back over the bar's 12px.
+            right: -12px;
+            background: var(--surface-1, #f8fafc);
+        }
+    }
+
+    // No rail lies under the first pane: its cell is not a column header, only the badge
+    // of the model, with the name in the `title` of `.toolbar-identity`.
+    > .dock-panel:first-child {
+        .toolbar-rail-cell {
+            width: auto;
+            margin-left: 2px;
+            padding: 0 0 0 6px;
+        }
+
+        .toolbar-identity__name,
+        .toolbar-identity__chevron {
+            display: none;
+        }
+    }
+}
+
+@container jj-beside-bar (max-width: 1100px) {
+    .editor-v2-toolbar {
+        .toolbar-group__label,
+        .toolbar-separator,
+        .toolbar-dropdown-btn > span,
+        .toolbar-viewpoint-trigger__label {
+            display: none;
+        }
+
+        .toolbar-group,
+        .toolbar-viewpoint-group,
+        .toolbar-viewpoint-selector {
+            flex: none;
+            gap: 1px;
+        }
+
+        .toolbar-group--labeled {
+            .notation-selector,
+            .scheme-selector {
+                flex: none;
+                min-width: 0;
+            }
+
+            .toolbar-dropdown-btn {
+                width: auto;
+                padding: 4px 5px;
+            }
+        }
+
+        .toolbar-btn,
+        .toolbar-commands__btn,
+        .toolbar-dropdown-btn--icon {
+            width: 22px;
+            min-width: 0;
+            padding: 0;
+            flex: none;
+        }
+
+        .toolbar-viewpoint-trigger {
+            min-width: 0;
+            padding: 3px 4px;
+        }
+
+        .toolbar-commands__level {
+            min-width: 34px;
+        }
+
+        .toolbar-commands__hairline {
+            margin: 0 1px;
+        }
+
+        .validation-freshness {
+            gap: 0;
+            margin-left: 2px;
+            padding: 3px 4px;
+            font-size: 0;
+
+            i {
+                font-size: 13px;
+            }
+        }
+
+        // A scroller clips its absolute descendants on both axes, so the menus are fixed and
+        // anchored to their selector, which follows the bar's scroll where a static position
+        // does not (measured at 1280: same x before and after). Right edge on the trigger's:
+        // to the right lie the rail and the window's edge. The `auto` lines are for a browser
+        // without anchor(): the menu then sits under its trigger as long as the bar is unscrolled.
+        .notation-selector,
+        .scheme-selector {
+            anchor-name: --jj-bar-menu;
+            anchor-scope: --jj-bar-menu;
+        }
+
+        .notation-selector__dropdown,
+        .scheme-selector__dropdown {
+            position: fixed;
+            position-anchor: --jj-bar-menu;
+            top: auto;
+            top: anchor(bottom);
+            left: auto;
+            right: auto;
+            right: anchor(right);
+            margin-top: 4px;
+        }
+    }
+}
+
 // ============================================
 // ALIGNMENT TOOLBAR
 // ============================================
@@ -1408,6 +1562,12 @@ html[data-mode="advanced"] .editor-v2-toolbar {
             color: var(--shell-text-2);
             margin-bottom: 8px;
             padding: 0 2px;
+        }
+
+        // In a split the title names the active pane's viewpoint, as the picker writes it (multi-tab L6c).
+        &__viewpoint {
+            text-transform: none;
+            letter-spacing: normal;
         }
 
         &__list {
@@ -4384,6 +4544,12 @@ body.header-variant-c {
 .editor-v2 .react-flow__minimap {
     border: 1px solid var(--border-default);
     box-shadow: 0 2px 8px var(--node-shadow);
+}
+
+// Two canvases side by side (R-MT-24, P-2026-11-08-1633): the inline `right` adds the rail's
+// inset, and no rail lies over the first canvas (P-2026-11-08-1729).
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel:first-child .react-flow__minimap {
+    right: 16px !important;
 }
 
 // TODO: cleanup — dead since the minimap stopped being portalled: no element carries

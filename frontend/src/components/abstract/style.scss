@@ -1047,9 +1047,10 @@ body[data-layout-mode="split"] {
 
   // F2-fix (2026-07-29): :not(:first-child) so a single-child dockbox (canvas only,
   // post-F2) is never matched — this used to size the removed Properties column.
-  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there);
+  // P-2026-11-08-1608: nor on two canvases side by side (R-MT-24).
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-box:not(:first-child):last-child {
     min-width: 400px;
     transition: opacity 200ms ease;
     max-width: 710px
@@ -1064,13 +1065,65 @@ body[data-layout-mode="sidebar"] {
   }
 
   // F2-fix (2026-07-29): :not(:first-child) — see split block above.
-  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there);
+  // P-2026-11-08-1608: nor on two canvases side by side (R-MT-24).
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-box:not(:first-child):last-child {
     min-width: 350px;
     max-width: 550px;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
     transition: opacity 200ms ease;
+  }
+}
+
+/* Two canvases side by side (R-MT-24, P-2026-11-08-1608; at the window's edge, P-2026-11-08-1729). The rail gets a column
+   of its own after the last panel: a margin counts in the row's flex sum but not in the offsetWidth rc-dock reads back on a
+   drag, so the panels share what the rail leaves by their dock sizes and the divider does not jump. The last panel's content
+   runs under the rail as in a single tab, which is what --jj-canvas-right-inset says about that canvas. */
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel:last-child {
+  margin-right: var(--jj-rail-width, 0px);
+  overflow: visible;
+
+  > .dock {
+    width: calc(100% + var(--jj-rail-width, 0px));
+  }
+}
+
+/* The divider of a split of canvases shows itself at rest, with a grip (P-2026-11-08-2045). rc-dock's scaleX(3) is every
+   other divider's hit area and would triple the width here, so ::before is the hit area instead. */
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-divider {
+  flex: 0 0 6px;
+  transform: none;
+  border-left: none;
+  background: var(--color-border-primary);
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    right: -1px;
+  }
+
+  &::after {
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 32px;
+    border-radius: 2px;
+    background-color: var(--text-dim, #94a3b8);
+  }
+
+  &:hover,
+  &:active {
+    background: #0ea5e9;
+
+    &::after {
+      height: 32px;
+      background-color: #0ea5e9;
+    }
   }
 }
 
