@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1759
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane jjscript-settle-inflight · fac890de5
 Lane: full, core change (redux/action/action.ts, jjscript/executor/commands/instance.ts), two-phase Phase 2 with Layer Impact Report
 Depends: T8f report docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md (commit 000a8f1f4 on branch textual-t8e-match, file in ~/jjodel-w-textt8e; read it with git show 000a8f1f4:docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md) and the probe in ~/.jjodel-lanes/P-2026-11-08-1718/
 Worktree: ~/jjodel-w-jjsettle, branch jjscript-settle-inflight (from trunk 9cfe2bcc4, own node_modules)
