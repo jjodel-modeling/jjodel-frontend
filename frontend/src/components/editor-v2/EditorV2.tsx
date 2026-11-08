@@ -126,6 +126,7 @@ import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/nota
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
+import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
@@ -2333,6 +2334,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             takeSnapshot();
 
+            // At `class` the drag is one undo entry with an exact inverse (R-OI-22): outside a group the reducer's legacy
+            // merge of the deferred writes leaves the new object in the store after the undo (S2-L28).
+            const grouped = !!generalizationSlot((store.getState() as any).idlookup ?? {}, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+            if (grouped) beginUndoGroup();
+            const closeGroup = (landed: () => boolean, attempt = 0) => {
+                if (!grouped) return;
+                if (landed() || attempt >= 80) endUndoGroup();
+                else setTimeout(() => closeGroup(landed, attempt + 1), 100);
+            };
+
             // Hidden vertex position: midpoint between the two endpoint nodes
             const currentNodes = getNodes();
             const sn = currentNodes.find(n => n.id === conn.source);
@@ -2343,6 +2354,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const vertexId = syncCreateObject(graphId, match.edgeClass.id, midX, midY);
             if (!vertexId) {
                 console.warn('[EditorV2] Failed to create object-as-edge instance');
+                closeGroup(() => true);
                 return;
             }
             markDropCreated(vertexId);
@@ -2361,6 +2373,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const meaningful = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
                 slot.values = [...meaningful, objId];
             };
+            let landed = () => true;
             const writeSlotsAndMount = (attempt: number) => {
                 const lObject = (LPointerTargetable.fromPointer(vertexId) as any)?.model;
                 const ready = lObject
@@ -2387,6 +2400,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         TRANSACTION('graphVertex edge object owner', () => {
                             applyMembershipOps([{ op: 'append', slot: owner, value: edgeObjectId }]);
                         });
+                        // The owner's write is the last one queued: once it is in the store, the slots' are.
+                        if (classSlot) landed = () => !!(LPointerTargetable.fromPointer(classSlot.ownerId) as any)?.['$' + classSlot.feature]?.__raw?.values?.includes(edgeObjectId);
                     }
                 }
                 const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
@@ -2402,6 +2417,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     } as ObjectNodeData,
                 };
                 setNodes(nds => nds.some(n => n.id === vertexId) ? nds : [...nds, newNode]);
+                closeGroup(landed);
             };
             setTimeout(() => writeSlotsAndMount(0), 0);
         },
