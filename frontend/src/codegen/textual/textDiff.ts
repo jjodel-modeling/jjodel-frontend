@@ -43,7 +43,7 @@ import type { ParsedRef, TextParseError, TextParseResult } from './parser';
 import type { ObjectSpan, RefSpan, UnprintedObject } from './printer';
 import { hasUnprinted } from './printer';
 import { featureTable, identityOf, matchObjects, placesOf, sameValue, shownFeatures } from './textMatch';
-import type { ObjectMatch, TextMatch } from './textMatch';
+import type { MatchEvidence, ObjectMatch, TextMatch } from './textMatch';
 
 /**
  * An object of the model (`model`) or a new one of the text (`text`); the ids of the two sides may coincide. `outer`: a
@@ -102,6 +102,14 @@ export interface TextDiff {
     readonly unresolved?: readonly TextParseError[];
     /** R-TXT-35: every reference token with its target, when the parse lists them. */
     readonly refs?: readonly RefTarget[];
+    /** T8c: the uncertain pairings the input unpaired (`DiffInput.unpaired`), each now a creation and a deletion; absent when none. */
+    readonly unpaired?: readonly ObjectMatch[];
+}
+
+/** T8c (R-TXT-55 F10): an uncertain pairing by its two sides, the parsed object's id and the model object's. */
+export interface Pairing {
+    readonly text: string;
+    readonly model: string;
 }
 
 export interface DiffInput {
@@ -118,18 +126,45 @@ export interface DiffInput {
     readonly previousRefs?: readonly RefSpan[];
     /** Whether a feature is declared ordered (R-TXT-19); by default its `ordered` in the metamodel, absent read as unordered. */
     readonly ordered?: (cls: string, feature: string) => boolean;
+    /** T8a, T8b: the id each parsed object's comment carries (`textIdsOf`), evidence 0 of the match; absent in the editor. */
+    readonly ids?: ReadonlyMap<string, string>;
+    /**
+     * T8c: the uncertain pairings the user unticked in the confirm panel: each parsed object is a creation and its model
+     * object a deletion. A pairing the cascade does not make as uncertain is ignored.
+     */
+    readonly unpaired?: readonly Pairing[];
 }
 
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
 const isUnset = (v: unknown): boolean => asArray(v).length === 0;
 const keyOf = (r: ObjectRef): string => ('model' in r ? `m:${r.model}` : 'text' in r ? `t:${r.text}` : `o:${r.outer}`);
 
+/** T8c: the match without the uncertain pairings `unpaired` names, their two sides a creation and a deletion. */
+function unpair(found: TextMatch, input: Pick<DiffInput, 'model' | 'parsed' | 'unpaired'>): { readonly match: TextMatch; readonly unpaired: readonly ObjectMatch[] } {
+    const asked = new Set((input.unpaired ?? []).map(p => `${p.text}\u0000${p.model}`));
+    const unpaired = found.matches.filter(m => m.uncertain && asked.has(`${m.text}\u0000${m.model}`));
+    if (!unpaired.length) return { match: found, unpaired };
+    const texts = new Set(unpaired.map(m => m.text));
+    const models = new Set(unpaired.map(m => m.model));
+    const created = new Set([...found.created, ...texts]);
+    const deleted = new Set([...found.deleted, ...models]);
+    return {
+        match: {
+            ...found,
+            matches: found.matches.filter(m => !texts.has(m.text)),
+            created: input.parsed.objects.filter(t => created.has(t.id)).map(t => t.id),
+            deleted: input.model.filter(m => deleted.has(m.id)).map(m => m.id),
+        },
+        unpaired,
+    };
+}
+
 /** The diff between the model and the parsed text (R-TXT-19). The parse must be applicable (`isApplicableParse`). */
 export function diffText(input: DiffInput): TextDiff {
     const { grammar: g, model, parsed } = input;
     const featuresOf = featureTable(input.mm);
     const ordered = input.ordered ?? ((cls: string, feature: string) => featuresOf(cls).some(f => f.name === feature && f.ordered === true));
-    const match = matchObjects(input);
+    const { match, unpaired } = unpair(matchObjects(input), input);
     const modelOf = new Map<string, ObjectMatch>(match.matches.map(m => [m.text, m]));
     const modelById = new Map(model.map(o => [o.id, o]));
     const deleted = new Set(match.deleted);
@@ -288,7 +323,8 @@ export function diffText(input: DiffInput): TextDiff {
     });
     const ops = [...removals, ...early, ...deletions, ...evicting, ...placedOps, ...attributes, ...additions];
     ops.push(...reorders(ops));
-    return { match, ops, unsupported, ...(outer.length ? { outer } : {}), ...(unresolved.length ? { unresolved } : {}), ...(parsed.refs ? { refs: tokens } : {}) };
+    return { match, ops, unsupported, ...(outer.length ? { outer } : {}), ...(unresolved.length ? { unresolved } : {}), ...(parsed.refs ? { refs: tokens } : {}),
+        ...(unpaired.length ? { unpaired } : {}) };
 
     /**
      * The reorders: the ops run on a copy of every ordered many-valued slot the text prints, then each slot is compared
@@ -636,4 +672,103 @@ export function planTextEdit(input: PlanInput): TextEditPlan {
     const built = diffLines(input.mm, input.grammar, input.model, input.parsed, diff, input.reserved);
     for (const p of built.problems) refusals.push({ code: 'unwritable', message: p.message });
     return { diff, refusals, lines: refusals.length ? null : built.lines, handles: built.handles, ...(built.named ? { named: built.named } : {}) };
+}
+
+/**
+ * T8c (R-TXT-55 F10): one row of the confirm panel, for an edit and a re-import alike. An uncertain pairing carries its
+ * score and whether it is ticked (unticked, it applies as a creation and a deletion, which are also listed); a change
+ * names the features the plan writes on a certain match (`container` for a move); a deletion another model references
+ * is flagged.
+ */
+export type PlanRow =
+    | { readonly kind: 'uncertain'; readonly text: string; readonly model: string; readonly by: MatchEvidence; readonly score: number;
+        readonly ticked: boolean; readonly features: readonly string[] }
+    | { readonly kind: 'change'; readonly text: string; readonly model: string; readonly features: readonly string[] }
+    | { readonly kind: 'create'; readonly text: string }
+    | { readonly kind: 'delete'; readonly model: string; readonly flagged: boolean };
+
+/** The counts at the top of the panel: model objects changed (a ticked uncertain pairing included), created, deleted. */
+export interface PlanCounts {
+    readonly changes: number;
+    readonly creates: number;
+    readonly deletes: number;
+}
+
+export interface PlanRowsInput {
+    readonly diff: TextDiff;
+    readonly mm: TextMetamodel;
+    readonly grammar: ConcreteGrammar;
+    readonly model: readonly TextObject[];
+    readonly parsed: Pick<TextParseResult, 'objects'>;
+    readonly referencedElsewhere?: ReadonlySet<string>;
+}
+
+/**
+ * The panel's rows, in this order: the uncertain pairings (the unticked ones included) in text order, the changes in
+ * text order, the creations in text order, the deletions in model order. A rename's score is its similarity
+ * (`matchObjects`); a homonym's or a move's is the share of the features the rule shows, set on either side, with equal
+ * values, the name included, 1 when none is set: the same measure, which a rename takes without the name it changed.
+ */
+export function planRows(input: PlanRowsInput): { readonly rows: readonly PlanRow[]; readonly counts: PlanCounts } {
+    const { diff, grammar: g } = input;
+    const featuresOf = featureTable(input.mm);
+    const modelById = new Map(input.model.map(o => [o.id, o]));
+    const textById = new Map(input.parsed.objects.map(o => [o.id, o]));
+    const toModel = new Map(diff.match.matches.map(m => [m.text, m.model]));
+    const score = (m: ObjectMatch): number => {
+        if (m.score !== undefined) return m.score;
+        const t = textById.get(m.text);
+        const o = modelById.get(m.model);
+        const rule = t ? g.objects[t.cls] : undefined;
+        if (!t || !o || !rule) return 0;
+        const shown = shownFeatures(rule);
+        let union = 0;
+        let equal = 0;
+        for (const f of featuresOf(t.cls)) {
+            if (f.kind === 'containment' || !shown.has(f.name)) continue;
+            const tv = asArray(t.slots[f.name]);
+            const mv = asArray(o.slots[f.name]);
+            if (!tv.length && !mv.length) continue;
+            union++;
+            const mapped = f.kind === 'attribute' ? tv : tv.map(id => (typeof id === 'string' ? toModel.get(id) : isOuterRef(id) ? id.outer : undefined));
+            if (sameValue(mapped, mv, false)) equal++;
+        }
+        return union === 0 ? 1 : equal / union;
+    };
+    const changed = new Map<string, string[]>();
+    for (const op of diff.ops) {
+        if (op.op === 'create' || op.op === 'delete') continue;
+        const id = op.op === 'move' ? op.model : 'model' in op.target ? op.target.model : undefined;
+        if (id === undefined) continue;
+        const feature = op.op === 'move' ? 'container' : op.feature;
+        const features = changed.get(id) ?? [];
+        if (!features.includes(feature)) features.push(feature);
+        changed.set(id, features);
+    }
+    const unticked = new Map((diff.unpaired ?? []).map(m => [m.text, m]));
+    const matched = new Map(diff.match.matches.map(m => [m.text, m]));
+    const uncertain: PlanRow[] = [];
+    const changes: PlanRow[] = [];
+    for (const t of input.parsed.objects) {
+        const off = unticked.get(t.id);
+        if (off) { uncertain.push({ kind: 'uncertain', text: off.text, model: off.model, by: off.by, score: score(off), ticked: false, features: [] }); continue; }
+        const m = matched.get(t.id);
+        if (!m) continue;
+        const features = changed.get(m.model) ?? [];
+        if (m.uncertain) uncertain.push({ kind: 'uncertain', text: m.text, model: m.model, by: m.by, score: score(m), ticked: true, features });
+        else if (features.length) changes.push({ kind: 'change', text: m.text, model: m.model, features });
+    }
+    const elsewhere = input.referencedElsewhere;
+    const rows: PlanRow[] = [
+        ...uncertain,
+        ...changes,
+        ...diff.match.created.map((text): PlanRow => ({ kind: 'create', text })),
+        ...diff.match.deleted.map((model): PlanRow => ({ kind: 'delete', model, flagged: !!elsewhere?.has(model) })),
+    ];
+    const counts: PlanCounts = {
+        changes: changes.length + uncertain.filter(r => r.kind === 'uncertain' && r.ticked && r.features.length).length,
+        creates: diff.match.created.length,
+        deletes: diff.match.deleted.length,
+    };
+    return { rows, counts };
 }

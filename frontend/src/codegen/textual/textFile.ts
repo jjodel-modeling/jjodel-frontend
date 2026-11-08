@@ -20,7 +20,6 @@ import type { UnprintedObject } from './printer';
 import { planTextEdit } from './textDiff';
 import type { ApplyRefusal, DiffOp, PlanInput, TextEditPlan } from './textDiff';
 import { identityOf, textIdsOf } from './textMatch';
-import type { MatchInput } from './textMatch';
 import type { ConfirmRow } from './ui/TextConfirmPanel';
 
 /** What the import plans against: the model as the Text tab prints it. */
@@ -61,8 +60,8 @@ export function planTextImport(base: TextImportBase, text: string, evidence: Tex
                                confirmed?: readonly ApplyRefusal['code'][]): TextImport {
     const parsed = parseText(text, base.grammar);
     const ids = parsed.tree ? textIdsOf(parsed.tree, base.grammar) : new Map<string, string>();
-    // `diffText` hands its input to `matchObjects` whole, so the ids reach the match through the plan's input.
-    const input: PlanInput & Pick<MatchInput, 'ids'> = {
+    // The ids are the diff input's evidence 0 (`DiffInput.ids`), which `diffText` hands to `matchObjects`.
+    const input: PlanInput = {
         mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: [],
         ...(ids.size ? { ids } : {}),
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
