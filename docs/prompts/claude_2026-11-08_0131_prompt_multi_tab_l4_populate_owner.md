@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0131
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · LIR f888be09f, tests 634dceabf (red), code 587aed3cf (continued by P-2026-11-08-0150 and P-2026-11-08-0245 after the context ceiling) · gates green (typecheck 0 error TS; vitest: 3 import reds baseline) · log entry in docs/log-inbox/multi-tab.md · hard-stop: visual check due · non fuso
 Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23 «Si a tutto» for L4, launched with --critical-zone-goahead P-2026-11-08-0131)
 Depends: L3 and L5 on the trunk (P-2026-11-07-1249, P-2026-11-07-1516), L4b on the trunk (P-2026-11-07-0833, `acquireProducerMount`), docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §3.2, §3.7, §7 row L4; R-MT-17
 Worktree: ~/jjodel-w-mtl4, branch multi-tab-l4, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

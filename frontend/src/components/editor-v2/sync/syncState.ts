@@ -177,3 +177,39 @@ export function clearSuppressedSingletons(): void {
 export function getSuppressedSingletonIds(): ReadonlySet<string> {
     return suppressedSingletonIds;
 }
+
+// ---------------------------------------------------------------------------
+// Populate owner per model (multi-tab L4, P-2026-11-08-0131, R-MT-17).
+//
+// Every mounted EditorV2 runs its own useJjomSync. Actions reach the store one
+// macrotask after they fire (action.ts:352), so two instances on one model whose
+// populate effects run in the same commit both see the same missing element and
+// both create it. The instances of a model are kept here in mount order; the
+// first owns the populate, the others render only, and releasing the owner hands
+// the populate to the next. The release of the last instance is when the
+// registries above are cleared. Ref-count precedent: scriptPreviewStore.ts.
+// See docs/discovery/lir_2026-11-07_l4_populate_owner.md.
+// ---------------------------------------------------------------------------
+
+const populateInstances = new Map<string, object[]>();
+
+export function acquirePopulateOwner(modelId: string, token: object): void {
+    const list = populateInstances.get(modelId);
+    if (!list) populateInstances.set(modelId, [token]);
+    else if (!list.includes(token)) list.push(token);
+}
+
+/** True when the model has no instance left. A token not held changes nothing and returns false. */
+export function releasePopulateOwner(modelId: string, token: object): boolean {
+    const list = populateInstances.get(modelId);
+    const at = list ? list.indexOf(token) : -1;
+    if (!list || at < 0) return false;
+    list.splice(at, 1);
+    if (list.length > 0) return false;
+    populateInstances.delete(modelId);
+    return true;
+}
+
+export function isPopulateOwner(modelId: string, token: object): boolean {
+    return populateInstances.get(modelId)?.[0] === token;
+}

@@ -256,3 +256,22 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 2026-11-07 18:58, and the take-trunk gates on `f2b5d1934` stand for this code)
 **Notes**: Probes 5/5 once. Files on both sides: none; governance files on the branch: none. Branch's 18 new tests counted from its test diff: vitest cannot start in the branch tree (no node_modules), not written there. Trunk-tip vitest at load ~112 had 5 timing-bound reds (timeouts, 50 ms budget, Chromium layout); all passed on the merge at load ~16. Lane board untouched, not restarted; 3001 up, not restarted.
 **Prompt document name**: 2026-11-08 00:55
+
+## 2026-11-08 — fix: one populate owner per model, the last instance clears (multi-tab L4)
+**Prompt**: `claude_2026-11-08_0131_prompt_multi_tab_l4_populate_owner.md`, lane full (critical zone): a per-model populate owner in `syncState.ts`, used by `useJjomSync.ts` to gate the populate creators; the registry clears run on the last instance of the model. Continued by P-2026-11-08-0150 (gates, two-tab measurement, cut at the AM-8 ceiling) and closed by P-2026-11-08-0245 (rerun, regressions, closure).
+**Files touched**: `f888be09f` the LIR; `634dceabf` `useJjomSyncPopulateOwner.test.ts`, `populateOwner.test.ts`, red (16 of 18 on `db65de069`); `587aed3cf` `syncState.ts`, `useJjomSync.ts`, `useJjomSyncPopulateOwner.test.ts`; 0245: LIR §7, this entry and the ticket, three Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: 0245 on `587aed3cf`, layout probe 3/3 every step x3, container 0 failures, 0457 V1/V3/V2/R-MT-18 17 PASS 0 FAIL, demo tabs 18/18 and 25/25; two-tab scene rerun identical to 0150 (vertex 2 -> 1, registries kept after the owner's close, cleared after the last)
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (probes of 0150 and 0245, pageerrors 0 in every run; four light-theme crops in `~/.jjodel-lanes/P-2026-11-08-0150/`, LIR §7; Alfonso's visual check due)
+**Notes**: Gates. 0131 on 587aed3cf: typecheck exit 0, 0 error TS; vitest 570 files, 15124 passed, 2 skipped, 3 files red: the known window imports; bench 10 mutations, all killed. 0150: build exit 0, check:docs exit 0; 0245: check:docs after the closure edits. Departures (console creation through ContextMenu.tsx:321, :325; viewport framing in tab 2; 0150 runs started at load 64.15, rerun at 2.40) and the §3.7 edge duplicate not reproducing on the parent: LIR §7.
+**Prompt document name**: 2026-11-08 01:31
+
+## 2026-11-08 — ticket: sync registries have no model key, the last tab of model N clears model M
+**Ticket**: The five registries the populate unmount clears (`canvasEdgePairs`, `edgeRefIds`, `canvasUpdatedIds`, `syncModes`, `dropCreatedIds`) are module-level and keyed by element id only: the last tab of model N unmounting clears the entries of an open tab on model M. L4 changed only when the clears run (the last instance of the model), not what they clear; out of L4. Keying them by model needs the writers outside L4 (`canvasToJjom.ts`, `useM1ReferenceEdges.ts`, `jjomTransformers.ts:679`, `EditorV2.tsx`) to pass a model id, or a clear by membership in the model's graph.
+**Priority**: medium
+**Found in**: P-2026-11-08-0131
+**Detail**: docs/discovery/lir_2026-11-07_l4_populate_owner.md
