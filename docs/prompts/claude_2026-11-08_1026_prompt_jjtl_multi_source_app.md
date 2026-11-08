@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1026
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · d2e654cf0 (dialog and tests, committed by P-2026-11-08-1120)
 Lane: full (unattended; discovery of the dialog first in this lane, then the change; more than five files)
 Depends: P-2026-11-08-1025
 Worktree: ~/jjodel-w-multisrcapp, branch jjtl-multi-source-app

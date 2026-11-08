@@ -1530,3 +1530,32 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: property read on a demand warns, full suite green
 **Notes**: Rollback tag `pre-jjtl-demand-read` on `b3b82d861` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1041/result.json`.
 **Prompt document name**: 2026-11-08 10:41
+
+## 2026-11-08 — ticket: envLookup on an unbound name is null, so + "_w" succeeds
+**Ticket**: `envLookup` on an unbound name returns `null`, not a demand, so a demand-as-operand error never fires: `name := envLookup("x") + "_w"` with `x` unbound succeeds and names every object `_w`. `SPEC.md` §10 lists `envLookup(n) + "_w"` as an error, without excepting an unbound name.
+
+Reproduction, on the real executor (`execute` with the lexer and parser, as `jjtl/components/__tests__/sourceSelection.test.ts` calls them), three `Class` source objects, a target class `Table` with attribute `name`, and the rule:
+
+    Class c -> Table {
+        name := envLookup("x") + "_w"
+    }
+
+Measured 2026-11-08: `{"success":true,"errors":[],"warnings":[],"names":["_w","_w","_w"]}`.
+
+Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closure yields `null`. `envValue` on the same name throws. Not fixed: whether an unbound `envLookup` should stop the run, warn, or stay `null` is a decision of its own.
+**Priority**: medium
+**Found in**: P-2026-11-08-1026
+**Detail**: docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md
+
+## 2026-11-08 — feat(jjtl): several source models in the run dialog, closed with two visual fixes (P-2026-11-08-1120)
+**Prompt**: P-2026-11-08-1120, continuation of P-2026-11-08-1026 after its context ceiling: commit the dialog as it stood, fix the checkbox of the «Also include» rows and the open list covering the next label, finish report, SPEC §9, log, Status lines, ticket for the envLookup candidate.
+**Files touched**: d2e654cf0: `components/abstract/DockManager.tsx`, `components/project/ProjectEditor.tsx`, `jjtl/components/ExecuteTransformationDialog.tsx`, `JjtlDevelopmentEnv.tsx`, `execute-transformation-dialog.scss`, `sourceSelection.ts`, `__tests__/sourceSelection.test.ts`. af756e1ea: the dialog and its `.scss`. 7849b01ca: `jjtl/SPEC.md`. 67e2f1a7f: `docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md`. This entry, the two prompt Status lines, the ticket block.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 10:26
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: yes, seven code files against the prompt's own scope, above five (RC-11): `sourceSelection.ts`, its test, the dialog's `.scss` and `DockManager.tsx` were not named by P-2026-11-08-1026; reasons in the report §1.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe, unattended, 33/33; three crops viewed. The list over the primary select is a perceptual judgement left to Alfonso.
+**Notes**: Typecheck and build exit 0; full vitest 15328 passed, 3 skipped, only the 3 known files failing at import. The upward list stops at the hint's box (394.5). Evidence and decisions D1 to D7: the report. The cause of the checkbox is `.form-group input` and `.form-group label`, measured on the running dialog; the file holding them was not located.
+**Prompt document name**: 2026-11-08 11:20
