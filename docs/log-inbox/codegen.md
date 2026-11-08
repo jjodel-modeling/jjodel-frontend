@@ -3099,3 +3099,24 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: non applicabile, tests only (T8d calibration bench)
 **Notes**: Rollback tag `pre-textual-t8d-calibration` on `d1daf6d2f` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0845/result.json`.
 **Prompt document name**: 2026-11-08 08:45
+
+## 2026-11-08 — ticket: undo: reducer indexes the sender stack with the length of all
+**Ticket**: `frontend/src/redux/reducer/reducer.ts:1292` on `undo-682-create-entry` HEAD (`:1284` when the discovery measured it) indexes the sender's stack with the length of the shared stack: `statehistory[action.sender].undoable[statehistory.all.undoable.length-1]`.
+
+In a single-user session the two lengths were equal in every measure of the #682 discovery. In a shared session they differ, so `pastDelta` is read from the wrong position of the sender's stack, or is `undefined`. The shared-session case was reasoned from the code, not measured. Observed while working on #682 and left out of its scope (§6.4 of the discovery).
+**Priority**: low
+**Found in**: P-2026-11-08-1202
+**Detail**: docs/discovery/discovery_2026-11-08_canvas_create_undo_682.md
+
+## 2026-11-08 — fix(undo): a canvas create opens its own entry, #682 Phase 2 (P-2026-11-08-1202, P-2026-11-08-1313)
+**Prompt**: `claude_2026-11-08_1202_prompt_undo_682_create_entry.md` (P-2026-11-08-1202, Alfonso's GO 11:59: a container create is one Undo step), stopped at the context ceiling (RC-51), closed by `claude_2026-11-08_1313_prompt_undo_682_closure.md` (P-2026-11-08-1313: smoke diagnosis, ticket, gates, docs).
+**Files touched**: `frontend/src/redux/reducer/reducer.ts` and `frontend/src/redux/reducer/__tests__/undoGroup.test.ts` in 0475bde69; `docs/discovery/lir_2026-11-08_canvas_create_undo_682.md` in 5e0987b1b and a3cd1dbcd; uncommitted (RC-17): this inbox and the Status lines of the two prompts.
+**Outcome**: ✅ completed. Rule roots `objects`, `classs`, `enumerators`, `packages` (`enumerators` and `packages` measured on the old code with the defect of `classs`). Compose branch narrower than §7 of the discovery: `pastDelta === undoCreateEntry && !delta.graphs`, not `touchesGraph`. Tests 40 passed in `undoGroup.test.ts`, 11 red before the code, mutation bench all killed (commit message). Typecheck exit 0; build exit 0; full vitest: the 3 baseline import reds plus `tolerant.test.ts`, load-sensitive, 64 of 64 alone. App probe port 3683: A, B, E, G, G2, G3, H, I, J undoDelta 1, one Undo removes element and vertex, prior edit intact; K two creates two entries; L own entry; M delete with an edge +1, restored. Limits: H runs the real calls of `EditorV2.tsx:2553-2576` from the page, the drop on an IR container with a creation owner was not driven (no fixture); J proves records, vertices and edges, not slot values (H proves slots); one Undo below a tab open leaves `idlookupGraphs` 6, `mmGraphs` 4, not measured on the pre-fix code.
+**Corregge**: 2026-11-08 09:16 (#682, the ticket's discovery prompt)
+**Causa**: (c)
+**Regressions**: unknown (the tab-open residue of the limits above has no pre-fix measure; nothing else broke in tests, smoke or probe)
+**Out-of-scope changes**: no (six files across the two prompts, all declared: reducer.ts, undoGroup.test.ts, the LIR, this inbox, the two prompts)
+**Layer Impact Report**: produced (docs/discovery/lir_2026-11-08_canvas_create_undo_682.md)
+**Smoke visivo**: passato — `npm run smoke` on each tree's own Vite: a3cd1dbcd GREEN 12/0/3; HEAD RED once 5/2/0 (`page.goto` timeout on two states), then GREEN 12/0/3 twice, warm and after a server restart; crops viewed by the lanes, Alfonso's GO pending
+**Notes**: Smoke exit 3 of 1202 was VOID and ran against :3000, served by `~/jjodel-release`, so it never measured this branch. The single RED on HEAD did not repeat in two runs and timed out at navigation; its cause is not proven. Compose narrowing: a tab open must not fold into a create's entry (LIR amendment a3cd1dbcd). Measures: `~/.jjodel-lanes/P-2026-11-08-1202/handoff.md`. Ticket #764 for the sender-stack index.
+**Prompt document name**: 2026-11-08 13:13
