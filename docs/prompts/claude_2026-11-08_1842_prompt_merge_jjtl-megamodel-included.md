@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1842
 Chat: C-2026-11-03-1202
 Request: https://claude.ai/code/session_01DQt9R5EJe1reXq5Xut2Jif (merge of jjtl-megamodel-included launched by chat C-2026-11-03-1202)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane merge · ea9bacb81 · verifica visiva passata 2026-11-08 (Megamodel: included edges on separate tracks, crop checked by the chat)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-08-1842 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

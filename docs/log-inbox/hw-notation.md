@@ -1619,3 +1619,16 @@ Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closur
 **Smoke visivo**: passato — probe of P-2026-11-08-1612 on this code, not rerun here, crop viewed and accepted by the chat: three distinct tracks, short pills. One assertion failed on two pre-existing `conformsTo` pills: ticket above, card #781.
 **Notes**: Typecheck and build exit 0; full vitest 15450 passed, 3 skipped, only the 3 known files failing at import. Answers of the chat: included models get `instanceInputOf` only; its default visibility is unchanged, so a multi-source run shows its included edges only once the kind is turned on. Ticket priority low chosen by this lane. Mutation benches in the commit bodies and report §8.
 **Prompt document name**: 2026-11-08 17:20
+
+## 2026-11-08 — merge: jjtl-megamodel-included into alfonso-frontend-jjtl (P-2026-11-08-1842)
+**Prompt**: `claude_2026-11-08_1842_prompt_merge_jjtl-megamodel-included.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-megamodel-included` at `8d695c689` into `alfonso-frontend-jjtl`, merge base `4c51808e8`, 11 commits on the branch side.
+**Files touched**: merge `ea9bacb81`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-08_jjtl_megamodel_included.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1612_prompt_jjtl_megamodel_included.md`, `docs/prompts/claude_2026-11-08_1720_prompt_megamodel_included_close.md`, `frontend/src/components/megamodel/MegamodelEdge.ts`, `frontend/src/components/megamodel/MegamodelView.tsx`, `frontend/src/components/megamodel/__tests__/MegamodelEdge.test.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ea9bacb81` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15466 tests in 585 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Megamodel: included edges on separate tracks, crop checked by the chat
+**Notes**: Rollback tag `pre-jjtl-megamodel-included` on `34677007c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1842/result.json`.
+**Prompt document name**: 2026-11-08 18:42
