@@ -1439,3 +1439,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Baseline: arbiter `5c0d9731c4bb9632`, core `2a34b97ab348ce64`, success true, 0 warnings. S2 lives in a `JjelEvaluator` subclass in `executor.ts` (operator nodes mark their operands), nothing outside `jjtl/`. Interpolation holes not covered: JjTL lexes no interpolation. Suite: the 3 known import failures, plus Chromium `afterAll` timeouts in `irSelectionRing`/`irCollapsedRender`, green rerun alone (g).
 **Prompt document name**: 2026-11-08 07:40
+
+## 2026-11-08 — merge: jjtl-envvalue into alfonso-frontend-jjtl (P-2026-11-08-0814)
+**Prompt**: `claude_2026-11-08_0814_prompt_merge_jjtl-envvalue.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-envvalue` at `a9ac45e81` into `alfonso-frontend-jjtl`, merge base `ce18b0c02`, 7 commits on the branch side.
+**Files touched**: merge `2f389051a`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_0740_prompt_jjtl_envvalue_and_demand_as_value.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/demand-as-value.test.ts`, `frontend/src/jjtl/executor/__tests__/env-value.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2f389051a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15214 tests in 576 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: S1 and S2: full suite green, kernel baselines unchanged
+**Notes**: Rollback tag `pre-jjtl-envvalue` on `f64bd6592` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0814/result.json`.
+**Prompt document name**: 2026-11-08 08:14
