@@ -3218,7 +3218,9 @@ export class JjtlExecutor {
      * The environment as JjEL sees it (R-JTG-5): `extendEnv(names, values)` returns a new
      * frame over the current environment, each value a closure over the current
      * environment, the binding site; `envHas(name)`; `envLookup(name)`, the bound value as
-     * a demand lowered under its closure's environment, or null when unbound.
+     * a demand lowered under its closure's environment, or null when unbound;
+     * `envValue(name[, env])`, the bound value as bound, never a demand, read from the
+     * current environment or from an `extendEnv` marker; unbound, it fails (R-FA-11).
      */
     private registerEnvironmentBuiltins(): void {
         const ctx = this.context.evalContext;
@@ -3238,6 +3240,12 @@ export class JjtlExecutor {
             const name = String(args[0]);
             const closure = this.lookupClosure(this.currentEnvironment(), name);
             return (closure ? this.makeDemand({ kind: 'closure', name, closure }) : null) as JjelValue;
+        }));
+        ctx.registerBuiltin('envValue', createFunction(['name', 'env'], (args: JjelValue[]) => {
+            const name = String(args[0]);
+            const closure = this.lookupClosure(this.environmentOf(args[1]) ?? this.currentEnvironment(), name);
+            if (!closure) throw new Error(`'${name}' is not bound in the environment; envHas tests it`);
+            return closure.value as JjelValue;
         }));
     }
 
