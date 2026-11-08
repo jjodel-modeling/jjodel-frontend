@@ -1465,3 +1465,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Comparisons needed no code: the Binary branch of P-2026-11-08-0740 already marks every binary operator, so those 16 tests were green before the change. Only the method-call receiver is new. The prompt says a property read stays a warning: measured, it reads null with no warning at all, kept unchanged and pinned. Suite: the 3 known import failures, plus Chromium afterAll timeouts in irSelectionRing/irCollapsedRender, green rerun alone (g).
 **Prompt document name**: 2026-11-08 08:35
+
+## 2026-11-08 — merge: jjtl-demand-cmp into alfonso-frontend-jjtl (P-2026-11-08-0901)
+**Prompt**: `claude_2026-11-08_0901_prompt_merge_jjtl-demand-cmp.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-demand-cmp` at `e48d462c9` into `alfonso-frontend-jjtl`, merge base `65c095682`, 7 commits on the branch side.
+**Files touched**: merge `6fde8bad1`: 6 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/demand-as-value.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6fde8bad1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15251 tests in 577 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: comparison and method call on a demand stop the run, full suite green
+**Notes**: Rollback tag `pre-jjtl-demand-cmp` on `e1f06117c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0901/result.json`.
+**Prompt document name**: 2026-11-08 09:01
