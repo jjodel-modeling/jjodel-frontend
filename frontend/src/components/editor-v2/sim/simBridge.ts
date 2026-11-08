@@ -125,6 +125,15 @@ import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
 import { defaultSimPins } from './simViewerPrefs';
 import type { SimAttrRef } from './simViewerPrefs';
+import { dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import { compileDcn, DCN_TICK_EVENT } from '../../../model/simulation/dcn/dcnCompile';
+import type { DcnCompileInput } from '../../../model/simulation/dcn/dcnCompile';
+import { readDcnModel } from '../../../model/simulation/dcn/dcnHandles';
+import { dcnNucleus, readDcnStep } from '../../../model/simulation/dcn/dcnStep';
+import type { DcnClassification, DcnNucleus, DcnStepModel } from '../../../model/simulation/dcn/dcnStep';
+import { dcnCandidateLabel, dcnDefectsLine, dcnLastStepText, dcnMarkingChips, dcnMarkingLine } from '../../../model/simulation/dcn/dcnPanelText';
+// A cycle at module level, used inside functions on both sides only (report F2, P-2026-11-08-0248).
+import { dcnInputOf } from '../problems/dcnToProblems';
 
 type Lookup = Record<string, any>;
 
@@ -731,7 +740,9 @@ export function startRun(
     // the Trigger's type, derived here and never read from the bag (R-SIM-38).
     const bag = raw ? runBag(raw, lookup) : undefined;
     const stc = netStcFromRoles(bag);
-    if (!stc) return { kind: 'refused', reason: 'The simulation roles are incomplete.' };
+    // Petri first: with both role sets bound the run is the Petri one; a DCN run only when the Petri roles are incomplete.
+    if (!stc) return (dcnStcFromRoles(bag) ? startDcnRun(lookup, modelId, configModelId, projectId, build, seed) : null)
+        ?? { kind: 'refused', reason: 'The simulation roles are incomplete.' };
     const ids = collectModelObjectIds(lookup, modelId);
     const view = makeNetModelView(lookup, stc.eventIdentifier);
     // The declarations (R-SIM-67, R-SIM-68): an absent key is the empty set, any other value is decoded.
@@ -795,6 +806,106 @@ export function startRun(
             ...declarationDefectsOf(net.declarationDefects ?? [], lookup, net.attributes),
         ],
     };
+}
+
+// ---------------------------------------------------------------------------
+// The DCN run (lane L4.5, P-2026-11-08-0248 decisions 1-4, P-2026-11-08-0303)
+// ---------------------------------------------------------------------------
+
+/** What the text readers of a DCN run need beyond its net: the step model and the nucleus. */
+interface DcnRunText {
+    readonly model: DcnStepModel;
+    readonly nucleus: DcnNucleus;
+}
+
+/** The DCN runs by their net, set by `startDcnRun`: the readers taking a net dispatch to the DCN twins through it. */
+const dcnRuns = new WeakMap<object, DcnRunText>();
+
+/** The DCN part of the run of `net`, `undefined` for a Petri run. */
+function dcnRunOf(net: object): DcnRunText | undefined {
+    return dcnRuns.get(net);
+}
+
+/** The classification of the live run of `net`, when `net` is its net; `null` otherwise. */
+function liveClassification(net: Pick<CompiledNet, 'modelId'>, d: DcnRunText): DcnClassification | null {
+    const run = getSimRun(net.modelId);
+    return run && run.net === net ? d.nucleus.classify(run.config.state) : null;
+}
+
+/** The M2 feature of a property's upper bound, found by name in the metamodel: `MultiplicityElement.upper`, else `Property.upper`. */
+function upperFeatureOf(lookup: Lookup, metamodelId: string | null): string | undefined {
+    if (!metamodelId) return undefined;
+    const found = new Map<string, string>();
+    for (const id in lookup) {
+        const d = lookup[id];
+        if (d?.className !== 'DAttribute' || d.name !== 'upper') continue;
+        const owner = lookup[d.father];
+        if (owner?.className !== 'DClass' || (owner.name !== 'MultiplicityElement' && owner.name !== 'Property')) continue;
+        let m: any = owner;
+        for (let depth = 0; m && m.className !== 'DModel' && depth < 40; depth++) m = lookup[m.father];
+        if (m?.id === metamodelId && !found.has(owner.name)) found.set(owner.name, id);
+    }
+    return found.get('MultiplicityElement') ?? found.get('Property');
+}
+
+/**
+ * The run of a model whose metamodel binds the dcn roles (R-DCN-8): the DCN
+ * nucleus over the placeless net of `compileDcn`, its oracles, the alphabet of
+ * the tick (when some monitor contributes) and the invocations a press can
+ * name (a redefinition is re-triggered by its operation, R-DCN-22), the
+ * arguments as inputs (R-SIM-88). σ0 is not classified (Reset never halts);
+ * the declaration defects go to the panel line, not to the node problems.
+ * `null` when no binding fits the static class.
+ */
+function startDcnRun(
+    lookup: Lookup, modelId: string, configModelId: string | null, projectId: string, build: ContextBuilder, seed: number,
+): RunStart | null {
+    const found = dcnInputOf(lookup, modelId);
+    if (found === null) return null;
+    const input: DcnCompileInput = { modelId, stc: found.stc, binding: found.binding, view: found.view, features: found.features };
+    const compiled = compileDcn(input);
+    const model = readDcnModel(input, compiled, { upper: upperFeatureOf(lookup, configModelId) });
+    const globals = build(evalContextFor(lookup, modelId, projectId), { extentModelId: modelId });
+    let snapshot: SimSnapshot;
+    try {
+        snapshot = freezeSnapshot(globals, { id: modelId, name: String(lookup[modelId]?.name ?? '') });
+    } catch (e) {
+        if (e instanceof SimSnapshotError) return { kind: 'refused', reason: `The model cannot be frozen: ${e.message}.` };
+        throw e;
+    }
+    const stepModel = readDcnStep(input, model);
+    const nucleus = dcnNucleus(stepModel, snapshot);
+    const net = nucleus.net;
+    dcnRuns.set(net, { model: stepModel, nucleus });
+    const entries = [...compiled.entries.values()];
+    const invocations = entries.filter(e => e.kind === 'invocation' && !stepModel.redefines.has(e.id)).map(e => e.id);
+    const inputs = new Map(entries.filter(e => e.inputs.length > 0).map(e => [e.id, e.inputs] as const));
+    return {
+        kind: 'started',
+        run: {
+            net,
+            nucleus,
+            config: { state: nucleus.initial, event: null },
+            halt: null,
+            guards: nucleus.guards,
+            actions: nucleus.actions,
+            derived: undefined,
+            alphabet: [...(entries.some(e => e.kind === 'tick') ? [DCN_TICK_EVENT] : []), ...invocations],
+            signature: runSignature(lookup, modelId, configModelId),
+            ...(inputs.size > 0 ? { inputs } : {}),
+            seed,
+            draws: 0,
+            trace: [],
+            snapshot,
+        },
+        compileDefects: [],
+    };
+}
+
+/** The candidates of a press on `run`: the DCN nucleus folds a redefinition into its invocation (R-DCN-22, report F3). */
+function runCandidates(run: SimRun, cfg: NetConfiguration, guards: GuardOracle): CandidateSet {
+    const d = dcnRunOf(run.net);
+    return d ? d.nucleus.candidates(cfg, guards) : candidates(run.net, cfg, guards);
 }
 
 // ---------------------------------------------------------------------------
@@ -949,6 +1060,8 @@ function arcsText(arcs: readonly Arc[], lookup: Lookup): string {
  * after, `node#edge`), then its preset and postset: "tCoin (Locked → Unlocked)".
  */
 export function candidateLabel(net: CompiledNet, transitionId: string, lookup: Lookup): string {
+    const d = dcnRunOf(net);
+    if (d) return dcnCandidateLabel(d.model, transitionId, id => elementName(lookup, id), liveClassification(net, d));
     const t = net.transitions.find(x => x.id === transitionId);
     const own = elementName(lookup, transitionId.split('#')[0]);
     if (!t) return own;
@@ -975,6 +1088,8 @@ export function choiceHead(input: string): { heading: string; input: string; sub
  * `Marking: p2 ×2, p3 · coins = 2, paid = true`.
  */
 export function markingLine(state: SimState, net: Pick<CompiledNet, 'modelId'>, lookup: Lookup): { line: string; title: string } {
+    const d = dcnRunOf(net);
+    if (d) return dcnMarkingLine(state, d.model, d.nucleus.classify(state));
     const places = [...state.marking]
         .filter(([, n]) => n > 0)
         .map(([place, n]) => ({ name: elementName(lookup, place), n }))
@@ -1095,8 +1210,10 @@ export interface SimMarkingChip {
     readonly text: string;
 }
 
-/** The Marking chips (R-SIM-104): the places `markingLine` lists, in its order and its words, one chip each. */
-export function markingChips(state: SimState, lookup: Lookup): SimMarkingChip[] {
+/** The Marking chips (R-SIM-104): the places `markingLine` lists, in its order and its words, one chip each; of a DCN run's `net`, the classification. */
+export function markingChips(state: SimState, lookup: Lookup, net?: Pick<CompiledNet, 'modelId'>): SimMarkingChip[] {
+    const d = net ? dcnRunOf(net) : undefined;
+    if (d) return dcnMarkingChips(d.model, d.nucleus.classify(state));
     return [...state.marking]
         .filter(([, n]) => n > 0)
         .map(([place, n]) => ({ place, name: elementName(lookup, place), tokens: n }))
@@ -1159,6 +1276,7 @@ function defectSubject(d: CompileDefect, lookup: Lookup): string {
  * for all: a defect. `null` when none.
  */
 export function defectsLine(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
+    if (dcnRunOf(net)) return dcnDefectsLine(net, id => elementName(lookup, id));
     const items = [
         ...net.defects.map(d => `${elementName(lookup, d.element)} (${d.message})`),
         ...compileDefects.map(d => `${defectSubject(d, lookup)} (${d.short ?? defectShort(d.reason, d.detail)})`),
@@ -1581,7 +1699,7 @@ export function playTick(run: SimRun | undefined, policy: SimPolicy, steps: numb
     if (status === 'Terminated' || status === 'Deadlock' || status === 'Halted') return { kind: 'stop', reason: status };
     if (steps >= policy.k) return { kind: 'stop', reason: 'limit' };
     if (inputAsks(run, null).length > 0) return { kind: 'stop', reason: 'input' };
-    const found = candidates(run.net, { state: run.config.state, event: null }, run.guards).candidates.length;
+    const found = runCandidates(run, { state: run.config.state, event: null }, run.guards).candidates.length;
     if (found === 0) return { kind: 'stop', reason: 'event' };
     if (found > 1 && policy.choices === 'ask') return { kind: 'stop', reason: 'choice' };
     return { kind: 'press' };
@@ -1735,7 +1853,7 @@ function press(
     const cfg = { state: run.config.state, event };
     let chosen: string | null;
     if (selector === undefined) {
-        const cs = candidates(run.net, cfg, live.guards);
+        const cs = runCandidates(run, cfg, live.guards);
         if (cs.candidates.length > 1) return { pending: cs.candidates, lastStep: null, outcome: null };
         chosen = cs.candidates[0]?.transition ?? null;
     } else {
@@ -1746,7 +1864,11 @@ function press(
     // The values given are kept on the step, so a replay reads them (R-SIM-106).
     simCommit(modelId, outcome, origin, values);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(live, outcome, lookup) : null;
-    const lastStep = lastStepText(outcome, run.net, lookup, input, why);
+    const dcn = dcnRunOf(run.net);
+    // A DCN step is labelled on the classification of the σ it read: the redefinitions that ran with the invocation.
+    const lastStep = dcn
+        ? dcnLastStepText(outcome, dcn.model, id => elementName(lookup, id), dcn.nucleus.classify(run.config.state), input, values)
+        : lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
     const asked = (values ?? []).map(v => `${inputLabel(v, run.net, lookup)} = ${String(v.value)}`);
     const derivedValues = outcome.kind === 'fired' ? derivedText(outcome.next.state, lookup) : [];

@@ -329,3 +329,48 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (docs and probe only; gates verified by the chat C-2026-11-06-2159)
 **Notes**: Stopped once: the textual-t8a-ids merge (94a55a92d, code) landed on this prompt's commit; the chat accepted c8153d84a as pre-merge tip, reset target and step-7 base. Union byte-identical to trunk file plus the branch's added lines; 11 probes once each. The branch adds no vitest test (its probe is outside the include; counted from the diff, no node_modules in its tree). Lane board not restarted (no change).
 **Prompt document name**: 2026-11-08 01:54
+
+## 2026-11-08 — feat: DCN L4.5 run wiring, startRun to panel (P-2026-11-08-0248, P-2026-11-08-0303, P-2026-11-08-0315)
+**Prompt**: `claude_2026-11-08_0248_prompt_dcn_l45_run_wiring.md` (discovery), `claude_2026-11-08_0303_prompt_dcn_l45a_code.md` (stopped at the context ceiling after items 0-2), `claude_2026-11-08_0315_prompt_dcn_l45c_panel.md` (continuation, items 3-5): startRun starts a DCN run, its texts dispatch by net, the panel gates on either role set and shows the DCN inputs row.
+**Files touched**: bdd94bfc7 `docs/discovery/discovery_2026-11-08_dcn_l45_run_wiring.md`; 70c5174c8 `model/simulation/dcn/dcnPanelText.ts` + test; b7bffda4c `sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`; b4bb4c04c `sim/simRoleStatus.ts`, `sim/__tests__/simRoleStatus.test.ts`, `sim/SimulationPanel.tsx`; this entry; Status of the three prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates at b4bb4c04c: typecheck exit 0, typecheck:scripts exit 0, vitest 3 failed (the 3 known import reds) | 567 passed files, 15144 passed tests, build exit 0, check:docs exit 0; the panel render is not covered by a test
+**Out-of-scope changes**: no (eight files over three prompts, each in its DOVE: the report, dcnPanelText.ts and test, simBridge.ts and test, simRoleStatus.ts and test, SimulationPanel.tsx)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (separate lane, chat to read the crops)
+**Notes**: Benches 13/13, 12/12, 6/6 killed (lists in the commit messages). runEngine is startRun's rule, Petri first, dcn roles read through runBag. The DCN row reuses the sim-panel__event classes, is on while Running, and labels by candidateLabel, which dispatches to dcnCandidateLabel. The heading is DCN_PANEL_HEADING in the panel; simLabels.ts and the inspector's markingHeading are untouched. The unattended decisions are in the handoff of 0303 and the closing report.
+**Prompt document name**: 2026-11-08 03:15
+
+**Ticket** (medium): `withInputs` (simRunState.ts:303) overlays only the values the net declares `input: true`; the arguments of a DCN invocation (entries[].inputs, element = the transition id) are not declared, so a value given for `dji.charge(rate)` is asked but may not reach the action. Not measured; the drone visual check uses `takeOff()`, which has no arguments.
+
+## 2026-11-08 — fix: a DCN run freezes its model, class shell flags read the stored field (P-2026-11-08-0345)
+**Prompt**: `claude_2026-11-08_0345_prompt_dcn_l45e_freeze.md`: Reset of the drone refused the run («The model cannot be frozen: an L proxy at ...superTypes.0.isAbstract»); root cause first, then the fix, probe acceptance, gates. The cause sat in `eval.ts`, outside DOVE: hard stop with a question, the chat (C-2026-11-06-2159) widened DOVE to the flag reads.
+**Files touched**: 53606f71c `frontend/scripts/probe/dcn-drone-run.ts`; 969670d5b `docs/discovery/discovery_2026-11-08_dcn_freeze_proxy.md`; db9d66ddf `frontend/src/jjscript/executor/commands/eval.ts`, `frontend/src/jjscript/executor/__tests__/classShellFlags.test.ts` (new); this entry; Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 03:40 (P-2026-11-08-0329, the drone run report)
+**Causa**: (c)
+**Regressions**: no. Gates at db9d66ddf: typecheck exit 0, typecheck:scripts exit 0, vitest 3 failed (the 3 known import reds) | 568 passed files, 15148 passed tests, build exit 0, check:docs exit 0
+**Out-of-scope changes**: yes (`eval.ts` and its new test were outside the prompt's DOVE; widened by the chat before the change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (probe acceptance, crops by the re-run of P-2026-11-08-0329)
+**Notes**: The chat widened DOVE to eval.ts (flag reads only). The fix is shared: the same builder serves Petri, DCN, JjScript eval and validation. Red test first (4/4 red, path Association.superTypes.0.isPartial); bench 8/8 killed. Probe: L45d-1 and L45d-2 pass, Reset Running, σ0 classified Mode=Charging, Alert=Safe; then it aborts on its own locator (/^tick/ vs the label dcn-tick). Detail: discovery_2026-11-08_dcn_freeze_proxy.md.
+**Prompt document name**: 2026-11-08 03:45
+
+**Ticket** (medium): `dcn-drone-run.ts` presses the tick with `/^tick/i`, but the DCN inputs row labels it `dcn-tick` (MEAS `inputs row`), so the probe aborts after L45d-2 with a 30 s click timeout. Causa line: a latent bug in the shared builder (`isAbstract`/`isInterface`/`isPartial` have no getter and resolve to a same-named child); `cls.partial` falls back to the child again when the D field is unset (read, not measured).
+
+## 2026-11-08 — test: DCN drone run in the Simulation panel, crops (P-2026-11-08-0329)
+**Prompt**: `claude_2026-11-08_0329_prompt_dcn_l45d_visual.md`: probe `dcn-drone-run.ts` imports dcn-drone-objects.jjodel, opens the object diagram and the Simulation panel, Choices Random on a fixed seed, Reset, Ticks to Ready, takeOff, three Ticks; four crops and one MEAS per step. The first run stopped on the freeze (fixed by P-2026-11-08-0345); resumed from the chat after the tick selector fix.
+**Files touched**: 53606f71c `frontend/scripts/probe/dcn-drone-run.ts` (committed by 0345); 32a3e617e the same probe, the tick matched by its label `dcn-tick`; this entry; Status of this prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (probe only, no frontend/src change)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops read by the chat 2026-11-08 04:24: 1-reset, 3-takeoff viewed; 2, 4 per MEAS; Charging to Ready to Flying, takeOff one trace step)
+**Notes**: Probe 5/5 PASS, page errors none, seed 4242, Choices Random. dji reaches Mode=Ready on Tick 20 (battery 100), the limit exactly; takeOff is trace 20 to 21, Mode=Flying, speed 1; three Ticks fire Mode::Flying drain (distance 3, battery 97). Crops 1-reset 2-ready 3-takeoff 4-flying in ~/.jjodel-lanes/P-2026-11-08-0329/crops/. The panel shows «15 defects: dji.power (no slot and no default); ...» over the heading. Selector fix 32a3e617e.
+**Prompt document name**: 2026-11-08 03:29
+
+**Ticket** (low): the inputs row labels the Tick button with its raw id `dcn-tick` (MEAS `tick button label`), where every invocation has a readable label. Also seen, not fixed: the last-step line repeats the label (`dji.takeOff() in Mode::Ready: dji.takeOff() in Mode::Ready fired`); the chips title lists `wau1: ownedSensors = temp`, one of four sensors; every input is on while Running, takeOff in Charging included.

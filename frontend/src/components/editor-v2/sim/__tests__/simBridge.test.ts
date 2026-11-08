@@ -16,7 +16,7 @@ import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
-    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
+    pressRandom, pressStep, runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
 import { encodeWatches } from '../../../../model/simulation/watchCodec';
@@ -26,13 +26,14 @@ import {
     __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
 } from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
+import { nucleusOf } from '../simNucleus';
 import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
 import * as netStepModule from '../../../../model/simulation/netStep';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
-import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import { encodeRoleValues, ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../../model/simulation/roleCatalog';
-import { EVENT_FROM_TRIGGER } from '../../../../model/simulation/simProfiles';
+import { EVENT_FROM_TRIGGER, systemProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileShape, RoleMode } from '../../../../model/simulation/simProfiles';
 import type { CompiledNet, NetRunStatus, NetTransition, SimState, SimValue } from '../../../../model/simulation/netTypes';
 
@@ -3162,5 +3163,167 @@ describe('R-SIM-144: event reads checked at Reset, the unset warning (P-2026-10-
         })).compileDefects?.map(d => [d.element, d.role, d.reason, d.detail]);
         expect(join(['C10'], [])).toEqual([['e1', 'guard', 'trigger-position', 'its trigger is ignored: join J takes the trigger of its choice edge, e3, the edge out of it']]);
         expect(join([], ['C10'])).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// DCN L4.5: the DCN run in startRun and the panel texts (P-2026-11-08-0248, P-2026-11-08-0303)
+// ---------------------------------------------------------------------------
+
+/** The DCN M2 classes and features under PKG of MM, beside the turnstile's (so both role sets can be bound). */
+const DCN_CLASSES: Record<string, { name: string; extends?: string[] }> = {
+    D_Named: { name: 'NamedElement' }, D_Class: { name: 'Class', extends: ['D_Named'] }, D_Static: { name: 'StaticClass', extends: ['D_Class'] },
+    D_Viewpoint: { name: 'Viewpoint', extends: ['D_Named'] }, D_Dynamic: { name: 'DynamicClass', extends: ['D_Named'] },
+    D_Property: { name: 'Property', extends: ['D_Named'] }, D_Operation: { name: 'Operation', extends: ['D_Named'] },
+    D_Instance: { name: 'InstanceSpecification', extends: ['D_Named'] }, D_Slot: { name: 'Slot' }, D_LitInt: { name: 'LiteralInteger' },
+    D_Primitive: { name: 'PrimitiveType', extends: ['D_Named'] },
+};
+const DCN_FEATURES: Record<string, { className: 'DAttribute' | 'DReference'; name: string; father: string }> = {
+    D_ownedAttributes: { className: 'DReference', name: 'ownedAttributes', father: 'D_Class' },
+    D_ownedOperations: { className: 'DReference', name: 'ownedOperations', father: 'D_Class' },
+    D_viewpoints: { className: 'DReference', name: 'viewpoints', father: 'D_Static' },
+    D_classes: { className: 'DReference', name: 'classes', father: 'D_Viewpoint' },
+    D_invariant: { className: 'DAttribute', name: 'invariant', father: 'D_Dynamic' },
+    D_dynOperations: { className: 'DReference', name: 'operations', father: 'D_Dynamic' },
+    D_body: { className: 'DAttribute', name: 'body', father: 'D_Operation' },
+    D_redefines: { className: 'DReference', name: 'redefines', father: 'D_Operation' },
+    D_type: { className: 'DReference', name: 'type', father: 'D_Property' },
+    D_classifier: { className: 'DReference', name: 'classifier', father: 'D_Instance' },
+    D_slots: { className: 'DReference', name: 'slots', father: 'D_Instance' },
+    D_definingFeature: { className: 'DReference', name: 'definingFeature', father: 'D_Slot' },
+    D_values: { className: 'DReference', name: 'values', father: 'D_Slot' },
+    D_litValue: { className: 'DAttribute', name: 'value', father: 'D_LitInt' },
+};
+
+const DCN_ONTO = JSON.stringify({
+    v: 1,
+    bindings: [{
+        name: 'object', typeReference: 'D_classifier', featureContainer: 'D_ownedAttributes', featureType: 'D_type',
+        slotContainer: 'D_slots', definingFeature: 'D_definingFeature', valueHolder: 'D_values',
+        valueKinds: [{ when: 'primitive:Integer', create: 'D_LitInt', field: 'D_litValue' }],
+    }],
+});
+
+/** The dcn roles without the profile; `DCN_BAG` adds the «Dynamic classification» profile, or a run reads the dcn group off. */
+const DCN_ROLE_KEYS = {
+    simStaticClass: 'D_Static', simViewpoints: 'D_viewpoints', simDynamicClasses: 'D_classes', simInvariant: 'D_invariant',
+    simOperation: encodeRoleValues(['D_ownedOperations', 'D_dynOperations']), simBody: 'D_body', simRedefines: 'D_redefines',
+};
+const DCN_BAG = { simProfile: encodeProfile(systemProfile('dynamicClassification')!), ...DCN_ROLE_KEYS, ontoBindings: DCN_ONTO };
+
+/** The drone dji with speed and alt, Mode {Ready: speed 0, Flying: speed > 0}; `takeOff` adds 1 to speed, its Flying redefinition 5 to alt. */
+function dcnObjects(speed: number): Record<string, Obj & { name?: string }> {
+    return {
+        Integer: { cls: 'D_Primitive', name: 'Integer' },
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_takeOff'], D_viewpoints: ['vp_Mode'] } },
+        p_speed: { cls: 'D_Property', name: 'speed', slots: { D_type: ['Integer'] } },
+        p_alt: { cls: 'D_Property', name: 'alt', slots: { D_type: ['Integer'] } },
+        op_takeOff: { cls: 'D_Operation', name: 'takeOff', slots: { D_body: ['self.speed := self.speed + 1'] } },
+        vp_Mode: { cls: 'D_Viewpoint', name: 'Mode', slots: { D_classes: ['dc_Ready', 'dc_Flying'] } },
+        dc_Ready: { cls: 'D_Dynamic', name: 'Ready', slots: { D_invariant: ['self.speed == 0'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'] } },
+        op_Flying_takeOff: { cls: 'D_Operation', name: 'takeOff', slots: { D_body: ['self.alt := self.alt + 5'], D_redefines: ['op_takeOff'] } },
+        dji: { cls: 'D_Instance', name: 'dji', slots: { D_classifier: ['Drone'], D_slots: ['s_speed', 's_alt'] } },
+        s_speed: { cls: 'D_Slot', slots: { D_definingFeature: ['p_speed'], D_values: ['l_speed'] } },
+        l_speed: { cls: 'D_LitInt', slots: { D_litValue: [speed] } },
+        s_alt: { cls: 'D_Slot', slots: { D_definingFeature: ['p_alt'], D_values: ['l_alt'] } },
+        l_alt: { cls: 'D_LitInt', slots: { D_litValue: [0] } },
+    };
+}
+
+/** The turnstile's lookup with the DCN classes, features and objects added; `name` overrides the id as the object's name. */
+function dcnLookup(bag: Record<string, unknown>, speed = 1, extra: Record<string, Obj> = {}): Lookup {
+    const objects = { ...dcnObjects(speed), ...extra };
+    const lookup = buildLookup(bag, objects);
+    lookup.PKG = { className: 'DPackage', id: 'PKG', name: 'dcn', father: 'MM' };
+    for (const [id, c] of Object.entries(DCN_CLASSES)) lookup[id] = { className: 'DClass', id, name: c.name, father: 'PKG', extends: [...(c.extends ?? [])] };
+    for (const [id, f] of Object.entries(DCN_FEATURES)) lookup[id] = { ...f, id };
+    for (const [id, o] of Object.entries(objects)) if ((o as { name?: string }).name) lookup[id].name = (o as { name?: string }).name;
+    return lookup;
+}
+
+/** One plain handle per object of the model, as the real builder gives them. */
+const dcnBuilder = (lookup: Lookup): ContextBuilder => () => ({
+    instances: collectModelObjectIds(lookup, 'M').map(id => ({ id, __type: 'Object', name: lookup[id].name })),
+    classes: [],
+});
+
+function dcnStarted(lookup: Lookup) {
+    const r = startRun(lookup, 'M', 'MM', 'P', dcnBuilder(lookup), 7);
+    if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+    return r;
+}
+
+describe('DCN L4.5: startRun picks the DCN nucleus by the bound dcn roles (decision 1)', () => {
+    it('a DCN bag starts a run on the DCN nucleus: its net, the invocation alone in the alphabet, no compile defect, σ0 not classified (mutants: no DCN branch, the redefinition in the alphabet)', () => {
+        const lookup = dcnLookup(DCN_BAG);
+        const r = dcnStarted(lookup);
+        const run = r.run;
+        const nucleus = nucleusOf(run) as ReturnType<typeof nucleusOf> & { classify?: unknown };
+        expect(typeof nucleus.classify).toBe('function');
+        expect(run.nucleus).toBe(nucleus);
+        expect(run.alphabet).toHaveLength(1);
+        expect(run.halt).toBeNull();
+        expect(r.compileDefects).toEqual([]);
+        expect(markingLine(run.config.state, run.net, lookup).line).toBe('Classification: dji: Mode = Flying');
+        expect(markingChips(run.config.state, lookup, run.net).map(c => c.text)).toEqual(['dji.Mode = Flying']);
+        expect(candidateLabel(run.net, run.alphabet[0], lookup)).toBe('dji.takeOff()');
+    });
+
+    it('a Petri bag is unchanged: the Petri nucleus, the Marking line, the chips of the places (mutant: DCN tried first)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        const run = started(lookup);
+        expect((nucleusOf(run) as { classify?: unknown }).classify).toBeUndefined();
+        expect(markingLine(run.config.state, run.net, lookup).line).toBe('Marking: Locked');
+        expect(markingChips(run.config.state, lookup, run.net).map(c => c.text)).toEqual(['Locked']);
+    });
+
+    it('both role sets bound: the Petri run wins (mutant: DCN tried first)', () => {
+        // A user profile with no group off, so that the run reads both sets (R-SIM-78).
+        const modes = Object.fromEntries(ROLE_IDS.map(r => [r, r === 'event' ? EVENT_FROM_TRIGGER : { mode: 'edit' }])) as Record<RoleId, RoleMode>;
+        const simProfile = encodeProfile({
+            id: 'u-both', name: 'Both', system: false, shape: 'controlFlow', modes,
+            params: { bound: 1, selector: 'list' }, constraints: [], addedRequired: [],
+        });
+        const lookup = dcnLookup({ simProfile, ...ROLES, ...DCN_ROLE_KEYS, ontoBindings: DCN_ONTO }, 1, TURNSTILE);
+        expect(runBag(lookup.MM._state, lookup).simStaticClass).toBe('D_Static');
+        const run = started(lookup, dcnBuilder(lookup));
+        expect((nucleusOf(run) as { classify?: unknown }).classify).toBeUndefined();
+        expect(markingLine(run.config.state, run.net, lookup).line.startsWith('Marking: Locked')).toBe(true);
+    });
+
+    it('an incomplete DCN binding gives no DCN run: refused (mutant: a run on a null input)', () => {
+        const lookup = dcnLookup({ ...DCN_BAG, ontoBindings: undefined });
+        const r = startRun(lookup, 'M', 'MM', 'P', dcnBuilder(lookup), 7);
+        expect(r.kind).toBe('refused');
+    });
+});
+
+describe('DCN L4.5: the press through the DCN nucleus (decisions 2-3, R-DCN-22)', () => {
+    it('takeOff with the Flying redefinition active: forced, admissible, one step running both (mutant: candidates from netStep, the redefinition a candidate alone)', () => {
+        const lookup = dcnLookup(DCN_BAG);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const takeOff = run.alphabet[0];
+        expect(candidateLabel(run.net, takeOff, lookup)).toBe('dji.takeOff() + Mode::Flying');
+        const p = pressInput('M', takeOff, undefined, lookup, 'takeOff');
+        expect(p.pending).toBeNull();
+        expect(p.outcome?.kind).toBe('fired');
+        expect(p.lastStep).toBe('takeOff: dji.takeOff() + Mode::Flying fired');
+        const after = getSimRun('M')!;
+        expect(after.trace).toHaveLength(1);
+        expect(after.config.state.attrs.get('dji')?.get('speed')).toBe(2);
+        expect(after.config.state.attrs.get('dji')?.get('alt')).toBe(5);
+    });
+
+    it('from Ready takeOff runs the static operation alone and classifies Flying (mutant: the classification of the σ before the step ignored)', () => {
+        const lookup = dcnLookup(DCN_BAG, 0);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const p = pressInput('M', run.alphabet[0], undefined, lookup, 'takeOff');
+        expect(p.lastStep).toBe('takeOff: dji.takeOff() fired');
+        const after = getSimRun('M')!;
+        expect(after.config.state.attrs.get('dji')?.get('alt')).toBe(0);
+        expect(markingLine(after.config.state, after.net, lookup).line).toBe('Classification: dji: Mode = Flying');
     });
 });

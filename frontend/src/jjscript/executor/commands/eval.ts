@@ -461,15 +461,15 @@ function shallowClassToJjelValue(cls: any): JjelValue {
         // M3 type name (meta-metaclass), e.g. "DClass". Source: D-layer runtime
         // class name auto-set by the joiner at construction (classes.ts:458).
         className: cls.className ?? 'DClass',
-        isAbstract: cls.isAbstract ?? cls.abstract ?? false,
-        isInterface: cls.isInterface ?? cls.interface ?? false,
+        isAbstract: cls.abstract ?? cls.isAbstract ?? false,
+        isInterface: cls.interface ?? cls.isInterface ?? false,
         // Mapped to D-layer field allowCrossReference for historical reasons;
         // UI and JjEL both use the more accurate name allowCrossExtend.
         allowCrossExtend: cls.allowCrossReference ?? false,
         isFinal: cls.isFinal ?? cls.final ?? false,
         isSingleton: cls.isSingleton ?? false,
         isRootable: cls.isRootable ?? cls.rootable ?? false,
-        isPartial: cls.isPartial ?? cls.partial ?? false,
+        isPartial: cls.partial ?? cls.isPartial ?? false,
         attributes,
         references,
         operations,
@@ -537,8 +537,8 @@ function shallowPackageToJjelValue(pkg: any): JjelValue {
     const classes = (pkg.classes || []).map((c: any) => ({
         id: c.id ?? '',
         name: c.name ?? '',
-        isAbstract: c.isAbstract ?? c.abstract ?? false,
-        isInterface: c.isInterface ?? c.interface ?? false
+        isAbstract: c.abstract ?? c.isAbstract ?? false,
+        isInterface: c.interface ?? c.isInterface ?? false
     }));
     return {
         id: pkg.id ?? '',
