@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2200
 Chat: C-2026-11-08-1855
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 82ca58b64
 Lane: full (discovery, read-only on source; one docs commit for the L6d closure)
 Depends: P-2026-11-08-2045 (L6d, F1..F3 at efcda31f1, Alfonso's visual GO 2026-11-08 21:55; its docs closure is item (0) here, from `~/.jjodel-lanes/P-2026-11-08-2045/handoff.md`)
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit
