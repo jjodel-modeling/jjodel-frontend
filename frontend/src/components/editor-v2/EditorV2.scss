@@ -28,6 +28,11 @@
     }
 }
 
+// Where the active pane's palette lands in a split (multi-tab L6c): no box of its own, the palette stays a flex child of the editor.
+.editor-v2-palette-slot {
+    display: contents;
+}
+
 .editor-v2__main {
     flex: 1;
     display: flex;
@@ -1547,6 +1552,12 @@ html[data-mode="advanced"] .editor-v2-toolbar {
             color: var(--shell-text-2);
             margin-bottom: 8px;
             padding: 0 2px;
+        }
+
+        // In a split the title names the active pane's viewpoint, as the picker writes it (multi-tab L6c).
+        &__viewpoint {
+            text-transform: none;
+            letter-spacing: normal;
         }
 
         &__list {

@@ -127,6 +127,8 @@ import { getCompositionChildOptions, getCompatibleReferences, getCompatibleConta
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
+import { paneAcceptsPaletteDrop } from './utils/canvasSplit';
+import { useCanvasSplit } from './hooks/useCanvasSplit';
 import { PolymetricView } from '../polymetric';
 import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
@@ -586,6 +588,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     // Phase 3: bidirectional incremental sync with JjOM/Redux
+    // This editor's place in a split of canvases (multi-tab L6c, P-2026-11-08-1855): one palette, the active pane's.
+    const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
+    const canvasSplit = useCanvasSplit(paneEl);
+    const inCanvasSplit = paneEl !== null && canvasSplit.panes.includes(paneEl);
+    const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
+    const paneAcceptsDropRef = useRef(true);
+    paneAcceptsDropRef.current = paneEl === null || paneAcceptsPaletteDrop(canvasSplit, paneEl);
+
     // fitViewRef / applyDistributionRef bridge hook ordering: useJjomSync's
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
@@ -2741,7 +2751,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             event.preventDefault();
 
             const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
+            if (!rawType || !paneAcceptsDropRef.current) return;
 
             createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
         },
@@ -2761,6 +2771,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
     const onDragOver = useCallback((event: React.DragEvent) => {
+        // In a split only the active pane takes a palette drop (L6c): no preventDefault, no drop, no-drop cursor.
+        if (!paneAcceptsDropRef.current && event.dataTransfer.types.includes('application/reactflow')) {
+            event.dataTransfer.dropEffect = 'none';
+            return;
+        }
         event.preventDefault();
 
         // M1: show not-allowed cursor for non-rootable classes (they need context menu)
@@ -2795,7 +2810,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const onClassicDrop = useCallback((event: React.DragEvent) => {
         event.preventDefault();
         const metaclassId = event.dataTransfer.getData('application/jjodel-classic');
-        if (!metaclassId || !modelid) return;
+        if (!metaclassId || !modelid || !paneAcceptsDropRef.current) return;
 
         try {
             const lModel: any = LPointerTargetable.fromPointer(modelid);
@@ -2814,7 +2829,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // dataTransfer.types is readable during dragOver (unlike getData), so we
     // can filter out unrelated drags (e.g. files from the desktop) early.
     const onClassicDragOver = useCallback((event: React.DragEvent) => {
-        if (!event.dataTransfer.types.includes('application/jjodel-classic')) return;
+        if (!event.dataTransfer.types.includes('application/jjodel-classic') || !paneAcceptsDropRef.current) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
@@ -5235,26 +5250,36 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         </HighlightProvider>
     );
 
+    const palette = (
+        <PalettePanel
+            editorMode={modeInfo.mode}
+            rootableClasses={irPalette.classes}
+            irPaletteFallback={irPalette.fallback}
+            undeclaredClasses={irPalette.undeclared}
+            allClasses={modeInfo.allClasses}
+            selectedDObjectId={lastSelectedModelElement ?? null}
+            onItemActivate={onPaletteActivate}
+            collapsed={!!scriptPreview?.owner}
+            viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
+        />
+    );
+    // In a split the active pane shows its palette in the first pane's slot, at the window's left edge; the other pane shows none.
+    const paletteSlot = inCanvasSplit && canvasSplit.active === paneEl
+        ? canvasSplit.panes[0].querySelector<HTMLElement>(':scope > .editor-v2-palette-slot')
+        : null;
+
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div ref={setPaneEl} className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <InstantiationProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
                 <DcnProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
-                <PalettePanel
-                    editorMode={modeInfo.mode}
-                    rootableClasses={irPalette.classes}
-                    irPaletteFallback={irPalette.fallback}
-                    undeclaredClasses={irPalette.undeclared}
-                    allClasses={modeInfo.allClasses}
-                    selectedDObjectId={lastSelectedModelElement ?? null}
-                    onItemActivate={onPaletteActivate}
-                    collapsed={!!scriptPreview?.owner}
-                />
-                <div className="editor-v2__main">
+                <div className="editor-v2-palette-slot" />
+                {inCanvasSplit ? (paletteSlot && createPortal(palette, paletteSlot)) : palette}
+                <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}

@@ -7,6 +7,7 @@ import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, splitSizes, type BesidePanel } from '../scripts/refactoringBeside';
+import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
@@ -19,6 +20,37 @@ import type { RunRecord } from '../../jjtl/components/sourceSelection';
 class DockManager {
     static cname = "DockManager";
     static dock: DockLayout|null;
+
+    // The canvases shown side by side and the active one (multi-tab L6c, P-2026-11-08-1855).
+    static canvasSplit: CanvasSplit = NO_CANVAS_SPLIT;
+    private static canvasSplitListeners = new Set<() => void>();
+
+    static subscribeCanvasSplit = (listener: () => void): (() => void) => {
+        DockManager.canvasSplitListeners.add(listener);
+        return () => { DockManager.canvasSplitListeners.delete(listener); };
+    };
+
+    static getCanvasSplit = (): CanvasSplit => DockManager.canvasSplit;
+
+    private static setCanvasSplit(next: CanvasSplit): void {
+        if (next === DockManager.canvasSplit) return;
+        DockManager.canvasSplit = next;
+        DockManager.canvasSplitListeners.forEach(listener => listener());
+    }
+
+    /** Re-reads the split from the dock: the same rows the split's SCSS matches, and the editor each panel shows. A Refactoring split is none. */
+    static refreshCanvasSplit = (): void => {
+        const box = document.querySelector('.not-strip > .dock-layout > .dock-hbox');
+        const beside = !box || !!box.querySelector(':scope > .dock-panel .script-tab--beside');
+        const shown = beside ? [] : [...box.querySelectorAll(':scope > .dock-panel.dock-style-models')]
+            .map(panel => panel.querySelector<HTMLElement>('.dock-tabpane-active .editor-v2'));
+        const panes = shown.every((pane): pane is HTMLElement => pane !== null) ? shown as HTMLElement[] : [];
+        DockManager.setCanvasSplit(reconcileCanvasSplit(DockManager.canvasSplit, panes));
+    };
+
+    static activateCanvasPane(pane: HTMLElement): void {
+        DockManager.setCanvasSplit(activateCanvasPane(DockManager.canvasSplit, pane));
+    }
 
     /**
      * Close a tab by its ID

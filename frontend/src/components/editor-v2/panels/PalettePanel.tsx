@@ -81,9 +81,11 @@ interface PalettePanelProps {
     /** Click or Enter/Space on an entry: creates it at the canvas centre (the drop path). Member
      *  entries stay inert, as on a bare-canvas drop. Without it the entries are drag-only. */
     onItemActivate?: (type: string, metaclassId?: string) => void;
+    /** In a split, the viewpoint of the pane this palette is showing, read beside the Instances title (multi-tab L6c). */
+    viewpointName?: string;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, viewpointName }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -143,7 +145,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
             <aside className={`editor-v2-palette editor-v2-palette--m1${collapsed ? ' editor-v2-palette--collapsed' : ''}`}>
                 {/* Instances — root instance creation (kept as drag-to-canvas) */}
                 <div className="palette-instances">
-                    <div className="palette-instances__title">Instances</div>
+                    <div className="palette-instances__title">Instances{viewpointName && <> · <span className="palette-instances__viewpoint">{viewpointName}</span></>}</div>
                     {irPaletteFallback && (
                         <div className="palette-notice">
                             Active viewpoint declares no views for creatable root classes. Showing all.
