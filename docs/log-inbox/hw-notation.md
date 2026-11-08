@@ -1426,3 +1426,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: The red check is Check C on an entry of another front, `docs/log-inbox/dcn.md:320` (Notes of 505 characters, merge P-2026-11-08-0154), already on the trunk before this merge. This branch adds docs only. Left to the owner of that front; `lane-run go` refuses a blocked merge, so this closure is by hand.
 **Prompt document name**: 2026-11-08 02:29
+
+## 2026-11-08 — fix(jjtl): envValue, and a demand used as an operand stops the run (P-2026-11-08-0740)
+**Prompt**: `claude_2026-11-08_0740_prompt_jjtl_envvalue_and_demand_as_value.md`, lane full, unattended: register the seven ratified recommendations of the kernel-gaps report, implement S1 `envValue` and S2 the demand-as-value error, tests first, full suite, node baseline on the two Briefs.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/env-value.test.ts` (a35b54454); `executor.ts`, `__tests__/demand-as-value.test.ts` (93cf9f04b); `frontend/src/jjtl/SPEC.md` (0fbc6a015); `docs/decisions.md` R-JTG-23..29 (1f163a4d8); this entry; the prompt's `Status:` line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15193 passed, 0 failed tests, 12 new; no existing expectation changed; both Brief hashes unchanged
+**Out-of-scope changes**: no — seven files, all named by the prompt's DOVE; the baseline probe was copied, run and removed as asked
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Baseline: arbiter `5c0d9731c4bb9632`, core `2a34b97ab348ce64`, success true, 0 warnings. S2 lives in a `JjelEvaluator` subclass in `executor.ts` (operator nodes mark their operands), nothing outside `jjtl/`. Interpolation holes not covered: JjTL lexes no interpolation. Suite: the 3 known import failures, plus Chromium `afterAll` timeouts in `irSelectionRing`/`irCollapsedRender`, green rerun alone (g).
+**Prompt document name**: 2026-11-08 07:40

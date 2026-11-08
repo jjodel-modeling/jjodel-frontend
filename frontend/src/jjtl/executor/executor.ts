@@ -412,6 +412,40 @@ class JjtlEvaluationContext extends EvaluationContext {
     }
 }
 
+/**
+ * The JjEL evaluator of a run: a demand used as the operand of an operator stops the run
+ * (P-2026-11-08-0740). A demand is carried out only where a binding places it; as an operand
+ * JjEL sees the marker object, and `+` wrote `"[object Object]_w"` or `null` with
+ * `success true`. Operands are marked when their operator node is evaluated, before them,
+ * so the check is structural; JjEL reaches every subexpression through `evaluate`.
+ */
+class JjtlJjelEvaluator extends JjelEvaluator {
+    private readonly operands = new WeakMap<JjelExpression, string>();
+
+    constructor(private readonly demandSource: (value: unknown) => string | undefined) {
+        super();
+    }
+
+    evaluate(expr: JjelExpression, ctx?: EvaluationContext): JjelValue {
+        if (expr.type === 'Binary') {
+            this.operands.set(expr.left, `an operand of '${expr.operator}'`);
+            this.operands.set(expr.right, `an operand of '${expr.operator}'`);
+        } else if (expr.type === 'Unary') {
+            this.operands.set(expr.operand, `the operand of '${expr.operator}'`);
+        }
+        const value = super.evaluate(expr, ctx);
+        if (value !== null && typeof value === 'object') {
+            const use = this.operands.get(expr);
+            const source = use !== undefined ? this.demandSource(value) : undefined;
+            if (source !== undefined) {
+                throw new JjtlBuiltinError(source, `its result, a demand, is ${use}; a demand is carried out only ` +
+                    'where a binding places it; bind it with let, or read a bound value with envValue');
+            }
+        }
+        return value;
+    }
+}
+
 /** Key under which a delegating rule's error carries the application stack of its throw. */
 const APPLICATION_STACK = Symbol('jjtlApplicationStack');
 
@@ -573,7 +607,10 @@ type CreationShape =
 export class JjtlExecutor {
     private ast: TransformationAST;
     private context!: ExecutionContext;
-    private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
+    private jjelEvaluator: JjelEvaluator = new JjtlJjelEvaluator(value => {
+        const demand = this.demandOf(value);
+        return demand?.kind === 'call' ? demand.rule.ruleName ?? 'a called rule' : demand ? 'envLookup' : undefined;
+    });
     private errors: string[] = [];
     private warnings: string[] = [];
     // Target classes referenced by mappings that don't exist in the target
@@ -3218,7 +3255,9 @@ export class JjtlExecutor {
      * The environment as JjEL sees it (R-JTG-5): `extendEnv(names, values)` returns a new
      * frame over the current environment, each value a closure over the current
      * environment, the binding site; `envHas(name)`; `envLookup(name)`, the bound value as
-     * a demand lowered under its closure's environment, or null when unbound.
+     * a demand lowered under its closure's environment, or null when unbound;
+     * `envValue(name[, env])`, the bound value as bound, never a demand, read from the
+     * current environment or from an `extendEnv` marker; unbound, it fails (R-FA-11).
      */
     private registerEnvironmentBuiltins(): void {
         const ctx = this.context.evalContext;
@@ -3238,6 +3277,12 @@ export class JjtlExecutor {
             const name = String(args[0]);
             const closure = this.lookupClosure(this.currentEnvironment(), name);
             return (closure ? this.makeDemand({ kind: 'closure', name, closure }) : null) as JjelValue;
+        }));
+        ctx.registerBuiltin('envValue', createFunction(['name', 'env'], (args: JjelValue[]) => {
+            const name = String(args[0]);
+            const closure = this.lookupClosure(this.environmentOf(args[1]) ?? this.currentEnvironment(), name);
+            if (!closure) throw new Error(`'${name}' is not bound in the environment; envHas tests it`);
+            return closure.value as JjelValue;
         }));
     }
 
