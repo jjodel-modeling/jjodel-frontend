@@ -451,7 +451,7 @@ active log is not touched by this lane.
 **Regressions**: no
 **Out-of-scope changes**: no (six repo files, all in the DOVE of the prompt: the fixture, three assets, this inbox, the prompt)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (screenshot read by the lane: six instances with slot rows, readable, no overlap; chat to read it)
+**Smoke visivo**: passato (screenshot read by the chat 2026-11-08 20:35: six instances with slot rows, readable, no overlap)
 **Notes**: Fixture 30/30 (O-7, O-8, RT-1, L-1 new), dcn and instantiation problems zero, conformant. Run probe 9/9, no selector changed, Ready on Tick 20. Exports from the green run; earlier runs: 4 edited and 1 on HEAD each lost one link. The green run, with a settle added after buildLinks, lost none: the re-apply branch is unexercised. Own 3x2 grid in the viewpoint. check:scripts 0, tsc on the fixture 0; repo typecheck, vitest, build not run (no frontend/src change).
 **Prompt document name**: 2026-11-08 19:39
 
