@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-0932
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-tab-fixes launched by chat C-2026-11-03-1037)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane merge · 49cd0871d · verifica visiva passata 2026-11-08 (TABFIX crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/ checked by the chat; probe 19/19)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-08-0932 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

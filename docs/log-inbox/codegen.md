@@ -3112,3 +3112,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato: probe 19/19 PASS on 3859 (DemoESM, red before the fixes), read from Monaco's markers, decorations and the DOM; crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/, checked by the session
 **Notes**: Selection read from `.react-flow__node.selected` (the event has no pull form): a node out of view is not in the DOM and is not read. No visibility hook: a hidden tab stays mounted and the listener covers it (not run in the app). Also rechecked on text brought back to agreed. Bench 19/19 killed. Gates: typecheck 0; vitest 3 baseline import reds; build 0; check:docs 0; codegen-lazy ALL GREEN.
 **Prompt document name**: 2026-11-08 08:59
+
+## 2026-11-08 — merge: textual-tab-fixes into alfonso-frontend-jjtl (P-2026-11-08-0932)
+**Prompt**: `claude_2026-11-08_0932_prompt_merge_textual-tab-fixes.md`, a direct merge by `lane-run merge --direct`, no session: `textual-tab-fixes` at `0b56563f7` into `alfonso-frontend-jjtl`, merge base `e1f06117c`, 5 commits on the branch side.
+**Files touched**: merge `49cd0871d`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0859_prompt_textual_tab_fixes.md`, `frontend/src/codegen/textual/__tests__/jjelIslands.test.ts`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/ui/TextConfirmPanel.tsx`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `49cd0871d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15267 tests in 577 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: TABFIX crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/ checked by the chat; probe 19/19
+**Notes**: Rollback tag `pre-textual-tab-fixes` on `18ce96017` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0932/result.json`.
+**Prompt document name**: 2026-11-08 09:32
