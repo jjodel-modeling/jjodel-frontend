@@ -14,6 +14,7 @@
  * Pure: no React, no Monaco, no store.
  */
 
+import { resolveElementIds } from '../../components/editor-v2/utils/canvasSelection';
 import type { CanvasPick } from '../ui/codeOrigins';
 import type { ObjectNode, SyntaxNode, TextNode } from './parser';
 import type { ObjectSpan } from './printer';
@@ -113,6 +114,18 @@ export function selectedSpans(spans: readonly ObjectSpan[], elementIds: readonly
  */
 export function lastSelectedOf(elementIds: readonly string[]): string | null {
     return elementIds.length === 1 ? elementIds[0] : null;
+}
+
+/**
+ * Lane TABFIX (P-2026-11-08-0859; §5.1, §6.1): the elements a Text tab opened over a canvas selection takes as selected,
+ * read once. `CANVAS_SELECTION_CHANGED` fires on a change only, so a selection made before the tab never reaches it; the
+ * selected nodes resolve as the publisher resolves them. Null when there is nothing to read, and when the listener
+ * already holds a selection, which is newer.
+ */
+export function heldOnOpen(held: readonly string[], selectedNodes: readonly string[], lookup: Readonly<Record<string, any>>): string[] | null {
+    if (held.length) return null;
+    const ids = resolveElementIds(selectedNodes, lookup as Record<string, any>);
+    return ids.length ? ids : null;
 }
 
 const isNode = (c: SyntaxNode | { readonly kind: 'token' }): c is SyntaxNode => c.kind !== 'token';

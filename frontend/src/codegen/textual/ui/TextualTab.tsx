@@ -44,7 +44,7 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { reprintChanged } from '../textReprint';
-import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
+import { CARET_SELECT_DELAY_MS, canvasNodeOf, canvasVertexIds, heldOnOpen, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
 import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/canvasSelection';
 import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
@@ -1799,6 +1799,19 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         },
     };
 
+    /**
+     * TABFIX (§5.1, §6.1): the selection the canvas already holds, read once from its selected nodes when the editor
+     * mounts (rc-dock keeps a hidden tab mounted, so the listener covers it from then on). Through the listener's handler,
+     * so the highlight and the last-sent guard are the same; no store write, no event. A node out of view is not in the DOM.
+     */
+    const readCanvasSelection = (): void => {
+        void import('../../ui/canvasSelection').then(cs => {
+            const selected = [...(cs.modelPane(modelId)?.querySelectorAll('.react-flow__node.selected[data-id]') ?? [])].map(e => e.getAttribute('data-id') ?? '').filter(Boolean);
+            const ids = heldOnOpen(canvasIdsRef.current, selected, ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>);
+            if (ids) handlers.current.canvas(ids);
+        });
+    };
+
     useEffect(() => {
         const onSelection = (e: Event): void => {
             const detail = (e as CustomEvent<CanvasSelectionDetail>).detail;
@@ -1956,6 +1969,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }, true);
         updateUndoKey();
         setNav({ editor, session: sessionRef.current });
+        readCanvasSelection();
     };
 
     const shownStatus = editStatusText(stale && status.kind !== 'errors' ? { kind: 'stale' } : status);
