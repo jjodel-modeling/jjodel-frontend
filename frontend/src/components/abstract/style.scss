@@ -1089,6 +1089,44 @@ body[data-layout-mode="sidebar"] {
   }
 }
 
+/* The divider of a split of canvases shows itself at rest, with a grip (P-2026-11-08-2045). rc-dock's scaleX(3) is every
+   other divider's hit area and would triple the width here, so ::before is the hit area instead. */
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-divider {
+  flex: 0 0 6px;
+  transform: none;
+  border-left: none;
+  background: var(--color-border-primary);
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    right: -1px;
+  }
+
+  &::after {
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 32px;
+    border-radius: 2px;
+    background-color: var(--text-dim, #94a3b8);
+  }
+
+  &:hover,
+  &:active {
+    background: #0ea5e9;
+
+    &::after {
+      height: 32px;
+      background-color: #0ea5e9;
+    }
+  }
+}
+
 /* Default responsive last-child sizing (F2-fix 2026-07-29): REMOVED. These four
    media blocks capped the width of `.dock-hbox > .dock-panel:last-child` — the old
    Properties column — for the no-`data-layout-mode` default layout. Post-F2 the
