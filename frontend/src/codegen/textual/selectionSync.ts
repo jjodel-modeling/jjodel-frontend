@@ -8,10 +8,14 @@
  * Canvas to text (lane E2b, P-2026-11-07-1635; §5.2, §6.3): the elements selected on the canvas are highlighted on
  * their carried spans; an element without one is silent (E8).
  *
+ * Generated line to text (lane F2, P-2026-11-08-0027; R-TXT-55 F6, F12): the line of a generated span's origin, its
+ * feature's item inside the object's carried span.
+ *
  * Pure: no React, no Monaco, no store.
  */
 
 import type { CanvasPick } from '../ui/codeOrigins';
+import type { ObjectNode, SyntaxNode, TextNode } from './parser';
 import type { ObjectSpan } from './printer';
 
 /** Monaco's `CursorChangeReason.Explicit`: a move the user made with the mouse or a cursor key, not the cursor shift of an edit. */
@@ -109,4 +113,46 @@ export function selectedSpans(spans: readonly ObjectSpan[], elementIds: readonly
  */
 export function lastSelectedOf(elementIds: readonly string[]): string | null {
     return elementIds.length === 1 ? elementIds[0] : null;
+}
+
+const isNode = (c: SyntaxNode | { readonly kind: 'token' }): c is SyntaxNode => c.kind !== 'token';
+
+/**
+ * Lane F2 (P-2026-11-08-0027; R-TXT-55 F6, F12; discovery_2026-11-07_textual_f_jjel_tracing.md §5.3 route 2): the range
+ * the Text tab reveals for a generated span whose origin is `elementId` and `featureName`. Inside the element's carried
+ * span, the first item of that feature among the object's own items (never one of a contained object) when `tree`, the
+ * parse of `text`, writes one; else the object's first line. Null for an element with no carried span, or a collapsed
+ * one: silent, as E8. The placement of the conformance marks (conformanceMarks.ts, D8), for one element.
+ */
+export function revealedRange(
+    spans: readonly ObjectSpan[], elementId: string, featureName: string | undefined, text: string, tree?: TextNode,
+): { readonly start: number; readonly end: number } | null {
+    const s = spans.find(x => x.id === elementId && x.end > x.start);
+    if (!s) return null;
+    const end = Math.min(s.end, text.length);
+    if (end <= s.start) return null;
+    const objectIn = (n: SyntaxNode): ObjectNode | undefined => {
+        if (n.kind === 'object' && n.start >= s.start && n.end <= end && n.end > n.start) return n;
+        if (n.end < s.start || n.start > end) return undefined;
+        for (const c of n.children) {
+            const found = isNode(c) ? objectIn(c) : undefined;
+            if (found) return found;
+        }
+        return undefined;
+    };
+    const featureIn = (n: SyntaxNode): SyntaxNode | undefined => {
+        for (const c of n.children) {
+            if (!isNode(c) || c.kind === 'object') continue;
+            if ((c.kind === 'item' || c.kind === 'list' || c.kind === 'ref') && c.feature === featureName && c.end > c.start) return c;
+            const found = featureIn(c);
+            if (found) return found;
+        }
+        return undefined;
+    };
+    const o = featureName && tree ? objectIn(tree) : undefined;
+    const item = o ? featureIn(o) : undefined;
+    if (item) return { start: item.start, end: item.end };
+    const nl = text.indexOf('\n', s.start);
+    const head = text.slice(s.start, nl < 0 ? end : Math.min(nl, end)).trimEnd();
+    return head.length ? { start: s.start, end: s.start + head.length } : null;
 }
