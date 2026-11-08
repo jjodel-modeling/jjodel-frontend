@@ -19,8 +19,12 @@ prime ore dell'8, in gran parte in `/lane auto` con Alfonso assente («decidi tu
   (`b4bb4c04c`); gate verdi (vitest 15144 passati, solo i 3 rossi noti), 31 mutanti su 31 uccisi. La verifica visiva
   0329 ha trovato un bug vero: al Reset il run DCN rifiuta il modello («The model cannot be frozen: an L proxy at
   globals.InstanceValue_3 ... superTypes.0.isAbstract»), perché il contesto di valutazione DCN contiene proxy L vivi.
-  Fix in corso con P-2026-11-08-0345 (causa prima, regola di freeze di `guardContext.ts` intatta, il probe
-  `dcn-drone-run.ts` come test di accettazione). `dcn-l45` non entra nel tronco finché le crop non sono lette.
+  La causa era condivisa: `shallowClassToJjelValue` in `jjscript/executor/commands/eval.ts` leggeva `isAbstract`
+  prima di `abstract`, e il proxy L, davanti a una chiave sconosciuta, restituisce il figlio con quel nome (il
+  metamodello del drone ha l'attributo `Classifier.isAbstract`). Fix `db9d66ddf` (P-2026-11-08-0345): il campo salvato
+  prima, per abstract, interface e partial. Poi 0329: `dji` va da Charging a Ready al tick 20, a Flying con `takeOff`
+  (un passo solo nella traccia), tre tick di `drain`. **Slice 4 chiusa**: `dcn-l45` nel tronco con il merge
+  `617ad7579` (P-2026-11-08-0430, vitest 15165 passati, solo i 3 rossi noti).
 - Push del tronco: di Alfonso.
 
 ## Decisioni prese
@@ -63,7 +67,12 @@ prime ore dell'8, in gran parte in `/lane auto` con Alfonso assente («decidi tu
 10. `withInputs` (`simRunState.ts:303`) passa solo gli input dichiarati sulla rete: gli argomenti di un'invocazione DCN
     (`dji.charge(rate)`) potrebbero non arrivare all'azione. Non misurato, priorità media.
 11. Nessun test copre il rendering del pannello Simulation (`Regressions: unknown` nella voce di L4.5).
-12. Il guard dei commit chiede il trailer `Model: Anthropic Claude Opus 5.5`, mentre i commit recenti usano
+12. Il fallback del proxy L sul figlio con lo stesso nome (senza distinzione di maiuscole) può mascherare altri campi
+    mancanti oltre a quelli corretti in `eval.ts`.
+13. Pannello DCN, dalla verifica visiva: il pulsante del tick mostra l'id `dcn-tick`; Ready arriva esattamente al tick
+    20; il testo dell'ultimo passo ripete l'etichetta; il tooltip delle chip elenca un sensore su quattro; gli input
+    restano sempre attivi (`takeOff` premibile in Charging); la riga «15 defects» nasce dagli slot vuoti.
+14. Il guard dei commit chiede il trailer `Model: Anthropic Claude Opus 5.5`, mentre i commit recenti usano
     `claude-opus-5-5`.
 
 ## Prompt generati per Claude Code (8 novembre)
@@ -76,13 +85,16 @@ prime ore dell'8, in gran parte in `/lane auto` con Alfonso assente («decidi tu
 | P-2026-11-08-0248 | L4.5 discovery del cablaggio del run | ⚠️ tetto dopo la discovery |
 | P-2026-11-08-0303 | L4.5a testi DCN, startRun, press e Play | ⚠️ tetto dopo gli item 0-2 |
 | P-2026-11-08-0315 | L4.5c gate del pannello, riga Inputs, gate, log | ✅ |
-| P-2026-11-08-0329 | L4.5d run del drone nell'app, crop | ❌ Reset rifiutato (freeze), probe pronto |
-| P-2026-11-08-0345 | L4.5e fix del freeze del contesto DCN | in corso |
+| P-2026-11-08-0329 | L4.5d run del drone nell'app, crop | ✅ dopo il fix (primo run: Reset rifiutato) |
+| P-2026-11-08-0345 | L4.5e fix del freeze (`eval.ts`, perimetro allargato dalla chat) | ✅ |
+| P-2026-11-08-0430 | merge di `dcn-l45` | ✅ `617ad7579` |
+
+0315 e 0345 non hanno ricevuto il GO (Status già `eseguito`, sessioni vicine al tetto).
 
 ## Prossimi passi
 
-1. Chiudere L4.5: fix 0345, riprendere 0329 per le crop, merge di `dcn-l45`. Poi guardare su localhost:3001
-   `dcn-drone-objects.jjodel` (pannello Simulation, Reset, Tick, `takeOff`).
+1. Guardare su localhost:3001 `~/jjodel-demo-exports/dcn/dcn-drone-objects.jjodel`: pannello Simulation, Reset,
+   `dcn-tick` venti volte, `takeOff`. Push del tronco (di Alfonso).
 2. Slice 5: viste dedicate sul canvas (un compartimento per viewpoint con la classe attiva evidenziata, slot dormienti
    in grigio), «Save snapshot as object diagram», watch di coerenza, batch γ.
 3. Slice 6: W5 per enumerazione; mapping dell'esportatore nuXmv (§9).
