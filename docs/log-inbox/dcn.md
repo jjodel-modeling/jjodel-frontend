@@ -316,3 +316,16 @@ active log is not touched by this lane.
 **Smoke visivo**: screenshot read by the lane, chat to read it (`docs/discovery/assets/dcn-drone/dcn-drone-objects-light.png`: six instances, 36 nodes, no overlap)
 **Notes**: MEAS: dji 7 slots, chargeRate=1 dormant under Charging; wau1.ownedSensors holds the 4 sensors; 0 instantiation and 0 dcn problems. 16 type_mismatch warnings on Action bodies expected (charge, takeOff, rampUp 2, rampDown 2, drain 2, injectFailure 4, reset 4), fixed on trunk by P-2026-11-08-0010. Run 3 was a load flake: 4 green runs after, no fix. Four sensors, not two: the Alert invariants read all four. Both exports from run 7, roles bound, simProfile dynamicClassification.
 **Prompt document name**: 2026-11-08 00:57
+
+## 2026-11-08 — merge: dcn-l25 into alfonso-frontend-jjtl (P-2026-11-08-0154)
+**Prompt**: `claude_2026-11-08_0154_prompt_merge_dcn-l25.md`, lane full (merge; 1 conflict, `docs/log-inbox/dcn.md`): bring `dcn-l25` at a42645aa5 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 631076c5a; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 21e7da758 (merge) — `docs/discovery/assets/dcn-drone/` (`dcn-drone.json`, `dcn-drone-class-level-light.png`, `dcn-drone-objects-light.png`), `docs/log-inbox/dcn.md` (union), the two prompts 0011 and 0057, `frontend/scripts/probe/dcn-drone-fixture.ts`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: check:addonly PASS, typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 566 passed files, 15122 passed and 2 skipped (expected 15122 + 0), hooks 21 files 967/967, build exit 0, check:docs 5/5, check:agents green, check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs and probe only; gates verified by the chat C-2026-11-06-2159)
+**Notes**: Stopped once: the textual-t8a-ids merge (94a55a92d, code) landed on this prompt's commit; the chat accepted c8153d84a as pre-merge tip, reset target and step-7 base. Union byte-identical to trunk file plus the branch's added lines; 11 probes once each. The branch adds no vitest test (its probe is outside the include; counted from the diff, its tree has no node_modules). Lane board not restarted (no change). Prompt defect: step 6's reset target 8329dbbb3 was the prompt's parent, not the pre-merge tip.
+**Prompt document name**: 2026-11-08 01:54
