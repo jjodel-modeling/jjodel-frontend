@@ -7,7 +7,8 @@ import { describe, it, expect, vi } from 'vitest';
  * places it; as the operand of an operator JjEL saw the marker
  * object, and `+` wrote `"[object Object]_w"` or `null` with `success true`. The error names
  * the builtin, the expression, the rule and the source element, as R-FA-12 and R-FA-13 do.
- * A demand that a binding places stays legal. Both parser paths.
+ * A demand that a binding places stays legal. Both parser paths. An unbound `envLookup`
+ * stops the run as an unbound `envValue` does (R-JTG-33, #758).
  *
  * The `joiner` barrel is mocked as in called-lazy-rules.test.ts: `executor.ts` imports it for
  * `U.asNumber` alone, which drags in monaco and fails under `environment: 'node'`. The
@@ -378,5 +379,47 @@ Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
         expect(result.warnings.filter((w: string) => FAILED_EVAL.test(w))).toEqual([]);
         expect(result.success).toBe(true);
         expect(result.targetModel!.roots.map(term)).toEqual(['Const(7)']);
+    });
+
+    const UNBOUND_X = "'x' is not bound in the environment; envHas tests it";
+
+    it('#758: an unbound envLookup concatenated to a string stops the run, it no longer names every object _w', async () => {
+        const classes = ['c1', 'c2', 'c3'].map(id => el(id, 'Class'));
+        const result = await execute(parseJjtl(`
+Class c -> Table {
+    name := envLookup("x") + "_w"
+}`, withSource), classes, { classes: [cls('Table', ['name'])] });
+        expect(result.success).toBe(false);
+        expect(result.targetModel).toBeUndefined();
+        // A matched rule goes on to the next source element: one error each, as any failing builtin
+        expect(result.errors).toHaveLength(3);
+        classes.forEach(({ id }, i) => {
+            expect(result.errors[i]).toContain("Builtin 'envLookup' failed in expression at line 6, column ");
+            expect(result.errors[i]).toContain(`(rule 'Class -> Table', source element '${id}'): ${UNBOUND_X}`);
+        });
+    });
+
+    it('an unbound envLookup placed whole by a binding stops the run, naming the key and the rule', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := envLookup("x")
+}
+
+Main m = mk(m.expr, extendEnv(["w"], [3]))`, VAR_SOURCE);
+        const error = failed(result);
+        expect(error).toContain("Builtin 'envLookup' failed in expression at line 6, column ");
+        expect(error).toContain(`${RULE_MK_VAR}: ${UNBOUND_X}`);
+    });
+
+    it('envHas stays the way to test: an envLookup in the branch not taken does not stop the run', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := if envHas("x") then envLookup("x") else "unbound"
+}
+
+Main m = mk(m.expr, extendEnv(["w"], [3]))`, VAR_SOURCE);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Ref(unbound)']);
     });
 });
