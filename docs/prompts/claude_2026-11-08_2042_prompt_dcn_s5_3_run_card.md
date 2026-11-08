@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2042
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 2b6effb56 · verifica visiva passata 2026-11-08
 Lane: full (UI: `sim/SimNodeRunState.tsx` and its stylesheet; probe and crops)
 Depends: lanes 1 (dcnCanvasState.ts), 2 (getSimDcnNode), 0 (drone with the UML object viewpoint) on dcn-s5; R-DCN-25, 26, 29; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §A
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt

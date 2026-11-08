@@ -458,3 +458,18 @@ active log is not touched by this lane.
 **Ticket** (high, for a diagnosis lane): a containment write from `syncCreateCompositionLink` is lost about once per fixture build: 5 of 5 runs, load 3-13, also on unmodified HEAD, a different link each time (`WindSensor.ownedAttributes->p_WindSensor_speed`, `pkg.packagedElements->Boolean`, `TempSensor.ownedOperations->op_TempSensor_injectFailure` twice, `TempSensor.ownedAttributes->p_TempSensor_value`). Cause not diagnosed. A sixth run, with a settle added after `buildLinks`, lost none (L-1 counts 0): one observation, not a cause. The fixture now re-applies a lost link and L-1 reports it without failing.
 
 **Ticket** (low): the copied row template shows `values[0]` only, so `wau1` reads `ownedSensors = temp` while the slot holds the four sensors. Kept as copied, by the chat's answer.
+
+## 2026-11-08 — feat: DCN run card under the instance node (P-2026-11-08-2042)
+**Prompt**: `claude_2026-11-08_2042_prompt_dcn_s5_3_run_card.md`, lane full, slice 5 lane 3 (R-DCN-29): the run card in `SimNodeRunState` below the node, viewpoint compartments, dormant slots, monitors, changed static slots, one column with the tags, no dashed ring; styles; the drone probe with DOM assertions and three crops; gates. After the stop on the test mock, the chat's answer: one line in that mock, a ticket on the panel chips.
+**Files touched**: da677a25f `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`; 3a3563cc4 `frontend/scripts/probe/dcn-drone-run.ts`; 2b6effb56 `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irActivityRender.test.ts`; docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (4 tests of irActivityRender.test.ts, red because its mock lacked getSimDcnNode; fixed in the lane, no production behaviour affected)
+**Out-of-scope changes**: yes (test mock only, granted by the chat: one line in irActivityRender.test.ts)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops read by the lane; 1-charging and 2-flying read by the chat 2026-11-08 20:58: the card is right; 3-stepback read by the lane only)
+**Notes**: Probe 17/17, port 3142. Run twice: in the first the open panel hid the card in the crops, so it is hidden for the crop only. Ring absent on dji with enabled true. Typecheck, scripts, build 0; vitest 15465 passed, 3 known import reds. Stopped once: the card broke the mock in irActivityRender.test.ts (4 reds, under viewpoint/ir/); the chat granted one line. Column only around a card, Petri DOM unchanged. At this zoom the open panel covers dji's card.
+**Prompt document name**: 2026-11-08 20:42
+
+**Ticket** (medium): the panel Classification chips do not follow the viewed step at step back (R-SIM-106): with the timeline at step 0 the card reads Charging while the chips read `dji.Mode = Flying` (probe MEAS `card step back`, `panelChips`).
