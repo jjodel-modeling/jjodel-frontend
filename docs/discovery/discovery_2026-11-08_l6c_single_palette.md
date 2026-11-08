@@ -24,7 +24,7 @@ All read on `25de37c41`; none measured in this phase.
 3. **The active pane can live in `DockManager.tsx`.** Holds. `DockManager.tsx:21` «`static dock: DockLayout|null;`» is already the per-dock state, and `EditorV2.tsx:134` «`import DockManager from '../abstract/DockManager';`» already imports it. No other common parent of two editors exists: rc-dock mounts them separately.
 4. **A layout-change notification is reachable inside DOVE.** Falsified as a callback: `onLayoutChange` is wired in `components/abstract/Dock.tsx:423`, outside DOVE. A `ResizeObserver` on each editor's root replaces it, because every change of split membership changes a pane's size (hidden tabs: `rc-dock.css:130` «`.dock-tabpane:not(.dock-tabpane-active)`»), and an editor's unmount refreshes by itself. To be confirmed by the app check.
 5. **D3 fits the two existing drop paths.** Holds. `EditorV2.tsx:2763` «`const onDragOver = useCallback((event: React.DragEvent) => {`» and `:2739` for the flow, `:2816` and `:2795` for the classic wrapper.
-6. **D6 is the rail's inset applied to a canvas the rail does not cover.** Holds as a reading, app check to confirm. `viewportInset.ts:39` «`return { top: base, bottom: base, left: base, right: `${inset + 20}px` };`» reads one global. After 1729 only the last panel runs under the rail (`abstract/style.scss:1083-1088`); the left canvas also gets that padding, about 420 px on a canvas of about 239 to 400. `viewportInset.ts` needs no change: at the call sites in `EditorV2.tsx` (814, 821, 823, 1210, 2757, 3990, 3992, 4301, 4353) the pane can use `fitPadding()` or the plain `0.2`.
+6. **D6 is the rail's inset applied to a canvas the rail does not cover.** Holds as a reading, app check to confirm. `viewportInset.ts:39` «`return { top: base, bottom: base, left: base, right: `${inset + 20}px` };`» reads one global. After 1729 only the last panel runs under the rail (`abstract/style.scss:1083-1088`); the left canvas also gets that padding, about 420 px on a canvas of about 239 to 400. `viewportInset.ts` needs no change: at the call sites in `EditorV2.tsx` (814, 821, 823, 1210, 2757, 3990, 3992, 4301, 4353) the pane can use `fitPadding()` or the plain `0.2`. **Corrected by the app check (P-2026-11-08-2025): this is half of the cause.** The inset was real and is fixed; the other half is React Flow's default `minZoom` 0.5 (`@xyflow/react/dist/esm/index.mjs:267`), which clamps the fit: that layout is about 2700 wide and the canvas 397, so after the inset fix the left canvas still showed nodes at x -275..1075 on a canvas 201..598. A pane in a split now has `minZoom` 0.05.
 7. **The app bar can read a tab's viewpoint inside DOVE.** Holds, through the DOM: the viewpoint is the tab's state in `EditorSwitch.tsx`, outside DOVE, while `syncTabs` (`Navbar.tsx:1733`) runs on a timer and the pane's `.toolbar-viewpoint-trigger` shows the name.
 
 ## Smallest change per decision
@@ -49,3 +49,54 @@ New identifiers are unused: `command grep -rl` over `components pages styles eve
 ## Open questions
 
 None.
+
+## App check and closure (P-2026-11-08-1855, finished by P-2026-11-08-2025)
+
+Session 4f8e24fc-40e7-4d16-abb1-4ea2f1addd7d. Code at `81c7608af`. Probe: `~/.jjodel-lanes/P-2026-11-08-2025/gesture.mjs` (copy of the 1855 one; the entry and E4 checks added, the workaround that hid the left pane's move removed), own Vite on 3790 restarted after the last source edit.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| typecheck | exit 0 |
+| build | exit 0 |
+| check:docs | exit 0, 5/5 |
+| vitest: `canvasSplit.test.ts`, the five L6 files, the three layout-key files, the six files reading `EditorV2.tsx` | 15 files, 177 passed |
+
+### Split of one model, Control wiring and Floor plan
+
+Pageerrors 0 in every run.
+
+| Run | W | Checks | Left canvas | Right canvas | Nodes outside on entry | Left nodes moved by the right auto layout |
+|---|---|---|---|---|---|---|
+| `pre1600`, before E4's fix | 1600 | 23 of 24, E4 fails | 201..598.5 | 601.5..1599 | 0 | 17 of 17 |
+| `r1600-1` | 1600 | 24 of 24 | 201..598.5 | 601.5..1599 | 0 | 0 of 17 |
+| `r1600-2` | 1600 | 24 of 24 | 201..598.5 | 601.5..1599 | 0 | 0 of 17 |
+| `r1280-1` | 1280 | 24 of 24 | 201..458.5 | 461.5..1279 | 0 | 0 of 17 |
+| `r1280-2` | 1280 | 24 of 24 | 201..458.5 | 461.5..1279 | 0 | 0 of 17 |
+
+Positive control of the E4 check: the right pane's own 18 nodes moved in every run. The fit after an auto layout leaves no node on the palette or the rail or outside its canvas, in both panes, in every run.
+
+### The other scenes, 1600
+
+| Scene | Checks | Note |
+|---|---|---|
+| single tab | 5 of 5 | one palette, no split class, title `Instances` |
+| Refactoring split | 6 of 6 | no split class, two palettes, as before |
+| 1730 two-model demo | 20 of 20 | labels unchanged, models differ |
+
+Crops, light theme, in `~/.jjodel-lanes/P-2026-11-08-2025/`: `crop_split_1600.png` (right pane active), `crop_split_1280.png`, `crop_single_tab.png`. Their runs passed too: 24 of 24 twice and 5 of 5.
+
+### Decisions recorded
+
+- **E1.** `minZoom={inCanvasSplit ? 0.05 : 0.5}` on `<ReactFlow>`, `EditorV2.tsx`. 0.5 is spelled out because the store skips an undefined prop, so a pane leaving a split would keep 0.05.
+- **E2.** A pane refits once on entering a split, when it has nodes, two frames on. No refit on later resizes or on focus.
+- **E3, the reading of D2.** The inactive pane's toolbar has a transparent 2 px top border: nothing is painted, and the toolbar does not shift when the active pane switches.
+- **E4, fixed.** Cause: `handleAutoLayout` called `syncPositionBatchToJjom` with no key, so `canvasToJjom.ts:108` wrote under `getActiveLayoutKey()`, the root viewpoint's. Measured: `state.viewpoint` was Control wiring, the left pane's, and both viewpoints are exclusive. So the right pane's layout was stored as the left pane's positions, and the left canvas, reading its own key, moved. The positions live per vertex under the layout key (`viewpoint/layout/vertexLayoutAdapter.ts:82`). The fix passes the tab's key at `EditorV2.tsx:4265`, 4283, 4290 and 4349; `canvasToJjom.ts` is unchanged, its parameter exists since L3.
+
+### Open
+
+- The same missing key, read and not measured, on the other canvas writes: drag end `EditorV2.tsx:4863` and 4867 with the reads at 4720 and 4848, resize 1379 and 4914. A drag in a pane whose viewpoint is not the root's would write under the root's key. Outside E4, which names the auto layout.
+- At 1280 the two app bar tabs are too narrow to show the text: the `Apartment · <viewpoint>` label passes as text and in the tooltip, and the crop shows only the model chip.
+- After a fit the Control wiring layout stands at about 10% in the left canvas, as E1 allows: inside the canvas, hard to read. The right pane's minimap covers part of Kitchen and Bathroom.
+- With the right pane active the rail's filter still reads Control wiring, the root viewpoint.

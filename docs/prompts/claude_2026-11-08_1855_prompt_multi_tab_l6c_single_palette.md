@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1855
 Chat: C-2026-11-08-1855
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · d10579948 · finished by P-2026-11-08-2025 · gates green (typecheck 0, build, check:docs, vitest 177 passed) · log entry in docs/log-inbox/multi-tab.md · Alfonso's visual GO pending
 Lane: full (TSX in editor-v2 and Navbar.tsx, SCSS; no critical zone, no core)
 Depends: P-2026-11-08-1729 (branch multi-tab-l6b at 4fb6549cb, not merged: rail at the window's right edge, no width cap, toolbar icons, app bar lists the beside tab); R-MT-26
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

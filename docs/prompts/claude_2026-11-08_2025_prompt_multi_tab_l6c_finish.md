@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2025
 Chat: C-2026-11-08-1855
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 81c7608af · gates green (typecheck 0, build, check:docs, vitest 177 passed) · log entry in docs/log-inbox/multi-tab.md · Alfonso's visual GO pending
 Lane: full (TSX in editor-v2, SCSS; no critical zone, no core)
 Depends: P-2026-11-08-1855 (stopped at the context ceiling at d10579948; handoff `~/.jjodel-lanes/P-2026-11-08-1855/handoff.md`, read it first, it is the state of the work)
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit (the node_modules symlink is in place; remove it at the end only if 3061 is not running from this worktree)
