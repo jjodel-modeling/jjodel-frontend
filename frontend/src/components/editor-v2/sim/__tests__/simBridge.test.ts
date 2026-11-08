@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
     pressRandom, pressStep, runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
@@ -3193,6 +3193,8 @@ const DCN_FEATURES: Record<string, { className: 'DAttribute' | 'DReference'; nam
     D_definingFeature: { className: 'DReference', name: 'definingFeature', father: 'D_Slot' },
     D_values: { className: 'DReference', name: 'values', father: 'D_Slot' },
     D_litValue: { className: 'DAttribute', name: 'value', father: 'D_LitInt' },
+    D_precondition: { className: 'DAttribute', name: 'precondition', father: 'D_Operation' },
+    D_monitors: { className: 'DReference', name: 'monitors', father: 'D_Dynamic' },
 };
 
 const DCN_ONTO = JSON.stringify({
@@ -3325,5 +3327,50 @@ describe('DCN L4.5: the press through the DCN nucleus (decisions 2-3, R-DCN-22)'
         const after = getSimRun('M')!;
         expect(after.config.state.attrs.get('dji')?.get('alt')).toBe(0);
         expect(markingLine(after.config.state, after.net, lookup).line).toBe('Classification: dji: Mode = Flying');
+    });
+});
+
+describe('DCN L4.6: an input is on only when admissible (P-2026-11-08-1606)', () => {
+    const BAG = { ...DCN_BAG, simPrecondition: 'D_precondition', simMonitor: 'D_monitors' };
+    /** arm owned by Ready; land static with a false precondition below speed 6; drain a monitor of Flying. */
+    const EXTRA: Record<string, Obj & { name?: string }> = {
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_takeOff', 'op_land'], D_viewpoints: ['vp_Mode'] } },
+        op_land: { cls: 'D_Operation', name: 'land', slots: { D_body: ['self.speed := 0'], D_precondition: ['self.speed > 5'] } },
+        dc_Ready: { cls: 'D_Dynamic', name: 'Ready', slots: { D_invariant: ['self.speed == 0'], D_dynOperations: ['op_arm'] } },
+        op_arm: { cls: 'D_Operation', name: 'arm', slots: { D_body: ['self.alt := 1'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'], D_monitors: ['mon_drain'] } },
+        mon_drain: { cls: 'D_Operation', name: 'drain', slots: { D_body: ['self.alt := self.alt + 1'] } },
+    };
+    const armed = (speed: number) => {
+        const lookup = dcnLookup(BAG, speed, EXTRA);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const id = (text: string) => run.alphabet.find(a => candidateLabel(run.net, a, lookup).startsWith(text))!;
+        return { lookup, run, id, off: (a: string) => dcnInputOff(run, a, lookup) };
+    };
+
+    it('the owner class inactive: off, naming the class (mutants: always on, the class of the static op, the viewpoint dropped)', () => {
+        const { id, off } = armed(1);
+        expect(off(id('dji.arm()'))).toBe('not in Mode::Ready');
+    });
+
+    it('the owner class active: on (mutant: always off)', () => {
+        const { id, off } = armed(0);
+        expect(off(id('dji.arm()'))).toBeNull();
+    });
+
+    it('a false precondition: off, says so; a true one: on (mutant: the precondition ignored)', () => {
+        expect(armed(1).off(armed(1).id('dji.land()'))).toBe('precondition false');
+        expect(armed(6).off(armed(6).id('dji.land()'))).toBeNull();
+    });
+
+    it('the Tick: on with a monitor of an active class, off without, id untouched (mutants: Tick always on, always off)', () => {
+        expect(armed(1).off('dcn-tick')).toBeNull();
+        expect(armed(0).off('dcn-tick')).toBe('no monitor of an active class contributes');
+    });
+
+    it('a Petri run is never off through here (mutant: the check on a Petri net)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        expect(dcnInputOff(started(lookup), 'whatever', lookup)).toBeNull();
     });
 });

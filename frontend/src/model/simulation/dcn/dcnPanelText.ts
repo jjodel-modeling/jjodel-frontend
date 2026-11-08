@@ -129,6 +129,14 @@ export function dcnCandidateLabel(
     return [call, ...active].join(' + ');
 }
 
+/** Why an input of the DCN run has no candidate in `c`: its owner class is inactive, else its precondition is false; the Tick has no contribution. */
+export function dcnInputOffWords(m: DcnStepModel, input: string, nameOf: DcnNameOf, c: DcnClassification | null): string {
+    if (input === DCN_TICK_EVENT) return 'no monitor of an active class contributes';
+    const e = m.model.compiled.entries.get(input);
+    if (e !== undefined && e.dynamicClass !== null && !isActive(m, c, e.instance, e.dynamicClass)) return `not in ${classRef(e, nameOf)}`;
+    return 'precondition false';
+}
+
 /** What a halt says after `halted the run: `. */
 function haltWords(reason: HaltReason, m: DcnStepModel, nameOf: DcnNameOf): string {
     const r = reason as HaltReason & { readonly element?: string; readonly attr?: string };

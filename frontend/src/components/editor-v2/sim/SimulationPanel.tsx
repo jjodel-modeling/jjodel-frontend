@@ -93,7 +93,7 @@ import {
     profileBindings, profilePatch, profileSummary, profileSummaryText, runEngine, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
     runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
@@ -542,7 +542,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!r) {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
-                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
+                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(), dcnOff: new Map<string, string>(),
                 watch: [] as SimWatchRow[], chips: [] as SimMarkingChip[], markingTitle: null as string | null,
                 accepting: null as 'accepting' | null, output: null as { line: string; title: string } | null,
                 step: 0, seed: undefined as number | undefined, hits: [] as WatchResult[],
@@ -569,6 +569,14 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 if (read.length > 0) asks.set(e, read.map(a => inputLabel(a, r.net, lookup)).join(', '));
             }
         }
+        // A DCN input is on only when the nucleus has a candidate for it; the title says why not (P-2026-11-08-1606).
+        const dcnOff = new Map<string, string>();
+        if (status === 'Running' && dcnEngine) {
+            for (const id of r.alphabet) {
+                const off = dcnInputOff(r, id, lookup);
+                if (off !== null) dcnOff.set(id, off);
+            }
+        }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
         const features = { actions: roleValues(roles.simAction), entries: roleValues(roles.simEntry), exits: roleValues(roles.simExit) };
         // R-SIM-104: the face reads the live run; the changes are the last step's, against the σ before it.
@@ -584,6 +592,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, guards) : null,
             noCandidate,
+            dcnOff,
             asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3), as rows
             // and chips (R-SIM-104); the marking line stays the title of the chips, so its readers change a selector only.
@@ -1279,13 +1288,13 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             </>
                         )}
                         {/* A DCN run's inputs (P-2026-11-08-0315): Tick and one button per invocation of its alphabet, labelled as
-                            the choice list labels them, pressed through the event path; on while the run is Running. */}
+                            the choice list labels them, pressed through the event path; on while the run is Running and the input admissible. */}
                         {dcnEngine && run && view && (
                             <>
                                 <div className="sim-panel__section">Inputs</div>
                                 <div className="sim-panel__events">
                                     {run.alphabet.map(id => {
-                                        const on = view.status === 'Running';
+                                        const on = view.status === 'Running' && !view.dcnOff.has(id);
                                         const asks = view.asks.get(id);
                                         const text = candidateLabel(run.net, id, lookupNow);
                                         return (
@@ -1293,7 +1302,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                                 type="button"
                                                 className="sim-panel__event"
                                                 key={id}
-                                                title={on ? inputTitle(`Fire ${text}`, id) : offTitle(`Fire ${text}`, id)}
+                                                title={on ? inputTitle(`Fire ${text}`, id) : inputOffTitle(`Fire ${text}`, view.dcnOff.get(id), status)}
                                                 onClick={() => fire(id)}
                                                 disabled={!on}
                                             >
