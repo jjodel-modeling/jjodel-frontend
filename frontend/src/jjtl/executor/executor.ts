@@ -417,7 +417,9 @@ class JjtlEvaluationContext extends EvaluationContext {
  * (P-2026-11-08-0740). A demand is carried out only where a binding places it; as an operand
  * JjEL sees the marker object, and `+` wrote `"[object Object]_w"` or `null` with
  * `success true`. Operands are marked when their operator node is evaluated, before them,
- * so the check is structural; JjEL reaches every subexpression through `evaluate`.
+ * so the check is structural; JjEL reaches every subexpression through `evaluate`. The
+ * receiver of a method call is marked the same way (P-2026-11-08-0835); a property read on
+ * a demand is not, and stays a warning with `null` (R-FA-12).
  */
 class JjtlJjelEvaluator extends JjelEvaluator {
     private readonly operands = new WeakMap<JjelExpression, string>();
@@ -432,6 +434,8 @@ class JjtlJjelEvaluator extends JjelEvaluator {
             this.operands.set(expr.right, `an operand of '${expr.operator}'`);
         } else if (expr.type === 'Unary') {
             this.operands.set(expr.operand, `the operand of '${expr.operator}'`);
+        } else if (expr.type === 'MethodCall' || expr.type === 'NullSafeMethodCall') {
+            this.operands.set(expr.object, `the receiver of method '${expr.method}'`);
         }
         const value = super.evaluate(expr, ctx);
         if (value !== null && typeof value === 'object') {
