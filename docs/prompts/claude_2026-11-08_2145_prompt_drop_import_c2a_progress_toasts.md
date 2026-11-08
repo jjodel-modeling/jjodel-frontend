@@ -9,7 +9,7 @@ Lane: full (six files counting the test; changes the shared toast, used by the w
 
 Rule 19: this prompt names six files (five plus one test). The chat confirms that count here, inside the scope
 Alfonso ratified with D5; a seventh file is a stop.
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane dashboard-drop-import · 71db7bd16 · verifica visiva passata 2026-11-08 (chat, sui crop, RC-23)
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

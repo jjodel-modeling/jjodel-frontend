@@ -65,3 +65,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 21:15
 
 **Ticket** (found here, not fixed): Safari and Firefox `dragleave` are still not measured: if a browser reports a null `relatedTarget` between children, the overlay would clear until the next `dragover`. The dashboard no longer renders `.drop-overlay`; its rule stays in `dashboard.scss` (Rule 9).
+
+## 2026-11-08 — feat(dashboard): drop import panel and toasts (P-2026-11-08-2145)
+**Prompt**: lane C2a of the dashboard drop import: shared toast as a polite live region with `role="alert"` only on errors and warnings, progress panel, dashboard wiring with "Open project", tests of the pure mapping with mutation bench, CDP probe and crops.
+**Files touched**: `frontend/src/components/Toast/Toast.tsx`, `frontend/src/components/Toast/ToastContainer.tsx`, `frontend/src/pages/components/Dashboard.tsx`, `frontend/src/pages/components/DropImportPanel.tsx` (new), `frontend/src/pages/components/DropImportPanel.scss` (new), `frontend/src/pages/components/__tests__/DropImportPanel.test.ts` (new) (71db7bd16); this inbox entry and the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no — six files, the prompt's own list, confirmed there under Rule 19
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 3/3 sui crop (RC-23); sonda della corsia 50/50, porta 3063, offline, light
+**Notes**: Bench 37 of 37 killed. Summary rule: per-file toasts up to 3 outcomes, one per kind above. Panel sits beside the toast column. Toast's own `aria-live` removed: it turned `role="alert"` polite. Dashboard loops on `importJjodelFile`: `importJjodelFiles` reports only at the end. A drop during an import extends the batch. Sole console error: the `{}` fixture (measured). Online path not run, hence Regressions unknown. Typecheck 0, vitest only the 3 known red files, build 0.
+**Prompt document name**: 2026-11-08 21:45
+
+**Ticket** (found here, not fixed): the toast stack paints over the Quick Tip card, same corner, measured on the crops and independent of this lane. Below about 680 px wide the panel can meet the toast column, which goes full width at 480 px; not handled. The panel title stays "Importing N projects" once settled, as the prompt words it; an item for Alfonso.
