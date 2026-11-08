@@ -3401,6 +3401,17 @@ describe('DCN L4.6: the arguments of an invocation reach its body (P-2026-11-08-
         expect(p.lastStep).toBe('charge: dji.charge(rate = 5) fired');
     });
 
+    it('the bare name reads the answer in the body and in the precondition, through the one overlay (P-2026-11-09-0055; mutants: the name not bound, a defect read as off)', () => {
+        const lookup = argLookup('self.alt := rate', 'rate > 0');
+        const { run, id } = start(lookup);
+        expect(inputAsks(run, id).map(a => a.attr)).toEqual(['rate']);
+        expect(dcnInputOff(run, id, lookup)).toBeNull();
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 0 }]).outcome?.kind).toBe('discard');
+        expect(alt()).toBe(0);
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 5 }]).outcome?.kind).toBe('fired');
+        expect(alt()).toBe(5);
+    });
+
     it('a precondition reads the argument: waiting before the answer, then decided by it (mutants: a defect read as off, the guards not overlaid)', () => {
         const lookup = argLookup('self.alt := self.[rate]', 'self.[rate] > 0');
         const { run, id } = start(lookup);
