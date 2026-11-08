@@ -69,7 +69,7 @@ export interface SnapshotWriteResult {
 }
 
 const WAIT_STEP_MS = 50;
-/** Every wait of one write shares it. Not measured yet. */
+/** The wait for the model and its slots shares one, the landing of the values has another. Not measured yet. */
 const SNAPSHOT_DEADLINE_MS = 60000;
 /** Two store COMMITs (`U.UpdatingTimer`, 300 ms) with no change: the side effects of the creates have landed too. */
 const QUIET_MS = 700;
@@ -162,8 +162,10 @@ export async function writeSnapshot(plan: SnapshotPlan, metamodelId: string, hos
                 const now = h.lookup();
                 return sent.every(s => holds(now[s.slot]?.values, s.expected));
             };
-            if (!(await settle(h, landed, until))) problems.push('some values never landed');
-            await quiet(h, until);
+            // Its own deadline: a slot that never came has spent `until`, and what was sent must still land inside the group.
+            const landedUntil = h.now() + SNAPSHOT_DEADLINE_MS;
+            if (!(await settle(h, landed, landedUntil))) problems.push('some values never landed');
+            await quiet(h, landedUntil);
         } else {
             problems.push('the new model never reached the store');
         }
