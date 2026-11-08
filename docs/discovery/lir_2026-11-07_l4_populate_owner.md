@@ -135,3 +135,65 @@ unmount it after each test; they run unchanged.
 - A JjTL or JjScript run that creates M1 objects, one tab: vertices and M1 edges as before.
 
 The app measurement, before and after, is the continuation lane on the same branch.
+
+## 7. Addendum: the app measurement (P-2026-11-08-0150, P-2026-11-08-0245)
+
+Added after the code commit `587aed3cf`; §0-§6 above are unchanged. Parent `db65de069`, branch `587aed3cf`. Probes and
+JSON in `~/.jjodel-lanes/P-2026-11-08-0150/` and `~/.jjodel-lanes/P-2026-11-08-0245/`, a throwaway browser profile
+per run.
+
+**Setup.** Families.ecore imported through the project page's `.ecore` file input (`ProjectEditor.tsx:978`, the
+gesture's own handler). Tab 1 opened by `DockManager.open2`; tab 2 crafted from the console as discovery §6
+describes: `DockManager.open('models', {...TabDataMaker.metamodel(m), id: m.id + '~2'})`.
+
+**Departures, declared.**
+- Console creation. No Tree View gesture adds a class and no Properties control adds a reference on this tree
+  (`TreeViewContent.tsx` offers Create View, Derive viewpoint, Add view only, `:663-702`, `:2012-2020`; positive
+  control: "Add view" found). The D-first creations of §6 go through the L-layer calls of the classic context menu,
+  from the console: `LPackage.addClass` (`ContextMenu.tsx:325`) and `LClass.addReference(name, type)`
+  (`ContextMenu.tsx:321`).
+- The view move in tab 2. Step C focuses tab 2 (`dock.updateTab`) and frames its viewport through the RF12 store
+  (`panZoom.setViewport`), because ProbeC1 lands off-viewport; viewport only, no node moved. Then a real connect drag
+  Family -> ProbeC1 and Association picked in the edge-type popup. Facing Family/Member sides failed (source handle
+  under the drop, source -> source invalid) in 6 dry runs, not counted. Per-pane DOM counts miss off-viewport nodes:
+  the per-pane minimap node count (`m`) was added.
+- Load gate. The branch 3-run invocation of 0150 started at 1-min load 64.15 (uptime printed in the run's own
+  command, not checked before it); its results were identical to the 6 dry runs at loads 2-39. P-2026-11-08-0245
+  reran the scene once on the branch at load 2.40: identical row by row (table below).
+
+**Two tabs on one model, 0150** (parent 1 run, branch 3 runs, identical; pageerrors 0 in every run):
+
+| step | parent `db65de069` | branch `587aed3cf` |
+|---|---|---|
+| one tab: reference edges | 8 x 1 | 8 x 1 |
+| two tabs mounted | Family/Member one vertex each, edges 8 x 1 | same |
+| A ProbeC1 (`addClass`) +4/+10 s: DVertex | **2** (minimap 4 nodes per pane) | **1** (minimap 3) |
+| B probeRef (`addReference`) +4/+10 s: edges with that refId | 1 | 1 |
+| C canvas reference in tab 2 (non-owner) +4/+10 s | 1 | 1 |
+| R0 registries, both mounted (pairs / edgeRefIds) | 3 / 10 | 3 / 10 |
+| R1 after closing tab 1 (the owner) | **0 / 0** | **3 / 10** (kept) |
+| D ProbeC2 after closing tab 1: DVertex, in tab 2 | 1, rendered | 1, rendered |
+| R2 after closing tab 2 | 0 / 0 | 0 / 0 (cleared) |
+
+**Findings.** The vertex duplicate of discovery §3.7 reproduces on the parent (2) and is gone on the branch (1). The
+duplicate M2 edge of §3.7 does not reproduce on the parent: a reference added D-first gives one `DVoidEdge` with its
+refId on both commits, so that half of §3.7 is not confirmed by this measurement. The residual risk of §4: the
+canvas gesture in the non-owner tab gives 1 edge, no duplicate. The registries survive the owner's close and are
+cleared by the last instance, as §1 states. The limit of §3 (no model key) is a ticket in `docs/log-inbox/multi-tab.md`.
+
+**Crops** (light theme, four, in the 0150 folder): `crop_head_t1_after_class.png`, `crop_head_t2_after_class.png`,
+`crop_parent_t1_after_class.png`, `crop_parent_t2_after_class.png`. The ProbeC1 vertices are off-viewport and stacked
+on the parent: the duplicate shows only in the minimap count, not as a visible second box. Alfonso's visual check due.
+
+**Rerun on the branch, 0245** (1 run, load 2.40, pageerrors 0): A 1 DVertex (minimap 3 per pane); B 1; C 1 (tab 2
+pane 1 edge); R0 3 / 10; R1 3 / 10, tab 1 pane gone; D 1, rendered in tab 2 (minimap 4); R2 0 / 0.
+
+**Single tab and two models, no regression, 0245 on the branch** (each run in its own call, 1-min load checked
+before it, all below 10):
+
+| probe | runs | result |
+|---|---|---|
+| 0628 layout switch (steps 1-6, +4 s / +10 s) | 3 | 3/3 at every step in every run, pageErrors 0, 0, 0 |
+| container switch | 1 | FAILURES 0, exit 0 |
+| 0457 scenes V1, V3, V2, R-MT-18 (with ONE and L3, `SCENES=all`) | 1 | 17 PASS, 0 FAIL, pageErrors 0; undo +0, +0; R-MT-18 saved `''` reopens on Abstract syntax, no preference on VP1 |
+| 1730 two-tab demo | 1 | tab A 18/18, tab B 25/25 at every focus, +4 s and +10 s; fails 0/15, pageErrors 0 |

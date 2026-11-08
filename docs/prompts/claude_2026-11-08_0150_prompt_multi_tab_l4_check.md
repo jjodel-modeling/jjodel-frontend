@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0150
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · no source change · build exit 0, check:docs exit 0 · two tabs: vertex 2 -> 1, M2 edge 1 and 1 (§3.7 edge half not reproduced on the parent), registries kept after the owner closes, cleared by the last · cut at the AM-8 ceiling, closed by P-2026-11-08-0245 · hard-stop: visual check due · non fuso
 Lane: full (gates, measurement and closure of a critical-zone lane; no source change)
 Depends: P-2026-11-08-0131 (LIR f888be09f, tests 634dceabf, code 587aed3cf), its handoff `~/.jjodel-lanes/P-2026-11-08-0131/handoff.md`; docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §3.2, §3.7
 Worktree: ~/jjodel-w-mtl4, branch multi-tab-l4, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

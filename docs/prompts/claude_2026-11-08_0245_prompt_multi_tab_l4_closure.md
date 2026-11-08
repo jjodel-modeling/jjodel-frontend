@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0245
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · no source change · two-tab rerun at load 2.40 identical to 0150 · single tab 3/3 every step x3, container 0 failures, 0457 scenes 17 PASS 0 FAIL, demo 18/18 and 25/25 · LIR §7 · log entry in docs/log-inbox/multi-tab.md · hard-stop: visual check due · non fuso
 Lane: full (measurement and closure of a critical-zone lane; no source change)
 Depends: P-2026-11-08-0131 (LIR f888be09f, tests 634dceabf, code 587aed3cf), P-2026-11-08-0150 (gates and two-tab measurement, uncommitted, handoff `~/.jjodel-lanes/P-2026-11-08-0150/handoff.md`)
 Worktree: ~/jjodel-w-mtl4, branch multi-tab-l4, at this prompt's commit (node_modules by the P14 symlink, re-created by you as the handoff says, removed at the end)
