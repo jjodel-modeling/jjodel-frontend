@@ -26,13 +26,17 @@ class TabDataMaker {
         };
     }
 
-    static model(model: DModel|LModel): TabData {
+    /**
+     * @param options A tab beyond the model's first (R-MT-9): its id (`modelTabId.ts`) and the
+     * viewpoint it starts on, null for abstract syntax. Omitted, the tab is the model's only one.
+     */
+    static model(model: DModel|LModel, options?: { tabId?: string; viewpointId?: string | null }): TabData {
         return {
-            id: model.id,
+            id: options?.tabId ?? model.id,
             title: <div className="tab-title active-on-mouseenter" data-type="model">{model.name}<ConformanceIndicator modelId={model.id} /></div>,
             group: 'models',
             closable: true,
-            content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
+            content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} tabId={options?.tabId} initialViewpointId={options?.viewpointId} />
         };
     }
 

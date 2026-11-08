@@ -60,7 +60,7 @@ export function isActiveDockTab(tabId: string): boolean {
  * R-MT-18: a saved '' is abstract syntax, a preference like any other, returned as '' and
  * restored with activateViewpoint(null); null stays "nothing to restore" (no preference saved).
  */
-export function savedViewpointToRestore(modelid: string, currentVpId: string | null | undefined): string | null {
+export function savedViewpointToRestore(modelid: string, currentVpId: string | null | undefined, tabId: string = modelid): string | null {
     const savedVpId = readEditorPrefs(modelid).viewpointId;
     if (typeof savedVpId !== 'string') return null;  // no preference saved
     if (savedVpId === '') {
@@ -70,16 +70,18 @@ export function savedViewpointToRestore(modelid: string, currentVpId: string | n
         if (!known.includes(savedVpId)) return null;  // deleted / unknown viewpoint
         if (savedVpId === currentVpId) return null;   // already the active (snapshot-restored) one
     }
-    if (!isActiveDockTab(modelid)) return null;     // mounted behind the active tab (R-MT-16)
+    if (!isActiveDockTab(tabId)) return null;       // mounted behind the active tab (R-MT-16)
     return savedVpId;
 }
 
 /**
  * The viewpoint a model tab starts with (R-MT-1: the active viewpoint belongs to the tab): the one
  * its mount restores, when savedViewpointToRestore returned one, else the root's. `null` is
- * abstract syntax, the canonical empty (R-IRN-21); '' never enters the tab state.
+ * abstract syntax, the canonical empty (R-IRN-21); '' never enters the tab state. A viewpoint
+ * chosen at the tab's opening (R-MT-9, null is abstract syntax) wins over both.
  */
-export function initialTabViewpoint(rootVpId: string | null | undefined, restored: string | null): string | null {
+export function initialTabViewpoint(rootVpId: string | null | undefined, restored: string | null, chosen?: string | null): string | null {
+    if (chosen !== undefined) return chosen || null;
     if (restored !== null) return restored || null;
     return rootVpId || null;
 }
@@ -104,9 +106,22 @@ export function writeFocusViewpoint(rootVpId: string | null | undefined, tabVpId
     return true;
 }
 
+/**
+ * Whether a tab adopts a root change it did not make. Asks the dock as well as the tab's own flag:
+ * a tab opening on a chosen viewpoint writes the root at its mount, possibly before the ACTIVE_TAB
+ * that tells the tab it took the focus from (R-MT-9), which would otherwise adopt that viewpoint.
+ */
+export function adoptsRootViewpoint(focused: boolean | null, tabId: string): boolean {
+    return !!focused && isActiveDockTab(tabId);
+}
+
 interface EditorSwitchProps {
     /** Model ID passed to the editor. */
     modelid: string;
+    /** The dock id of this tab when it is not the model's first (R-MT-9). Omitted: the model ID. */
+    tabId?: string;
+    /** The viewpoint this tab starts on, null for abstract syntax (R-MT-9). Omitted: root or saved preference. */
+    initialViewpointId?: string | null;
     /** Legacy classic editor JSX. Ignored since the classic shutdown (Fase 5a). */
     children?: ReactNode;
     /** Metamodels never enter the toggle/split flow — they always render the flow editor only. */
@@ -119,17 +134,18 @@ interface EditorSwitchProps {
  * and the user can pick the layout; metamodels and viewpoint-less models keep
  * the flow editor only.
  */
-export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchProps) {
+export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isMetamodel }: EditorSwitchProps) {
     const viewpointId = useSelector((state: any) => state.viewpoint) as string | undefined;
+    const ownTabId = tabId || modelid;
 
     // The tab's own viewpoint (R-MT-1, multi-tab L2), what this tab's EditorV2 and toolbar picker
     // read through EditorContext. It starts from the root, or from the preference the mount
     // restores, and stays in step with the root while the tab is focused (the effects below).
     // A metamodel owns none: no picker, no focus write, the root passes through as before.
     const [restoreAtMount] = useState<string | null>(() =>
-        isMetamodel ? null : savedViewpointToRestore(modelid, viewpointId));
+        isMetamodel || initialViewpointId !== undefined ? null : savedViewpointToRestore(modelid, viewpointId, ownTabId));
     const [tabViewpointId, setTabViewpointId] = useState<string | null>(() =>
-        initialTabViewpoint(viewpointId, restoreAtMount));
+        initialTabViewpoint(viewpointId, restoreAtMount, initialViewpointId));
     const shownViewpointId: string | null = isMetamodel ? (viewpointId || null) : tabViewpointId;
     const hasViewpoint = !!shownViewpointId && !isMetamodel;
     const tabViewpointRef = useRef(tabViewpointId);
@@ -138,7 +154,7 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
     rootViewpointRef.current = viewpointId;
     // Whether this tab is the dock's active one, kept by the ACTIVE_TAB listener below.
     const focusedRef = useRef<boolean | null>(null);
-    if (focusedRef.current === null) focusedRef.current = isActiveDockTab(modelid);
+    if (focusedRef.current === null) focusedRef.current = isActiveDockTab(ownTabId);
 
     // Editor view mode, hydrated from per-model localStorage. Metamodels are
     // always flow-only and never read a saved mode. The saved literal is validated
@@ -174,6 +190,13 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
         activateViewpoint(restoreAtMount || null);
     }, []);
 
+    // Mount-only: a tab opened on a chosen viewpoint and already the dock's active one has no
+    // transition to focused left to observe, so it makes the Q7 write here (R-MT-9).
+    useEffect(() => {
+        if (isMetamodel || initialViewpointId === undefined || !focusedRef.current) return;
+        writeFocusViewpoint(rootViewpointRef.current, tabViewpointRef.current);
+    }, []);
+
     // Q7: the tab that gains focus writes its viewpoint to the root and the project, which the
     // global readers (Tree View, rail, new-view parenting) and every reader not yet moved to the
     // tab (layout key, IR resolution: lanes L3, L5) follow. Only on the transition to focused:
@@ -182,13 +205,13 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
         if (isMetamodel) return;
         const onActiveTab = (e: Event) => {
             const wasFocused = focusedRef.current;
-            focusedRef.current = (e as CustomEvent).detail?.activeId === modelid;
+            focusedRef.current = (e as CustomEvent).detail?.activeId === ownTabId;
             if (!focusedRef.current || wasFocused) return;
             writeFocusViewpoint(rootViewpointRef.current, tabViewpointRef.current);
         };
         window.addEventListener(JjodelEvents.ACTIVE_TAB, onActiveTab);
         return () => window.removeEventListener(JjodelEvents.ACTIVE_TAB, onActiveTab);
-    }, [modelid, isMetamodel]);
+    }, [ownTabId, isMetamodel]);
 
     // The focused tab adopts a root change it did not make (an undone activation, a reload), so
     // its picker never contradicts what the canvas renders from the root. A tab behind it keeps
@@ -196,7 +219,7 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
     const didMountAdoptRef = useRef(false);
     useEffect(() => {
         if (!didMountAdoptRef.current) { didMountAdoptRef.current = true; return; }
-        if (isMetamodel || !focusedRef.current) return;
+        if (isMetamodel || !adoptsRootViewpoint(focusedRef.current, ownTabId)) return;
         setTabViewpointId(viewpointId || null);
     }, [viewpointId]);
 
