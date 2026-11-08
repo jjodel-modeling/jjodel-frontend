@@ -50,3 +50,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 20:40
 
 **Ticket** (found here, not fixed): a successful import from the modal shows no feedback, and after a selection the modal stays open, so only the cards behind the backdrop change; for lane C, which owns the toasts. A non-`.jjodel` file taken through the picker's "All files" option only logs `invalid file`, like the modal drop (lane A's ticket).
+
+## 2026-11-08 — feat(dashboard): drag tracking and drop overlay (P-2026-11-08-2115)
+**Prompt**: lane C1 of the dashboard drop import: pure drag transition function with tests and mutation bench, hook and wiring on `.dashboard-container`, overlay fixed over the rect of `.dash-content`, CDP probe and crops.
+**Files touched**: `frontend/src/pages/components/dashboardFileDrag.ts` (new), `frontend/src/pages/components/__tests__/dashboardFileDrag.test.ts` (new), `frontend/src/pages/components/useDashboardFileDrag.ts` (new), `frontend/src/pages/components/Dashboard.tsx`, `frontend/src/pages/dashboard.scss` (a6ccf5cdc); this inbox entry and the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 3/3 sui crop (RC-23); sonda della corsia 47/47, porta 3062, offline, light; Esc reale durante un drag OS non misurato, item per Alfonso
+**Notes**: Mutation bench 19 of 19 killed. The modal state is read from the DOM, because `AllProjects.tsx` is out of scope. Null-related dragleave, window dragend and Escape were exercised with synthetic events; a real Esc during an OS drag is not measured, an item for Alfonso. The glyph needed its colour on the `<i>`: `i.bi` paints it (measured). Online path not run, hence Regressions unknown. Typecheck 0, vitest only the 3 known red files, build 0.
+**Prompt document name**: 2026-11-08 21:15
+
+**Ticket** (found here, not fixed): Safari and Firefox `dragleave` are still not measured: if a browser reports a null `relatedTarget` between children, the overlay would clear until the next `dragover`. The dashboard no longer renders `.drop-overlay`; its rule stays in `dashboard.scss` (Rule 9).
