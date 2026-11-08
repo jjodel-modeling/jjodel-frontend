@@ -369,7 +369,7 @@ active log is not touched by this lane.
 **Regressions**: no (probe only, no frontend/src change)
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crops read by the lane, chat to read them)
+**Smoke visivo**: passato (crops read by the chat 2026-11-08 04:24: 1-reset, 3-takeoff viewed; 2, 4 per MEAS; Charging to Ready to Flying, takeOff one trace step)
 **Notes**: Probe 5/5 PASS, page errors none, seed 4242, Choices Random. dji reaches Mode=Ready on Tick 20 (battery 100), the limit exactly; takeOff is trace 20 to 21, Mode=Flying, speed 1; three Ticks fire Mode::Flying drain (distance 3, battery 97). Crops 1-reset 2-ready 3-takeoff 4-flying in ~/.jjodel-lanes/P-2026-11-08-0329/crops/. The panel shows «15 defects: dji.power (no slot and no default); ...» over the heading. Selector fix 32a3e617e.
 **Prompt document name**: 2026-11-08 03:29
 
