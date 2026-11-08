@@ -1007,7 +1007,8 @@ async function instantiateNow(
     history.beginUndoGroup();
     const until = Date.now() + INSTANTIATE_DEADLINE_MS;
     try {
-        await synthesize(modules, createInstance, get, plan, record, result, until, placeAt, viewpoint);
+        const container = ends ? linkContainer(modules, get, plan.modelId, record) : null;
+        await synthesize(modules, createInstance, get, plan, record, result, until, placeAt, viewpoint, container);
     } finally {
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
         // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own. Or once
@@ -1193,10 +1194,18 @@ async function createSlots(
     }
 }
 
+/** Where a link goes: the container of R-OI-22 for its metaclass, `null` the model root. */
+function linkContainer(m: WriteModules, get: DGet, modelId: string, record: OntoBinding): ClassElementPlan | null {
+    const metaclassId = ontoReadView(get).ownerOf(record.typeReference);
+    const placed = metaclassId !== undefined ? classElementPlan((m.joiner.store.getState() as any)?.idlookup ?? {}, modelId, metaclassId) : null;
+    return placed && !('error' in placed) ? placed : null;
+}
+
 /** The creates, the wait for their seeding and the node layout of `instantiate`, inside its undo group. */
 async function synthesize(
     m: WriteModules, createInstance: typeof import('./createAdapter').createInstance, get: DGet, plan: SynthesisPlan,
     record: OntoBinding, result: InstantiateResult, until: number, placeAt?: InstancePlacement, viewpoint?: string | null,
+    container?: ClassElementPlan | null,
 ): Promise<void> {
     const seeded: Seeded = [];
     const settle = async (slots: number) => {
@@ -1205,7 +1214,7 @@ async function synthesize(
         if (laid) result.problems.push(laid);
     };
 
-    const made = createInstance(plan.modelId, plan.instanceMetaclass, null, null, plan.instanceSeed);
+    const made = createInstance(plan.modelId, plan.instanceMetaclass, container?.ownerId ?? null, container?.childKey ?? null, plan.instanceSeed);
     if (!made.ok || !made.id) {
         result.problems.push(`instance: ${made.reason ?? 'not created'}`);
         return;
