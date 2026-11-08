@@ -28,6 +28,10 @@ $color-bg-tertiary: #f1f5f9;
 $color-border: #e2e4e8;
 $color-border-light: #f0f1f2;
 
+$color-slate-200: #e2e8f0;
+$color-slate-500: #64748b;
+$color-slate-700: #334155;
+
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
 $font-size-xs: 11px;
@@ -154,104 +158,188 @@ $transition-fast: 150ms ease;
 }
 
 // ============================================
-// Also include (R-JTG-27)
+// Also include (R-JTG-27): a multi-value select with pills
 // ============================================
 
-// The list floats over what follows: opening it moves nothing in the dialog.
-.execute-include {
+.included-models-combobox {
     position: relative;
-    margin-top: $spacing-sm;
 }
 
-.execute-include-toggle {
+// The look of the primary select. One row, whatever is selected: what does not fit goes in the +N pill.
+.included-models-field {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    width: 100%;
-    padding: $spacing-xs 0;
-    border: none;
-    background: none;
-    font-size: $font-size-sm;
+    gap: $spacing-xs;
+    height: 38px; // What the primary select above it measures: Bootstrap's .form-select, not --form-input-height
+    padding: 0 $spacing-md 0 $spacing-sm;
+    overflow: hidden;
+    background: var(--form-input-bg);
+    border: 1px solid var(--form-input-border-color);
+    border-radius: var(--form-input-border-radius);
+    box-sizing: border-box;
+    cursor: text;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:hover:not(:focus-within):not(.included-models-field--disabled) {
+        border-color: var(--form-input-border-color-hover);
+    }
+
+    &:focus-within {
+        border-color: var(--form-input-border-color-focus);
+        box-shadow: var(--form-input-focus-shadow);
+    }
+}
+
+.included-models-field--disabled {
+    background: $color-bg-tertiary;
+    cursor: not-allowed;
+}
+
+.included-models-pill,
+.included-models-more {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    box-sizing: border-box;
+    height: 24px;
+    font-size: $font-size-xs;
+    color: $color-slate-700;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-slate-200;
+    border-radius: $radius-sm;
+}
+
+.included-models-pill {
+    gap: 2px;
+    max-width: 136px;
+    padding: 0 2px 0 $spacing-sm;
+}
+
+.included-models-more {
+    padding: 0 $spacing-sm;
     font-weight: 500;
-    color: $color-accent;
+    cursor: default;
+}
+
+.included-models-pill-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.included-models-pill-remove {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    color: $color-slate-500;
+    background: none;
+    border: none;
+    border-radius: 2px;
     cursor: pointer;
 
     i {
-        font-size: $font-size-xs;
+        font-size: $font-size-md;
+        line-height: 1;
+    }
+
+    &:hover:not(:disabled) {
+        color: $color-primary;
+        background: $color-primary-light;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $color-primary;
     }
 
     &:disabled {
-        cursor: default;
+        cursor: not-allowed;
     }
 }
 
-.execute-include-count {
-    margin-left: auto;
-    font-size: $font-size-xs;
-    font-weight: 400;
-    color: $color-text-secondary;
+// Two classes and :focus: the app-wide input rules of the form reach this one too.
+.included-models-field .included-models-input,
+.included-models-field .included-models-input:focus {
+    flex: 1 1 56px;
+    width: auto;
+    min-width: 56px;
+    height: 24px;
+    padding: 0;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+
+    &::placeholder {
+        color: $color-text-tertiary;
+    }
+
+    &:disabled {
+        background: transparent;
+        cursor: not-allowed;
+    }
 }
 
-.execute-include-list {
+.included-models-chevron {
+    flex: none;
+    font-size: $font-size-xs;
+    color: $color-slate-500;
+}
+
+// Below the field, over what follows: it never moves the form and never reaches the primary select.
+.included-models-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 1;
+    z-index: 10;
     max-height: 136px;
+    margin-top: $spacing-xs;
     padding: $spacing-xs;
     overflow-y: auto;
     background-color: $color-bg-primary;
-    border: 1px solid $color-border;
+    border: 1px solid $color-slate-200;
     border-radius: $radius-md;
-    box-shadow: 0 8px 16px $color-accent-light;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
 }
 
-.execute-include-item {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    margin: 0;
+.included-models-option {
     padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-sm;
+    overflow: hidden;
     font-size: $font-size-sm;
-    color: $color-text-primary;
+    color: $color-slate-700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: $radius-sm;
     cursor: pointer;
-
-    &:hover {
-        background-color: $color-bg-tertiary;
-    }
-
-    input {
-        margin: 0;
-        accent-color: $color-accent;
-    }
-
-    span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 }
 
-// Opens upward, over the primary select and its count: downward it would cover
-// the label of the next field. The cap keeps it below the hint of the select.
-.execute-include-list.execute-include-popover {
-    top: auto;
-    bottom: 100%;
-    max-height: 72px;
+.included-models-option--active {
+    background-color: rgba(14, 165, 233, 0.08);
 }
 
-// Two classes: the app-wide `.form-group label` and `.form-group input` reach the row.
-.execute-include-list .execute-include-row {
+.included-models-option--empty {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    cursor: default;
+}
+
+// Measures the pills: laid out as in the field, not painted and taking no room.
+.included-models-ruler {
+    position: absolute;
+    top: 0;
+    left: 0;
     display: flex;
-}
-
-.execute-include-list .execute-include-checkbox {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    padding: 0;
+    width: max-content;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 // ============================================

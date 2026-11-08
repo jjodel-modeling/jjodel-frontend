@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../components/common/Button';
+import { IncludedModelsCombobox } from './IncludedModelsCombobox';
 import { isModelCompatibleWithSource } from './sourceConformance';
 import { orderIncludedIds, restoredSources } from './sourceSelection';
 import type { RunRecord } from './sourceSelection';
@@ -52,14 +53,12 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 }) => {
     const [sourceModelId, setSourceModelId] = useState('');
     const [includedIds, setIncludedIds] = useState<string[]>([]);
-    const [isIncludeListOpen, setIsIncludeListOpen] = useState(false);
     const [outputModelName, setOutputModelName] = useState('');
     const [errors, setErrors] = useState<{ source?: string; output?: string }>({});
     const [isExecuting, setIsExecuting] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const wasOpenRef = useRef(false);
-    const includeRef = useRef<HTMLDivElement>(null);
 
     // Filter models that conform to the source metamodel
     // Uses robust matching that tries multiple possible field names
@@ -115,7 +114,6 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
             const restored = restoredSources(getLastRun?.(), compatibleModels.map(m => m.id));
             setSourceModelId(restored?.primaryId ?? (compatibleModels.length > 0 ? compatibleModels[0].id : ''));
             setIncludedIds(restored?.includedIds ?? []);
-            setIsIncludeListOpen(false);
             setOutputModelName(generateDefaultOutputName());
             setErrors({});
             setIsExecuting(false);
@@ -139,16 +137,6 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen]);
-
-    // Close the "Also include" list on a click outside it
-    useEffect(() => {
-        if (!isIncludeListOpen) return;
-        const handleMouseDown = (e: MouseEvent) => {
-            if (!includeRef.current?.contains(e.target as Node)) setIsIncludeListOpen(false);
-        };
-        document.addEventListener('mousedown', handleMouseDown);
-        return () => document.removeEventListener('mousedown', handleMouseDown);
-    }, [isIncludeListOpen]);
 
     const validate = (): boolean => {
         const newErrors: typeof errors = {};
@@ -187,7 +175,6 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
             // Reset and close on success
             setSourceModelId('');
             setIncludedIds([]);
-            setIsIncludeListOpen(false);
             setOutputModelName('');
             setErrors({});
             onClose();
@@ -200,7 +187,6 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     const handleCancel = () => {
         setSourceModelId('');
         setIncludedIds([]);
-        setIsIncludeListOpen(false);
         setOutputModelName('');
         setErrors({});
         setIsExecuting(false);
@@ -217,13 +203,8 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     if (!isOpen) return null;
 
     const noCompatibleModels = compatibleModels.length === 0;
-    // On the count of compatible models, not of the others: emptying the primary must not make the row appear
-    const showIncludeList = compatibleModels.length > 1;
     const includableModels = compatibleModels.filter(m => m.id !== sourceModelId);
-
-    const toggleIncluded = (id: string) => {
-        setIncludedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
-    };
+    const includedModels = compatibleModels.filter(m => effectiveIncludedIds.includes(m.id));
 
     return (
         <div className="dialog-overlay" onClick={handleOverlayClick}>
@@ -304,45 +285,20 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                     <span className="form-count">
                                         {compatibleModels.length} model{compatibleModels.length !== 1 ? 's' : ''} available
                                     </span>
-                                    {showIncludeList && (
-                                        <div className="execute-include" ref={includeRef}>
-                                            <button
-                                                type="button"
-                                                className="execute-include-toggle"
-                                                aria-expanded={isIncludeListOpen}
-                                                aria-controls="execute-include-list"
-                                                onClick={() => setIsIncludeListOpen(open => !open)}
-                                                disabled={isExecuting}
-                                            >
-                                                <i className={`bi bi-chevron-${isIncludeListOpen ? 'up' : 'down'}`} />
-                                                <span>Also include</span>
-                                                <span className="execute-include-count">
-                                                    {effectiveIncludedIds.length} of {includableModels.length} selected
-                                                </span>
-                                            </button>
-                                            {isIncludeListOpen && (
-                                                <div
-                                                    id="execute-include-list"
-                                                    className="execute-include-list execute-include-popover"
-                                                    role="group"
-                                                    aria-label="Also include"
-                                                >
-                                                    {includableModels.map((model) => (
-                                                        <label key={model.id} className="execute-include-item execute-include-row">
-                                                            <input
-                                                                className="execute-include-checkbox"
-                                                                type="checkbox"
-                                                                checked={includedIds.includes(model.id)}
-                                                                onChange={() => toggleIncluded(model.id)}
-                                                                disabled={isExecuting}
-                                                            />
-                                                            <span>{model.name}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                </div>
+
+                                {/* Also include (R-JTG-27) */}
+                                <div className="form-group">
+                                    <label htmlFor="included-models">Also include</label>
+                                    <IncludedModelsCombobox
+                                        inputId="included-models"
+                                        candidates={includableModels}
+                                        selected={includedModels}
+                                        metamodelName={sourceMetamodelName}
+                                        disabled={isExecuting}
+                                        onAdd={(id) => setIncludedIds(ids => [...ids, id])}
+                                        onRemove={(id) => setIncludedIds(ids => ids.filter(x => x !== id))}
+                                    />
                                 </div>
 
                                 {/* Output Model Name */}

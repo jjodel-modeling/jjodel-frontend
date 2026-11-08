@@ -1572,3 +1572,18 @@ Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closur
 **Smoke visivo**: passato — chat, unattended: S4: run dialog with Also include, crops checked by the chat
 **Notes**: Rollback tag `pre-jjtl-multi-source-app` on `e88ab3d06` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1147/result.json`.
 **Prompt document name**: 2026-11-08 11:47
+
+## 2026-11-08 — feat(jjtl): included models as pills, unbound envLookup stops the run (P-2026-11-08-1230)
+**Prompt**: P-2026-11-08-1230, continuation of P-2026-11-08-1200 after its context ceiling: commit the combobox, check in the browser what the unit tests cannot reach, decision rows R-JTG-33 and R-JTG-34 and the note on R-JTG-27, SPEC §9, the report, close ticket #758, full gates.
+**Files touched**: `ac9ee73cf` (P-2026-11-08-1200): `executor.ts`, `demand-as-value.test.ts`. `e92b7d2cc`: `IncludedModelsCombobox.tsx`, its test, `ExecuteTransformationDialog.tsx`, `execute-transformation-dialog.scss`. `d4c331168`: the combobox and the `.scss`. `08384ff6e`: `frontend/src/jjtl/SPEC.md`. `a7b5a12a2`: `docs/decisions.md`. `c7b2df61a` and `6d99cd048`: `docs/discovery/discovery_2026-11-08_jjtl_include_pills.md`. This entry and the Status lines of the two prompts.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-08 11:20
+**Causa**: (d)
+**Regressions**: unknown: `regress.sh` ends in `REGRESSION FAILED` at its print stage, cause not established (report §6). The two SHA prefixes the prompt asks for are unchanged.
+**Out-of-scope changes**: no, but above five files (RC-11), all named by the scope of the handoff and listed in the report §4 and under Files touched. Temporary and removed: the `frontend/node_modules` symlink, the gitignored probe.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe, unattended, 56/56 after 3 failures that became the two fixes of `d4c331168`; five crops and the `+N` state viewed. The look of the pills is left to Alfonso.
+**Notes**: Typecheck and build exit 0; full vitest 15357 passed, 3 skipped, only the 3 known files failing at import. Arbiter `5c0d9731c4bb9632`, core `2a34b97ab348ce64`. `regress.sh` needed the system Python, Homebrew's 3.14 not loading `pyexpat`: 21 OK, then printed 0 identical, 42 different. Second cause (g). #758 closed. Both citations of the prompt were wrong, corrected by the chat. Report §6.
+**Prompt document name**: 2026-11-08 12:30
+
+**Ticket** (`regress.sh`, found in P-2026-11-08-1230): the print stage compares 0 of 42 files as identical, while all 21 Briefs pass the object-by-object comparison. No printed file was diffed and the base commit was not run, so whether this lane or the references are responsible is open. The lane changes no file under `frontend/src/codegen`.

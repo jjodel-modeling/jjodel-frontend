@@ -7527,6 +7527,7 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-27** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
   the run dialog keeps a primary source model plus an «also include» list of further models of the same metamodel.
   Not implemented (slice S4 of the report).
+  Note (P-2026-11-08-1230): «also include» is a multi-value select with pills (D7 of P-2026-11-08-1120 superseded).
 - **R-JTG-28** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
   matching on supertypes follows R-JTG-3: of the rules whose source class is the instance's class or a supertype, the
   most specific wins; two of equal specificity are an error naming both. Not implemented (slice S5 of the report, §5).
@@ -7549,6 +7550,13 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   treatment R-FA-12 gives a read on a missing feature. Not an error: a read is not a use as a value. The run stays
   `success true`. Replaces the «no warning is logged» that R-JTG-30 measured, which stays unchanged as the record of
   that measure. Evidence: `demand-as-value.test.ts`.
+- **R-JTG-33** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 11:55, registered by P-2026-11-08-1200, evidence: measured, verified: none, reversible: trunk):
+  unbound `envLookup` stops the run, as an unbound `envValue` does: the failing builtin of R-FA-11, naming the rule and
+  the source element as R-FA-13 asks, same message pattern. `envHas` stays the test. Before, it read `null` and
+  `+ "_w"` succeeded (#758). Evidence: `demand-as-value.test.ts`.
+- **R-JTG-34** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 11:55, registered by P-2026-11-08-1200, evidence: measured, verified: none, reversible: trunk):
+  the run dialog restores the last included selection on reopen, no re-run command. Evidence: the probe of
+  P-2026-11-08-1230: reopening restores the pill and the primary, an older record restores nothing.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
