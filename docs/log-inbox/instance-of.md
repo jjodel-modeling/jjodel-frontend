@@ -300,3 +300,20 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 17:26
 
 **Own choices** (lane 1, from its handoff): `ontoLevelOf` takes the id from the caller, `undefined` and `null` read `both`, no new `state.viewpoint` reader (R-MT-14), so `<EditorV2/>` with no `viewpointId` (route `App.tsx:152`) never sees a level; `writeOntoLevel` writes nothing on the current value, so `both` on an absent key stays absent; `onDeclareBinding` is `advancedMode && !ontoClassLevel`; drop and click share one guard in `runOntoPayload`, read at the drop through `viewpointIdRef`; labels «Classes and instances», «Classes», «Instances», field «Ontological level», class hook `.wp-onto-level-select`. The S2 suite leaves the side panel closed, the step that does it not identified, so the level block reopens it with the toolbar button.
+
+## 2026-11-08 — feat: the class rail and pane menu from the binding, probe, bench (P-2026-11-08-1822)
+**Prompt**: two lanes in one entry: lane 2 of the levels front, the rail's four class-level groups, the container rule and the pane menu «New ▸» (P-2026-11-08-1753, cut at its context ceiling after the code); this continuation, the probe with the three points the handoff left unverified, two regressions, three mutants, the docs.
+**Files touched**: `model/ontological/classRail.ts` and its test, `editor-v2/hooks/instantiate.ts`, `editor-v2/hooks/__tests__/classElement.test.ts`, `editor-v2/panels/PalettePanel.tsx`, `editor-v2/EditorV2.tsx` (b8b9bfe30); `scripts/probe/onto-s2-instantiate.ts` (3f399f545); `docs/decisions.md` R-OI-21, R-OI-22, R-OI-23, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (`hooks/__tests__/classElement.test.ts` is not named by the 1753 prompt, placed under «its tests» so that `instantiate.test.ts` stays untouched, accepted by the 1822 prompt; ten files across two lanes, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (four crops in `~/.jjodel-lanes/P-2026-11-08-1822/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S2-L5 and S2-L6 amended: they asserted lane 1's empty class tab, Q2 puts the rail and «New ▸» there. Titles read with textContent, CSS uppercases innerText. On uml-s3b S2 52/52, s3a 8/8, binding editor 10/10. Mutants red and reverted, `~/.jjodel-lanes/P-2026-11-08-1822/bench.txt`: M1, M2 in vitest, M3 on S2-L9; port 3005 served them while they ran. «No rootable classes found» left as a design choice (discovery §4). No product change in 1822.
+**Prompt document name**: 2026-11-08 18:22
+
+**Ticket** (the three points of the 1753 handoff, measured by P-2026-11-08-1822). (1) Stray node or composition edge: none drawn, a new Class adds one node and no edge (S2-L12), a new attribute no node and no edge (S2-L18); the D-layer gains one vertex and one edge record for each, drawn by no view. (2) The attribute draws as a row of its class, `property1 : [ 0 .. 0 ]` with no visibility and no type, unlike the fixture's rows; in `class-new-attribute.png` the 83 px node clips Book's header with the third row in, not diagnosed. (3) The class view's edge drag Book → Publication creates a Generalization with no picker: specific Book, general Publication, one undo entry, one edge drawn. It is a root object of the model, not in `Book.generalizations`, so it differs from the fixture's composition (`Classifier.generalizations`). The rail item stays disabled (S2-L22).
+
+**Own choices** (lane 2, from its handoff, also in R-OI-21..23): the group titles; an association told apart by the `link` record; the Attributes item needs a selected class and the node menu keeps its own; two qualifying pairs do not guess, the element is a root; a classifier keeps the capital and a property goes through `instanceName`; only the position is written (`slots: null`); the class payload shares `ONTO_DRAG_MIME` with shape `{ classElement: id }`.

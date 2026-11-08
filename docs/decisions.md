@@ -6690,6 +6690,30 @@ P-2026-10-20-1835.
   two sharing one guard read at the drop. Amends R-OI-10 on the pane menu and the class node menu. Amends R-OI-18 on the
   section. At `class` the pane menu shows nothing and the «Declare binding…» empty state is hidden, both until lane 2 gives
   them a home (discovery 2026-11-08, Q2).
+- **R-OI-21** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class`, with a binding, the rail's section is titled «Elements» and lists four groups read from the binding:
+  Classifiers, Associations, Attributes, Generalizations.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu»
+  (2026-11-08 16:03). Classifiers are the concrete conformers of the `object` record's type reference; an association is
+  told apart by the `link` record (a classifier conforming to the owner of `link.featureContainer`), and with no `link`
+  record it stays a classifier, enabled. Attributes need a selected class. Associations and Generalizations are listed
+  disabled with a tooltip. With a binding at `class` the linguistic «Instances» block is hidden; with none it shows as
+  before, and «No rootable classes found» stays (discovery 2026-11-08 §4, a design choice). Measured (P-2026-11-08-1822):
+  the class view's edge drag Book → Publication creates a Generalization (specific Book, general Publication, one undo
+  entry, a root object of the model and not in `Book.generalizations`); the rail item stays disabled regardless.
+- **R-OI-22** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A class-level element goes in the composition reference that accepts it when exactly one pair (composition reference,
+  sole owner in the model) qualifies; otherwise it is a root.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi
+  tu» (2026-11-08 16:03). Two qualifying pairs do not guess (`containerFor`, `model/ontological/classRail.ts`). On the UML
+  fixture a Class lands in `Package.packagedElements`. An attribute goes in the `object` record's feature container of the
+  selected class, `Class.ownedAttributes`. A classifier keeps the capital (`Class1`), a property goes through
+  `instanceName` (`property1`). One undo entry each; only the position of the new vertex is written, because a fixed height
+  would clip the rows added later.
+- **R-OI-23** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class`, with a binding, a right click on the empty pane opens «New ▸» with the rail's items, and a classifier lands
+  at the click.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). Disabled entries keep
+  the rail's hints; Property is enabled only with a class selected when the menu opens. Without a binding the pane menu
+  stays absent. Amends R-OI-20 on the pane menu and on the «Declare binding…» empty state, which it left without a home at
+  `class`.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

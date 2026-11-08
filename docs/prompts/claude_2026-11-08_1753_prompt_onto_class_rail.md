@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1753
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (no §3.1 file; new pure reader, rail and pane menu at the `class` level)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b8b9bfe30
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 12:25 finding 2: the class diagram's rail offers classes, attributes, associations from the metamodel and its bindings; 16:03 «decidi tu»; the discovery's recommended answers adopted unattended, RC-21)
 Depends: P-2026-11-08-1726
 Corregge: —
