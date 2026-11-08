@@ -7823,6 +7823,26 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   Slice 5 implements coherence constraints as watches: φ as a state invariant, BoundedPersistence and BoundedResponse
   as a counter automaton per instance, reported as watch hits (R-SIM-137). The batch of N Random runs estimating γ
   (SoSyM, Definition 8) is a later slice.
+- **R-DCN-29** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto» on the recommendation of docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md, evidence: read, verified: none, reversible: trunk).
+  Amends R-DCN-25 and R-DCN-26 on where the run is drawn. The viewpoint compartments, the greyed dormant slots and the
+  monitor icon are drawn in a run card mounted by `SimNodeRunState` below the instance node, absolutely positioned,
+  as the Petri run overlay is (R-SIM-3); not inside the node box. No CLAUDE.md §3.1 file is touched, the node keeps its
+  size and no handle or edge moves at Reset or Stop. The drone fixture gains the UML object viewpoint. The card also
+  lists the static slots whose σ differs from the value at Reset; node rows keep showing the model's value. The dashed
+  ring is suppressed on an instance that shows the card.
+- **R-DCN-30** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  Refines R-DCN-27. Because R-OI keeps the class level and the instance level in one M1 model, the snapshot copies the
+  whole model (classes, instances, links) into the new model and then writes σ over the attribute slots, so the
+  snapshot opens and runs on its own. Links are copied from the model, not from σ. Snapshot is offered for DCN runs
+  only. The write lane carries a Layer Impact Report and runs with Alfonso's go-ahead, given in the same message.
+- **R-DCN-31** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  The bound k of BoundedPersistence and BoundedResponse counts committed steps of the trajectory (invocations and
+  ticks, as in the trace). Pattern counters are not part of σ: they are a fold over the configurations, so step back,
+  scenarios and the slider replay them. The exact pattern semantics are aligned with the SoSyM definitions before the
+  lane that implements them.
+- **R-DCN-32** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  No new test dependency for the Simulation panel: its rendering is asserted by the probes (`dcn-drone-run.ts`), not
+  by a jsdom or testing-library unit test.
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 

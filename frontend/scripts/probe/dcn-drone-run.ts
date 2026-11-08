@@ -10,6 +10,8 @@
  * (the chips and their title's first line) and the status line (`step n · last step`).
  * Checks: the panel shows Reset (not «Simulation not configured»); the heading is DCN_PANEL_HEADING; after takeOff
  * the classification has `Mode = Flying` and the step is one trace entry (R-DCN-22).
+ * P-2026-11-08-2042 (R-DCN-29): the run card of `dji` on the canvas, read from its DOM after Reset, in Flying and after
+ * the timeline back to step 0; one crop each of the node with its card: 1-charging, 2-flying, 3-stepback.
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-dcn-l45 frontend/scripts/probe/dcn-drone-run.ts \
  *         --port 3087 --id P-2026-11-08-0329
@@ -84,6 +86,71 @@ async function step(page: Page, mid: string, name: string, crop: boolean): Promi
     return s;
 }
 
+// The run card of an instance (R-DCN-29), read from the visible canvas; `enabled` is what would light the dashed ring.
+type CardState = {
+    shown: boolean; layer: boolean; ring: boolean; enabled: boolean | null; ringsOnCanvas: number; cards: number; dormant: string[]; changed: string[];
+    viewpoints: Array<{ name: string | null; classes: Array<{ text: string; active: boolean; monitored: boolean }>; monitors: string[] }>;
+};
+const readCard = async (page: Page, id: string): Promise<CardState> => {
+    const dom = await page.evaluate((oid) => {
+        const visible = (e: Element) => (e as HTMLElement).offsetParent !== null;
+        const txt = (e: Element) => (e.textContent ?? '').trim();
+        const card = [...document.querySelectorAll(`.sim-node-run__dcn[data-sim-dcn="${oid}"]`)].find(visible);
+        const layer = card?.closest('.sim-node-run');
+        return {
+            shown: !!card, layer: !!layer, ring: !!layer?.querySelector('.sim-node-run__ring'),
+            ringsOnCanvas: [...document.querySelectorAll('.sim-node-run__ring')].filter(visible).length,
+            cards: [...document.querySelectorAll('.sim-node-run__dcn')].filter(visible).length,
+            dormant: [...(card?.querySelectorAll('.sim-node-run__dcn-slot--dormant') ?? [])].map(txt),
+            changed: [...(card?.querySelectorAll('.sim-node-run__dcn-slot--changed') ?? [])].map(txt),
+            viewpoints: [...(card?.querySelectorAll('.sim-node-run__dcn-viewpoint') ?? [])].map((v) => ({
+                name: v.getAttribute('data-sim-dcn-viewpoint'),
+                classes: [...v.querySelectorAll('.sim-node-run__dcn-class')].map((c) => ({
+                    text: txt(c), active: c.classList.contains('sim-node-run__dcn-class--active'), monitored: !!c.querySelector('.bi-activity'),
+                })),
+                monitors: [...v.querySelectorAll('.sim-node-run__dcn-monitors')].map(txt),
+            })),
+        };
+    }, id);
+    const enabled = await ev<boolean | null>(page,
+        `const s = await import('/src/components/editor-v2/sim/simRunState.ts'); return s.getSimNodeState(a)?.enabled ?? null;`, id, 0);
+    return { ...dom, enabled };
+};
+const activeIn = (c: CardState, viewpoint: string) => c.viewpoints.find((v) => v.name === viewpoint)?.classes.filter((x) => x.active).map((x) => x.text) ?? [];
+const dormantNames = (c: CardState) => c.dormant.map((d) => d.split(' = ')[0]);
+
+// One crop of the node of `id` with its card, at the page's deviceScaleFactor.
+async function shootCard(page: Page, id: string, name: string) {
+    const box = await page.evaluate((oid) => {
+        const card = [...document.querySelectorAll(`.sim-node-run__dcn[data-sim-dcn="${oid}"]`)].find((e) => (e as HTMLElement).offsetParent !== null);
+        const node = card?.closest('.react-flow__node');
+        if (!card || !node) return null;
+        const a = node.getBoundingClientRect(); const b = card.getBoundingClientRect();
+        return { left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom), node: [a.left, a.top, a.width, a.height], card: [b.left, b.top, b.width, b.height] };
+    }, id);
+    meas(`card box ${name}`, box);
+    if (!box) return;
+    const x = Math.max(0, box.left - 16); const y = Math.max(0, box.top - 16);
+    // The open panel floats over the canvas, on the card at this zoom: out of the crop only.
+    await page.addStyleTag({ content: '.sim-panel--open { visibility: hidden !important; }' }).then(async (tag) => {
+        await page.screenshot({ path: `${CROPS}/${name}.png`, clip: { x, y, width: Math.min(1440 - x, box.right + 16 - x), height: Math.min(900 - y, box.bottom + 16 - y) } });
+        await tag.evaluate((e) => e.remove());
+    });
+}
+
+// The timeline to step `n`, as a drag of its thumb does: the native setter, then the input event React listens to.
+const timelineTo = async (page: Page, n: number) => {
+    const moved = await page.evaluate((v) => {
+        const r = [...document.querySelectorAll('input.sim-timeline__range')].find((e) => (e as HTMLElement).offsetParent !== null) as HTMLInputElement | undefined;
+        if (!r) return false;
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(r, String(v));
+        r.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    }, n);
+    await wait(page, 700);
+    return moved;
+};
+
 async function press(page: Page, match: RegExp) {
     await panel(page).locator('.sim-panel__events .sim-panel__event').filter({ has: page.locator('span', { hasText: match }) }).first().click();
     await wait(page, 700);
@@ -143,6 +210,15 @@ try {
 
     const s1 = await step(page, model.id, '1-reset', true);
     meas('inputs row', s1.inputs);
+    const dji = await ev<string | null>(page, `const m = w.LProject.getProject().models.find((x) => x.id === a); return m.objects.find((o) => o.name === 'dji')?.id ?? null;`, model.id, 0);
+    if (!dji) throw new Error('no instance named dji');
+    const c1 = await readCard(page, dji);
+    meas('card charging', c1);
+    await shootCard(page, dji, '1-charging');
+    check('S5L3-1 after Reset the Mode compartment shows Charging active', c1.shown && activeIn(c1, 'Mode').join() === 'Charging', { shown: c1.shown, viewpoints: c1.viewpoints });
+    check('S5L3-2 chargeRate is not dormant in Charging', c1.shown && !dormantNames(c1).includes('chargeRate'), { shown: c1.shown, dormant: c1.dormant });
+    check('S5L3-3 no dashed ring on dji while the card shows, and the run enables it', c1.shown && c1.layer && !c1.ring && c1.enabled === true,
+        { shown: c1.shown, layer: c1.layer, ring: c1.ring, enabled: c1.enabled, ringsOnCanvas: c1.ringsOnCanvas, cards: c1.cards });
     meas('tick button label', s1.inputs.filter((i) => /tick/i.test(i.text)).map((i) => i.text));
     check('L45d-2 the heading is the DCN one', s1.sections.includes(DCN_PANEL_HEADING), { sections: s1.sections, expected: DCN_PANEL_HEADING });
     const takeOffInput = (st: PanelState) => st.inputs.find((i) => /^dji\.takeOff\(/.test(i.text));
@@ -185,6 +261,21 @@ try {
         s4 = await step(page, model.id, `flying tick ${i}`, false);
     }
     await shoot(page, '4-flying');
+    const c2 = await readCard(page, dji);
+    meas('card flying', c2);
+    await shootCard(page, dji, '2-flying');
+    check('S5L3-4 in Flying the Mode compartment shows Flying active', c2.shown && activeIn(c2, 'Mode').join() === 'Flying', { shown: c2.shown, viewpoints: c2.viewpoints });
+    check('S5L3-5 chargeRate is dormant in Flying', dormantNames(c2).includes('chargeRate'), { dormant: c2.dormant });
+    const flying = c2.viewpoints.find((v) => v.name === 'Mode')?.classes.find((x) => x.text === 'Flying');
+    check('S5L3-6 the monitor icon is on Flying, with the monitors named', flying?.monitored === true && (c2.viewpoints.find((v) => v.name === 'Mode')?.monitors.length ?? 0) > 0, { flying, viewpoints: c2.viewpoints });
+    check('S5L3-7 no dashed ring on dji in Flying', c2.shown && c2.layer && !c2.ring, { shown: c2.shown, ring: c2.ring, enabled: c2.enabled, ringsOnCanvas: c2.ringsOnCanvas });
+
+    const moved = await timelineTo(page, 0);
+    const c3 = await readCard(page, dji);
+    const sBack = await readPanel(page);
+    meas('card step back', { moved, ...c3, line: sBack.line, panelChips: sBack.chips });
+    await shootCard(page, dji, '3-stepback');
+    check('S5L3-8 the timeline at step 0 returns the Charging card', moved && c3.shown && activeIn(c3, 'Mode').join() === 'Charging' && !dormantNames(c3).includes('chargeRate'), { moved, shown: c3.shown, viewpoints: c3.viewpoints, dormant: c3.dormant });
     meas('step 4-flying', { classification: s4.chipsTitle?.split('\n')[0] ?? null, status: s4.pill, line: s4.line, slots: s4.chipsTitle });
     check('L45d-6 page errors', errors.length === 0, errors.slice(0, 5));
 } catch (e) {

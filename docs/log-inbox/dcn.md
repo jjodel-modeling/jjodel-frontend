@@ -428,3 +428,61 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (merge; app checks by P-2026-11-08-1606 and P-2026-11-08-1652, crops read by the chat)
 **Notes**: Zero conflicts, no union; merge tree f9a9dc478 equal to the measure; 10 probes as expected. Full vitest: 2 load flakes (languageService budget, laneRun monitor; load about 100), each green alone twice, files untouched by the branch, accepted in the GO. Branch vitest not run (no node_modules; writing forbidden): 13 new tests counted, total matched. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change).
 **Prompt document name**: 2026-11-08 17:57
+
+## 2026-11-08 — feat: DCN run card state, pure per instance (P-2026-11-08-1829)
+**Prompt**: `claude_2026-11-08_1829_prompt_dcn_s5_1_canvas_state.md`, lane full, slice 5 lane 1: `dcnCanvasState.ts`, plain data for one instance (viewpoints with active classes, dormant slots, tick monitors, static slots changed since Reset; null for a non-instance), test red first, gates, bench of at least 6 mutants. No UI.
+**Files touched**: d614f6dde `frontend/src/model/simulation/dcn/dcnCanvasState.ts` (new), `frontend/src/model/simulation/dcn/__tests__/dcnCanvasState.test.ts` (new); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: New module with test: dcnNodeStateOf adds nameOf (DcnEntry holds only the monitor id). classify covers all instances: WeakMap per state. Bench 19/20; survivor is the unreachable guard on an absent slot (R-DCN-3). Typecheck 0; vitest 15456 passed, 3 known import reds, irSelectionRing load red (hook timeout), alone 5/5; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after. A viewpoint with no class keeps its empty row.
+**Prompt document name**: 2026-11-08 18:29
+
+## 2026-11-08 — feat: DCN run card data reachable from the canvas (P-2026-11-08-1905)
+**Prompt**: `claude_2026-11-08_1905_prompt_dcn_s5_2_registry.md`, lane full, slice 5 lane 2: the DCN run registry moves to a module simRunState can read, `getSimDcnNode(objectId)` on the shown step cached per record, tests red first, gates, bench of at least 5 mutants. No UI.
+**Files touched**: b109e1479 `frontend/src/components/editor-v2/sim/simDcnRuns.ts` (new), `sim/simBridge.ts`, `sim/simRunState.ts`, `sim/__tests__/simBridge.test.ts`; docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Registry in simDcnRuns.ts; it gains nameOf (the lookup at Reset), since simRunState has no lookup. Tests in simBridge.test.ts on real startRun and presses. Bench 12/12. Typecheck 0; vitest 15464 passed, 3 known import reds, tolerant.test.ts load red (timing, 91 vs 50 ms), alone 64/64; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after.
+**Prompt document name**: 2026-11-08 19:05
+
+## 2026-11-08 — test: DCN drone object level in the UML object viewpoint (P-2026-11-08-1939)
+**Prompt**: `claude_2026-11-08_1939_prompt_dcn_s5_0_object_view.md`, lane full, slice 5 lane 0 (R-DCN-29): the UML object views copied into the drone fixture, both exports, screenshots and `dcn-drone.json` regenerated, a check on the export's viewpoint, run probe once, screenshot read. Answer of the chat after the stop on the lost links: re-apply them after `buildLinks`, one MEAS per loss, a non-failing count.
+**Files touched**: 13ff7af42 `frontend/scripts/probe/dcn-drone-fixture.ts`, `docs/discovery/assets/dcn-drone/` (class-level and object-level png, `dcn-drone.json`); outside the repo `~/jjodel-demo-exports/dcn/dcn-drone.jjodel`, `dcn-drone-objects.jjodel` (previous ones in `~/.jjodel-lanes/P-2026-11-08-1939/prev/`); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (six repo files, all in the DOVE of the prompt: the fixture, three assets, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (screenshot read by the chat 2026-11-08 20:35: six instances with slot rows, readable, no overlap)
+**Notes**: Fixture 30/30 (O-7, O-8, RT-1, L-1 new), dcn and instantiation problems zero, conformant. Run probe 9/9, no selector changed, Ready on Tick 20. Exports from the green run; earlier runs: 4 edited and 1 on HEAD each lost one link. The green run, with a settle added after buildLinks, lost none: the re-apply branch is unexercised. Own 3x2 grid in the viewpoint. check:scripts 0, tsc on the fixture 0; repo typecheck, vitest, build not run (no frontend/src change).
+**Prompt document name**: 2026-11-08 19:39
+
+**Ticket** (high, for a diagnosis lane): a containment write from `syncCreateCompositionLink` is lost about once per fixture build: 5 of 5 runs, load 3-13, also on unmodified HEAD, a different link each time (`WindSensor.ownedAttributes->p_WindSensor_speed`, `pkg.packagedElements->Boolean`, `TempSensor.ownedOperations->op_TempSensor_injectFailure` twice, `TempSensor.ownedAttributes->p_TempSensor_value`). Cause not diagnosed. A sixth run, with a settle added after `buildLinks`, lost none (L-1 counts 0): one observation, not a cause. The fixture now re-applies a lost link and L-1 reports it without failing.
+
+**Ticket** (low): the copied row template shows `values[0]` only, so `wau1` reads `ownedSensors = temp` while the slot holds the four sensors. Kept as copied, by the chat's answer.
+
+## 2026-11-08 — feat: DCN run card under the instance node (P-2026-11-08-2042)
+**Prompt**: `claude_2026-11-08_2042_prompt_dcn_s5_3_run_card.md`, lane full, slice 5 lane 3 (R-DCN-29): the run card in `SimNodeRunState` below the node, viewpoint compartments, dormant slots, monitors, changed static slots, one column with the tags, no dashed ring; styles; the drone probe with DOM assertions and three crops; gates. After the stop on the test mock, the chat's answer: one line in that mock, a ticket on the panel chips.
+**Files touched**: da677a25f `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`; 3a3563cc4 `frontend/scripts/probe/dcn-drone-run.ts`; 2b6effb56 `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irActivityRender.test.ts`; docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (4 tests of irActivityRender.test.ts, red because its mock lacked getSimDcnNode; fixed in the lane, no production behaviour affected)
+**Out-of-scope changes**: yes (test mock only, granted by the chat: one line in irActivityRender.test.ts; six repo files in all, the five of the DOVE and this mock)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (GO given; 1-charging and 2-flying read by the chat 2026-11-08 20:58: the card is right; 3-stepback read by the lane only)
+**Notes**: Probe 17/17, port 3142. Run twice: in the first the open panel hid the card in the crops, so it is hidden for the crop only. Ring absent on dji with enabled true. Typecheck, scripts, build 0; vitest 15465 passed, 3 known import reds. Stopped once: the card broke the mock in irActivityRender.test.ts (4 reds, under viewpoint/ir/); the chat granted one line. Column only around a card, Petri DOM unchanged. At this zoom the open panel covers dji's card.
+**Prompt document name**: 2026-11-08 20:42
+
+**Ticket** (medium): the panel Classification chips do not follow the viewed step at step back (R-SIM-106): with the timeline at step 0 the card reads Charging while the chips read `dji.Mode = Flying` (probe MEAS `card step back`, `panelChips`).
