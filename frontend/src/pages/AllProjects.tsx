@@ -12,6 +12,7 @@ import { Catalog } from './components/catalog/Catalog';
 import { Button } from '../components/common/Button';
 
 import {ProjectsApi} from "../api/persistance";
+import {importJjodelFiles} from "../api/persistance/jjodelImport";
 import { LatestUpdates } from './components/LatestUpdates';
 import { CreateProjectDialog, ProjectFormData } from '../components/CreateProjectDialog/CreateProjectDialog';
 import { JjodelEvents } from '../events/registry';
@@ -59,22 +60,13 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         e.stopPropagation();
         // console.log('dropevent', {e});
 
-        const droppedFiles = Array.from(e.dataTransfer.files);
-        if (droppedFiles.length > 0) {
-            for (let file of droppedFiles){
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                if (!e.target) { Log.ee('invalid file', e); return; }
-                var contents = e.target.result;
-                // console.log('read file', {contents, e, file});
-                let date: number = file.lastModified;
-                let name = file.name; // including extension
-                if (typeof contents === 'string') ProjectsApi.importFromText(contents, name, date);
-                else Log.ee('invalid file content', {e, contents});
-            };
-            reader.readAsText(file);
+        importJjodelFiles(e.dataTransfer.files, ProjectsApi.importFromText).then(results => {
+            for (const result of results) {
+                if (result.ok) continue;
+                if (result.reason === 'failed') U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
+                else Log.ee('invalid file', result.file.name);
             }
-        }
+        });
         //let file = e.dataTransfer.getData('file');
         setDropping(false);
     }

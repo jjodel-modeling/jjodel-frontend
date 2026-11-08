@@ -41,6 +41,7 @@ import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
+import { importJjodelFiles } from '../../api/persistance/jjodelImport';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
@@ -291,21 +292,13 @@ function GenericDashboard(props: DashProps): any {
         e.preventDefault();
         setIsDragging(false);
 
-        const file = e.dataTransfer.files[0];
-        if (file && file.name.endsWith('.jjodel')) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const content = String(event.target?.result);
-                try {
-                    await ProjectsApi.importFromText(content);
-                    U.alert('i', 'Project imported', `"${file.name}" has been imported successfully.`);
-                } catch (err) {
-                    U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
-                }
-            };
-            reader.readAsText(file);
-        } else if (file) {
-            U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
+        // preventDefault stays on every page, so a drop never leaves the app; only All Projects imports.
+        if (active !== 'All') return;
+        const results = await importJjodelFiles(e.dataTransfer.files, ProjectsApi.importFromText);
+        for (const result of results) {
+            if (result.ok) U.alert('i', 'Project imported', `"${result.file.name}" has been imported successfully.`);
+            else if (result.reason === 'extension') U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
+            else U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
         }
     };
 
