@@ -960,6 +960,7 @@ try {
                 selected16 === ids.classes.Book && !!disabledBefore?.disabled && !enabled16?.disabled, { selected16, book: ids.classes.Book, disabledBefore, enabled16 });
             const nodeText = async () => (await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${book16.id}"]`).first().innerText()).replace(/\s+/g, ' ').trim();
             const text16 = await nodeText();
+            const box16 = await nodeBox(book16.id);
             const c16 = await census(page, ids.model); const f16 = await flow();
             const owned16 = c16.objects.find((o) => o.id === ids.classes.Book)!.f.ownedAttributes ?? [];
             await page.locator(ELEMENT, { hasText: /^Property$/ }).first().click();
@@ -967,13 +968,24 @@ try {
             const made16 = w16.made.filter((o) => o.cls === 'Property');
             const owned16b = w16.c.objects.find((o) => o.id === ids.classes.Book)!.f.ownedAttributes ?? [];
             const text16b = await nodeText();
+            const box16b = await nodeBox(book16.id);
             await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${book16.id}"]`).first().screenshot({ path: `${CROPS}/class-new-attribute.png` });
             check('S2-L17 class tab: the Property item adds one owned attribute to the selected class, one undo entry',
                 w16.made.length === 1 && made16.length === 1 && owned16b.length === owned16.length + 1 && owned16b.includes(made16[0].id) && w16.undo === 1, { made: w16.made.map((o) => [o.cls, o.name]), owned: [owned16.length, owned16b.length], undo: w16.undo });
             check('S2-L18 point 1: the new attribute draws no node and no edge', w16.nodes.length === 0 && w16.edges.length === 0, { nodes: w16.nodes, edges: w16.edges, records: w16.records });
             check('S2-L19 point 2: the new attribute draws as a row of its class', !!made16[0] && text16b.includes(made16[0].name) && !text16.includes(made16[0].name), { name: made16[0]?.name, before: text16.slice(0, 200), after: text16b.slice(0, 240) });
+            // P-2026-11-08-2146: the defaults of the attribute and the box of its class. The row reads `+ name : String`, the
+            // form the class view draws for a public 1..1 attribute (uml-class-object-fixture, propertyRows).
+            const row16 = box16b?.rows.find((r) => !!made16[0] && r.text.includes(made16[0].name));
+            const bounds16 = { lower: made16[0]?.f.lower, upper: made16[0]?.f.upper, visibility: made16[0]?.f.visibility, type: made16[0]?.f.type };
+            check('S2-L24 the new attribute is public, 1..1 and typed String, drawn as one row',
+                !!row16 && /^\+ property\d+ : String$/.test(row16.text) && String(bounds16.lower?.[0]) === '1' && String(bounds16.upper?.[0]) === '1' && box16b?.rows.length === (box16?.rows.length ?? 0) + 1, { row: row16?.text, rows: [box16?.rows.length, box16b?.rows.length], ...bounds16 });
+            check('S2-L25 the header of the class is not clipped: labels and rows inside the box, grown in height only',
+                !!box16 && !!box16b && box16b.labels.every((l) => l.inside && !l.clipped) && box16b.rows.every((r) => r.inside) && box16b.node.h > box16.node.h && box16b.node.w === box16.node.w, { before: box16?.node, after: box16b?.node, labels: box16b?.labels });
             const u16 = await undoOnce(c16);
             check('S2-L20 class tab: one Cmd+Z removes the attribute', u16.objects === u16.expected && u16.same, u16);
+            const box16c = await nodeBox(book16.id);
+            check('S2-L26 the same Cmd+Z gives the class its box back', !!box16 && box16c?.node.h === box16.node.h && box16c?.node.w === box16.node.w, { before: box16?.node, undone: box16c?.node });
 
             // S2-L21: Association and Generalization are listed disabled with their hints, and a click writes nothing.
             const items21 = await railItems();
@@ -993,14 +1005,16 @@ try {
             const src22 = classNodes.find((n) => n.name === 'Book')!; const tgt22 = classNodes.find((n) => n.name !== 'Book')!;
             const sb = (await nodeScreenBox(page, src22.id))!; const tb = (await nodeScreenBox(page, tgt22.id))!;
             const ghost = `.dock-tabpane-active .react-flow__node[data-id="${src22.id}"] .react-flow__handle.source.mm-anchor--ghost-visible`;
+            let connecting = false; let validEnd = false; let picker: string[] = []; let picked: string | null = null; let handleClass: string | null = null;
+            // The gesture as a closure: S2-L28's control (b) runs it again at level `both`.
+            const drag22 = async () => {
+            connecting = false; validEnd = false; picker = []; picked = null; handleClass = null;
             let sh: { x: number; y: number; width: number; height: number } | null = null;
             for (const s of [{ x: (sb.l + sb.r) / 2, y: sb.t + 3 }, { x: sb.r - 3, y: (sb.t + sb.b) / 2 }, { x: (sb.l + sb.r) / 2, y: sb.b - 3 }, { x: sb.l + 3, y: (sb.t + sb.b) / 2 }]) {
                 await page.mouse.move(s.x, s.y); await wait(page, 400);
                 if (await page.locator(ghost).count()) { sh = await page.locator(ghost).first().boundingBox(); if (sh) break; }
             }
             const handles22 = await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${tgt22.id}"] .react-flow__handle`).evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
-            const c22 = await census(page, ids.model); const f22 = await flow();
-            let connecting = false; let validEnd = false; let picker: string[] = []; let picked: string | null = null; let handleClass: string | null = null;
             if (sh) {
                 const press = { x: sh.x + sh.width / 2, y: sh.y + sh.height / 2 };
                 const near = [...handles22].sort((a, b) => Math.hypot(a.x - press.x, a.y - press.y) - Math.hypot(b.x - press.x, b.y - press.y))[0] ?? { x: (tb.l + tb.r) / 2, y: tb.t };
@@ -1011,6 +1025,10 @@ try {
                     await page.mouse.move(press.x + (near.x - press.x) * i / 12, press.y + (near.y - press.y) * i / 12); await wait(page, 40);
                     if (i === 6) connecting = (await count('.dock-tabpane-active .react-flow__connection')) > 0;
                 }
+                // A node's handles draw under the pointer: wait for them and aim at the nearest target, as S4's `dragEdge` does.
+                await wait(page, 400);
+                const targets22 = await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${tgt22.id}"] .react-flow__handle.target`).evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+                if (targets22.length) { const aim = [...targets22].sort((a, b) => Math.hypot(a.x - near.x, a.y - near.y) - Math.hypot(b.x - near.x, b.y - near.y))[0]; await page.mouse.move(aim.x, aim.y, { steps: 3 }); await wait(page, 200); }
                 validEnd = (await count('.dock-tabpane-active .react-flow__handle.valid, .dock-tabpane-active .react-flow__connection.valid')) > 0;
                 await page.mouse.up(); await wait(page, 900);
                 picker = await texts('.edge-type-popup__option');
@@ -1020,6 +1038,9 @@ try {
                     else await page.keyboard.press('Escape');
                 }
             }
+            };
+            const c22 = await census(page, ids.model); const f22 = await flow();
+            await drag22();
             const w22 = await written(c22, f22);
             const gens22 = w22.made.filter((o) => o.cls === 'Generalization');
             const item22 = (await railItems()).find((i) => i.text === 'Generalization');
@@ -1028,7 +1049,46 @@ try {
                 inSource: (w22.c.objects.find((o) => o.name === src22.name && o.cls === 'Class')?.f.generalizations ?? []).includes(gens22[0].id) } : null;
             out.classEdgeDrag = { src: src22.name, tgt: tgt22.name, handleClass, connecting, validEnd, picker, picked, made: w22.made.map((o) => [o.cls, o.name]), shape22, undo: w22.undo, nodes: w22.nodes, edges: w22.edges, records: w22.records };
             check('S2-L22 point 3 (measure): the edge drag started; the Generalization item stays disabled whatever it wrote', connecting && !!item22?.disabled, { ...(out.classEdgeDrag as object), generalizations: gens22.length, item22 });
-            if (w22.undo > 0) await undoOnce(c22);
+            check('S2-L27 class tab: the drag puts the Generalization in Book.generalizations, general = Publication, one undo entry, one edge',
+                gens22.length === 1 && !!shape22?.inSource && shape22.fatherFeature === 'generalizations' && shape22.general[0] === 'Publication' && w22.undo === 1 && w22.edges.length === 1, out.classEdgeDrag);
+            if (w22.edges[0]) {
+                const pad = 30; const x = Math.max(0, Math.min(sb.l, tb.l) - pad); const y = Math.max(0, Math.min(sb.t, tb.t) - pad);
+                await page.screenshot({ path: `${CROPS}/class-generalization-edge.png`, clip: { x, y, width: Math.max(sb.r, tb.r) + pad - x, height: Math.max(sb.b, tb.b) + pad - y } });
+                // S2-L28, control (a): the undo with no click on the edge before it; then redo, for the click below.
+                const h28 = await settle(page);
+                const gen28 = gens22[0]?.id as string;
+                const top28 = await entriesFrom(page, (h28.user as number) - 1);
+                await page.keyboard.press('Meta+z');
+                const samples28: unknown[] = [];
+                for (let i = 0; i < 6; i++) { await wait(page, 250); samples28.push(await ev<unknown>(page, `const s = w.store.getState(); const h = w.statehistory[w.DUser.current]; return { user: h.undoable.length, redo: h.redoable ? h.redoable.length : null, has: !!s.idlookup[a] };`, gen28, 0)); }
+                const h28u = await settle(page);
+                const c28 = await census(page, ids.model);
+                const u22 = { objects: c28.objects.length, expected: c22.objects.length, same: c28.objects.every((o) => c22.objects.some((p) => p.id === o.id)) };
+                console.log(`MEAS S2-L28a trace ${JSON.stringify({ gen: gen28, top: top28, samples: samples28, fresh: c28.objects.filter((o) => !c22.objects.some((p) => p.id === o.id)).map((o) => [o.id, o.cls, o.name]), after: await entriesFrom(page, c22.undo as number) })}`);
+                console.log(`MEAS S2-L28a undo, no click first ${JSON.stringify({ ...u22, entries: [h28.user, h28u.user] })}`);
+                check('S2-L28 class tab: one Cmd+Z, with no click on the edge before it, removes the Generalization', u22.objects === u22.expected && u22.same, u22);
+                await page.keyboard.press('Meta+Shift+z'); await wait(page, 1500);
+                const h28r = await settle(page);
+                console.log(`MEAS S2-L28a redo ${JSON.stringify({ objects: (await census(page, ids.model)).objects.length, entries: h28r.user, edges: added(f22.edges, (await flow()).edges) })}`);
+                const mid22 = await page.evaluate((id) => { const g = [...document.querySelectorAll(`.dock-tabpane-active .react-flow__edge[data-id="${id}"] path`)].sort((p, q) => (q as SVGPathElement).getTotalLength() - (p as SVGPathElement).getTotalLength())[0] as SVGPathElement | undefined; if (!g) return null; const p = g.getPointAtLength(g.getTotalLength() / 2); const b = g.getBBox(); const r = g.getBoundingClientRect(); return { x: r.left + (p.x - b.x) * (b.width ? r.width / b.width : 1), y: r.top + (p.y - b.y) * (b.height ? r.height / b.height : 1) }; }, w22.edges[0]);
+                if (mid22) { await page.mouse.click(mid22.x, mid22.y); await wait(page, 900); }
+                const h28c = await settle(page);
+                console.log(`MEAS S2-L28 edge click ${JSON.stringify({ clicked: !!mid22, entries: [h28r.user, h28c.user] })}`);
+                await page.screenshot({ path: `${CROPS}/generalization-properties.png` });
+                out.generalizationSelected = await ev<unknown>(page, `const s = w.store.getState()._lastSelected; return s ? s.modelElement : null;`, undefined, 0);
+                // The sequence that failed in P-2026-11-08-2146: the undo right after the click; a second one if the first did not remove it.
+                const u22c = await undoOnce(c22);
+                const u22c2 = u22c.objects === u22c.expected ? null : await undoOnce(c22);
+                console.log(`MEAS S2-L28 undo after the click ${JSON.stringify({ first: u22c, second: u22c2, entries: (await settle(page)).user })}`);
+                // S2-L28, control (b): the same drag at level `both`, where the owner is the trunk's container chain.
+                await choose(classVp, 'Classes and instances');
+                const cb = await census(page, ids.model); const fb = await flow();
+                await drag22();
+                const wb = await written(cb, fb);
+                const ub = wb.made.length ? await undoOnce(cb) : null;
+                console.log(`MEAS S2-L28b level both ${JSON.stringify({ connecting, picked, made: wb.made.map((o) => [o.cls, o.name]), undo: wb.undo, edges: wb.edges.length, undone: ub })}`);
+                await choose(classVp, 'Classes');
+            }
 
             // The object tab, at instance: the surfaces stay, and the same drop is the control of S2-L8.
             await pickViewpoint(page, VP_OBJECT);

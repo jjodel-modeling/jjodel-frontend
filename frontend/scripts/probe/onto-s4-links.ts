@@ -146,7 +146,7 @@ const mountedVid = async (page: Page, v: Vertices, name: string) =>
     page.evaluate((vs) => vs.find((id) => document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${id}"]`)) ?? null, v[name] ?? []);
 
 /** An edge drag from a ghost handle of `src` to the nearest handle of `tgt` (S2-L22's gesture). The mouse is left up. */
-async function dragEdge(page: Page, src: string, tgt: string) {
+async function dragEdge(page: Page, src: string, tgt: string, off = 0) {
     const sb = await page.locator(nodeSel(src)).boundingBox();
     const tb = await page.locator(nodeSel(tgt)).boundingBox();
     if (!sb || !tb) return { connecting: false, started: false, picker: [] as string[], why: 'no box' };
@@ -178,7 +178,9 @@ async function dragEdge(page: Page, src: string, tgt: string) {
     const final = await handlesOf();
     if (final.targets > 0) {
         const aim = [...final.points].sort((a, b) => Math.hypot(a.x - near.x, a.y - near.y) - Math.hypot(b.x - near.x, b.y - near.y))[0];
-        await page.mouse.move(aim.x, aim.y, { steps: 3 }); await wait(page, 200);
+        // `off` (S4-11): the drop lands that many screen px from the target handle, away from the node.
+        const c = { x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 }; const l = Math.hypot(aim.x - c.x, aim.y - c.y) || 1;
+        await page.mouse.move(aim.x + (aim.x - c.x) / l * off, aim.y + (aim.y - c.y) / l * off, { steps: 3 }); await wait(page, 200);
     }
     await page.mouse.up(); await wait(page, 900);
     const picker = await page.locator(POPUP).allInnerTexts();
@@ -461,6 +463,33 @@ try {
         const after = await settle(page); const f1 = await flowCounts();
         out.s410 = { framed, r, generalizations: (after.classes.Generalization ?? 0) - (before.classes.Generalization ?? 0), links: after.links.length - before.links.length, instances: (after.classes.InstanceSpecification ?? 0) - (before.classes.InstanceSpecification ?? 0), undo: (after.undo ?? 0) - (before.undo ?? 0), edges: f1.edges - f0.edges };
         check('S4-10 class tab, Book → Library: the drag creates one Generalization and no link, as before', r.connecting && after.classes.Generalization === before.classes.Generalization + 1 && after.links.length === before.links.length && after.classes.InstanceSpecification === before.classes.InstanceSpecification, out.s410);
+
+        // ── S4-11: how far from a target handle a drop still connects (ticket of P-2026-11-08-2041), a measure ──────────
+        const reach = async (from: string, to: string) => {
+            const rows: Array<{ off: number; started: boolean; menu: number; undo: number }> = [];
+            for (const off of [0, 15, 30, 45, 60, 90]) {
+                const was = await settle(page);
+                const d = await dragEdge(page, from, to, off);
+                if (d.picker.length) { await page.keyboard.press('Escape'); await wait(page, 500); }
+                const now = await settle(page);
+                const undo = (now.undo ?? 0) - (was.undo ?? 0);
+                rows.push({ off, started: d.started, menu: d.picker.length, undo });
+                if (undo > 0) { await page.keyboard.press('Meta+z'); await wait(page, 1200); await settle(page); }
+            }
+            return rows;
+        };
+        const zoomNow = () => page.evaluate((root) => new DOMMatrix(getComputedStyle(document.querySelector(`${root} .react-flow__viewport`)!).transform).a, ACTIVE);
+        const classRows = src && tgt ? await reach(src, tgt) : null;
+        const classZoom = await zoomNow();
+        await pickViewpoint(page, VP_OBJECT);
+        await wait(page, SETTLE_MS);
+        const O = await verticesOf(page, NAMES, 'InstanceSpecification');
+        await frame(page, NAMES.map((n) => O[n]?.[0]).filter(Boolean) as string[]);
+        await wait(page, 800);
+        const from = await mountedVid(page, O, 'alice'); const to = await mountedVid(page, O, 'history');
+        const objectRows = from && to ? await reach(from, to) : null;
+        out.s411 = { connectionRadius: 40, class: { zoom: classZoom, rows: classRows }, object: { zoom: await zoomNow(), rows: objectRows } };
+        meas('S4-11 (measure) how far from a target handle a drop still connects', out.s411);
     }
 
     out.errors = errors.slice(0, 10);
