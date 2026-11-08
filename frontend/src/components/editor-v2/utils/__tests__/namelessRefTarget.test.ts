@@ -327,6 +327,34 @@ describe('D6 — IRFormField: a nameless target is labelled `<Class> (unnamed)`'
         ]);
     });
 
+    it('C2h: two different unnamed Ports on the chips of one field read 1 and 2, text and title', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless', 'p_nameless2'] }), { widget: 'chips' }))).toEqual([
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
+            { broken: false, title: 'Port (unnamed) 2', text: 'Port (unnamed) 2' },
+        ]);
+    });
+
+    it('C2h: the order of the values sets the index', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless2', 'p_nameless'] }), { widget: 'chips' })).map(p => p.text))
+            .toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('C2h: one unnamed target on the chips reads without an index', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless'] }), { widget: 'chips' })))
+            .toEqual([{ broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' }]);
+    });
+
+    it('C2h: named and broken chips are unchanged and not counted, a hole does not disturb the index', () => {
+        const values = ['p_named', 'p_nameless', '', 'p_gone', 'p_nameless2', 'g_nameless'];
+        expect(pillTexts(paint(fieldOf({ values }), { widget: 'chips' }))).toEqual([
+            { broken: false, title: 'Port_1', text: 'Port_1' },
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
+            { broken: true, title: 'p_gone', text: 'p_gone' },
+            { broken: false, title: 'Port (unnamed) 2', text: 'Port (unnamed) 2' },
+            { broken: false, title: 'Gate (unnamed)', text: 'Gate (unnamed)' },
+        ]);
+    });
+
     it('a read-only single value set to a nameless target reads `Port (unnamed)`, not «empty»', () => {
         const one = (v: string) => paint(fieldOf({ isMultivalued: false, isReadOnly: true, upperBound: 1, values: [v] }));
         expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port (unnamed)</div>');
