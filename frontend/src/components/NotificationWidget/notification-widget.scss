@@ -312,3 +312,100 @@
     font-size: 12px;
   }
 }
+
+/* ============================================
+   TIPS BROWSER (Help menu)
+   ============================================ */
+
+.tips-browser-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: var(--z-modal);
+}
+
+.tips-browser {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+}
+
+.tips-browser__header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border-secondary);
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  i {
+    color: var(--color-text-secondary);
+  }
+}
+
+.tips-browser__close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.tips-browser__list {
+  margin: 0;
+  padding: 8px 16px;
+  list-style: none;
+  overflow-y: auto;
+
+  li {
+    padding: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  li + li {
+    border-top: 1px solid var(--color-border-secondary);
+  }
+}
+
+.tips-browser__empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

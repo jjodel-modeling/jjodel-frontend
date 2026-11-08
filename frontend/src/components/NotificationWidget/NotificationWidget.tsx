@@ -12,6 +12,7 @@ import {
   saveTipsPrefs,
   type NotificationPost,
 } from './noticesStore';
+import { TipsBrowserModal } from './TipsBrowserModal';
 import './notification-widget.scss';
 
 const CARD_GAP_PX = 16;
@@ -118,7 +119,7 @@ function useMeasured<T>(active: boolean, measure: () => T): T | null {
   return value;
 }
 
-export const NotificationWidget: React.FC = () => {
+const NoticesAndTips: React.FC = () => {
   // Templates page: no Quick tip (handoff §2.4, P-2026-10-19-1616); system notices stay.
   const onTemplatesPage = /^\/templates(\/|$)/.test(useLocation().pathname);
   const [posts, setPosts] = useState<NotificationPost[]>([]);
@@ -231,5 +232,12 @@ export const NotificationWidget: React.FC = () => {
 
   return null;
 };
+
+export const NotificationWidget: React.FC = () => (
+  <>
+    <NoticesAndTips />
+    <TipsBrowserModal />
+  </>
+);
 
 export default NotificationWidget;
