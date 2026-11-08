@@ -1,7 +1,8 @@
 /**
  * dcn-snapshot (P-2026-11-08-2216, R-DCN-30): the snapshot of a DCN run written as a new model, in the app.
  * The export of dcn-drone-fixture imported on its own dev server, the Simulation panel on the object diagram, Reset with
- * a fixed seed, the Ticks to Ready, dji.takeOff(), three Ticks; then `saveRunSnapshot` by the entry lane 6 will use:
+ * a fixed seed, the Ticks to Ready, dji.takeOff(), three Ticks; then the panel's «Save snapshot» button (P-2026-11-09-0017,
+ * crops 1-button, 2-saved; its line; off while Playing; absent on a Petri run):
  *   - the new model `drone (snapshot step 24)`, its objects and links equal the source's by containment path, name and
  *     classifier, σ on the slots of dji; the source model byte-equal; `runSignature` unchanged;
  *   - one undo removes the new model and nothing else;
@@ -13,8 +14,9 @@
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-dcn-s5 frontend/scripts/probe/dcn-snapshot.ts \
  *         --port 3157 --id P-2026-11-08-2216
  * Env:  DCN_FILE  the export (default ~/jjodel-demo-exports/dcn/dcn-drone-objects.jjodel)
- *       DCN_CROPS the crops directory (default ~/.jjodel-lanes/P-2026-11-08-2320/crops)
+ *       DCN_CROPS the crops directory (default ~/.jjodel-lanes/P-2026-11-09-0017/crops)
  *       DCN_SEED  the seed of Reset (default 4242)
+ *       DCN_PETRI the Petri export the button must be absent on (default fixtures/scene_2_DemoPetri.jjodel)
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -23,14 +25,15 @@ import { seed, setTheme, SETTLE_MS } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3157/').replace(/\/$/, '');
 const FILE = process.env.DCN_FILE || `${homedir()}/jjodel-demo-exports/dcn/dcn-drone-objects.jjodel`;
-const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-2320/crops`).replace(/\/$/, '');
+const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-09-0017/crops`).replace(/\/$/, '');
+const PETRI = process.env.DCN_PETRI || new globalThis.URL('./fixtures/scene_2_DemoPetri.jjodel', import.meta.url).pathname;
 const SEED = Number(process.env.DCN_SEED || 4242);
 const MAX_TICKS = 20;
 const SNAPSHOT_NAME = 'drone (snapshot step 24)';
 const BRIDGE = '/src/components/editor-v2/sim/simBridge.ts';
 const PROBLEMS = '/src/components/editor-v2/problems/dcnToProblems.ts';
 const RUNS = '/src/components/editor-v2/sim/simRunState.ts';
-const WRITER = '/src/components/editor-v2/sim/simSnapshotWrite.ts';
+const SAVE = '.sim-panel__btn[aria-label="Save snapshot"]';
 
 const { ev } = await import('./bpmn-lanes-fixture.ts');
 
@@ -69,6 +72,10 @@ async function press(page: Page, match: RegExp) {
 async function openAndReset(page: Page) {
     await page.locator('.sim-panel--closed .sim-panel__chip').filter({ visible: true }).first().click();
     await wait(page, 900);
+    await resetOnSeed(page);
+}
+
+async function resetOnSeed(page: Page) {
     await panel(page).locator('select[aria-label="Choices"]').selectOption('random');
     await wait(page, 300);
     await page.evaluate((s) => {
@@ -172,12 +179,60 @@ const storeState = (page: Page) => ev<Store>(page, `
     return { keys: Object.keys(j.store.getState().idlookup).sort(), models: p.models.map((m) => m.id), names: p.models.map((m) => m.name),
         graphs: (p.graphs ?? []).length, undo: h.undoable.length, redo: h.redoable.length };`, undefined, 0);
 
-type WriteResult = { ok: boolean; modelId: string | null; name: string | null; unwritten: unknown[]; problems: string[]; ms: number };
-const writeSnapshot = (page: Page, mid: string) => ev<WriteResult>(page, `
-    const snap = await import('${WRITER}'); const s = await import('${RUNS}');
-    const t0 = performance.now();
-    const r = await snap.saveRunSnapshot(a, s.getSimRun(a).trace.length);
-    return { ...r, ms: Math.round(performance.now() - t0) };`, mid, 300);
+/** The panel's line of a snapshot, the only hint that opens so. */
+const savedLine = (page: Page) => panel(page).locator('.sim-panel__hint[role="status"]').filter({ hasText: /^(Saved as|Snapshot not saved)/ });
+const saveButton = async (page: Page) => {
+    const b = panel(page).locator(SAVE);
+    const count = await b.count();
+    return { count, disabled: count ? await b.isDisabled() : null, title: count ? await b.getAttribute('title') : null };
+};
+
+type WriteResult = { ok: boolean; modelId: string | null; name: string | null; unwritten: number; line: string; inFlight: { disabled: boolean | null; title: string | null }; ms: number };
+/** Presses «Save snapshot» and reads the outcome from the panel's line; the id is the model the press added to the project. */
+async function writeSnapshot(page: Page): Promise<WriteResult> {
+    const before = (await storeState(page)).models;
+    const t0 = Date.now();
+    await panel(page).locator(SAVE).click();
+    const { disabled, title } = await saveButton(page);
+    const seen = savedLine(page);
+    await seen.waitFor({ timeout: 120000 });
+    const ms = Date.now() - t0;
+    await wait(page, 300);
+    const line = (await seen.textContent()) ?? '';
+    const added = (await storeState(page)).models.filter((m) => !before.includes(m));
+    return { ok: line.startsWith('Saved as'), modelId: added[0] ?? null, name: /«(.*)»/.exec(line)?.[1] ?? null,
+        unwritten: Number(/(\d+) values? not written/.exec(line)?.[1] ?? 0), line, inFlight: { disabled, title }, ms };
+}
+
+/** A clip of the union of some boxes of the panel, 8 px around. */
+async function cropPanel(page: Page, name: string, selectors: string[]) {
+    const boxes = (await Promise.all(selectors.map((s) => panel(page).locator(s).first().boundingBox()))).filter((b) => b !== null);
+    if (boxes.length !== selectors.length) throw new Error(`crop ${name}: a box is missing`);
+    const x = Math.min(...boxes.map((b) => b.x)) - 8; const y = Math.min(...boxes.map((b) => b.y)) - 8;
+    const right = Math.max(...boxes.map((b) => b.x + b.width)) + 8; const bottom = Math.max(...boxes.map((b) => b.y + b.height)) + 8;
+    await page.screenshot({ path: `${CROPS}/${name}.png`, clip: { x, y, width: right - x, height: bottom - y } });
+}
+
+/** Presses Play with the button observed: Play can end in its first beat (no ε), so the state alone may never be seen off. */
+const playWatch = (page: Page) => page.evaluate(async (sel) => {
+    const shown = (e: Element) => { const c = getComputedStyle(e); return c.visibility !== 'hidden' && c.display !== 'none' && e.getClientRects().length > 0; };
+    const p = [...document.querySelectorAll('.sim-panel--open')].filter(shown)[0];
+    const save = p?.querySelector(sel) as HTMLButtonElement | null;
+    const play = p?.querySelector('.sim-panel__btn[title="Play"]') as HTMLButtonElement | null;
+    if (!save || !play) return { missing: { save: !!save, play: !!play } };
+    const records: Array<{ attr: string | null; old: string | null }> = [];
+    const keep = (m: MutationRecord[]) => m.forEach((r) => records.push({ attr: r.attributeName, old: r.oldValue }));
+    const o = new MutationObserver(keep);
+    o.observe(save, { attributes: true, attributeFilter: ['disabled', 'title'], attributeOldValue: true });
+    play.click();
+    await new Promise((r) => setTimeout(r, 120));
+    const during = { disabled: save.disabled, title: save.title, pause: !!p.querySelector('.sim-panel__btn[title="Pause"]') };
+    (p.querySelector('.sim-panel__btn[title="Pause"]') as HTMLButtonElement | null)?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    keep(o.takeRecords());
+    o.disconnect();
+    return { during, records, after: { disabled: save.disabled, title: save.title } };
+}, SAVE);
 
 const openModel = (page: Page, mid: string) => ev<boolean>(page, `
     const dm = await import('/src/components/abstract/DockManager.tsx');
@@ -275,19 +330,22 @@ try {
     page.on('pageerror', (e) => errors.push(e.message));
     mkdirSync(CROPS, { recursive: true });
 
-    await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
-    await wait(page, 5000);
-    const imported = await ev<{ id: string | null }>(page, `
-        const api = await import('/src/api/persistance/projects.ts');
-        const list = () => JSON.parse(localStorage.getItem('projects') || '[]');
-        const before = list().length;
-        await api.ProjectsApi.importFromText(a);
-        for (let i = 0; i < 75 && list().length <= before; i++) await new Promise((r) => setTimeout(r, 200));
-        const l = list(); return { id: l.length > before ? l[l.length - 1].id : null };`, readFileSync(FILE, 'utf8'), 0);
-    if (!imported.id) throw new Error('the export did not import');
-    await page.goto(`${URL}/#/project?id=${imported.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
-    await wait(page, 9000);
-    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    const importExport = async (file: string) => {
+        await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+        await wait(page, 5000);
+        const imported = await ev<{ id: string | null }>(page, `
+            const api = await import('/src/api/persistance/projects.ts');
+            const list = () => JSON.parse(localStorage.getItem('projects') || '[]');
+            const before = list().length;
+            await api.ProjectsApi.importFromText(a);
+            for (let i = 0; i < 75 && list().length <= before; i++) await new Promise((r) => setTimeout(r, 200));
+            const l = list(); return { id: l.length > before ? l[l.length - 1].id : null };`, readFileSync(file, 'utf8'), 0);
+        if (!imported.id) throw new Error(`${file} did not import`);
+        await page.goto(`${URL}/#/project?id=${imported.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+        await wait(page, 9000);
+        await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    };
+    await importExport(FILE);
 
     const model = await ev<{ id: string; name: string }>(page, `
         const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
@@ -326,11 +384,18 @@ try {
     const source = await dump(page, model.id);
     meas('before the write', { bytes: bytes0.length, objects: Object.keys(source).length, models: store0.names, graphs: store0.graphs, undo: store0.undo, signatureIsStored: sig0.computed === sig0.stored, signatureConfig: sig0.config });
 
-    // The write.
-    const w1 = await writeSnapshot(page, model.id);
+    // The write, by the button.
+    const button0 = await saveButton(page);
+    meas('button at the DCN step', button0);
+    check('SN-25 the button is there and on at a DCN step', button0.count === 1 && button0.disabled === false && button0.title === 'Save snapshot', button0);
+    await cropPanel(page, '1-button', ['.sim-panel__actions']);
+    const w1 = await writeSnapshot(page);
     meas('write', w1);
     const store1 = await storeState(page);
-    check('SN-1 the writer reports ok and the plan name', w1.ok && w1.name === SNAPSHOT_NAME && !!w1.modelId, { ok: w1.ok, name: w1.name, problems: w1.problems, unwritten: w1.unwritten });
+    check('SN-1 the line reports the plan name', w1.ok && w1.name === SNAPSHOT_NAME && !!w1.modelId, { line: w1.line, modelId: w1.modelId });
+    check('SN-26 off while the snapshot is in flight, and says why', w1.inFlight.disabled === true && /being written/.test(w1.inFlight.title ?? ''), w1.inFlight);
+    await savedLine(page).scrollIntoViewIfNeeded();
+    await cropPanel(page, '2-saved', ['.sim-panel__actions', '.sim-panel__hint[role="status"]:has-text("Saved as")']);
     check('SN-2 one model more, in the project', store1.models.length === store0.models.length + 1 && store1.names.includes(SNAPSHOT_NAME), store1.names);
     check('SN-3 the write is one undo entry', store1.undo === store0.undo + 1, { before: store0.undo, after: store1.undo });
     if (!w1.modelId) throw new Error('no model written');
@@ -374,10 +439,19 @@ try {
     check('SN-12 the source model is byte-equal after the undo', (await sourceBytes(page, model.id)) === bytes0, { bytes: bytes0.length });
 
     // Written again, opened: the source's layout, then a Reset on the snapshot.
-    const w2 = await writeSnapshot(page, model.id);
+    const w2 = await writeSnapshot(page);
     meas('second write', w2);
-    check('SN-13 after the undo the name is free again', w2.ok && w2.name === SNAPSHOT_NAME, { ok: w2.ok, name: w2.name, problems: w2.problems });
+    check('SN-13 after the undo the name is free again', w2.ok && w2.name === SNAPSHOT_NAME, { line: w2.line });
     if (!w2.modelId) throw new Error('no second model written');
+    // The line goes at the next step; the slider's step is the one saved.
+    await press(page, /^Tick$/);
+    const lineAfterStep = await savedLine(page).count();
+    check('SN-27 the line clears at the next step', lineAfterStep === 0, { lineAfterStep });
+    await ev(page, `const s = await import('${RUNS}'); s.simSetView(a, 10); return true;`, model.id, 500);
+    const w3 = await writeSnapshot(page);
+    meas('write at the viewed step', w3);
+    check('SN-28 the slider moved: the step shown is the one saved', w3.ok && w3.name === 'drone (snapshot step 10)', { line: w3.line });
+    await ev(page, `const s = await import('${RUNS}'); s.simSetView(a, null); return true;`, model.id, 300);
     await page.setViewportSize({ width: 3000, height: 2000 });
     await wait(page, 600);
     await openModel(page, model.id);
@@ -428,6 +502,16 @@ try {
     const snapshotTrace = await traceLength(page, w2.modelId);
     check('SN-16 a Reset on the snapshot classifies dji as Flying, read from its own panel', s2.chips.includes('dji.Mode = Flying') && s2.shownPanels === 1 && snapshotTrace === 0 && !/step 24/.test(s2.line ?? ''), { chips: s2.chips, line: s2.line, shownPanels: s2.shownPanels, trace: snapshotTrace });
 
+    // Play on the snapshot's own run, so the steps it may press touch no check above.
+    const played = await playWatch(page);
+    meas('Save snapshot while Playing', played);
+    {
+        const r = played.missing ? null : played;
+        const steady = !!r?.during.pause && r.during.disabled && /pause the run/.test(r.during.title);
+        const brief = !!r?.records.some((x) => x.attr === 'title' && /pause the run/.test(x.old ?? '')) && !!r?.records.some((x) => x.attr === 'disabled');
+        check('SN-29 off while Playing, says why, on again after', (steady || brief) && r?.after.disabled === false && r?.after.title === 'Save snapshot', { steady, brief, after: r?.after });
+    }
+
     // LIR smoke: save, reload, the project opens again with the snapshot in it.
     await ev(page, `const api = await import('/src/api/persistance/projects.ts'); await api.ProjectsApi.save(w.LProject.getProject(), { silent: true }); await new Promise((r) => setTimeout(r, 2000)); return true;`, undefined, 0);
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 300000 });
@@ -443,6 +527,33 @@ try {
     }
     check('SN-19 the source is unchanged by save and reload (data)', JSON.stringify(await dump(page, model.id)) === JSON.stringify(source), { objects: Object.keys(source).length });
     check('SN-20 page errors', errors.length === 0, errors.slice(0, 5));
+
+    // A Petri run: the panel, the run, and no button. The run read back, or the absence is of nothing.
+    // A hash-only goto keeps the document and the project in it: a new document first. The panel may come up open.
+    await page.goto('about:blank');
+    await importExport(PETRI);
+    const openNet = () => ev<{ id: string; name: string; models: string[] }>(page, `
+        const models = w.LProject.getProject().models;
+        const m = models.find((x) => !x.isMetamodel);
+        const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(w.LPointerTargetable.fromPointer(m.id));
+        return { id: m.id, name: m.name, models: models.map((x) => x.name) };`, undefined, 8000);
+    const openPanels = () => page.locator('.sim-panel--open').filter({ visible: true }).count();
+    const closedChip = page.locator('.sim-panel--closed .sim-panel__chip').filter({ visible: true }).first();
+    const panelThere = async () => (await openPanels()) > 0 || (await closedChip.count()) > 0;
+    let net = await openNet();
+    // open2 does not always switch tab (sim-coverage-polish.ts).
+    if (!(await panelThere())) net = await openNet();
+    if (!(await panelThere())) {
+        meas('Petri check skipped: no Simulation panel on the model', { net, hash: await page.evaluate(() => location.hash), panels: await page.locator('.sim-panel').count() });
+    } else {
+        if ((await openPanels()) === 0) { await closedChip.click(); await wait(page, 900); }
+        await resetOnSeed(page);
+        const petriPanel = await readPanel(page);
+        const petriTrace = await traceLength(page, net.id);
+        const petriButton = await saveButton(page);
+        meas('Petri run', { model: net, pill: petriPanel.pill, chips: petriPanel.chips.slice(0, 6), trace: petriTrace, button: petriButton });
+        check('SN-30 a Petri run has no «Save snapshot»', petriTrace !== null && petriPanel.hasReset && petriButton.count === 0, { trace: petriTrace, pill: petriPanel.pill, button: petriButton.count });
+    }
 } catch (e) {
     console.log(`FAIL  probe aborted  ${String((e as Error).message ?? e).slice(0, 800)}`);
     fail++;
