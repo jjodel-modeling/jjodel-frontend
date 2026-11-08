@@ -146,6 +146,60 @@ export function creationOptions(get: DGet, binding: OntoBinding, modelId: string
         .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
+/** The record of the links between two instances (R-OI-8, S4): the rail lists it, not instantiable (R-OI-18). */
+export const LINK_RECORD = 'link';
+
+/** The dataTransfer key of a drag from the «Instances of» rail (R-OI-18). Not `application/reactflow`, which routes a
+ *  drop into the linguistic palette and the ClassNode/EnumNode drop handlers; a module constant, not an event. */
+export const ONTO_DRAG_MIME = 'application/jjodel-onto';
+
+export interface OntoRailSection {
+    record: OntoBinding;
+    options: CreationOption[];
+    /** The `link` record before S4: a link is drawn between two instances, never dropped alone (R-OI-5). */
+    disabled: boolean;
+}
+
+/**
+ * The «Instances of» groups of the rail (R-OI-18): the `object` record, then the `link` record disabled, each with the
+ * options of `creationOptions`; none without a binding. The signature is `''` with no group and changes with any
+ * record or option, id or name: the rail's selector compares it, so the scan below runs once per dispatch.
+ */
+export function ontoRailSections(get: DGet, modelId: string): { sections: OntoRailSection[]; signature: string } {
+    const bindings = memoBindings(get, modelId);
+    const records = [OBJECT_RECORD, LINK_RECORD].map(name => bindings.find(b => b.name === name)).filter((b): b is OntoBinding => !!b);
+    if (records.length === 0) return { sections: [], signature: '' };
+    const view = ontoReadView(get);
+    const ids = modelObjectIds(get, modelId);
+    const sections = records.map(record => ({
+        record,
+        options: instantiableClassifiers(view, record, ids)
+            .map(id => ({ id, name: String(get(id)?.name ?? id) }))
+            .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+        disabled: record.name !== OBJECT_RECORD,
+    }));
+    const signature = sections.map(s => `${JSON.stringify(s.record)}|${s.options.map(o => `${o.id}=${o.name}`).join(',')}`).join(';');
+    return { sections, signature };
+}
+
+/** The payload of a rail drag or click: the record by name and the classifier, never the record itself, so a binding
+ *  edited between the drag and the drop cannot run a stale record. */
+export function ontoDragPayload(record: OntoBinding, classifierId: string): string {
+    return JSON.stringify({ record: record.name, classifier: classifierId });
+}
+
+/** The instantiation a rail payload asks for, its record re-read from the store by name: `null` when it does not
+ *  parse, names no `object` record (no link without its two ends, R-OI-5), or the classifier is no longer offered. */
+export function ontoDropRequest(get: DGet, modelId: string, payload: string): { classifierId: string; record: OntoBinding } | null {
+    let parsed: { record?: unknown; classifier?: unknown } | null;
+    try { parsed = JSON.parse(payload); } catch { return null; }
+    const classifierId = parsed?.classifier;
+    if (parsed?.record !== OBJECT_RECORD || !isId(classifierId)) return null;
+    const record = objectRecord(get, modelId);
+    if (!record || !creationOptions(get, record, modelId).some(o => o.id === classifierId)) return null;
+    return { classifierId, record };
+}
+
 /** True when the M2 class `classId`, or one of its ancestors, has a feature named `name`. */
 function hasFeatureNamed(get: DGet, classId: string, name: string): boolean {
     const seen = new Set<string>();

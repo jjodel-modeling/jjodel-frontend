@@ -78,7 +78,8 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instanceObjectRecord, instantiate, objectRecord, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import { creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoRailSections, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
@@ -660,6 +661,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
     const codegenEnabled = useCodegenEnabled();
     const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
+    // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
+    const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid).signature : '');
+    const ontoSections = useMemo(
+        () => (isModelMode && modelid ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
+        [ontoRailSig, isModelMode, modelid]
+    );
+    const advancedMode = useSelector((state: any) => !!state.advanced);
+    const [bindingMetamodel, setBindingMetamodel] = useState<string | null>(null);
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -2729,10 +2739,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
     );
 
+    const runOntoPayloadRef = useRef<(payload: string, click: { x: number; y: number }) => void>(() => {});
+
     // Handle drop from palette
     const onDrop = useCallback(
         (event: React.DragEvent) => {
             event.preventDefault();
+
+            // A drag from «Instances of» (R-OI-18): its own key, the pane menu's path (runInstantiate, defined below).
+            const ontoPayload = event.dataTransfer.getData(ONTO_DRAG_MIME);
+            if (ontoPayload) {
+                runOntoPayloadRef.current(ontoPayload, { x: event.clientX, y: event.clientY });
+                return;
+            }
 
             const rawType = event.dataTransfer.getData('application/reactflow');
             if (!rawType) return;
@@ -3260,6 +3279,27 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
     }, [screenToFlowPosition, getViewport, modelid]);
+
+    // A drop or a click on «Instances of» (R-OI-18): the record re-read from the store by name, then the pane menu's
+    // path, so the queue, the deadline, the one undo entry and the tab's layout come with it. The click lands where a
+    // linguistic palette click does, the centre of the canvas the overlay leaves visible.
+    const runOntoPayload = useCallback((payload: string, click: { x: number; y: number }) => {
+        if (!isModelMode || !modelid) return;
+        const request = ontoDropRequest((id: string) => (store.getState() as any)?.idlookup?.[id], modelid, payload);
+        if (request) runInstantiate(request.classifierId, request.record, click);
+    }, [isModelMode, modelid, runInstantiate]);
+    runOntoPayloadRef.current = runOntoPayload;
+
+    const onOntoActivate = useCallback((record: OntoBinding, classifierId: string) => {
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+    }, [runOntoPayload]);
+
+    const onDeclareBinding = useCallback(() => {
+        const metamodel = modelid ? (store.getState() as any)?.idlookup?.[modelid]?.instanceof : undefined;
+        if (typeof metamodel === 'string' && metamodel !== '') setBindingMetamodel(metamodel);
+    }, [modelid]);
 
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
@@ -5247,7 +5287,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     selectedDObjectId={lastSelectedModelElement ?? null}
                     onItemActivate={onPaletteActivate}
                     collapsed={!!scriptPreview?.owner}
+                    ontoSections={ontoSections}
+                    onOntoActivate={onOntoActivate}
+                    onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
                 />
+                {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main">
                     <Toolbar
                         snapEnabled={snapEnabled}

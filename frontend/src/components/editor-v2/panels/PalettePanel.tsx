@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import type { MetaclassInfo, MetaclassReference } from '../hooks/useEditorMode';
 import { setDraggedMetaclassId } from '../utils/dragState';
+import { ONTO_DRAG_MIME, ontoDragPayload, type OntoRailSection } from '../hooks/instantiate';
+import type { OntoBinding } from '../../../model/ontological/bindingCodec';
 import { LPointerTargetable } from '../../../joiner';
 
 // ---------------------------------------------------------------------------
@@ -81,9 +83,16 @@ interface PalettePanelProps {
     /** Click or Enter/Space on an entry: creates it at the canvas centre (the drop path). Member
      *  entries stay inert, as on a bare-canvas drop. Without it the entries are drag-only. */
     onItemActivate?: (type: string, metaclassId?: string) => void;
+    /** The «Instances of» groups (R-OI-18, `ontoRailSections`): the classifiers of the model by binding record. */
+    ontoSections?: OntoRailSection[];
+    /** Click or Enter/Space on an «Instances of» entry: instantiates it at the canvas centre (the drop path). */
+    onOntoActivate?: (record: OntoBinding, classifierId: string) => void;
+    /** «Declare binding…» of the empty «Instances of» section; passed in Advanced only, so Basic shows no section
+     *  without a binding (R-OI-18). */
+    onDeclareBinding?: () => void;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -101,6 +110,13 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
         setDraggedMetaclassId(null);
     }, []);
 
+    // A drag from «Instances of» carries its own key alone (R-OI-18): no `application/reactflow`, the linguistic drop,
+    // and no setDraggedMetaclassId, whose id onDragOver would read as a non-rootable metaclass.
+    const onOntoDragStart = useCallback((event: React.DragEvent, record: OntoBinding, classifierId: string) => {
+        event.dataTransfer.setData(ONTO_DRAG_MIME, ontoDragPayload(record, classifierId));
+        event.dataTransfer.effectAllowed = 'move';
+    }, []);
+
     // Click and Enter/Space on an entry (WCAG: a focusable button). An HTML5 drag fires no click.
     const activateProps = (type: string, metaclassId?: string) => onItemActivate ? {
         role: 'button',
@@ -110,6 +126,17 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             onItemActivate(type, metaclassId);
+        },
+    } : {};
+
+    const ontoActivateProps = (record: OntoBinding, classifierId: string) => onOntoActivate ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: () => onOntoActivate(record, classifierId),
+        onKeyDown: (event: React.KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onOntoActivate(record, classifierId);
         },
     } : {};
 
@@ -190,6 +217,51 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                         </div>
                     )}
                 </div>
+
+                {/* Instances of — the classifiers of the model by binding record (R-OI-18), beside the pane menu */}
+                {(ontoSections.length > 0 || onDeclareBinding) && (
+                    <div className="palette-onto">
+                        <div className="palette-onto__title">Instances of</div>
+                        {ontoSections.length === 0 ? (
+                            <div className="palette-onto__empty">
+                                <div className="palette-empty">No ontological binding declared</div>
+                                <button type="button" className="palette-onto__declare" onClick={onDeclareBinding}>Declare binding…</button>
+                            </div>
+                        ) : ontoSections.map((section) => (
+                            <div key={section.record.name} className="palette-onto__group">
+                                <div className="palette-onto__subtitle">{section.disabled ? 'Links' : 'Objects'}</div>
+                                {section.options.length === 0 ? (
+                                    <div className="palette-empty">No class to instantiate</div>
+                                ) : (
+                                    <div className="palette-onto__list">
+                                        {section.options.map((option) => section.disabled ? (
+                                            <div
+                                                key={option.id}
+                                                className="palette-onto__item palette-onto__item--disabled"
+                                                aria-disabled="true"
+                                                title="A link is drawn between two instances (S4)"
+                                            >
+                                                <i className="bi bi-arrow-left-right" />
+                                                <span>{option.name}</span>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                key={option.id}
+                                                className="palette-onto__item"
+                                                draggable
+                                                onDragStart={(e) => onOntoDragStart(e, section.record, option.id)}
+                                                {...ontoActivateProps(section.record, option.id)}
+                                            >
+                                                <i className="bi bi-box" />
+                                                <span>{option.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Read-only info cards — only when exactly one element is selected */}
                 {selectedMetaclass ? (

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
     BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
     layoutLanded, readOntoBindings, seedLanded, synthesisPlan, syncSlotsPlan, viewCentre, type NodeLayoutWrite,
+    ontoDragPayload, ontoDropRequest, ontoRailSections,
     type SlotSyncPlan, type SynthesisPlan,
     instanceRows, materializePlan,
     instantiate, materializeSlot, syncSlots, type InstantiateResult,
@@ -171,6 +172,63 @@ describe('the bag and the menu', () => {
         expect(instanceName(get, 'M1', 'Book')).toBe('book1');
         obj('book1', 'InstanceSpecification');
         expect(instanceName(get, 'M1', 'Book')).toBe('book2');
+    });
+});
+
+describe('the «Instances of» rail (R-OI-18)', () => {
+    it('lists the ids of creationOptions per record: object enabled, link disabled', () => {
+        const { get, object, link } = uml();
+        const { sections } = ontoRailSections(get, 'M1');
+        expect(sections.map(s => [s.record.name, s.disabled])).toEqual([['object', false], ['link', true]]);
+        expect(sections[0].options).toEqual(creationOptions(get, object as any, 'M1'));
+        expect(sections[1].options).toEqual(creationOptions(get, link as any, 'M1'));
+        expect(sections[1].options.map(o => o.name)).toEqual(['Holdings']);
+    });
+
+    it('the signature changes on a new Class, a rename and isAbstract true, and the list follows (killed by no abstract filter)', () => {
+        const { db, get, obj, val } = uml();
+        const s0 = ontoRailSections(get, 'M1').signature;
+        obj('Novel', 'Class'); val('Novel', 'a_Classifier_isAbstract', [false]);
+        const s1 = ontoRailSections(get, 'M1');
+        expect(s1.signature).not.toBe(s0);
+        expect(s1.sections[0].options.map(o => o.name)).toContain('Novel');
+        db.Book.name = 'Tome';
+        const s2 = ontoRailSections(get, 'M1');
+        expect(s2.signature).not.toBe(s1.signature);
+        expect(s2.sections[0].options.map(o => o.name)).toContain('Tome');
+        db['Library.a_Classifier_isAbstract'].values = [true];
+        const s3 = ontoRailSections(get, 'M1');
+        expect(s3.signature).not.toBe(s2.signature);
+        expect(s3.sections[0].options.map(o => o.name)).toEqual(['Magazine', 'Member', 'Novel', 'Tome']);
+    });
+
+    it('no binding, or an unreadable bag, gives no section and an empty signature', () => {
+        const { db, get } = uml();
+        db.MM._state = {};
+        expect(ontoRailSections(get, 'M1')).toEqual({ sections: [], signature: '' });
+        db.MM._state = { ontoBindings: '{"v":2,"bindings":[]}' };
+        expect(ontoRailSections(get, 'M1')).toEqual({ sections: [], signature: '' });
+    });
+
+    it('a drop re-reads its record by name: a bag edited after the drag runs the new record, a removed one nothing (killed by a carried record)', () => {
+        const { db, get, object, link } = uml();
+        const payload = ontoDragPayload(object as any, 'Book');
+        const edited = { ...object, defaultValue: undefined };
+        db.MM._state = { ontoBindings: JSON.stringify({ v: 1, bindings: [edited, link] }) };
+        const request = ontoDropRequest(get, 'M1', payload);
+        expect(request?.classifierId).toBe('Book');
+        expect(request?.record).toEqual(JSON.parse(JSON.stringify(edited)));
+        db.MM._state = {};
+        expect(ontoDropRequest(get, 'M1', payload)).toBeNull();
+    });
+
+    it('a drop of a link, an abstract class, an unknown id or a payload that does not parse runs nothing', () => {
+        const { get, object, link } = uml();
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Member'))?.classifierId).toBe('Member');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(link as any, 'Holdings'))).toBeNull();
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Publication'))).toBeNull();
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'alien'))).toBeNull();
+        expect(ontoDropRequest(get, 'M1', 'objectNode')).toBeNull();
     });
 });
 
