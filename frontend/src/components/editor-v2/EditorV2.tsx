@@ -78,7 +78,7 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoRailSections, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import { creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
 import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
@@ -664,9 +664,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
     // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
     const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid).signature : '');
+    // The level of the tab's viewpoint (R-OI-19): at `class` no instance surface, the empty state included (R-OI-20).
+    const ontoClassLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], viewpointId) === 'class');
     const ontoSections = useMemo(
-        () => (isModelMode && modelid ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
-        [ontoRailSig, isModelMode, modelid]
+        () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
+        [ontoRailSig, isModelMode, modelid, ontoClassLevel]
     );
     const advancedMode = useSelector((state: any) => !!state.advanced);
     const [bindingMetamodel, setBindingMetamodel] = useState<string | null>(null);
@@ -3240,14 +3242,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     // Pane menu of the ontological instantiation (R-OI-10, hooks/instantiate.ts). It opens
-    // only when the metamodel's bag declares an `object` record; without one the pane right
-    // click is left alone, as before.
+    // only when the metamodel's bag declares an `object` record and the tab's viewpoint is not at
+    // `class` (R-OI-20); otherwise the pane right click is left alone, as before.
     const onPaneContextMenu = useCallback(
         (event: MouseEvent | React.MouseEvent) => {
             if (!isModelMode || !modelid) return;
             const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
             const record = objectRecord(get, modelid);
-            if (!record) return;
+            if (!record || ontoLevelOf(get, viewpointIdRef.current) === 'class') return;
             event.preventDefault();
             setContextMenu({
                 x: event.clientX,
@@ -3285,7 +3287,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // linguistic palette click does, the centre of the canvas the overlay leaves visible.
     const runOntoPayload = useCallback((payload: string, click: { x: number; y: number }) => {
         if (!isModelMode || !modelid) return;
-        const request = ontoDropRequest((id: string) => (store.getState() as any)?.idlookup?.[id], modelid, payload);
+        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+        // The level read at the drop (R-OI-20): the rail is hidden at `class`, but a drag can be held across a tab switch.
+        if (ontoLevelOf(get, viewpointIdRef.current) === 'class') return;
+        const request = ontoDropRequest(get, modelid, payload);
         if (request) runInstantiate(request.classifierId, request.record, click);
     }, [isModelMode, modelid, runInstantiate]);
     runOntoPayloadRef.current = runOntoPayload;
@@ -3588,12 +3593,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 && ((node as any).width != null || (node as any).height != null);
 
             // «New instance» on a node whose object is a classifier the metamodel's `object`
-            // record lets be instantiated (R-OI-10).
+            // record lets be instantiated (R-OI-10), except under a viewpoint at `class` (R-OI-20).
             if (isModelMode && modelid && node) {
                 const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
                 const record = objectRecord(get, modelid);
                 const objectId: unknown = get(node.id)?.model;
-                if (record && typeof objectId === 'string'
+                if (record && typeof objectId === 'string' && ontoLevelOf(get, viewpointIdRef.current) !== 'class'
                     && creationOptions(get, record, modelid).some(o => o.id === objectId)) {
                     items.push(
                         { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
@@ -5289,7 +5294,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     collapsed={!!scriptPreview?.owner}
                     ontoSections={ontoSections}
                     onOntoActivate={onOntoActivate}
-                    onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
+                    onDeclareBinding={advancedMode && !ontoClassLevel ? onDeclareBinding : undefined}
                 />
                 {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main">

@@ -182,6 +182,22 @@ export function ontoRailSections(get: DGet, modelId: string): { sections: OntoRa
     return { sections, signature };
 }
 
+/** The ontological level a viewpoint authors (R-OI-19): the classes, the instances, or both of one model's two (R-OI-1). */
+export type OntoLevel = 'class' | 'instance' | 'both';
+
+/** The key of a viewpoint's `_state` that holds its level. */
+export const ONTO_LEVEL_KEY = 'ontoLevel';
+
+/**
+ * The level of the viewpoint `viewpointId` (R-OI-19): `both` when the key is absent or unknown, and with no viewpoint
+ * (`undefined` no tab, `null` abstract syntax). The id comes from the caller, the tab's: `useIRInteractionPlan` follows the root.
+ */
+export function ontoLevelOf(get: DGet, viewpointId: string | null | undefined): OntoLevel {
+    if (!isId(viewpointId)) return 'both';
+    const level: unknown = get(viewpointId)?._state?.[ONTO_LEVEL_KEY];
+    return level === 'class' || level === 'instance' ? level : 'both';
+}
+
 /** The payload of a rail drag or click: the record by name and the classifier, never the record itself, so a binding
  *  edited between the drag and the drop cannot run a stale record. */
 export function ontoDragPayload(record: OntoBinding, classifierId: string): string {
