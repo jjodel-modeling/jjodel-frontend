@@ -90,12 +90,12 @@ import type { SimChoices } from './simRunState';
 import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
-    profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
+    profileBindings, profilePatch, profileSummary, profileSummaryText, runEngine, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
-    runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
+    runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -104,6 +104,8 @@ import type { StateHeading } from './simLabels';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
+import { dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import { DCN_PANEL_HEADING } from '../../../model/simulation/dcn/dcnPanelText';
 import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
@@ -118,7 +120,7 @@ import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import type { Candidate, InputRead, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
-import type { RoleKey, Roles } from './simRoleStatus';
+import type { RoleKey, Roles, RunEngine } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
@@ -319,6 +321,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
         modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw, modelWatchesRaw, modelScenariosRaw,
+        modelEngine,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -440,7 +443,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     /** Labels of the engine roles the shape lacks, and of the invalid ones (simRoleStatus.ts). */
     const missingRoles = missingEngineRoles(roles);
     const invalidRoles = invalidEngineRoles(roles);
-    const rolesComplete = missingRoles.length === 0 && invalidRoles.length === 0;
+    // The run controls show when startRun would start a nucleus: the Petri roles, else the dcn ones (runEngine).
+    const rolesComplete = modelEngine !== null;
+    /** A DCN run: its inputs row, its chips and its heading «Classification» (P-2026-11-08-0315). */
+    const dcnEngine = modelEngine === 'dcn';
     /**
      * The event role is declared: the rule of netStcFromRoles, both keys set, on
      * the derived roles, so a Trigger typed to a class (R-SIM-38).
@@ -546,7 +552,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const status = runStatus(r);
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const inputs = panelInputs(status, structuralInputs(r.net, r.config.state));
-        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? (dcnEngine ? candidateLabel(r.net, e, lookup) : e));
         // R-SIM-60: a button that is on while its input has no candidate says why in its title.
         const noCandidate = new Map<string | null, string>();
         // R-SIM-88: a button whose press reads an input names it in its title.
@@ -555,7 +561,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const guards = roleValues(roles.simGuard);
         if (status === 'Running') {
             // R-SIM-104: an event that is off says why in its title too, so every event is asked, not only the enabled ones.
-            for (const e of [...(inputs.epsilon ? [null] : []), ...events.map(x => x.id)]) {
+            // A DCN run's inputs are its alphabet (Tick, the invocations), asked as the events are.
+            for (const e of [...(inputs.epsilon ? [null] : []), ...events.map(x => x.id), ...(dcnEngine ? r.alphabet : [])]) {
                 const why = inputReason(r, e, lookup, label, guards);
                 if (why) noCandidate.set(e, why.full);
                 const read = inputAsks(r, e);
@@ -581,7 +588,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3), as rows
             // and chips (R-SIM-104); the marking line stays the title of the chips, so its readers change a selector only.
             watch,
-            chips: markingChips(r.config.state, lookup),
+            chips: markingChips(r.config.state, lookup, r.net),
             markingTitle: markingLine(r.config.state, r.net, lookup).title,
             // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's output, a Watch row from Reset to Stop or never.
             accepting: acceptingMark(r.net, r.config.state),
@@ -593,7 +600,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         };
         // tick is the real input of this memo: the run changes only through this panel; prefsVersion re-reads the pins;
         // an edit of the invariants and breakpoints, which interrupts nothing, reads them again.
-    }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
+    }, [isModelMode, rolesComplete, dcnEngine, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
 
     /** Reset; `null` when the run started, the line's reason when it was refused (a scenario's replay reads it). */
     const resetRun = useCallback((): string | null => {
@@ -784,7 +791,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      */
     const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[], keepPlay?: boolean): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
+        const live = getSimRun(modelid);
+        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? (dcnEngine && live ? candidateLabel(live.net, event, lookup) : event));
         if (!keepPlay) {
             setPlaying(null);
             setPlayNote(null);
@@ -795,7 +803,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 ? pressStep(modelid, lookup, values)
                 : pressInput(modelid, event, selector, lookup, input, values);
         show(pressed, event, input, values);
-    }, [modelid, events, show]);
+    }, [modelid, events, dcnEngine, show]);
 
     const onStep = useCallback((): void => { fire(null); }, [fire]);
 
@@ -1231,7 +1239,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {/* R-SIM-104: one chip per marked place, `×n` from two tokens; the marking line is the title. */}
                         {run && view && (
                             <>
-                                <div className="sim-panel__section">{modelStateHeading}</div>
+                                <div className="sim-panel__section">{dcnEngine ? DCN_PANEL_HEADING : modelStateHeading}</div>
                                 <div className="sim-panel__chips" title={view.markingTitle === null ? undefined : headedStateLine(view.markingTitle, modelStateHeading)}>
                                     {view.chips.length === 0
                                         ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
@@ -1268,6 +1276,34 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                         })}
                                     </div>
                                 )}
+                            </>
+                        )}
+                        {/* A DCN run's inputs (P-2026-11-08-0315): Tick and one button per invocation of its alphabet, labelled as
+                            the choice list labels them, pressed through the event path; on while the run is Running. */}
+                        {dcnEngine && run && view && (
+                            <>
+                                <div className="sim-panel__section">Inputs</div>
+                                <div className="sim-panel__events">
+                                    {run.alphabet.map(id => {
+                                        const on = view.status === 'Running';
+                                        const asks = view.asks.get(id);
+                                        const text = candidateLabel(run.net, id, lookupNow);
+                                        return (
+                                            <button
+                                                type="button"
+                                                className="sim-panel__event"
+                                                key={id}
+                                                title={on ? inputTitle(`Fire ${text}`, id) : offTitle(`Fire ${text}`, id)}
+                                                onClick={() => fire(id)}
+                                                disabled={!on}
+                                            >
+                                                <i className="bi bi-chevron-right" />
+                                                <span>{text}</span>
+                                                {on && asks && <span className="sim-state-chip sim-state-chip--ivar sim-panel__event-chip" title={`Asks: ${asks}`}>IVAR</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </>
                         )}
                         {/* R-SIM-137: one row right above the buttons while the live step hits, the full list in its title; an
@@ -1487,6 +1523,8 @@ interface StateProps {
     modelWatchesRaw: string | null;
     /** The raw `runScenarios` string of the M1 model's own bag (R-SIM-139), `null` when unset or on the M2 face: a primitive. */
     modelScenariosRaw: string | null;
+    /** The nucleus a run of the roles starts (`runEngine`, the rule of startRun), `null` when neither role set is complete. */
+    modelEngine: RunEngine | null;
 }
 
 interface DispatchProps { }
@@ -1533,6 +1571,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         modelBoardRaw: ownProps.isModelMode && typeof dModel?._state?.[IO_BOARD_KEY] === 'string' ? dModel._state[IO_BOARD_KEY] : null,
         modelWatchesRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_WATCHES_KEY] === 'string' ? dModel._state[RUN_WATCHES_KEY] : null,
         modelScenariosRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_SCENARIOS_KEY] === 'string' ? dModel._state[RUN_SCENARIOS_KEY] : null,
+        // The dcn roles of the bag the run reads (profile applied); the raw bag first, so an unbound metamodel pays no runBag.
+        modelEngine: runEngine(roles, dcnStcFromRoles(rawState) === null ? undefined : runBag(rawState, lookup)),
     };
 }
 
