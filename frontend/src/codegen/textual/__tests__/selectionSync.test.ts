@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, heldOnOpen, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
+import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, heldOnOpen, selectedOnOpen, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan } from '../printer';
@@ -280,5 +280,37 @@ describe('heldOnOpen: the canvas selection read once when the tab opens over it 
 
     it('a selection the listener already holds is not read over (dies on the held guard dropped)', () => {
         expect(heldOnOpen(['e9'], ['v1'], lookup)).toBeNull();
+    });
+});
+
+describe('selectedOnOpen: a selected node out of view, read from the store (lane T8e, P-2026-11-08-1625)', () => {
+    const lookup = { v1: { className: 'DVertex', model: 'e1' }, g1: { className: 'DGraphVertex', model: 'e2' }, edge: { className: 'DVoidEdge', model: 'e3' }, far: { className: 'DVertex', model: 'other' } };
+    const spans = [{ id: 'e1', start: 0, end: 5 }, { id: 'e2', start: 6, end: 9 }, { id: 'e3', start: 10, end: 12 }, { id: 'cut', start: 13, end: 13 }];
+
+    it('no mounted selected node: the last selected vertex, when the text prints its element (dies on the store unread)', () => {
+        expect(selectedOnOpen([], 'v1', lookup, spans)).toEqual(['v1']);
+        expect(selectedOnOpen([], 'g1', lookup, spans)).toEqual(['g1']);
+    });
+
+    it('mounted selected nodes are the selection: the store does not add to them (dies on a union, a stale last node)', () => {
+        expect(selectedOnOpen(['g1'], 'v1', lookup, spans)).toEqual(['g1']);
+    });
+
+    it('a last selected edge is not a node (dies on the vertex guard dropped)', () => {
+        expect(selectedOnOpen([], 'edge', lookup, spans)).toEqual([]);
+    });
+
+    it('a vertex of another model, not printed here, reads nothing (dies on the span guard dropped)', () => {
+        expect(selectedOnOpen([], 'far', lookup, spans)).toEqual([]);
+    });
+
+    it('nothing last selected reads nothing: the empty node of a deselect, a missing field, a vertex gone', () => {
+        expect(selectedOnOpen([], '', lookup, spans)).toEqual([]);
+        expect(selectedOnOpen([], undefined, lookup, spans)).toEqual([]);
+        expect(selectedOnOpen([], 'ghost', lookup, spans)).toEqual([]);
+    });
+
+    it('through heldOnOpen, the element is what the tab holds (dies on the vertex id highlighted)', () => {
+        expect(heldOnOpen([], selectedOnOpen([], 'v1', lookup, spans), lookup)).toEqual(['e1']);
     });
 });

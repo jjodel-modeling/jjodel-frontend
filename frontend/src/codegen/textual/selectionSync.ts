@@ -128,6 +128,17 @@ export function heldOnOpen(held: readonly string[], selectedNodes: readonly stri
     return ids.length ? ids : null;
 }
 
+/**
+ * Lane T8e (P-2026-11-08-1625): the selected nodes a Text tab reads on open. The mounted ones when there are any; else the
+ * vertex the store holds as last selected (`_lastSelected.node`, emptied by a deselect), which is there when the node is out
+ * of view and unmounted, provided the text prints its element: `_lastSelected` is global, and a node of another model has
+ * no span here. Only one: the store does not hold a multi-selection.
+ */
+export function selectedOnOpen(mounted: readonly string[], lastNode: unknown, lookup: Readonly<Record<string, any>>, spans: readonly ObjectSpan[]): string[] {
+    if (mounted.length || typeof lastNode !== 'string' || !/Vertex$/.test(lookup[lastNode]?.className ?? '')) return [...mounted];
+    return selectedSpans(spans, resolveElementIds([lastNode], lookup as Record<string, any>)).length ? [lastNode] : [];
+}
+
 const isNode = (c: SyntaxNode | { readonly kind: 'token' }): c is SyntaxNode => c.kind !== 'token';
 
 /**

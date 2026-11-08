@@ -9,9 +9,10 @@
  * 1. The previous print's spans (R-TXT-22), as the editor carries them over the edit (decorations): a parsed object
  *    whose span overlaps a model object's carried span by at least half of their union, same class, is that object.
  *    A span collapsed to nothing (a cut) is no evidence.
- * 2. Class and name in the same container and containment feature (R-TXT-18). Homonyms there pair by their order
- *    among the homonyms and are uncertain; a nameless object counts as named `null`, so a lone nameless object in a
- *    slot is matched, two of them are homonyms.
+ * 2. Class and name in the same container and containment feature (R-TXT-18). Homonyms there, two or more on each side,
+ *    pair by the similarity of step 4, their order among the homonyms the tie-break (T8e); fewer pair by order. All are
+ *    uncertain; a nameless object counts as named `null`, so a lone nameless object in a slot is matched, two of them are
+ *    homonyms.
  * 2b. Nameless expression objects (the operators and primaries of an expression rule, P-2026-11-04-1158): under each
  *    matched object, the unmatched ones below it in the text pair with the unmatched ones below its match in the model,
  *    equal subtrees first (class, shown attributes, reference targets through the matches, children), then by class
@@ -159,6 +160,10 @@ export interface MatchInput {
     readonly unplaced?: ReadonlySet<string>;
     /** T8a: the id each parsed object's head comment carries (`textIdsOf`); absent or empty when the text has none. */
     readonly ids?: ReadonlyMap<string, string>;
+    /** T8e: the least similarity of a rename (step 4), `RENAME_THRESHOLD` when absent; only the calibration bench sets it. */
+    readonly renameThreshold?: number;
+    /** T8e: how far ahead of the second a rename's similarity must be (step 4), `RENAME_MARGIN` when absent; only the calibration bench sets it. */
+    readonly renameMargin?: number;
 }
 
 /**
@@ -262,6 +267,13 @@ export function matchObjects(input: MatchInput): TextMatch {
         return owner ? owner.model : null;
     };
     const slotOf = (place: Place | undefined): string => (place ? place.feature : '');
+    /** The features `similarity` compares for a class: what its rule prints, other than the name and what it contains. */
+    const contentFeatures = (cls: string): readonly TextFeature[] => {
+        const rule = g.objects[cls];
+        if (!rule) return [];
+        const shown = shownFeatures(rule);
+        return featuresOf(cls).filter(f => f.kind !== 'containment' && f.name !== 'name' && shown.has(f.name));
+    };
     const expr = expressionClasses(g);
     for (const t of parsed.objects) {
         if (toModel.has(t.id) || input.unplaced?.has(t.id) || expr.has(t.cls)) continue;
@@ -276,10 +288,9 @@ export function matchObjects(input: MatchInput): TextMatch {
             && (modelPlace.get(m.id)?.owner ?? '') === key && slotOf(modelPlace.get(m.id)) === slotOf(tp))
             .sort((a, b) => position(a.id) - position(b.id));
         const homonyms = siblings.length > 1 || candidates.length > 1;
-        siblings.forEach((s, i) => {
-            const m = candidates[i];
-            if (m) accept({ text: s.id, model: m.id, by: homonyms ? 'homonym' : 'name', uncertain: homonyms });
-        });
+        const paired = siblings.length > 1 && candidates.length > 1 ? pairByContent(siblings, candidates, contentFeatures(t.cls), toModel)
+            : siblings.flatMap((s, i) => (candidates[i] ? [[s, candidates[i]] as const] : []));
+        for (const [s, m] of paired) accept({ text: s.id, model: m.id, by: homonyms ? 'homonym' : 'name', uncertain: homonyms });
     }
 
     // 2b. Nameless expression objects, by slot under the matched objects.
@@ -298,15 +309,16 @@ export function matchObjects(input: MatchInput): TextMatch {
     const freeText = parsed.objects.filter(t => !toModel.has(t.id));
     const freeModel = model.filter(m => !taken.has(m.id));
     const scored: { text: string; model: string; score: number; order: number }[] = [];
+    const renameThreshold = input.renameThreshold ?? RENAME_THRESHOLD;
+    const renameMargin = input.renameMargin ?? RENAME_MARGIN;
     freeText.forEach((t, order) => {
         const rule = g.objects[t.cls];
         if (!rule) return;
-        const shown = shownFeatures(rule);
-        const fs = featuresOf(t.cls).filter(f => f.kind !== 'containment' && f.name !== 'name' && shown.has(f.name));
+        const fs = contentFeatures(t.cls);
         const scores = freeModel.filter(m => m.cls === t.cls).map(m => ({ m, score: similarity(fs, t, m, toModel) }))
             .sort((a, b) => b.score - a.score);
         const [best, second] = scores;
-        if (best && best.score >= RENAME_THRESHOLD && best.score - (second?.score ?? 0) >= RENAME_MARGIN) {
+        if (best && best.score >= renameThreshold && best.score - (second?.score ?? 0) >= renameMargin) {
             scored.push({ text: t.id, model: best.m.id, score: best.score, order });
         }
     });
@@ -439,6 +451,26 @@ function matchExpressions(x: ExprMatchInput): void {
             if (m) x.accept({ text: t.id, model: m.id, by: 'slot', uncertain: false });
         }
     }
+}
+
+/**
+ * T8e (step 2): homonyms, two or more on each side, paired by `similarity`, the highest first; among equal scores the
+ * text order, then the model order, so identical homonyms pair by order. As many pairs as the shorter side: the lowest
+ * score pairs too, the pairing stays uncertain.
+ */
+function pairByContent(ts: readonly TextObject[], ms: readonly TextObject[], fs: readonly TextFeature[], toModel: ReadonlyMap<string, ObjectMatch>): (readonly [TextObject, TextObject])[] {
+    const scored = ts.flatMap((t, i) => ms.map((m, j) => ({ t, m, i, j, score: similarity(fs, t, m, toModel) })));
+    scored.sort((a, b) => b.score - a.score || a.i - b.i || a.j - b.j);
+    const usedText = new Set<string>();
+    const usedModel = new Set<string>();
+    const out: (readonly [TextObject, TextObject])[] = [];
+    for (const { t, m } of scored) {
+        if (usedText.has(t.id) || usedModel.has(m.id)) continue;
+        usedText.add(t.id);
+        usedModel.add(m.id);
+        out.push([t, m]);
+    }
+    return out;
 }
 
 /** Equal set features over the features set on either side; a reference is equal when its targets match. */

@@ -11,15 +11,15 @@
  * for the `CREATED_SLOT` limit of textDiff.ts, which the table counts), an unedited text pairs every object with itself.
  * The numbers go to the table at `CALIBRATION_OUT`, when set.
  *
- * `matchObjects` reads RENAME_THRESHOLD and RENAME_MARGIN as module constants and takes no parameter for them, so this
- * bench measures their current values only.
+ * Lane T8e (P-2026-11-08-1625): the grid of the rename thresholds. No caller of `matchObjects` passes them, so here a mock
+ * of the module adds them to the input of every call `planTextImport` makes; the corpora above run at the defaults.
  *
  * The Briefs are read from the prototype's folder in the PROTO environment variable (no path in the repo), as
  * styleCheck.test.ts does; skipped without it.
  */
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { afterAll, describe, it, expect } from 'vitest';
+import { afterAll, describe, it, expect, vi } from 'vitest';
 import { deriveBaseGrammar } from '../baseGrammar';
 import { deriveConcreteGrammar } from '../concreteGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
@@ -33,6 +33,13 @@ import { RENAME_MARGIN, RENAME_THRESHOLD, featureTable, identityOf, placesOf, sh
 import { grammarOf } from './corpus';
 import { FIXTURE, metamodelOf, objectsOf } from './spec';
 import { tolerantCases } from './tolerantCorpus';
+
+/** The thresholds of the grid cell being run; empty at the defaults. */
+const cell = vi.hoisted(() => ({ current: {} as { renameThreshold?: number; renameMargin?: number } }));
+vi.mock('../textMatch', async importOriginal => {
+    const actual = await importOriginal<typeof import('../textMatch')>();
+    return { ...actual, matchObjects: (input: Parameters<typeof actual.matchObjects>[0]) => actual.matchObjects({ ...input, ...cell.current }) };
+});
 
 interface Mut { readonly id: string; readonly cls: string; readonly slots: Record<string, unknown> }
 interface Bench { readonly name: string; readonly mm: TextMetamodel; readonly g: ConcreteGrammar; readonly objects: readonly TextObject[] }
@@ -219,6 +226,12 @@ const renameScores = new Map<string, { right: number; wrong: number }>();
 const evidence = new Map<string, Map<string, { right: number; wrong: number }>>();
 const refusalCodes = new Map<string, number>();
 
+/** The corpus name of a grid cell starts with this: its tallies stay out of the tables of the defaults. */
+const GRID = 'grid ';
+const GRID_THRESHOLDS = [0.5, 0.6, 0.7] as const;
+const GRID_MARGINS = [0.1, 0.2, 0.3] as const;
+const gridKey = (threshold: number, margin: number): string => `${GRID}${threshold}/${margin}`;
+
 const objectIds = (n: SyntaxNode): string[] => [...(n.kind === 'object' ? [n.id] : []), ...n.children.flatMap(c => (c.kind === 'token' ? [] : objectIds(c)))];
 
 function tallyOf(corpus: string, kind: string): Tally {
@@ -251,7 +264,7 @@ function measure(b: Bench, corpus: string, kind: string, edited: readonly Mut[])
         const e = byEvidence.get(m.by) ?? { right: 0, wrong: 0 };
         byEvidence.set(m.by, e);
         if (right) e.right++; else e.wrong++;
-        if (m.by === 'rename' && m.score !== undefined) {
+        if (m.by === 'rename' && m.score !== undefined && !corpus.startsWith(GRID)) {
             const key = m.score.toFixed(2);
             const s = renameScores.get(key) ?? { right: 0, wrong: 0 };
             renameScores.set(key, s);
@@ -262,7 +275,7 @@ function measure(b: Bench, corpus: string, kind: string, edited: readonly Mut[])
     if (imported.plan.refusals.length || imported.plan.lines === null) {
         t.refused++;
         if (!imported.plan.refusals.length || imported.plan.refusals.some(r => !CREATED_SLOT.test(r.message))) t.unexpected++;
-        for (const r of imported.plan.refusals) refusalCodes.set(`${r.code}: ${r.message.replace(/renamed\w+|added\w+/g, '<name>')}`, (refusalCodes.get(`${r.code}: ${r.message.replace(/renamed\w+|added\w+/g, '<name>')}`) ?? 0) + 1);
+        if (!corpus.startsWith(GRID)) for (const r of imported.plan.refusals) refusalCodes.set(`${r.code}: ${r.message.replace(/renamed\w+|added\w+/g, '<name>')}`, (refusalCodes.get(`${r.code}: ${r.message.replace(/renamed\w+|added\w+/g, '<name>')}`) ?? 0) + 1);
     }
 }
 
@@ -278,12 +291,16 @@ function runEdits(b: Bench, corpus: string, kind: string, edits: readonly Edit[]
     }
 }
 
-function runCorpus(corpus: string, benches: readonly Bench[]): void {
+function sweep(corpus: string, benches: readonly Bench[]): void {
     for (const b of benches) {
         measure(b, corpus, 'none (control)', copyOf(b.objects));
         for (const [kind, e] of [...BASE_EDITS, ...SAME_TARGET]) runEdits(b, corpus, kind, [e], VARIANTS);
         for (const [kind, es] of COMBOS) runEdits(b, corpus, kind, es, COMBO_VARIANTS);
     }
+}
+
+function runCorpus(corpus: string, benches: readonly Bench[]): void {
+    sweep(corpus, benches);
     const table = tables.get(corpus)!;
     const control = table.get('none (control)')!;
     expect(control.runs, corpus).toBe(benches.length);
@@ -295,12 +312,13 @@ function tableText(): string {
     const lines = [
         '# T8d calibration of the match cascade, re-import without ids (P-2026-11-08-0831)',
         '',
-        `RENAME_THRESHOLD ${RENAME_THRESHOLD}, RENAME_MARGIN ${RENAME_MARGIN}. Other values not measured: matchObjects takes no parameter for them.`,
+        `RENAME_THRESHOLD ${RENAME_THRESHOLD}, RENAME_MARGIN ${RENAME_MARGIN}. Other values: the grid at the end.`,
         '',
         'objects: parsed objects over all runs. wrong: paired with a model object that is not its source, or a new object paired at all. missed: an object with a source in the model that the plan creates (a create plus a delete that should have been a pairing).',
         '',
     ];
     for (const [corpus, table] of tables) {
+        if (corpus.startsWith(GRID)) continue;
         lines.push(`## ${corpus}`, '', '| edit | runs | no target | objects | correct | wrong, certain | wrong, uncertain | uncertain rows | missed | refused |', '|---|---|---|---|---|---|---|---|---|---|');
         for (const [kind, t] of table) lines.push(`| ${kind} | ${t.runs} | ${t.skipped} | ${t.objects} | ${t.correct} | ${t.wrongCertain} | ${t.wrongUncertain} | ${t.uncertain} | ${t.missed} | ${t.refused} |`);
         lines.push('', '| evidence | right | wrong |', '|---|---|---|');
@@ -310,7 +328,24 @@ function tableText(): string {
     lines.push('## Rename rows by score, all corpora', '', '| score | right | wrong |', '|---|---|---|');
     for (const [score, s] of [...renameScores].sort(([a], [c]) => Number(a) - Number(c))) lines.push(`| ${score} | ${s.right} | ${s.wrong} |`);
     lines.push('', `Refusals after confirming the uncertain rows: ${[...refusalCodes].map(([c, n]) => `${c} ${n}`).join(', ') || 'none'}.`, '');
+    lines.push(...gridText());
     return lines.join('\n');
+}
+
+/** One row per grid cell, every edit of every corpus summed. */
+function gridText(): string[] {
+    const lines = ['## Grid of the rename thresholds, all corpora and edits', '', '| threshold | margin | runs | objects | correct | wrong, certain | wrong, uncertain | uncertain rows | missed | refused | rename right | rename wrong |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
+    for (const threshold of GRID_THRESHOLDS) {
+        for (const margin of GRID_MARGINS) {
+            const key = gridKey(threshold, margin);
+            const sum = emptyTally();
+            for (const t of tables.get(key)?.values() ?? []) for (const k of Object.keys(sum) as (keyof Tally)[]) sum[k] += t[k];
+            const rename = evidence.get(key)?.get('rename') ?? { right: 0, wrong: 0 };
+            lines.push(`| ${threshold} | ${margin} | ${sum.runs} | ${sum.objects} | ${sum.correct} | ${sum.wrongCertain} | ${sum.wrongUncertain} | ${sum.uncertain} | ${sum.missed} | ${sum.refused} | ${rename.right} | ${rename.wrong} |`);
+        }
+    }
+    lines.push('');
+    return lines;
 }
 
 const PROTO = process.env.PROTO ?? '';
@@ -383,5 +418,23 @@ describe('T8d calibration bench: re-import without ids (invariants only)', () =>
 
     it.skipIf(!PROTO)('the 16 Briefs (PROTO)', () => {
         runCorpus('16 Briefs', briefBenches());
+    }, 300_000);
+
+    it('the grid of the rename thresholds runs every cell (T8e)', () => {
+        const benches: Bench[] = [
+            ...tolerantCases().filter(c => c.name.startsWith('turnstile')),
+            { name: 'fixture', mm: metamodelOf(FIXTURE), g: grammarOf(FIXTURE), objects: objectsOf(FIXTURE) },
+            ...(PROTO ? briefBenches() : []),
+        ];
+        try {
+            for (const renameThreshold of GRID_THRESHOLDS) {
+                for (const renameMargin of GRID_MARGINS) {
+                    cell.current = { renameThreshold, renameMargin };
+                    sweep(gridKey(renameThreshold, renameMargin), benches);
+                }
+            }
+        } finally { cell.current = {}; }
+        const objects = GRID_THRESHOLDS.flatMap(t => GRID_MARGINS.map(m => [...tables.get(gridKey(t, m))!.values()].reduce((n, x) => n + x.objects, 0)));
+        expect(objects.every(n => n > 0 && n === objects[0])).toBe(true);
     }, 300_000);
 });

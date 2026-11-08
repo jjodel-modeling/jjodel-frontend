@@ -3314,3 +3314,18 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: C2h crops 1-chips, 2-default-view in ~/.jjodel-lanes/P-2026-11-08-1626/ checked by the chat; app check 29/29
 **Notes**: Rollback tag `pre-textual-c2h-index` on `3c5c56bf4` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1926/result.json`.
 **Prompt document name**: 2026-11-08 19:26
+
+## 2026-11-08 — feat(codegen): T8e, thresholds as a parameter, homonyms by content, highlight off-screen (P-2026-11-08-1625, P-2026-11-08-1705, P-2026-11-08-1718, P-2026-11-08-1927)
+**Prompt**: `claude_2026-11-08_1625_prompt_textual_t8e_match.md`, its continuation 1705, the T8f diagnosis 1718, and `claude_2026-11-08_1927_prompt_textual_t8e_acceptance.md`: rename thresholds as a match parameter with a grid in the T8d bench, content-aware homonym pairing, highlight on open for a node out of view; acceptance after the settle fix, this entry.
+**Files touched**: `723eb1233` frontend/src/codegen/textual/textMatch.ts, `__tests__/calibration.test.ts`, `__tests__/textMatchPairing.test.ts` (new); `ad25337a7` textMatch.ts, textMatchPairing.test.ts; `52c8422ea` selectionSync.ts, ui/TextualTab.tsx, `__tests__/selectionSync.test.ts`; `000a8f1f4` docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md; this entry and the Status lines of the four prompts, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `fa4ac61e3`: typecheck exit 0; vitest 15506 passed, 3 skipped, 5 file reds: the 3 known import reds, plus irCollapsedRender and irSelectionRing (Chromium hook timeout under load, green alone with 13 and 5 tests); build completed; check:docs 5/5; check:codegen-lazy ALL GREEN.
+**Out-of-scope changes**: no. More than five files (RC-11), all named by the prompts: textMatch.ts, selectionSync.ts, ui/TextualTab.tsx, three test files, the T8f report, this entry, four Status lines.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe on this tree's Vite (:3927), crops 1-swap, 2-offscreen in ~/.jjodel-lanes/P-2026-11-08-1927/, read by the session; no human visual check ran.
+**Notes**: Bench: wrong uncertain 5564 to 213 over 30225 objects, no row worse. Grid: Recommended keep 0.6 and 0.2. Off-screen read path `_lastSelected.node`. The hole of 1705 was the JjScript settle race (T8f), fixed by P-2026-11-08-1759. Acceptance, measured from DOM, Monaco and store: 1-swap 20 of 20, 0 holes in Initial.transitions, pairing 100%, ids kept; 2-offscreen and its 2b control pass. Mutant controls not rerun here.
+**Prompt document name**: 2026-11-08 19:27
+
+**Ticket** (low): the confirm panel still reads `same name, paired by order` for homonyms now paired by content (crop 1-swap). T8c's probe check depends on that text, so changing it needs that check changed too.
