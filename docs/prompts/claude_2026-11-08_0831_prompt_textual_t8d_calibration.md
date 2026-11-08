@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0831
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b6b40a7fd
 Lane: full (a measurement bench as tests; no threshold change, no UI)
 Depends: T8a, T8b (merged), T8c (merging), R-TXT-55 (F8)
 Worktree: ~/jjodel-w-textt8d, branch textual-t8d-calibration (from textual-t8c-dialog at 948b1402b, T8c being merged, own node_modules)

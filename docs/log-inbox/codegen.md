@@ -3032,3 +3032,18 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Prompt document name**: 2026-11-08 07:39
 
 **Ticket** (candidate, low): nameless homonyms all read `Transition (unnamed)` in the panel's model and text cells, so the user tells the rows apart only by order and score; a distinguishing label (e.g. event and next state) is a lane of its own.
+
+## 2026-11-08 — test(codegen): T8d, calibration bench of the match thresholds (P-2026-11-08-0831)
+**Prompt**: `claude_2026-11-08_0831_prompt_textual_t8d_calibration.md` (R-TXT-55 F8, R-TXT-21 (7), risk R6): a bench of scripted edits re-imported without ids on the 16 Briefs and the state-machine fixture, the numbers in a table in the lane folder; no threshold change.
+**Files touched**: `frontend/src/codegen/textual/__tests__/calibration.test.ts` (new) in b6b40a7fd; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: matchObjects takes no threshold parameter: only 0.6 and 0.2 measured, no other value run. 30225 objects: 5564 wrong, all uncertain (5562 homonym order, 2 rename), 73 missed. Table: `~/.jjodel-lanes/P-2026-11-08-0831/calibration-table.md`. One Brief plan refused unwritable, counted. Gates: typecheck 0; vitest 3 baseline import reds, 2 load reds green alone (irCollapsedRender, irSelectionRing); check:docs 0.
+**Prompt document name**: 2026-11-08 08:31
+
+**Ticket** (candidate, medium): without ids, nameless siblings pair by order, so deleting one Brief `Instruction` shifts every later pairing (delete one: 1547 wrong uncertain rows of 4144 objects) and an unedited Brief already shows 276 uncertain rows of 361 objects. No rename threshold reaches step 2; a content-aware pairing of homonyms is a lane of its own.
