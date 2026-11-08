@@ -16,6 +16,13 @@ import './notification-widget.scss';
 
 const CARD_GAP_PX = 16;
 
+const NOTICE_ICONS: Record<string, string> = {
+  warning: 'bi-exclamation-triangle-fill',
+  info: 'bi-info-circle-fill',
+  success: 'bi-check-circle-fill',
+  error: 'bi-x-circle-fill',
+};
+
 function visibleElement(selector: string): HTMLElement | null {
   return Array.from(document.querySelectorAll<HTMLElement>(selector)).find(el => el.offsetWidth > 0) ?? null;
 }
@@ -36,6 +43,38 @@ function measureTipsCard(): { left: number; bottom: number } {
     left: Math.max(rail?.getBoundingClientRect().right ?? 0, 0) + CARD_GAP_PX,
     bottom: (statusBar ? viewportHeight - statusBar.getBoundingClientRect().top : 0) + CARD_GAP_PX,
   };
+}
+
+const BANNER_INSET_PX = 8;
+
+// The docked Jjodie takes the right edge of the viewport; 0 when it is not docked.
+function dockWidth(): number {
+  return parseFloat(getComputedStyle(document.body).getPropertyValue('--jj-jodie-dock-width')) || 0;
+}
+
+/** The top of the work area: the canvas column in the editor, the content column on the dashboard. */
+function measureBanner(): { left: number; top: number; width: number } {
+  const viewportWidth = document.documentElement.clientWidth;
+  const panes = Array.from(document.querySelectorAll<HTMLElement>('.editor-v2__main'))
+    .filter(el => el.offsetWidth > 0)
+    .map(el => el.getBoundingClientRect());
+  let left: number;
+  let right: number;
+  let top: number;
+  if (panes.length > 0) {
+    const palette = visibleElement('aside.editor-v2-palette')?.getBoundingClientRect();
+    const toolbar = visibleElement('.editor-v2-toolbar')?.getBoundingClientRect();
+    const panel = visibleElement('.properties-tree-overlay')?.getBoundingClientRect();
+    left = Math.max(Math.min(...panes.map(r => r.left)), palette?.right ?? 0);
+    right = Math.min(Math.max(...panes.map(r => r.right)), panel?.left ?? viewportWidth, viewportWidth - dockWidth());
+    top = toolbar?.bottom ?? Math.min(...panes.map(r => r.top));
+  } else {
+    const content = (visibleElement('.dash-content') ?? visibleElement('.navbar') ?? document.body).getBoundingClientRect();
+    left = Math.max(content.left, 0);
+    right = Math.min(content.right, viewportWidth - dockWidth());
+    top = visibleElement('.dash-content') ? content.top : content.bottom;
+  }
+  return { left: left + BANNER_INSET_PX, top: top + BANNER_INSET_PX, width: Math.max(right - left - 2 * BANNER_INSET_PX, 0) };
 }
 
 /** Runs measure while active, again on resize, on the rail and dock variables and on layout changes. */
@@ -124,6 +163,7 @@ export const NotificationWidget: React.FC = () => {
 
   const tipVisible = tipAllowed && currentTip !== null;
   const tipPosition = useMeasured(tipVisible, measureTipsCard);
+  const bannerPosition = useMeasured(notice !== null && !onAuthPage, measureBanner);
 
   // Signal to other components (like Jjodie FAB) when the widget is actually visible
   const isActuallyVisible = !onAuthPage && (notice !== null || tipVisible);
@@ -147,35 +187,20 @@ export const NotificationWidget: React.FC = () => {
     setDismissCount(count => count + 1);
   };
 
-  const getPriorityIcon = (priority?: string) => {
-    switch (priority) {
-      case 'warning': return 'bi-exclamation-triangle-fill';
-      case 'info': return 'bi-info-circle-fill';
-      case 'success': return 'bi-check-circle-fill';
-      case 'error': return 'bi-x-circle-fill';
-      default: return 'bi-bell-fill';
-    }
-  };
+  const bannerLevel = notice?.priority && NOTICE_ICONS[notice.priority] ? notice.priority : 'info';
 
   // SYSTEM NOTICE
-  if (notice) {
+  if (notice && bannerPosition) {
     return (
-      <div className={`notification-widget priority-${notice.priority || 'info'}`}>
-        <div className="notification-header">
-          <div className="notification-header-label">
-            <i className={`bi ${getPriorityIcon(notice.priority)}`} />
-            <span>System Notice</span>
-          </div>
-          <button className="notification-close" onClick={() => dismissSystemNotice(notice.id)}>
-            <i className="bi bi-x-lg" />
-          </button>
-        </div>
-        <div className="notification-content">
-          {notice.title && (
-            <h4 className="notification-title">{notice.title}</h4>
-          )}
-          <p className="notification-message">{notice.message}</p>
-        </div>
+      <div className={`notice-banner notice-banner--${bannerLevel}`} role="status" style={bannerPosition}>
+        <i className={`bi ${NOTICE_ICONS[bannerLevel]} notice-banner__icon`} aria-hidden="true" />
+        <span className="notice-banner__text" title={notice.message}>
+          {notice.title && <span className="notice-banner__title">{notice.title}</span>}
+          {notice.message}
+        </span>
+        <button type="button" className="notice-banner__close" aria-label="Dismiss notice" onClick={() => dismissSystemNotice(notice.id)}>
+          <i className="bi bi-x-lg" aria-hidden="true" />
+        </button>
       </div>
     );
   }

@@ -1,3 +1,6 @@
+// TODO: cleanup, the widget markup these first rules styled is gone (P-2026-11-08-2340).
+// .notification-header stays regardless: it also reaches .jjscript-success-notification.
+
 /* ============================================
    NOTIFICATION WIDGET
    Per notification-widget-spec.md
@@ -212,4 +215,100 @@
 .tips-card button:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 1px;
+}
+
+/* ============================================
+   ANNOUNCEMENT BANNER (R-NT-4)
+   left, top and width are measured from the work area (NotificationWidget.tsx)
+   ============================================ */
+
+.notice-banner {
+  position: fixed;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  z-index: var(--z-dropdown);
+}
+
+.notice-banner--info {
+  background: var(--color-info-bg);
+  border-color: var(--color-info-muted);
+
+  .notice-banner__icon { color: var(--color-info); }
+}
+
+.notice-banner--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-muted);
+
+  .notice-banner__icon { color: var(--color-warning); }
+}
+
+.notice-banner--success {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-muted);
+
+  .notice-banner__icon { color: var(--color-success); }
+}
+
+.notice-banner--error {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-muted);
+
+  .notice-banner__icon { color: var(--color-error); }
+}
+
+.notice-banner__icon {
+  flex: none;
+  font-size: 14px;
+}
+
+.notice-banner__text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice-banner__title {
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.notice-banner__close {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+
+  i {
+    font-size: 12px;
+  }
 }
