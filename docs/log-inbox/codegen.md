@@ -3301,3 +3301,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato: probe 29/29 on 3549 from the DOM, `npm run smoke` GREEN (12 passed, 3 skipped), crops 1-chips, 2-default-view in ~/.jjodel-lanes/P-2026-11-08-1626/; Alfonso's GO pending (critical zone)
 **Notes**: Scope widened by the chat on the chips (:84, :277-298) after a question. d54e1f51d is red on its own: tests and code one commit each, as asked. Read-only rows (IRFormField.tsx:217) and the read-only single value still label one target at a time, so they do not number (outside the range). Header of unnamedTargetLabels still lists only the C2f widgets. Vitest: 15441 passed, the 3 baseline import reds; irCollapsedRender timed out once in the earlier run, green alone.
 **Prompt document name**: 2026-11-08 16:26
+
+## 2026-11-08 — merge: textual-c2h-index into alfonso-frontend-jjtl (P-2026-11-08-1926)
+**Prompt**: `claude_2026-11-08_1926_prompt_merge_textual-c2h-index.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2h-index` at `21c46e67a` into `alfonso-frontend-jjtl`, merge base `f081ad4f2`, 8 commits on the branch side.
+**Files touched**: merge `936f8ac85`: 6 files from the branch side (`docs/discovery/lir_2026-11-08_c2h_unnamed_index.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1626_prompt_textual_c2h_index.md`, `frontend/src/components/editor-v2/utils/__tests__/namelessRefTarget.test.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRFormField.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `936f8ac85` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15501 tests in 586 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: C2h crops 1-chips, 2-default-view in ~/.jjodel-lanes/P-2026-11-08-1626/ checked by the chat; app check 29/29
+**Notes**: Rollback tag `pre-textual-c2h-index` on `3c5c56bf4` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1926/result.json`.
+**Prompt document name**: 2026-11-08 19:26
