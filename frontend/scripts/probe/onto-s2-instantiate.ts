@@ -29,11 +29,19 @@
  *         the late sync entries of `pointedBy` alone, a measure, P-2026-10-21-1121), S2-4u
  *         Member 1 entry, S2-2p the cascade node box contains the click (4 px), S2-3m bare createInstance +2 and
  *         instantiate +1 (decision 5).
+ *   S2-R  the «Instances of» rail (R-OI-18, P-2026-11-08-0212): S2-R0 with no bag, «Declare binding…» in Advanced, which
+ *         opens the binding dialog, and no section in Basic; S2-Rl the object record's classes, the link record's
+ *         associations disabled, a click on one creating nothing; S2-R1 a rail drag drops one instance at the drop point
+ *         under the tab's layout, 1 undo entry, 1 Cmd+Z; S2-R2 a click places it at the visible centre; S2-R3 a Class
+ *         added to the model appears in the rail with the tab open; S2-R4 the linguistic «Instances» drag still creates
+ *         its object (regression; the UML client has no rootable class, so it drags on LING_FILE's model).
+ *         Crops into ONTO_OUT, `r*-*.png`.
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-oi-s2 frontend/scripts/probe/onto-s2-instantiate.ts \
  *         --port 3087 --id P-2026-10-21-0100
  * Env:  ONTO_OUT   output directory (default docs/discovery/assets/onto-s2)
  *       UML_FILE   the exported project (default ~/jjodel-demo-exports/uml/uml-class-object.jjodel)
+ *       LING_FILE  the export of S2-R4's linguistic drag (default ~/jjodel-demo-exports/scene_2_DemoPetri.jjodel)
  */
 import { chromium, type Page } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -52,6 +60,8 @@ const { ev, meas, openPage, pickViewpoint, readNodes } = await import('./bpmn-la
 type Snap = Parameters<typeof runRules>[0];
 
 const FILE = process.env.UML_FILE || `${homedir()}/jjodel-demo-exports/uml/uml-class-object.jjodel`;
+/** The export S2-R4 drags a linguistic entry on, when the UML client's rail offers none. */
+const LING_FILE = process.env.LING_FILE || `${homedir()}/jjodel-demo-exports/scene_2_DemoPetri.jjodel`;
 const VP_CLASS = 'UML class diagram';
 const VP_OBJECT = 'UML object diagram';
 const BOOK_CLOSURE = ['isbn', 'genre', 'title', 'year'];
@@ -115,6 +125,8 @@ async function emptyPanePoint(page: Page, prefer: 'left' | 'right' = 'left') {
 
 /** The editor-v2 menu's panels: the app has other `.context-menu` elements; this one follows its backdrop. */
 const MENU = '.context-menu-backdrop ~ .context-menu';
+/** The M1 rail of the active tab (PalettePanel). */
+const RAIL = '.dock-tabpane-active .editor-v2-palette--m1';
 /** The undo history as the reducer sees it: the interaction flag, both stacks, the last entry's age. */
 const history = (page: Page) => ev<Record<string, unknown>>(page, `
     const h = w.statehistory || {}; const u = h[w.DUser.current]; const last = u && u.undoable[u.undoable.length - 1];
@@ -166,6 +178,32 @@ async function openCascade(page: Page, at: { x: number; y: number }) {
     const labels = panels > 1 ? (await child.locator('.context-menu__item').allInnerTexts()).map((t) => t.trim()) : [];
     return { panels, parentLabel, labels, child };
 }
+
+/** A rail item dragged onto the pane at `at`: dragstart on the item writes its payload into one DataTransfer, dragover
+ *  and drop on the topmost element there read it, dragend closes the drag; the keys the item wrote. */
+const dragTo = (page: Page, item: string, text: string, at: { x: number; y: number }) => page.evaluate(({ item, text, at }) => {
+    const src = [...document.querySelectorAll(item)].find((e) => (e.textContent || '').trim() === text) as HTMLElement | undefined;
+    const el = document.elementFromPoint(at.x, at.y);
+    if (!src || !el) return null;
+    const dt = new DataTransfer();
+    src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    const types = [...dt.types];
+    el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+    el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+    src.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    return types;
+}, { item, text, at });
+
+/** The screen box of the node of vertex `id` in the active tab, `null` when it is not drawn. */
+const nodeScreenBox = (page: Page, id: string) => page.evaluate((vid) => {
+    const el = document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${vid}"]`) as HTMLElement | null;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { l: r.left, t: r.top, r: r.right, b: r.bottom, zoom: el.offsetWidth ? r.width / el.offsetWidth : 1 };
+}, id);
+/** The node's top-left is the point, within half a step of the canvas's 16 px grid (the snap S2-2p measures) and 1 px. */
+const topLeftAt = (b: { l: number; t: number; zoom: number } | null, p: { x: number; y: number }) =>
+    !!b && Math.abs(b.l - p.x) <= 8 * b.zoom + 1 && Math.abs(b.t - p.y) <= 8 * b.zoom + 1;
 
 /** Wait until the model holds a new instance of `classifier` with `slots` slots (or the limit passes). */
 async function waitInstance(page: Page, modelId: string, before: Set<string>, classifierId: string, slots: number) {
@@ -228,6 +266,30 @@ try {
     const menus0 = await menuCount(page);
     check('S2-0 a metamodel without ontoBindings: a right click on the pane opens no menu', bag0 === null && menus0 === 0, { bag0, menus0, at: p0 });
     if (menus0) await closeMenu(page);
+
+    // ── S2-R0: the rail with no bag: «Declare binding…» in Advanced only (R-OI-18, question 2) ─────────────────────
+    {
+        const setAdvanced = (on: boolean) => ev(page, `const j = await import('/src/joiner/index.ts'); j.SetRootFieldAction.new('advanced', a); w.advanced = a;
+            localStorage.setItem('jjodel.interfaceMode', a ? 'advanced' : 'basic'); return 1;`, on, 1200);
+        const advanced0 = await ev<boolean>(page, `return !!w.store.getState().advanced;`, undefined, 0);
+        await setAdvanced(true);
+        const advanced = { section: await page.locator(`${RAIL} .palette-onto`).count(), declare: await page.locator(`${RAIL} .palette-onto__declare`).count(), dialog: 0 };
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r0-rail-empty-advanced.png` });
+        if (advanced.declare) {
+            await page.locator(`${RAIL} .palette-onto__declare`).first().click();
+            await wait(page, 800);
+            advanced.dialog = await page.locator('.onto-binding-modal').count();
+            await page.keyboard.press('Escape');
+            await wait(page, 400);
+        }
+        await setAdvanced(false);
+        const basic = { section: await page.locator(`${RAIL} .palette-onto`).count(), instances: await page.locator(`${RAIL} .palette-instances`).count() };
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r0-rail-basic-no-binding.png` });
+        await setAdvanced(advanced0);
+        out.railEmpty = { advanced0, advanced, basic, dialogLeft: await page.locator('.onto-binding-modal').count() };
+        check('S2-R0 no bag: Advanced shows «Instances of» with «Declare binding…», which opens the binding dialog; Basic shows no section',
+            advanced.section === 1 && advanced.declare === 1 && advanced.dialog === 1 && basic.section === 0 && basic.instances === 1, out.railEmpty);
+    }
 
     // ── The binding, through mm.state ──────────────────────────────────────────────────────────────────────────────
     const written = await ev<{ ok: boolean; missing: string[]; raw: string | null }>(page, `
@@ -605,6 +667,125 @@ try {
             !!box && JSON.stringify(box.labels.map((l) => l.text)) === JSON.stringify([b4.inst?.name, 'Book'])
             && box.labels.every((l) => l.inside && !l.clipped) && box.rows.length === 4
             && box.rows.every((r) => r.inside && r.top >= headerBottom - 0.5), out.classNodeBox);
+    }
+
+    // ── S2-R: the «Instances of» rail (R-OI-18, P-2026-11-08-0212) ─────────────────────────────────────────────────
+    // Last but S2-7, so the instance names and the undo measures above stay as they were. The object diagram, fit.
+    {
+        const objectItems = `${RAIL} .palette-onto__item:not(.palette-onto__item--disabled)`;
+        const linkItems = `${RAIL} .palette-onto__item--disabled`;
+        const texts = async (sel: string) => (await page.locator(sel).allInnerTexts()).map((t) => t.trim());
+        const objects = await texts(objectItems);
+        const links = await page.locator(linkItems).evaluateAll((els) => els.map((e) => ({
+            text: (e.textContent || '').trim(), disabled: e.getAttribute('aria-disabled'), draggable: e.getAttribute('draggable'), title: e.getAttribute('title') })));
+        const gap = await page.evaluate((rail) => {
+            const a = document.querySelector(`${rail} .palette-instances`)?.getBoundingClientRect();
+            const b = document.querySelector(`${rail} .palette-onto`)?.getBoundingClientRect();
+            return a && b ? { instancesBottom: a.bottom, ontoTop: b.top, gap: b.top - a.bottom } : null;
+        }, RAIL);
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r1-rail-binding.png` });
+        const preL = await census(page, ids.model);
+        if (links.length) { await page.locator(linkItems).first().click({ force: true }); await wait(page, 1500); }
+        const postL = await census(page, ids.model);
+        out.rail = { objects, links, gap, linkClick: { objects: [preL.objects.length, postL.objects.length], undo: [preL.undo, postL.undo] } };
+        check('S2-Rl the rail lists Book, Library, Magazine, Member under the object record and the associations disabled; a link click creates nothing',
+            JSON.stringify(objects) === JSON.stringify(['Book', 'Library', 'Magazine', 'Member']) && links.length > 0
+            && links.every((l) => l.disabled === 'true' && l.draggable === null && l.title === 'A link is drawn between two instances (S4)')
+            && !!gap && gap.gap >= 0 && postL.objects.length === preL.objects.length && postL.undo === preL.undo, out.rail);
+
+        // S2-R1: a drag from the rail, dropped on an empty point of the pane.
+        const pR = await emptyPanePoint(page, 'right');
+        if (!pR) throw new Error('no empty pane point for the rail drop');
+        await page.mouse.click(pR.x, pR.y); await wait(page, 300);
+        await settle(page);
+        const pre1 = await census(page, ids.model);
+        const pre1Ids = new Set(pre1.objects.map((o) => o.id));
+        const types1 = await dragTo(page, objectItems, 'Magazine', pR);
+        const r1 = await waitInstance(page, ids.model, pre1Ids, ids.classes.Magazine, 3);
+        await settle(page);
+        const post1 = await census(page, ids.model);
+        const v1 = r1.inst ? (await verticesOf(page, r1.inst.id))[0]?.id : undefined;
+        const box1 = v1 ? await nodeScreenBox(page, v1) : null;
+        await page.evaluate((p) => { const d = document.createElement('div'); d.id = 'probe-cursor';
+            d.style.cssText = `position:fixed;left:${p.x - 4}px;top:${p.y - 4}px;width:8px;height:8px;border-radius:50%;background:#e11d48;z-index:99999;pointer-events:none`;
+            document.body.appendChild(d); }, pR);
+        await page.locator('.dock-tabpane-active .react-flow').first().screenshot({ path: `${OUT}/r2-canvas-after-drop.png` });
+        await page.evaluate(() => document.getElementById('probe-cursor')?.remove());
+        await page.keyboard.press('Meta+z');
+        await wait(page, 1200); await settle(page);
+        const undone1 = await census(page, ids.model);
+        out.railDrop = { at: pR, types: types1, name: r1.inst?.name, slots: (r1.inst?.f.slots ?? []).length, vertex: v1, box: box1,
+            undo: [pre1.undo, post1.undo, undone1.undo], objects: [pre1.objects.length, post1.objects.length, undone1.objects.length] };
+        check('S2-R1 a rail drag drops one Magazine instance, its top-left at the drop point (half a grid step) under the tab\'s layout, 1 undo entry, 1 Cmd+Z',
+            JSON.stringify(types1) === JSON.stringify(['application/jjodel-onto']) && !!r1.inst && topLeftAt(box1, pR)
+            && (post1.undo ?? 0) - (pre1.undo ?? 0) === 1
+            && undone1.objects.length === pre1.objects.length && undone1.objects.every((o) => pre1Ids.has(o.id)), out.railDrop);
+
+        // S2-R2: a click on a rail entry, at the centre of the canvas the overlay leaves visible.
+        await settle(page);
+        const pre2 = await census(page, ids.model);
+        const pre2Ids = new Set(pre2.objects.map((o) => o.id));
+        const centre = await ev<{ x: number; y: number } | null>(page, `
+            const c = await import('/src/components/editor-v2/utils/canvasCentre.ts'); const v = await import('/src/components/editor-v2/viewportInset.ts');
+            const el = document.querySelector('.dock-tabpane-active .editor-v2__canvas'); return el ? c.clientCentre(el.getBoundingClientRect(), v.getCanvasRightInset()) : null;`, undefined, 0);
+        await page.locator(objectItems, { hasText: /^Library$/ }).first().click();
+        const r2 = await waitInstance(page, ids.model, pre2Ids, ids.classes.Library, 1);
+        await settle(page);
+        const post2 = await census(page, ids.model);
+        const v2 = r2.inst ? (await verticesOf(page, r2.inst.id))[0]?.id : undefined;
+        const box2 = v2 ? await nodeScreenBox(page, v2) : null;
+        out.railClick = { centre, name: r2.inst?.name, vertex: v2, box: box2, undo: [pre2.undo, post2.undo] };
+        check('S2-R2 a rail click places one Library instance, its top-left at the visible centre of the canvas (half a grid step), 1 undo entry',
+            !!r2.inst && !!centre && topLeftAt(box2, centre) && (post2.undo ?? 0) - (pre2.undo ?? 0) === 1, out.railClick);
+
+        // S2-R3: a Class added to the model reaches the rail with the tab open.
+        await ev(page, `const ca = await import('/src/components/editor-v2/hooks/createAdapter.ts');
+            return ca.createInstance(a, 'Class', null, null, { name: 'Novel' });`, ids.model, 1500);
+        let objects3: string[] = [];
+        for (let i = 0; i < 20 && !objects3.includes('Novel'); i++) { await wait(page, 250); objects3 = await texts(objectItems); }
+        out.railNewClass = { objects: objects3 };
+        check('S2-R3 a Class added to the model appears in the rail without reopening the tab', objects3.includes('Novel'), out.railNewClass);
+
+        // S2-R4: the linguistic «Instances» drag still creates its object. The UML client offers no rootable class
+        // («No rootable classes found», measured on uml-s3b), so the drag runs on LING_FILE's model when this rail has none.
+        const lingItems = `${RAIL} .palette-instances__item`;
+        let ling = await texts(lingItems);
+        let lingModel = ids.model;
+        const lingUml = ling.length;
+        if (ling.length === 0 && existsSync(LING_FILE)) {
+            const imported2 = await ev<{ id: string | null }>(page, `
+                const api = await import('/src/api/persistance/projects.ts');
+                const list = () => JSON.parse(localStorage.getItem('projects') || '[]');
+                const before = list().length;
+                await api.ProjectsApi.importFromText(a);
+                for (let i = 0; i < 75 && list().length <= before; i++) await new Promise((r) => setTimeout(r, 200));
+                const l = list(); return { id: l.length > before ? l[l.length - 1].id : null };`, readFileSync(LING_FILE, 'utf8'), 0);
+            if (imported2.id) {
+                await page.goto(`${URL}/#/project?id=${imported2.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+                await wait(page, 9000);
+                await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+                if (!(await page.locator(RAIL).count())) {
+                    await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx'); const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
+                        await dm.default.open2(w.LPointerTargetable.fromPointer(m.id)); return 1;`, undefined, 8000);
+                }
+                lingModel = await ev<string>(page, `return w.LProject.getProject().models.find((x) => !x.isMetamodel).id;`, undefined, 0);
+                ling = await texts(lingItems);
+            }
+        }
+        const lingName = ling[0];
+        const p4 = await emptyPanePoint(page, 'left');
+        if (p4) { await page.mouse.click(p4.x, p4.y); await wait(page, 300); }
+        const pre4 = await census(page, lingModel);
+        const pre4Ids = new Set(pre4.objects.map((o) => o.id));
+        const types4 = p4 && lingName ? await dragTo(page, lingItems, lingName, p4) : null;
+        let made4: Obj[] = [];
+        for (let i = 0; i < 20 && made4.length === 0; i++) {
+            await wait(page, 250);
+            made4 = (await census(page, lingModel)).objects.filter((o) => !pre4Ids.has(o.id) && o.cls === lingName);
+        }
+        out.lingDrop = { umlItems: lingUml, file: lingModel === ids.model ? FILE : LING_FILE, items: ling, name: lingName, at: p4, types: types4, made: made4.map((o) => o.name) };
+        check('S2-R4 the linguistic «Instances» drag still creates one object of its metaclass (regression)',
+            !!types4 && types4.includes('application/reactflow') && !types4.includes('application/jjodel-onto') && made4.length === 1, out.lingDrop);
     }
 
     // ── S2-7 ──────────────────────────────────────────────────────────────────────────────────────────────────────
