@@ -387,3 +387,18 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-0329, crops read by the chat C-2026-11-06-2159 at 04:24)
 **Notes**: Zero conflicts, no union; merge tree c43096b29 equal to the merge-tree measure; 6 probes once each. Branch vitest not run in /Users/alfonso/jjodel-w-dcn-l45 (no node_modules; writing forbidden): 26 new tests counted at 1d2691776 (+6, +3, +4, +13), matched on the merge. check:docs reports 5/5, not the 4/4 of the prompt. Lane board not restarted (no change). App check by P-2026-11-08-0329, crops read by the chat 04:24.
 **Prompt document name**: 2026-11-08 04:30
+
+## 2026-11-08 — fix: DCN Simulation panel polish, findings of the L4.5 visual check (P-2026-11-08-1606)
+**Prompt**: `claude_2026-11-08_1606_prompt_dcn_l46_panel_polish.md`, lane full: the Tick reads `Tick`; the last step says the input label once; a DCN input is on only when admissible, the title says why; the chips title lists a multi-valued slot; invocation arguments through `withInputs`; gates, mutants, one probe run.
+**Files touched**: 1af6fc775, fe041980c, 040f431ee `frontend/src/model/simulation/dcn/dcnPanelText.ts` and its test; 69d4a4da7 the same, `frontend/src/components/editor-v2/sim/simBridge.ts`, `SimulationPanel.tsx`, `__tests__/simBridge.test.ts`; 4a7b147c6 `sim/simRunState.ts`, `__tests__/simBridge.test.ts`; 4bf647cf4 `frontend/scripts/probe/dcn-drone-run.ts`; docs commits: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 03:29 (the findings in its log entry)
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no (nine files, all in the DOVE of the prompt: dcnPanelText.ts and test, simBridge.ts and test, SimulationPanel.tsx, simRunState.ts, the probe, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops 1-reset, 3-takeoff in ~/.jjodel-lanes/P-2026-11-08-1606/crops/ read by the lane; chat to read them)
+**Notes**: Gates: typecheck, typecheck:scripts, build, check:scripts exit 0; vitest 3 known import reds, 15441 passed. Bench 19/20 killed; survivor: the panel `on` line, held by probe L46-1/2. Probe 7/7, seed 4242, 20 Ticks to Ready. Item 5 measured failing; fixed for `self.[rate]`, the R-SIM-88 read form. Item 4 uses the DCN links, since σ holds the first target. `dcnClassificationLine` of the prompt is `dcnMarkingLine`. Causa: findings seen only in the L4.5 visual check.
+**Prompt document name**: 2026-11-08 16:06
+
+**Ticket** (medium): a bare argument name in a DCN body (`self.chargeRate := rate`) still halts with `'rate' does not exist`: the evaluation context is built in `dcnStep.ts` (`actions`), outside this lane's scope; `self.[rate]` works. A multi-valued attribute slot (not a link) still shows its first value: σ holds one and `dcnCompile.ts` was out of scope. A DCN argument named as a slot of its instance is not readable through `self.[...]` (σ is kept).
