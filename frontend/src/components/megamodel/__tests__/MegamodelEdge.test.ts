@@ -1,5 +1,86 @@
 import { describe, it, expect } from 'vitest'
-import { computeAdaptiveSides, NODE_W, NODE_H, type MmNode, type Side } from '../MegamodelEdge'
+import {
+    computeAdaptiveSides, edgeLabelOf, edgeTitleOf, routePoints, verticalTrackOffsets, EDGE_STYLES, NODE_W, NODE_H,
+    type MmNode, type RouteEnds, type Side,
+} from '../MegamodelEdge'
+
+describe('edgeLabelOf and edgeTitleOf', () => {
+    it('an unmarked edge keeps the label of its kind and has no tooltip', () => {
+        expect(edgeLabelOf('instanceInputOf')).toBe(EDGE_STYLES.instanceInputOf.label)
+        expect(edgeLabelOf('generatedBy', { timestamp: 5 })).toBe('generatedBy')
+        expect(edgeTitleOf('instanceInputOf')).toBeUndefined()
+    })
+
+    it('an included edge reads `included`, the full text goes in the tooltip', () => {
+        expect(edgeLabelOf('instanceInputOf', { included: true })).toBe('included')
+        expect(edgeTitleOf('instanceInputOf', { included: true })).toBe('instanceInputOf (included)')
+    })
+
+    it('the pill of an included edge fits the column gap', () => {
+        expect(edgeLabelOf('instanceInputOf', { included: true }).length * 6.4 + 16).toBeLessThan(120)
+    })
+})
+
+describe('verticalTrackOffsets', () => {
+    const route = (fromY: number, toY: number, fromX = -120, toX = 0): RouteEnds => ({
+        p1: { x: fromX, y: fromY }, exitSide: 'right', p2: { x: toX, y: toY }, entrySide: 'left',
+    })
+    const trackX = (r: RouteEnds, offset: number) => routePoints(r.p1, r.exitSide, r.p2, r.entrySide, offset)[1].x
+
+    it('a route alone in its gap keeps the x it has today', () => {
+        const r = route(10, 90)
+        const offsets = verticalTrackOffsets([r])
+        expect(offsets).toEqual([0])
+        expect(trackX(r, offsets[0])).toBe(routePoints(r.p1, r.exitSide, r.p2, r.entrySide)[1].x)
+    })
+
+    it('two routes in one gap get tracks 8 apart, centred on the x of today', () => {
+        const routes = [route(10, 90), route(200, 300)]
+        const xs = verticalTrackOffsets(routes).map((o, i) => trackX(routes[i], o)).sort((a, b) => a - b)
+        expect(xs).toEqual([-64, -56])
+    })
+
+    it('three routes in one gap get tracks 8 apart, centred on the x of today', () => {
+        const routes = [route(10, 90), route(200, 300), route(400, 500)]
+        const xs = verticalTrackOffsets(routes).map((o, i) => trackX(routes[i], o)).sort((a, b) => a - b)
+        expect(xs).toEqual([-68, -60, -52])
+    })
+
+    it('routes in different gaps do not take tracks from each other', () => {
+        expect(verticalTrackOffsets([route(10, 90), route(10, 90, 200, 320)])).toEqual([0, 0])
+    })
+
+    it('leaves a route alone when it has no vertical segment between horizontal ports', () => {
+        const down: RouteEnds = { p1: { x: 0, y: 0 }, exitSide: 'bottom', p2: { x: 0, y: 100 }, entrySide: 'top' }
+        expect(verticalTrackOffsets([down, route(10, 90, -60, 60)])).toEqual([0, 0])
+    })
+
+    it('on the ends measured in the browser, the two overlapping tracks come apart', () => {
+        const routes = [route(235, 307), route(405, 333), route(575, 359)]
+        expect(verticalTrackOffsets(routes)).toEqual([-8, 0, 8])
+    })
+
+    it('orders two rising routes so that they do not cross, whatever the input order', () => {
+        // Left of the other, the lower route would cross it twice
+        const lower = route(575, 359)
+        const upper = route(405, 333)
+        expect(verticalTrackOffsets([lower, upper])).toEqual([4, -4])
+        expect(verticalTrackOffsets([upper, lower])).toEqual([-4, 4])
+    })
+
+    it('orders two falling routes so that they do not cross, whatever the input order', () => {
+        // The route starting lower takes the left track
+        const upper = route(100, 300)
+        const lower = route(200, 400)
+        expect(verticalTrackOffsets([upper, lower])).toEqual([4, -4])
+        expect(verticalTrackOffsets([lower, upper])).toEqual([-4, 4])
+    })
+
+    it('reads a route drawn right to left by its left end', () => {
+        const rtl: RouteEnds = { p1: { x: 0, y: 300 }, exitSide: 'left', p2: { x: -120, y: 100 }, entrySide: 'right' }
+        expect(verticalTrackOffsets([rtl, route(200, 400)])).toEqual([4, -4])
+    })
+})
 
 // ============================================================
 // computeAdaptiveSides — geometry-aware anchor side selection
