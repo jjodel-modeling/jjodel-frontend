@@ -39,7 +39,10 @@
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-oi-s2 frontend/scripts/probe/onto-s2-instantiate.ts \
  *         --port 3087 --id P-2026-10-21-0100
+ *         S2-L*: the level of the tab's viewpoint (R-OI-19, R-OI-20), set through the control of the viewpoint properties.
  * Env:  ONTO_OUT   output directory (default docs/discovery/assets/onto-s2)
+ *       ONTO_CROPS the crops of S2-L* (default ONTO_OUT)
+ *       ONTO_OBJECT_LEVEL  written on the object viewpoint before the suite, which then runs under it; S2-L* is skipped
  *       UML_FILE   the exported project (default ~/jjodel-demo-exports/uml/uml-class-object.jjodel)
  *       LING_FILE  the export of S2-R4's linguistic drag (default ~/jjodel-demo-exports/scene_2_DemoPetri.jjodel)
  */
@@ -64,6 +67,9 @@ const FILE = process.env.UML_FILE || `${homedir()}/jjodel-demo-exports/uml/uml-c
 const LING_FILE = process.env.LING_FILE || `${homedir()}/jjodel-demo-exports/scene_2_DemoPetri.jjodel`;
 const VP_CLASS = 'UML class diagram';
 const VP_OBJECT = 'UML object diagram';
+const OBJECT_LEVEL = process.env.ONTO_OBJECT_LEVEL;
+const CROPS = (process.env.ONTO_CROPS || OUT).replace(/\/$/, '');
+mkdirSync(CROPS, { recursive: true });
 const BOOK_CLOSURE = ['isbn', 'genre', 'title', 'year'];
 
 let pass = 0; let fail = 0;
@@ -255,6 +261,16 @@ try {
         for (const id of q) { const o = idl[id]; if (o && ['Class', 'Enumeration', 'PrimitiveType', 'Association'].includes(idl[o.instanceof] && idl[o.instanceof].name)) classes[o.name] = id; }
         return { model: m.id, mm: idl[m.id].instanceof, classes };`, undefined, 0);
     out.ids = ids;
+    const vpIds = await ev<Record<string, string>>(page, `const out = {};
+        for (const r of Object.values(w.store.getState().idlookup)) if (r && r.className === 'DViewPoint' && a.includes(r.name)) out[r.name] = r.id;
+        return out;`, [VP_CLASS, VP_OBJECT], 0);
+    out.vpIds = vpIds;
+    if (OBJECT_LEVEL) {
+        const written = await ev<unknown>(page, `w.LPointerTargetable.fromPointer(a.vp).state = { ontoLevel: a.level };
+            await new Promise((r) => setTimeout(r, 600)); return w.store.getState().idlookup[a.vp]._state.ontoLevel;`, { vp: vpIds[VP_OBJECT], level: OBJECT_LEVEL }, 0);
+        out.objectLevel = written;
+        if (written !== OBJECT_LEVEL) throw new Error(`the object viewpoint's level did not land: ${String(written)}`);
+    }
 
     // ── S2-0: no binding, no menu ──────────────────────────────────────────────────────────────────────────────────
     const bag0 = await ev<unknown>(page, `const s = w.store.getState().idlookup[a]._state; return s ? s.ontoBindings ?? null : null;`, ids.mm, 0);
@@ -745,6 +761,137 @@ try {
         for (let i = 0; i < 20 && !objects3.includes('Novel'); i++) { await wait(page, 250); objects3 = await texts(objectItems); }
         out.railNewClass = { objects: objects3 };
         check('S2-R3 a Class added to the model appears in the rail without reopening the tab', objects3.includes('Novel'), out.railNewClass);
+
+        // S2-L: the level of the tab's viewpoint (R-OI-19, R-OI-20), set through its control. Before S2-R4, which leaves
+        // this project; not under ONTO_OBJECT_LEVEL, whose run is the suite itself.
+        if (!OBJECT_LEVEL) {
+            const LEVEL = '.wp-onto-level-select';
+            const count = (sel: string) => page.locator(sel).count();
+            const classVp = vpIds[VP_CLASS]; const objectVp = vpIds[VP_OBJECT];
+            const stateOf = (vp: string) => ev<Record<string, unknown> | null>(page, `return w.store.getState().idlookup[a]._state ?? null;`, vp, 0);
+            const levelOf = async (vp: string) => (await stateOf(vp))?.ontoLevel ?? null;
+            const setAdvancedL = (on: boolean) => ev(page, `const j = await import('/src/joiner/index.ts'); j.SetRootFieldAction.new('advanced', a); w.advanced = a;
+                localStorage.setItem('jjodel.interfaceMode', a ? 'advanced' : 'basic'); return 1;`, on, 1200);
+            // The suite leaves the side panel closed; the viewpoint's properties live in it, so it is reopened as a user would.
+            const reopenRail = async () => {
+                if (await count('.properties-with-tree-view')) return;
+                await page.locator('button[aria-label="Show the side panel"]').first().click();
+                await wait(page, 600);
+            };
+            const openVp = async (vp: string) => {
+                await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx');
+                dm.default.openViewpoint(w.LPointerTargetable.fromPointer(a)); return 1;`, vp, 1500);
+                await reopenRail();
+            };
+            const choose = async (vp: string, label: string) => {
+                await openVp(vp);
+                await page.locator(`${LEVEL} .jj-select__control`).first().click();
+                await wait(page, 300);
+                await page.locator('.jj-select__option', { hasText: new RegExp(`^${label}$`) }).first().click();
+                await wait(page, 300);
+                return (await settle(page)).user as number;
+            };
+            const ontoDrop = (payload: string, at: { x: number; y: number }) => page.evaluate(({ payload, at }) => {
+                const el = document.elementFromPoint(at.x, at.y);
+                if (!el) return false;
+                const dt = new DataTransfer();
+                dt.setData('application/jjodel-onto', payload);
+                el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+                el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+                return true;
+            }, { payload, at });
+            const bookPayload = JSON.stringify({ record: 'object', classifier: ids.classes.Book });
+            const advancedL = await ev<boolean>(page, `return !!w.store.getState().advanced;`, undefined, 0);
+
+            const panelDump = () => page.evaluate(() => {
+                const b = document.querySelector('.properties-panel-body') as HTMLElement | null; const s = (window as any).store.getState();
+                return { editor: document.body.getAttribute('data-editor-type'), last: s._lastSelected, advanced: s.advanced,
+                    shell: document.querySelectorAll('.properties-with-tree-view').length, wp: document.querySelectorAll('.workbench-properties').length,
+                    text: b ? b.innerText.replace(/\s+/g, ' ').slice(0, 120) : null };
+            });
+            await setAdvancedL(false);
+            await openVp(classVp);
+            const panel = await panelDump();
+            const basic = { panel: await count('.workbench-properties'), control: await count(LEVEL) };
+            await setAdvancedL(true);
+            await wait(page, 500);
+            const inAdvanced = await count(LEVEL);
+            out.levelControl = { basic, inAdvanced, panel, errors: errors.slice(0, 3) };
+            check('S2-L0 the level control shows in Advanced only, in the viewpoint properties', basic.panel > 0 && basic.control === 0 && inAdvanced === 1, out.levelControl);
+
+            const state0 = await stateOf(classVp);
+            const u0 = (await settle(page)).user as number;
+            const u1 = await choose(classVp, 'Classes');
+            const l1 = await levelOf(classVp);
+            await page.locator('.workbench-properties').first().screenshot({ path: `${CROPS}/control.png` });
+            check('S2-L1 the control writes _state.ontoLevel = class, one undo entry', l1 === 'class' && u1 - u0 === 1, { l1, u0, u1, state0 });
+            const u2 = await choose(classVp, 'Classes');
+            check('S2-L2 choosing the current level writes nothing', u2 === u1 && (await levelOf(classVp)) === 'class', { u1, u2 });
+
+            const pu = (await emptyPanePoint(page, 'left'))!;
+            await page.mouse.click(pu.x, pu.y);
+            await wait(page, 300);
+            const u3 = (await settle(page)).user as number;
+            await page.keyboard.press('Meta+z');
+            await wait(page, 700);
+            const u4 = (await settle(page)).user as number;
+            const state1 = await stateOf(classVp);
+            out.levelUndo = { u3, u4, state0, state1 };
+            check('S2-L3 Cmd+Z undoes the control: one entry fewer, the viewpoint\'s _state as before it',
+                u4 === u3 - 1 && JSON.stringify(state1 ?? {}) === JSON.stringify(state0 ?? {}), out.levelUndo);
+
+            await choose(classVp, 'Classes');
+            const uo0 = (await settle(page)).user as number;
+            const uo1 = await choose(objectVp, 'Instances');
+            const levels = { class: await levelOf(classVp), object: await levelOf(objectVp) };
+            out.levels = { ...levels, uo0, uo1 };
+            check('S2-L4 the object viewpoint is set to instance, one undo entry, the class viewpoint keeps its level',
+                levels.class === 'class' && levels.object === 'instance' && uo1 - uo0 === 1, out.levels);
+
+            // The class tab: no instance surface.
+            await pickViewpoint(page, VP_CLASS);
+            await wait(page, SETTLE_MS);
+            const classRail = { rail: await count(RAIL), section: await count(`${RAIL} .palette-onto`), declare: await count(`${RAIL} .palette-onto__declare`) };
+            await page.locator(RAIL).first().screenshot({ path: `${CROPS}/class-rail.png` });
+            check('S2-L5 class tab: the rail is drawn with no «Instances of» section and no «Declare binding…»', classRail.rail > 0 && classRail.section === 0 && classRail.declare === 0, classRail);
+            const pc = (await emptyPanePoint(page, 'left'))!;
+            await page.mouse.click(pc.x, pc.y);
+            await wait(page, 200);
+            await page.mouse.click(pc.x, pc.y, { button: 'right' });
+            await wait(page, 500);
+            const classMenus = await menuCount(page);
+            await page.locator('.dock-tabpane-active .editor-v2').first().screenshot({ path: `${CROPS}/class-pane-rightclick.png` });
+            check('S2-L6 class tab: a right click on the empty pane opens no menu', classMenus === 0, { classMenus, at: pc });
+            if (classMenus) await closeMenu(page);
+            const bookClass = (await readNodes(page)).find((n) => n.name === 'Book');
+            const classItems = bookClass ? await rightClickNode(bookClass.id) : [];
+            await closeMenu(page);
+            check('S2-L7 class tab: the Book node\'s menu opens, without «New instance»', classItems.length > 0 && !classItems.includes('New instance'), { book: bookClass?.id, classItems });
+            const pre = await census(page, ids.model);
+            const dropped = await ontoDrop(bookPayload, pc);
+            await wait(page, 1500);
+            const post = await settle(page);
+            const after = await census(page, ids.model);
+            out.levelDrop = { dropped, objects: [pre.objects.length, after.objects.length], idl: [pre.idl, after.idl], undo: [pre.undo, post.user] };
+            check('S2-L8 class tab: a synthetic «Instances of» drop writes nothing', dropped && after.objects.length === pre.objects.length && after.idl === pre.idl && post.user === pre.undo, out.levelDrop);
+
+            // The object tab, at instance: the surfaces stay, and the same drop is the control of S2-L8.
+            await pickViewpoint(page, VP_OBJECT);
+            await wait(page, SETTLE_MS);
+            const objectSection = await count(`${RAIL} .palette-onto`);
+            await page.locator(RAIL).first().screenshot({ path: `${CROPS}/object-rail.png` });
+            const po = (await emptyPanePoint(page, 'left'))!;
+            const cascade = await openCascade(page, po);
+            await page.locator('.dock-tabpane-active .editor-v2').first().screenshot({ path: `${CROPS}/object-pane-rightclick.png` });
+            check('S2-L9 object tab: «Instances of» and the cascade «New instance of ▸» with Book', objectSection === 1 && cascade.parentLabel === 'New instance of' && cascade.labels.includes('Book'),
+                { objectSection, parent: cascade.parentLabel, labels: cascade.labels });
+            await closeMenu(page);
+            const preIds = new Set((await census(page, ids.model)).objects.map((o) => o.id));
+            await ontoDrop(bookPayload, po);
+            const madeL = await waitInstance(page, ids.model, preIds, ids.classes.Book, 4);
+            check('S2-L10 object tab: the same drop creates one Book instance (the control of S2-L8)', !!madeL.inst, { inst: madeL.inst?.id ?? null });
+            await setAdvancedL(advancedL);
+        }
 
         // S2-R4: the linguistic «Instances» drag still creates its object. The UML client offers no rootable class
         // («No rootable classes found», measured on uml-s3b), so the drag runs on LING_FILE's model when this rail has none.
