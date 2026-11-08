@@ -428,3 +428,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: New module with test: dcnNodeStateOf adds nameOf (DcnEntry holds only the monitor id). classify covers all instances: WeakMap per state. Bench 19/20; survivor is the unreachable guard on an absent slot (R-DCN-3). Typecheck 0; vitest 15456 passed, 3 known import reds, irSelectionRing load red (hook timeout), alone 5/5; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after. A viewpoint with no class keeps its empty row.
 **Prompt document name**: 2026-11-08 18:29
+
+## 2026-11-08 — feat: DCN run card data reachable from the canvas (P-2026-11-08-1905)
+**Prompt**: `claude_2026-11-08_1905_prompt_dcn_s5_2_registry.md`, lane full, slice 5 lane 2: the DCN run registry moves to a module simRunState can read, `getSimDcnNode(objectId)` on the shown step cached per record, tests red first, gates, bench of at least 5 mutants. No UI.
+**Files touched**: b109e1479 `frontend/src/components/editor-v2/sim/simDcnRuns.ts` (new), `sim/simBridge.ts`, `sim/simRunState.ts`, `sim/__tests__/simBridge.test.ts`; docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Registry in simDcnRuns.ts; it gains nameOf (the lookup at Reset), since simRunState has no lookup. Tests in simBridge.test.ts on real startRun and presses. Bench 12/12. Typecheck 0; vitest 15464 passed, 3 known import reds, tolerant.test.ts load red (timing, 91 vs 50 ms), alone 64/64; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after.
+**Prompt document name**: 2026-11-08 19:05

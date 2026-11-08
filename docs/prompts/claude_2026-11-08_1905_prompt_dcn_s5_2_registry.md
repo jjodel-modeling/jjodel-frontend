@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1905
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b109e1479
 Lane: full (run-state plumbing; no UI)
 Depends: P-2026-11-08-1829 (dcnCanvasState.ts on dcn-s5); discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §A (Gap, Path) and §D lane 2
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
