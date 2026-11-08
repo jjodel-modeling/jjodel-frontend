@@ -1587,3 +1587,16 @@ Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closur
 **Prompt document name**: 2026-11-08 12:30
 
 **Ticket** (`regress.sh`, found in P-2026-11-08-1230): the print stage compares 0 of 42 files as identical, while all 21 Briefs pass the object-by-object comparison. No printed file was diffed and the base commit was not run, so whether this lane or the references are responsible is open. The lane changes no file under `frontend/src/codegen`.
+
+## 2026-11-08 — merge: jjtl-include-pills into alfonso-frontend-jjtl (P-2026-11-08-1359)
+**Prompt**: `claude_2026-11-08_1359_prompt_merge_jjtl-include-pills.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-include-pills` at `77c105333` into `alfonso-frontend-jjtl`, merge base `34a511ffb`, 11 commits on the branch side.
+**Files touched**: merge `cc06d9f6d`: 12 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-08_jjtl_include_pills.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1200_prompt_jjtl_include_pills.md`, `docs/prompts/claude_2026-11-08_1230_prompt_jjtl_include_pills_close.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/components/ExecuteTransformationDialog.tsx`, `frontend/src/jjtl/components/IncludedModelsCombobox.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `cc06d9f6d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15431 tests in 585 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Include pills: multi-value select with pills, crops checked by the chat
+**Notes**: Rollback tag `pre-jjtl-include-pills` on `fb108b065` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1359/result.json`.
+**Prompt document name**: 2026-11-08 13:59
