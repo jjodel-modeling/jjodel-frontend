@@ -320,3 +320,18 @@ active log is not touched by this lane.
 **Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok to the 0852 and 1003 crops, taken before the merge; no probe rerun on `7b4a75718`, the trunk merge lane reruns them.
 **Notes**: Vitest took three runs: at load 113-146 `tolerant.test.ts` broke its wall-clock guards (1726 and 1086 ms against 1000; 60 against 50 ms) and `irCollapsedRender` a hook timeout; both files green alone twice, run 3 green. `frontend/node_modules` absent: temporary symlink to the shared one (P14), removed after the gates. A hook run overran the tool timeout, stopped, rerun in the foreground. check:docs is 5/5 here, the prompt said 4/4.
 **Prompt document name**: 2026-11-08 11:56
+
+## 2026-11-08 — merge: multi-tab-l6 into alfonso-frontend-jjtl (P-2026-11-08-1247)
+**Prompt**: `claude_2026-11-08_1247_prompt_merge_multi-tab-l6.md`, lane full (merge, RC-14): `multi-tab-l6` at `76f051677` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `34a511ffb`, 11 branch commits, zero conflicts measured.
+**Files touched**: merge `bc4b137cd`: the 21 files of the branch side (`git diff --name-only bc4b137cd^1 bc4b137cd`), none by hand, no union resolution (tree `64b0f76b9` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on `bc4b137cd`: typecheck (0 `error TS`) and typecheck:scripts exit 0; build exit 0; check:docs 5/5; check:agents, check:scripts and check:addonly PASS; hooks 967/967 (967 + 0); vitest 584 files, 15381 passed and 3 skipped, 15384 total as stated before the merge (trunk tip 15346 + 38), 0 failed tests, the 3 files red at import. The GO cites no probe rerun on the merge commit.
+**Out-of-scope changes**: no — above five files only as the merge the prompt names (RC-11), listed by the command in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok of 2026-11-08 11:56 to the 0852 and 1003 crops, the app checks 0852 and 1003 on the same code and the merge gates; this lane ran no probe on `bc4b137cd`.
+**Notes**: Probes 5/5 once. Files on both sides: none; governance files on the branch: none. The 38 new tests counted statically at 76f051677 (5 new files), confirmed by the merge total: vitest cannot start in the branch tree (no node_modules), not written there. Trunk-tip vitest at load 115: 4 wall-clock reds in 3 codegen/textual files, 176/176 alone, absent on the merge. A trunk-tip hook run overran the tool timeout, finished in background. check:docs 5/5, not 4/4. Lane board, 3001 not restarted.
+**Prompt document name**: 2026-11-08 12:47
+
+**Ticket** (merge prompt, step 6): the `check:addonly` rollback names `3d0cc984d` as the pre-merge tip, but the tip before the merge was `af51a3094`, the prompt's own commit. Not triggered here; run as written it would also drop the prompt commit.
