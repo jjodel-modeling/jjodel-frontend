@@ -5,14 +5,15 @@
  *   - the new model `drone (snapshot step 24)`, its objects and links equal the source's by containment path, name and
  *     classifier, σ on the slots of dji; the source model byte-equal; `runSignature` unchanged;
  *   - one undo removes the new model and nothing else;
- *   - written again, opened: crop 1-snapshot-open, the rows of dji against the 200x120 of Step 2bis; a Reset on the new
+ *   - written again, opened: the vertices keep the source's layout (P-2026-11-08-2320), no node over dji, crop
+ *     1-snapshot-open, the rows of dji against the node; a Reset on the new
  *     model classifies dji as Flying;
  *   - saved and reloaded: the snapshot is still there with its σ (LIR smoke: existing project opens, save and reopen).
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-dcn-s5 frontend/scripts/probe/dcn-snapshot.ts \
  *         --port 3157 --id P-2026-11-08-2216
  * Env:  DCN_FILE  the export (default ~/jjodel-demo-exports/dcn/dcn-drone-objects.jjodel)
- *       DCN_CROPS the crops directory (default ~/.jjodel-lanes/P-2026-11-08-2216/crops)
+ *       DCN_CROPS the crops directory (default ~/.jjodel-lanes/P-2026-11-08-2320/crops)
  *       DCN_SEED  the seed of Reset (default 4242)
  */
 import { chromium, type Page } from '@playwright/test';
@@ -22,7 +23,7 @@ import { seed, setTheme, SETTLE_MS } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3157/').replace(/\/$/, '');
 const FILE = process.env.DCN_FILE || `${homedir()}/jjodel-demo-exports/dcn/dcn-drone-objects.jjodel`;
-const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-2216/crops`).replace(/\/$/, '');
+const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-2320/crops`).replace(/\/$/, '');
 const SEED = Number(process.env.DCN_SEED || 4242);
 const MAX_TICKS = 20;
 const SNAPSHOT_NAME = 'drone (snapshot step 24)';
@@ -182,6 +183,53 @@ const openModel = (page: Page, mid: string) => ev<boolean>(page, `
     const dm = await import('/src/components/abstract/DockManager.tsx');
     await dm.default.open2(w.LPointerTargetable.fromPointer(a)); return true;`, mid, 8000);
 
+// The edges of an opened model, "src→tgt" by object name: stored in its v2-flow graph and drawn in the active tab. nodes is the control on the DOM query, unparsed the edges with no readable ends.
+type EdgeRead = { nodes: number; drawn: string[]; unparsed: number; stored: string[]; vertexEnds: number };
+const edgesOf = (page: Page, mid: string) => ev<EdgeRead>(page, `
+    const l = w.store.getState().idlookup;
+    const end = (v) => l[l[v]?.model]?.name ?? '?';
+    const g = Object.values(l).find((d) => d && d.className === 'DGraph' && d.model === a && d.graphStyle === 'v2-flow');
+    const mine = (g?.subElements ?? []).map((x) => l[x]).filter((x) => x && String(x.className).includes('Edge'));
+    const visible = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+    const shown = [...document.querySelectorAll('.dock-tabpane-active .react-flow__edge')].filter(visible);
+    const ends = shown.map((e) => (e.getAttribute('aria-label') ?? '').match(/^Edge from (\\S+) to (\\S+)$/)).filter(Boolean);
+    return {
+        nodes: [...document.querySelectorAll('.dock-tabpane-active .react-flow__node')].filter(visible).length,
+        drawn: ends.map((m) => end(m[1]) + '→' + end(m[2])).sort(),
+        unparsed: shown.length - ends.length,
+        stored: mine.map((e) => end(e.start) + '→' + end(e.end)).sort(),
+        vertexEnds: mine.filter((e) => l[e.start]?.className === 'DVertex' && l[e.end]?.className === 'DVertex').length,
+    };`, mid, 0);
+
+// The vertices of source and snapshot in their v2-flow graph, paired by containment, name and classifier: what differs in the seed or in the records.
+type LayoutDiff = { pairs: number; sourceObjects: number; snapshotObjects: number; withRecords: number; noSnapshotVertex: string[]; differ: Array<{ path: string; source: unknown; snapshot: unknown }> };
+const layoutDiff = (page: Page, sourceId: string, snapshotId: string) => ev<LayoutDiff>(page, `
+    const { collectModelObjectIds } = await import('${BRIDGE}');
+    const l = w.store.getState().idlookup;
+    const nameOf = (x) => l[x]?.name ?? '?';
+    const pathOf = (id) => {
+        const o = l[id]; const father = l[o.father]; const self = nameOf(o.instanceof) + ':' + (o.name ?? '');
+        return father?.className === 'DValue' ? pathOf(father.father) + '/' + nameOf(father.instanceof) + '[' + (father.values ?? []).indexOf(id) + ']' + self : '/' + self;
+    };
+    const read = (mid) => {
+        const g = Object.values(l).find((d) => d && d.className === 'DGraph' && d.model === mid && d.graphStyle === 'v2-flow');
+        const byObject = new Map((g?.subElements ?? []).map((x) => l[x]).filter((x) => x && x.className === 'DVertex').map((x) => [x.model, x]));
+        return new Map(collectModelObjectIds(l, mid).map((id) => [pathOf(id), byObject.get(id)]));
+    };
+    const box = (v) => ({ x: v.x, y: v.y, w: v.w, h: v.h, isResized: !!v.isResized, records: v.layoutByViewpoint ?? {} });
+    const sorted = (b) => JSON.stringify({ ...b, records: Object.fromEntries(Object.entries(b.records).sort()) });
+    const src = read(a.s); const snap = read(a.t);
+    const noSnapshotVertex = []; const differ = []; let pairs = 0; let withRecords = 0;
+    for (const [path, v] of src) {
+        if (!v) continue;
+        const t = snap.get(path);
+        if (!t) { noSnapshotVertex.push(path); continue; }
+        pairs++;
+        if (Object.keys(v.layoutByViewpoint ?? {}).length > 0) withRecords++;
+        if (sorted(box(v)) !== sorted(box(t))) differ.push({ path, source: box(v), snapshot: box(t) });
+    }
+    return { pairs, sourceObjects: src.size, snapshotObjects: snap.size, withRecords, noSnapshotVertex: noSnapshotVertex.slice(0, 8), differ: differ.slice(0, 6) };`, { s: sourceId, t: snapshotId }, 0);
+
 // The node of `dji` on the visible canvas, by vertex or object id: its box, what is painted below its bottom edge, what scrolls inside it.
 type NodeBox = {
     count: number; rendered: number; left: number; top: number; width: number; height: number; text: string; zoom: string | null;
@@ -307,6 +355,10 @@ try {
     check('SN-8 the source model is byte-equal after the write', bytes1 === bytes0, { before: bytes0.length, after: bytes1.length });
     check('SN-9 runSignature is unchanged and still the run\'s baseline', sig1.computed === sig0.computed && sig1.computed === sig1.stored, { computedSame: sig1.computed === sig0.computed, baseline: sig1.computed === sig1.stored, config: sig1.config });
 
+    const layout1 = await layoutDiff(page, model.id, w1.modelId);
+    meas('layout against the source, after the write', layout1);
+    check('SN-21 every vertex of the snapshot has the source\'s position, size and records', layout1.pairs === diff.total && layout1.withRecords > 0 && layout1.noSnapshotVertex.length === 0 && layout1.differ.length === 0, { pairs: layout1.pairs, withRecords: layout1.withRecords, noVertex: layout1.noSnapshotVertex.length, differ: layout1.differ.length });
+
     // One undo.
     await page.evaluate(`document.querySelector('.editor-v2').focus()`);
     await wait(page, 400);
@@ -321,13 +373,16 @@ try {
     check('SN-11 one undo removes the new model and nothing else', store2.models.join() === store0.models.join() && store2.graphs === store0.graphs && added.length === 0 && removed.length === 0, { models: store2.names, added: added.length, removed: removed.length });
     check('SN-12 the source model is byte-equal after the undo', (await sourceBytes(page, model.id)) === bytes0, { bytes: bytes0.length });
 
-    // Written again, opened: the layout of Step 2bis, then a Reset on the snapshot.
+    // Written again, opened: the source's layout, then a Reset on the snapshot.
     const w2 = await writeSnapshot(page, model.id);
     meas('second write', w2);
     check('SN-13 after the undo the name is free again', w2.ok && w2.name === SNAPSHOT_NAME, { ok: w2.ok, name: w2.name, problems: w2.problems });
     if (!w2.modelId) throw new Error('no second model written');
     await page.setViewportSize({ width: 3000, height: 2000 });
     await wait(page, 600);
+    await openModel(page, model.id);
+    await wait(page, SETTLE_MS * 2);
+    const sourceEdges = await edgesOf(page, model.id);
     await openModel(page, w2.modelId);
     await wait(page, SETTLE_MS * 2);
     const djiIds = await ev<string[]>(page, `
@@ -342,13 +397,28 @@ try {
         const l = w.store.getState().idlookup; const ids = new Set(collectModelObjectIds(l, a));
         return { objects: ids.size, vertices: Object.values(l).filter((d) => d && d.className === 'DVertex' && ids.has(d.model)).length };`, w2.modelId, 0);
     meas('vertices of the snapshot', vertices);
+    const layout2 = await layoutDiff(page, model.id, w2.modelId);
+    meas('layout against the source, opened', layout2);
+    check('SN-22 opening the snapshot moves no vertex: same count, position, size and records', vertices.vertices === vertices.objects && layout2.pairs === diff.total && layout2.differ.length === 0, { vertices, pairs: layout2.pairs, differ: layout2.differ.length });
+    const snapshotEdges = await edgesOf(page, w2.modelId);
+    const onlyIn = (a: string[], b: string[]) => { const rest = [...b]; return a.filter((e) => { const i = rest.indexOf(e); if (i < 0) return true; rest.splice(i, 1); return false; }); };
+    const edgeDiff = { onlySource: onlyIn(sourceEdges.drawn, snapshotEdges.drawn), onlySnapshot: onlyIn(snapshotEdges.drawn, sourceEdges.drawn) };
+    const edgeCounts = (e: EdgeRead) => ({ nodes: e.nodes, drawn: e.drawn.length, unparsed: e.unparsed, stored: e.stored.length, vertexEnds: e.vertexEnds });
+    meas('edges against the source, opened', { source: edgeCounts(sourceEdges), snapshot: edgeCounts(snapshotEdges), ...edgeDiff, sample: sourceEdges.drawn.slice(0, 8), storedOnlySource: onlyIn(sourceEdges.stored, snapshotEdges.stored).length, storedOnlySnapshot: onlyIn(snapshotEdges.stored, sourceEdges.stored).length });
+    const edgesRead = (e: EdgeRead) => e.nodes > 0 && e.unparsed === 0;
+    check('SN-24 the snapshot draws the source\'s edges, by count and endpoints', edgesRead(sourceEdges) && edgesRead(snapshotEdges) && edgeDiff.onlySource.length === 0 && edgeDiff.onlySnapshot.length === 0, { source: edgeCounts(sourceEdges), snapshot: edgeCounts(snapshotEdges), ...edgeDiff });
+    {
+        const r = 'left' in node ? { top: node.top, bottom: node.top + node.height, left: node.left, right: node.left + node.width } : null;
+        const onPage = !!r && r.top >= 0 && r.left >= 0 && r.bottom <= 2000 && r.right <= 3000;
+        check('SN-23 no node overlaps dji and its rows are all in sight', 'left' in node && onPage && node.coveredBy.length === 0 && node.covered.length === 0 && node.below.length === 0, 'left' in node ? { box: r, onPage, covered: node.covered, coveredBy: node.coveredBy, below: node.below } : node);
+    }
     if ('left' in node) {
         const x = Math.max(0, node.left - 24); const y = Math.max(0, node.top - 24);
         await page.addStyleTag({ content: '.sim-panel--open { visibility: hidden !important; }' }).then(async (tag) => {
             await page.screenshot({ path: `${CROPS}/1-snapshot-open.png`, clip: { x, y, width: Math.max(node.width + 48, 640), height: Math.max(node.height + 48, 360) } });
             await tag.evaluate((e) => (e as Element).remove());
         });
-        // Measured, not a verdict: rows that clip are a ticket of this lane, not a failure of the write.
+        // The verdict is SN-23; this is the measure behind it.
         meas('rows of dji against the node', { size: [node.width, node.height], zoom: node.zoom, clippedByOwnBox: node.below.length > 0, covered: node.covered, coveredBy: node.coveredBy, top: node.top, below: node.below.slice(0, 12) });
     }
 
