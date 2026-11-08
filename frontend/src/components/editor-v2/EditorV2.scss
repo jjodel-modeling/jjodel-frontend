@@ -1179,7 +1179,7 @@ html[data-mode="advanced"] .editor-v2-toolbar {
 // never match) and under 1100px, the hard content plus the rail cell, every word goes and
 // its `title` stays: the group labels, the two dropdowns down to their chevron, the
 // viewpoint's name, the validation state. No control goes (R-MT-26): what still does not fit
-// scrolls inside the bar, and the left pane's rail cell stays over the rail while it does.
+// scrolls inside the bar, and the right pane's rail cell stays over the rail while it does.
 // A rule on the bar itself cannot sit in the query, which only reaches the container's
 // descendants.
 .not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) {
@@ -1192,9 +1192,9 @@ html[data-mode="advanced"] .editor-v2-toolbar {
         scrollbar-width: thin;
     }
 
-    // Under the first pane the rail is the cell's column, so the cell does not scroll away:
+    // Under the last pane the rail is the cell's column, so the cell does not scroll away:
     // it covers what passes behind it, and that part of the bar is out of the scrollport.
-    > .dock-panel:first-child {
+    > .dock-panel:last-child {
         .editor-v2-toolbar {
             scroll-padding-right: var(--jj-rail-width, 0px);
         }
@@ -1207,9 +1207,9 @@ html[data-mode="advanced"] .editor-v2-toolbar {
         }
     }
 
-    // No rail lies under the second pane: its cell is not a column header, only the badge
+    // No rail lies under the first pane: its cell is not a column header, only the badge
     // of the model, with the name in the `title` of `.toolbar-identity`.
-    > .dock-panel ~ .dock-panel {
+    > .dock-panel:first-child {
         .toolbar-rail-cell {
             width: auto;
             margin-left: 2px;
@@ -4526,8 +4526,8 @@ body.header-variant-c {
 }
 
 // Two canvases side by side (R-MT-24, P-2026-11-08-1633): the inline `right` adds the rail's
-// inset, and no rail lies over the second canvas.
-.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel ~ .dock-panel .react-flow__minimap {
+// inset, and no rail lies over the first canvas (P-2026-11-08-1729).
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel:first-child .react-flow__minimap {
     right: 16px !important;
 }
 
