@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0248
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · bdd94bfc7
 Lane: full (slice 4 closure: wiring of the DCN nucleus into startRun and the panel; `editor-v2/sim/` and `model/simulation/dcn/`)
 Depends: P-2026-11-07 L4.1..L4.4 (dcnNucleus, compileDcn, dcnHandles, Interleave/Sync, halts, on the trunk), P-2026-11-08-0011/0057 (dcn-drone-objects.jjodel with the dcn roles bound), P-2026-11-08-0010 (conformance in DCN mode)
 Worktree: ~/jjodel-w-dcn-l45, branch dcn-l45, at the commit that adds this prompt on top of the trunk

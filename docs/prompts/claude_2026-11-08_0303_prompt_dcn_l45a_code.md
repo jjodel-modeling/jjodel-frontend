@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0303
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b7bffda4c
 Lane: full (continuation of P-2026-11-08-0248, stopped at the context ceiling after discovery; `editor-v2/sim/` and `model/simulation/dcn/`; code and gates only, the visual check is a separate lane)
 Corregge: 2026-11-08 02:55 (P-2026-11-08-0248 stopped at the soft ceiling with the discovery report written and uncommitted, no code)
 Worktree: ~/jjodel-w-dcn-l45, branch dcn-l45, at the commit that adds this prompt on top of 6d98d145c
