@@ -82,6 +82,7 @@ import ReferencePicker from './widgets/ReferencePicker';
 import { extendedWidget, type WidgetChip } from './widgets';
 import { optionSlot } from '../../../../jjform';
 import { namelessTargetLabel } from '../../utils/namelessTargetLabel';
+import { unnamedReferenceLabels } from './widgets/ReferenceWidget';
 
 /** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
  *  the single definition now lives with the projection that produces them. */
@@ -276,10 +277,12 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
     const { chips, chipIndex } = useMemo(() => {
         const out: WidgetChip[] = [];
         const idx: number[] = [];
+        // One field is one list: unnamed homonyms are numbered, by raw position (R-TXT-59).
+        const unnamed = isPointerValued ? unnamedReferenceLabels(field.values as string[]) : [];
         field.values.forEach((v, i) => {
             if (v == null || v === '') return;
             if (isPointerValued && typeof v === 'string') {
-                const label = displayValue(v);
+                const label = unnamed[i] ?? displayValue(v);
                 // `displayValue` falls through to the pointer itself when nothing resolves,
                 // which is exactly the state the read side draws as broken.
                 const broken = label === v;
