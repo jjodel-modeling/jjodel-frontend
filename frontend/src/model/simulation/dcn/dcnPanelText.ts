@@ -74,6 +74,13 @@ function isActive(m: DcnStepModel, c: DcnClassification | null, instance: string
     return false;
 }
 
+/** A slot's value in the title: a multi-valued link lists its targets by name (σ holds the first), anything else reads σ. */
+function slotText(state: SimState, m: DcnStepModel, instance: string, attr: string): string {
+    const link = m.model.instances.get(instance)?.links.get(attr);
+    if (link?.many && link.targets.length > 0) return link.targets.map(t => m.model.instances.get(t)?.name ?? t).join(', ');
+    return String(state.attrs.get(instance)?.get(attr));
+}
+
 /** The σ line of a DCN run and its title (see the module comment). */
 export function dcnMarkingLine(state: SimState, m: DcnStepModel, c: DcnClassification): { line: string; title: string } {
     const byInstance: string[] = [];
@@ -89,7 +96,7 @@ export function dcnMarkingLine(state: SimState, m: DcnStepModel, c: DcnClassific
     for (const [instance, slots] of m.model.compiled.slots) {
         const values = [...slots].map(([attr, slot]) => {
             const dormant = slot.dormantOwner !== null && !isActive(m, c, instance, slot.dormantOwner);
-            return `${attr} = ${String(state.attrs.get(instance)?.get(attr))}${dormant ? ' (dormant)' : ''}`;
+            return `${attr} = ${slotText(state, m, instance, attr)}${dormant ? ' (dormant)' : ''}`;
         });
         slotLines.push(`${m.model.instances.get(instance)?.name ?? instance}: ${values.join(', ')}`);
     }

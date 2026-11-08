@@ -125,6 +125,20 @@ describe('dcnPanelText: the classification line (decision 5)', () => {
         ]);
     });
 
+    it('a multi-valued link lists all its targets by name, in order; a single-valued one reads σ (mutants: the first target only, the ids printed, many ignored, the order reversed)', () => {
+        const sensor = (id: string, name: string) => [id, { id, name, classifier: 'Sensor', links: new Map(), viewpoints: new Map() }] as const;
+        const wau = {
+            ...MODEL.model.instances.get('wau1')!,
+            links: new Map([
+                ['speed', { targets: ['s-temp', 's-wind', 's-rain'], many: true }],
+            ]),
+        };
+        const many: DcnStepModel = { ...MODEL, model: { ...MODEL.model, instances: new Map([...MODEL.model.instances, ['wau1', wau], sensor('s-temp', 'temp'), sensor('s-wind', 'wind'), sensor('s-rain', 'rain')]) } };
+        expect(dcnMarkingLine(sigma(), many, classified(['Ready'])).title.split('\n').pop()).toBe('wau1: speed = temp, wind, rain');
+        const single: DcnStepModel = { ...many, model: { ...many.model, instances: new Map([...many.model.instances, ['wau1', { ...wau, links: new Map([['speed', { targets: ['s-temp'], many: false }]]) }]]) } };
+        expect(dcnMarkingLine(sigma(), single, classified(['Ready'])).title.split('\n').pop()).toBe('wau1: speed = 3');
+    });
+
     it('in Flying the altitude slot is live, the Charging one stays dormant (mutant: dormancy read off the first dynamic class)', () => {
         expect(dcnMarkingLine(sigma(), MODEL, classified(['Flying'])).title.split('\n')[1])
             .toBe('dji: battery = 80, altitude = 0, rateSet = 0 (dormant)');
