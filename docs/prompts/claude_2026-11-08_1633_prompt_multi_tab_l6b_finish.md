@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1633
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b89421b06 · gates green (typecheck 0, build, check:docs, vitest 147 passed) · log entry in docs/log-inbox/multi-tab.md · Alfonso's visual GO pending
 Lane: full (layout only: SCSS and the app bar; no critical zone, no core)
 Depends: P-2026-11-08-1608 (note 6d229bff2, fixes 1cb96945d, 0aff5a02a, 541ba4cb8; toolbar work uncommitted in `EditorV2.scss`), its handoff `~/.jjodel-lanes/P-2026-11-08-1608/handoff.md` and `handoff.diff`; R-MT-26
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

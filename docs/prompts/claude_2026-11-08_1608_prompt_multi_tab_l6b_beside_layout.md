@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1608
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 541ba4cb8 · gates green (typecheck 0, build, check:docs, vitest 147 passed) · log entry in docs/log-inbox/multi-tab.md · Alfonso's visual GO pending
 Lane: full (layout only: SCSS and the app bar; no critical zone, no core)
 Depends: L6 on the trunk (merge bc4b137cd; the beside panel is painted by the `ScriptTab.scss` rule of 7f8e8c0fb); R-MT-24, R-MT-25, R-MT-26; the four layout findings of P-2026-11-08-1003 (`~/.jjodel-lanes/P-2026-11-08-1003/handoff.md` or its final report, crops `crop_1_beside_panel.png`)
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

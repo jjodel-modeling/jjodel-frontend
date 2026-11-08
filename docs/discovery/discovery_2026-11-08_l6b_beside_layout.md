@@ -89,3 +89,63 @@ Every fix is scoped to the split of two canvases, so a single tab and the Refact
 ## Open questions
 
 1. Is the rail between the two panes the arrangement wanted, against the rail at the window's edge? Recommended here: between, so it stays next to the canvas it describes and the single-tab geometry of the left pane holds.
+
+## Results, P-2026-11-08-1608
+
+Viewport 1600 x 1000, one run, before the toolbar was finished. Baseline `f081ad4f2`, after = the three fixes in the tree.
+
+| Measure | before | after |
+|---|---|---|
+| Panels | 889, 710 | 600, 600 (share 0.5 = dock share) |
+| Left canvas not under the rail | 288 | 398 |
+| Rail | x 489 to 889 | x 599 to 999, right canvas from 1202 |
+| Overlapping control pairs, left / right | 38 / 37 | 0 / 0 |
+| App bar | Apartment | Apartment, Office (`beside: true`) |
+| Pageerrors | 0 | 0 |
+
+## Results, P-2026-11-08-1633
+
+**Correction to 1608: the divider drag was not dead.** The probe grabbed `x + w/2` of a rounded rect, 1000.5, while the 1px divider lies at x 999.5 to 1000.5 (panels 599.5 wide). That point is the right panel. Integer x 999 and 1000 both hit `.dock-divider`, and a real drag from 999 moves the panels. No code changed for it.
+
+Fixes: `fa3b09e2f` (right minimap, inline `right` without the rail's inset), `b89421b06` (toolbar).
+
+Toolbar: under 1100px of bar, icons only. What does not fit scrolls inside the bar. On the first pane the rail cell is sticky and opaque, so it stays over the rail. The menus are fixed and anchored to their selector: a fixed box with auto offsets stayed at x 298 to 498 after the bar scrolled.
+
+Split, three runs per width, 0 failures in all six, pageerrors 0 (numbers identical where read):
+
+| Measure | 1600 | 1280 |
+|---|---|---|
+| Rail | x 599 to 999, w 400 | x 459 to 819, w 360 (its minimum) |
+| Left canvas clear of the rail | 398 | 258 |
+| Right canvas | x 1202 to 1599, w 398 | x 1022 to 1279, w 258 |
+| Divider drag, panels after | 339, 861 (right past 710) | 199, 721 |
+| Left minimap | x 373 to 575 | x 233 to 435 |
+| Right minimap | x 1381 to 1583 | x 1061 to 1263 |
+| Overlapping control pairs, left / right | 0 / 0 | 0 / 0 |
+| Buttons reachable after scrolling, left / right | 15 of 15 / 15 of 15 | 15 of 15 / 15 of 15 |
+| Bar scrollWidth / clientWidth, left | 819 / 798 | 779 / 618 |
+| Bar scrollWidth / clientWidth, right | 443 / 398 | 443 / 258 |
+| Left rail cell against the rail | within 1px | x 460 (rail 459), r 819 |
+| Views menu whole, on its trigger | left, right | x 258 to 458, x 1079 to 1279 |
+| App bar | Apartment, Office | Apartment, Office |
+
+Once each, 1600:
+
+| Scene | Result |
+|---|---|
+| Single tab, lane against the base `f081ad4f2` | same: canvas x 201 to 1599, rail cell x 1200 w 399, rail x 1200 to 1600, minimap x 973 to 1175, zoom 0.716, 18 nodes, 0 overlaps |
+| Refactoring split | editor w 542, canvas w 613, 8 nodes, sizes 640 / 960, as in 1003 |
+| 1730 two-model demo | 15 of 15, Apartment 18, Office 25, pageerrors 0 |
+
+Gates on `b89421b06`: typecheck exit 0, build exit 0, check:docs exit 0, vitest 12 files 147 passed (the seven test files that name a touched file, the five of L6).
+
+Probe changes against 1608's copy: a sticky cell over a scrolled control does not count as an overlap, since the reachability row measures that case; the left-canvas threshold is 300 at 1600 and 250 at 1280, because 258 is all the accepted split leaves there; the menu probe scrolls the trigger into view first.
+
+Limits, as measured or as noted:
+
+- Only the views menu was opened. The notation and theme triggers are disabled with a viewpoint active; they share the rule.
+- A browser without `anchor()` places a menu under its trigger only while the bar is unscrolled.
+- A long drag can leave the left panel narrower than its palette: at 1280 it reached 199, palette 201, so the left canvas lies wholly under the rail. rc-dock's minimum, untouched here. The probe's `leftVisible` 357 on that row is not a visible width.
+- At 1280 the app bar chips shrink to the icon and one letter (crop). Not compared with the trunk.
+- Inferred, not measured: `overflow-y: hidden` clips the cell's `margin-bottom: -1px`, so in the split its hairline can stop 1px above the rail's.
+- The crops of the split show the bars as the probe left them, scrolled to the views menu.
