@@ -595,6 +595,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
     const paneAcceptsDropRef = useRef(true);
     paneAcceptsDropRef.current = paneEl === null || paneAcceptsPaletteDrop(canvasSplit, paneEl);
+    // The rail covers only the last pane of a split (P-2026-11-08-1729): any other canvas reserves nothing for it (D6).
+    const paneUnderRail = !inCanvasSplit || canvasSplit.panes[canvasSplit.panes.length - 1] === paneEl;
+    const paneUnderRailRef = useRef(paneUnderRail);
+    paneUnderRailRef.current = paneUnderRail;
+    const paneRightInset = () => paneUnderRailRef.current ? getCanvasRightInset() : 0;
+    const paneFitPadding = () => paneUnderRailRef.current ? fitPadding() : 0.2;
 
     // fitViewRef / applyDistributionRef bridge hook ordering: useJjomSync's
     // onInit callback fires after init, but fitView and applyDistribution
@@ -821,16 +827,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const p = n.internals.positionAbsolute;
             rects.push({ id: n.id, x: p.x, y: p.y, w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
         }
-        return openViewportFallback(rects, getViewport(), { width, height, rightInset: getCanvasRightInset() }, fitPadding());
+        return openViewportFallback(rects, getViewport(), { width, height, rightInset: paneRightInset() }, paneFitPadding());
     }, [storeApi, getViewport]);
     const ensureNodeInView = useCallback((duration?: number) => {
         const next = openFallbackViewport();
         if (next) setViewport(next, { duration });
     }, [openFallbackViewport, setViewport]);
     viewportShowsNoNodeRef.current = () => openFallbackViewport() !== null;
-    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
+    fitViewRef.current = () => fitView({ padding: paneFitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
     // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
-    const fitViewOptions = useFitViewOptions();
+    const railFitViewOptions = useFitViewOptions();
+    const fitViewOptions = useMemo(() => paneUnderRail ? railFitViewOptions : { padding: 0.2, maxZoom: 1 }, [paneUnderRail, railFitViewOptions]);
 
     const {
         activeEditorId,
@@ -1217,7 +1224,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     height: targetNode.measured?.height ?? 50,
                 };
                 const { width, height } = storeApi.getState();
-                const next = revealViewport(box, getViewport(), { width, height }, getCanvasRightInset());
+                const next = revealViewport(box, getViewport(), { width, height }, paneRightInset());
                 if (next) setViewport(next, { duration: 300 });
             }
         };
@@ -2764,7 +2771,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         (type: string, metaclassId?: string) => {
             const canvas = editorContainerRef.current;
             if (!canvas) return;
-            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
         },
         [createFromPalette]
     );
@@ -4002,9 +4009,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setViewport({ ...getViewport(), zoom: next }, { duration: 150 });
     }, [storeApi, setViewport, getViewport]);
     const handleResetZoom = useCallback(() => {
-        fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 });
+        fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 });
     }, [fitView]);
-    const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
+    const handleFitView = useCallback(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
 
     // Persist pan/zoom at the end of every move (React Flow fires onMoveEnd once per
     // gesture, so no debounce is needed) and once more on unmount, which covers a
@@ -4313,7 +4320,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     },
                 };
             })));
-            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+            requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
             return;
         }
 
@@ -4365,7 +4372,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+        requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
