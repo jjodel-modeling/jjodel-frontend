@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "parens": "always",
+  "slots": [
+    { "class": "Register", "feature": "type" },
+    { "class": "Register", "feature": "reset" },
+    { "class": "Register", "feature": "next" },
+    { "class": "Wire", "feature": "type" },
+    { "class": "Wire", "feature": "expr" },
+    { "class": "Port", "feature": "type" },
+    { "class": "Port", "feature": "driver" },
+    { "class": "Property", "feature": "expr" },
+    { "class": "Actual", "feature": "expr" }
+  ],
+  "sharing": { "classes": ["IntExpr"], "minLength": 40, "minCount": 3, "prefix": "D", "host": "Brief" },
+  "roles": [
+    { "class": "IntLit", "role": "literal", "attribute": "value" },
+    { "class": "IntParam", "role": "reference", "attribute": "name" },
+    { "class": "IntProp", "role": "pattern", "args": { "item": "item", "key": "key" }, "text": "{item}.{key}" },
+    { "class": "IntAdd", "role": "infix", "symbol": "+", "precedence": 6, "assoc": "left", "operands": ["left", "right"] },
+    { "class": "IntSub", "role": "infix", "symbol": "-", "precedence": 6, "assoc": "left", "operands": ["left", "right"] },
+    { "class": "IntMax", "role": "call", "name": "max", "args": ["left", "right"] },
+    { "class": "IntDiv", "role": "pattern", "args": { "ceil": "ceil", "left": "left", "right": "right" }, "text": "{ceil?ceil|floor}({left} / {right})" },
+    { "class": "CondLt", "role": "infix", "symbol": "<", "precedence": 5, "assoc": "none", "operands": ["left", "right"], "parens": "never" },
+    { "class": "Ref", "role": "reference", "attribute": "name" },
+    { "class": "Arg", "role": "reference", "attribute": "name", "prefix": "@" },
+    { "class": "Const", "role": "literal", "attribute": "value", "booleanWhen": { "feature": "type", "class": "Bool", "true": "1", "false": "0", "other": "bool({})" } },
+    { "class": "Bool", "role": "pattern", "args": {}, "text": "bool" },
+    { "class": "Word", "role": "pattern", "args": { "width": "width" }, "text": "word<{width}>" },
+    { "class": "Array", "role": "pattern", "args": { "elem": "elem", "size": "size" }, "text": "{elem}[{size}]" },
+    { "class": "Neg", "role": "unary", "symbol": "!", "operand": "op", "precedence": 8 },
+    { "class": "Conj", "role": "nary", "symbol": "&", "precedence": 4, "operands": "ops" },
+    { "class": "Disj", "role": "nary", "symbol": "|", "precedence": 3, "operands": "ops" },
+    { "class": "Concat", "role": "bracket", "open": "{", "close": "}", "separator": ", ", "items": "ops" },
+    { "class": "Ite", "role": "conditional", "cond": "cond", "then": "ifTrue", "else": "ifFalse", "precedence": 1 },
+    { "class": "Case", "role": "case", "arms": "arms", "armClass": "Arm", "cond": "cond", "value": "value", "otherwise": "otherwise" },
+    {
+      "class": "Arm", "role": "pattern", "args": { "cond": "cond", "value": "value" },
+      "forms": [
+        { "when": [{ "mode": "caseArm" }], "text": "{cond} -> {value}" },
+        { "text": "{cond}: {value}" }
+      ]
+    },
+    { "class": "Slice", "role": "pattern", "args": { "op": "op", "hi": "hi", "lo": "lo" }, "text": "{op^}[{hi}:{lo}]" },
+    { "class": "Extend", "role": "pattern", "args": { "sign": "sign", "op": "op", "width": "width" }, "text": "{sign?sext|zext}({op}, {width})" },
+    { "class": "Eq", "role": "infix", "symbol": "==", "precedence": 5, "assoc": "none", "operands": ["left", "right"] },
+    { "class": "Implies", "role": "infix", "symbol": "->", "precedence": 2, "assoc": "right", "operands": ["left", "right"] },
+    { "class": "Le", "role": "infix", "symbol": "<=", "precedence": 5, "assoc": "none", "operands": ["left", "right"] },
+    { "class": "Add", "role": "infix", "symbol": "+", "precedence": 6, "assoc": "left", "operands": ["left", "right"] },
+    { "class": "Sub", "role": "infix", "symbol": "-", "precedence": 6, "assoc": "left", "operands": ["left", "right"] },
+    { "class": "Use", "role": "pattern", "args": { "name": "name" }, "text": "use {name!?}" },
+    {
+      "class": "ForEach", "role": "pattern",
+      "args": { "v": "v", "names": "names", "where": "where", "body": "body", "start": "start", "stop": "stop" },
+      "forms": [
+        { "when": [{ "has": "names" }, { "plain": "names" }, { "has": "where" }, { "absent": "stop" }], "text": "(if {where}: {body*, })" },
+        { "when": [{ "has": "names" }, { "has": "where" }], "text": "for {v} in {names} where {where}: [{body*, }]" },
+        { "when": [{ "has": "names" }], "text": "for {v} in {names}: [{body*, }]" },
+        { "when": [{ "has": "stop" }, { "has": "where" }], "text": "for {v} over {start!0}..{stop} where {where}: [{body*, }]" },
+        { "when": [{ "has": "stop" }], "text": "for {v} over {start!0}..{stop}: [{body*, }]" },
+        { "when": [{ "has": "where" }], "text": "for {v} over the picked items where {where}: [{body*, }]" },
+        { "text": "for {v} over the picked items: [{body*, }]" }
+      ]
+    }
+  ]
+}
