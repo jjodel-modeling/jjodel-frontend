@@ -19,6 +19,7 @@ import { isOuterRef } from './metamodel';
 import type { OuterRef, TextObject } from './metamodel';
 import { expressionWords, tokenizeText } from './parser';
 import type { ObjectNode, ParsedRef, SyntaxNode, SyntaxToken, TextNode, TokenRole } from './parser';
+import type { NotationStyle } from './style';
 
 /** `[start, end)` offsets into the printed text. */
 export interface ObjectSpan {
@@ -77,6 +78,21 @@ export interface TextPrintReport extends TextPrintResult {
 
 /** R-TXT-30: whether the text leaves objects out. Step T6 never applies a text while it does: their absence would read as a deletion. */
 export const hasUnprinted = (r: Pick<TextPrintReport, 'unprinted'>): boolean => r.unprinted.length > 0;
+
+/** The tag of the comment that carries an object's id (step T8a, R-TXT-55 F9): `// @id <id>` in C-like. */
+export const ID_COMMENT_TAG = '@id';
+
+/**
+ * The id comment of `id` in the style's comment syntax, its line form when it has one; undefined when the style has no
+ * comments, or the id holds a space or the block's close and could not be read back whole.
+ */
+export function idComment(style: NotationStyle, id: string): string | undefined {
+    if (!id || /\s/.test(id)) return undefined;
+    const { line, block } = style.comments;
+    if (line) return `${line} ${ID_COMMENT_TAG} ${id}`;
+    if (block && !id.includes(block[1])) return `${block[0]} ${ID_COMMENT_TAG} ${id} ${block[1]}`;
+    return undefined;
+}
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -412,8 +428,14 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         marks.push(m);
     };
     const placeMarks = (): void => { for (const m of marks) m.start = m.end = out.length; marks = []; };
+    // T8a: the first object the current line starts, its id comment written at the line's end; null when it has none.
+    let lineHead: string | null | undefined;
+    const endLine = (): void => {
+        if (lineHead) out += ` ${lineHead}`;
+        lineHead = undefined;
+    };
     const token = (s: string, punct = false, role: TokenRole = punct ? 'punctuation' : 'keyword', tight = false): void => {
-        if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
+        if (breakPending) { endLine(); out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
         blankPending = false;
         bodyStart = false;
         if (atLineStart) out += ' '.repeat(depth * style.indent);
@@ -422,6 +444,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         glueNext = false;
         prefixed = undefined;
         for (const id of opening) starts.set(id, out.length);
+        if (style.printIds && lineHead === undefined && opening.length) lineHead = idComment(style, opening[0]) ?? null;
         opening = [];
         cur().children.push({ kind: 'emitted', start: out.length, end: out.length + s.length, role });
         out += s;
@@ -628,6 +651,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     };
 
     for (const r of roots) { object(r); newline(); }
+    endLine();
     placeMarks();
 
     // R-TXT-30: a value left out by a printed owner; one inside an owner left out is counted in it, not listed.
