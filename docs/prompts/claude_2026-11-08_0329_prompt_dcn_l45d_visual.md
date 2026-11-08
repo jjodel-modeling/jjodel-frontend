@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0329
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 32a3e617e
 Lane: full (visual check of L4.5; probe only, no frontend/src)
 Depends: P-2026-11-08-0248, 0303, 0315 on this branch
 Worktree: ~/jjodel-w-dcn-l45, branch dcn-l45, at the commit that adds this prompt
