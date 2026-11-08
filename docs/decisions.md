@@ -6947,6 +6947,8 @@ Chromium 151 only), verified: none, reversible: trunk (docs only, no code yet).
 - **R-PLG-11** (2026-10-31). **The first slice re-hosts the instance-of semantics** (`bindingReader`, `bindingCheck`)
   as a worker plugin bound through `ontoBindings v1` and writing `set` lines through `applyAsOneStep`; the JavaScript
   generator of the codegen pilot is not the first slice.
+  Amended 2026-11-08 by R-EXP-1: the first plugin is the expression catalog, made of data; instance-of follows on the
+  same catalog format.
 
 ## R-TXT: a default textual notation for every model (decisions 2026-11-01)
 
@@ -7941,6 +7943,57 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
 - **R-MT-26** (2026-11-08, decided by the chat on Alfonso's delegation 2026-11-08 16:06 «decidi tu al meglio per tutto», evidence: read, verified: none, reversible: trunk).
   **Order of the remaining multi-tab work.** (1) L6b, the beside layout only (side panels over the left canvas, the 710 px cap of `style.scss:1055`, overlapping toolbar labels, the app bar missing the right tab); the maximized fallback stays a known limit. (2) L7, the selection highlight in every tab (R-MT-2). (3) L8, two small readers of the tab: the console's tab-id lookup and `publishedChannelSlots` (`useIRContainment.ts:61`) per canvas. (4) L4c, the sync registries keyed by model so that the last tab of one model no longer clears another model's entries (critical zone, go-ahead given by this delegation, Layer Impact Report first). Not now: a second tab on a metamodel (no use case yet, the menu is shared with class and package rows). Filed to their owners, no lane here: Refactoring finding no M1 target on the demo (`projectTargetCandidates`, refactoring front) and the merge template's reset sha (harness). One lane at a time, each with its app check and Alfonso's look at the crops before the merge.
+
+## R-EXP: the expression role catalog, textual projection of expression subtrees (decisions 2026-11-08)
+
+Evidence: the project chat C-2026-11-01-1434 of 2026-11-08 (23:01-23:04: expression subtrees are not canvas nodes; no
+single expression language but a role catalog with a generic printer; the catalog is born as the first concrete plugin;
+for the hardware Brief the printed text is the same as the kernel's own view; 23:39 «ok alle raccomandazioni» on the
+twelve questions of the discovery), `docs/discovery/discovery_2026-11-08_expression_catalog.md` (P-2026-11-08-2310),
+front `plugins`. Measured case: `ddr4_closed_v.xmi` from the Micron prototype, 4269 objects of which 4020 fold under 246
+roots, 249 nodes left.
+
+- **R-EXP-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: measured, reversible: trunk).
+  **The expression catalog is the first plugin of R-PLG, made of data interpreted by the host.** It runs no plugin code
+  and does not engage the R-PLG-2 worker: render needs the text synchronously. It amends R-PLG-11: instance-of follows
+  on the same catalog format. Stored JjGen templates are budgeted JjEL, not `new Function`, so the unrun R-PLG-6 lane
+  does not block it.
+- **R-EXP-2** (2026-11-08, ratified 23:39). **Roles:** infix {symbol, precedence, assoc, operands}, n-ary, unary,
+  literal, reference, call, conditional, case, bracket, pattern; a per-metaclass template is the escape hatch for what the
+  roles do not cover.
+- **R-EXP-3** (2026-11-08, ratified 23:39). **The binding lives on the metamodel**, as a versioned record list in its
+  `_state`, key `exprBinding`, like `ontoBindings`; an unknown version is refused, unknown keys are preserved. It travels
+  with the metamodel (the intent of R-VAL-10).
+- **R-EXP-4** (2026-11-08, ratified 23:39). **A viewpoint activates the fold; it does not own the binding.** This
+  corrects the chat's wording of 23:02 («the viewpoint declares the binding»).
+- **R-EXP-5** (2026-11-08, ratified 23:39, verified: measured). **The unit of folding is a slot, closed downward**
+  (`Register.next`, `Wire.expr`, `Property.expr`, ...); a metaclass alone does not decide, because a class such as
+  `ForEach` is both a design element and an expression.
+- **R-EXP-6** (2026-11-08, ratified 23:39). **The printer takes `parens: minimal | always` on the binding**, with a
+  per-row override, and a sharing pass that names repeated subexpressions (`D1`, `D2`, ...).
+- **R-EXP-7** (2026-11-08, ratified 23:39). **Text is computed in one batch and memoised** on D-record identity; render
+  reads it and never calls a template per node.
+- **R-EXP-8** (2026-11-08, ratified 23:39, verified: measured). **For the Brief metamodel the reference is
+  `brief_view.py`, with `parens: always`**, held by a golden test on the 246 slots of `ddr4_closed_v`; `syncrtl-text.md`
+  becomes the SyncRTL metamodel's own binding. «Decision 34» of the Micron prototype has no record; `brief_view.py` is
+  normative until one appears. A change of the kernel view is followed by flipping the binding.
+- **R-EXP-9** (2026-11-08, ratified 23:39). **A problem or a selection on a folded object maps to its owner**, the
+  message prefixed with the slot (`Register.next:`).
+- **R-EXP-10** (2026-11-08, ratified 23:39). **The first slice hides folded nodes and keeps their vertex records**;
+  removing them comes later, only if a measure asks for it, under a Layer Impact Report.
+- **R-EXP-11** (2026-11-08, ratified 23:39). **Automatic binding proposes and never chooses** among candidates
+  (protocol of `profileBinder`).
+- **R-EXP-12** (2026-11-08, ratified 23:39). **A missing or invalid binding degrades explicitly** (R-PLG-7): the objects
+  stay nodes and authoring says why.
+- **R-EXP-13** (2026-11-08, ratified 23:39). **Implementation choices of the discovery's questions 7, 8, 11, 12:** a new
+  `TextSource` union member `{from:'expression', slot}` is allowed (additive, compiler-checked, rule 11); a small
+  separate printer now, converging with `printer.ts` and `textSyntax` when editing arrives (R-TXT); parameters and
+  properties as rows come in a later slice, not the first; no Ecore mirror of the binding yet, the Brief binding ships as
+  a JSON import.
+- **R-EXP-14** (2026-11-08, ratified 23:39). **Slices in order:** S1 DDR4 readable (binding codec, printer, batch memo,
+  slot fold by hide, `TextSource` kind, viewpoint activation, JSON import, golden test); S2 problems and selection on the
+  owner; S3 expand and collapse with local layout; S4 removal of folded vertices, only on a measure, critical zone; S5
+  rows for parameters and properties; S6 automatic binding and a binding panel (R-PLG-3); S7 editing through R-TXT.
 
 ## Superate
 
