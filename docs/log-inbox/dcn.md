@@ -415,3 +415,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (crop 1-reset read by the chat 2026-11-08 17:10: no defects line, Charging/Safe, Tick on, takeOff greyed)
 **Notes**: Fixture 26/26 (O-6 new), dcn and instantiation problems zero, conformant. Defaults: power 0, unit, status OK, presence false. Slots: vmax 15, temp 20, wind 3, humidity 45, rain 0. Run probe 9/9, seed 4242: L47-1 no defects line (control: panel text, not a defective run), L47-2 Charging and Safe, Ready on Tick 20. Status committed per the prompt, ahead of the chat's check (P13). Object screenshot copied from DCN_CROPS. Crops in ~/.jjodel-lanes/P-2026-11-08-1652/crops/.
 **Prompt document name**: 2026-11-08 16:52
+
+## 2026-11-08 — merge: dcn-l47 into alfonso-frontend-jjtl (P-2026-11-08-1757)
+**Prompt**: `claude_2026-11-08_1757_prompt_merge_dcn-l47.md`, lane full (merge; zero conflicts measured): bring `dcn-l47` at 04d739dd4 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 4c51808e8; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 4a75388f7 (merge) — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simBridge.ts`, `simRunState.ts`, `__tests__/simBridge.test.ts`), `frontend/src/model/simulation/dcn/dcnPanelText.ts` and its test, `frontend/scripts/probe/dcn-drone-fixture.ts`, `dcn-drone-run.ts`, three assets in `docs/discovery/assets/dcn-drone/`, two prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 5 failed | 580 passed files, 15439 passed, 2 failed and 3 skipped (15444, expected 15431 + 13): the known 3 red at import and two load flakes accepted in the GO; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app checks by P-2026-11-08-1606 and P-2026-11-08-1652, crops read by the chat)
+**Notes**: Zero conflicts, no union; merge tree f9a9dc478 equal to the measure; 10 probes as expected. Full vitest: 2 load flakes (languageService budget, laneRun monitor; load about 100), each green alone twice, files untouched by the branch, accepted in the GO. Branch vitest not run (no node_modules; writing forbidden): 13 new tests counted, total matched. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change).
+**Prompt document name**: 2026-11-08 17:57
