@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0836
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · cc1ce544f (executor and tests), 202b32efc (SPEC), a2ea341bb (R-JTG-31)
 Lane: full (unattended; tests first, then the smallest change)
 Depends: P-2026-11-08-0835
 Worktree: ~/jjodel-w-multisrc, branch jjtl-multi-source
