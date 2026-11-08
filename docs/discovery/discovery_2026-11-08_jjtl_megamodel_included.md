@@ -113,3 +113,21 @@ The same channel is not new: the `inputOf` of the metamodel and the primary's `i
 
 3. Add a per-edge channel to the router so that the edges come apart, or accept the shared channel as the existing behaviour of the view?
 4. Shorten the included pill, or move it, given that the text asked for does not fit the column gap?
+
+## 8. Addendum, 2026-11-08: the two fixes, and the answers (P-2026-11-08-1720)
+
+Questions 3 and 4 of §7 are closed by the GO of Alfonso, 16:49. §7 stays as the record of what was measured before the fixes, when the fix was open and the pill read «(included)».
+
+**The fixes.** Edges with a vertical segment in one gap each get a track, 8px apart, centred on the previous position, every edge kind; a single edge stays where it is. On a `metadata.included` edge the pill reads `included` and the full text `instanceInputOf (included)` is the tooltip. The rule lives in `MegamodelEdge.ts`, but `MegamodelView.tsx` has to call `verticalTrackOffsets` before `routePoints`, so the change is not in `MegamodelEdge.ts` only. A gap is the same rounded `(p1.x + p2.x) / 2`. The order is a local optimum, not a proven minimum. There is no clamp: past 15 edges in a 120 gap, tracks pass behind nodes.
+
+**Measured by the probe of P-2026-11-08-1612**, on the code now committed, one real run from the dialog on a primary and two included models: 0 edges by default, 3 once the kind is on; tracks x -72 (primary), -56, -48, with `inputOf` at -64, each 8 from the next; no two share a vertical stretch; the input pills overlap neither each other nor a card; the tooltip is on both included pills and not on the primary's; both are reachable by the pointer; no page error. The crop was viewed and accepted by the chat: three distinct tracks, short pills. The probe was not rerun by P-2026-11-08-1720.
+
+**One probe assertion failed and is not fixed.** «No label pill covers or is covered by a node» lists two `conformsTo` pills, on `model_1` and `model_1 (1)`, and none of the input pills. `conformsTo` routes are vertical-sided, get offset 0 and keep their pill position, and the same pills sat there in the crop before the change. Pre-existing, ticket in `docs/log-inbox/hw-notation.md`.
+
+**Mutations.** Edge builder: removing the loop fails 6 tests, removing the duplicate guard fails 2. Router: offset forced to 0 fails 6, no swaps fails 2, `routePoints` ignoring the offset fails 2, one shared gap fails 1.
+
+**Answers of the chat to §6.** Question 1: included models get `instanceInputOf` only, no `sourceOf`, one edge per included model, as decided. Question 2: the default visibility of `instanceInputOf` stays as it is, out of scope, so a multi-source run shows its included edges only once the kind is turned on.
+
+**Gates**, on `7c172384a`: typecheck exit 0; full vitest 15450 passed, 3 skipped, only the 3 known files of CLAUDE.md §17 failing at import; build exit 0.
+
+The decision is R-JTG-35. Code: `295c5429b`, `7c172384a`.
