@@ -359,3 +359,18 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 03:45
 
 **Ticket** (medium): `dcn-drone-run.ts` presses the tick with `/^tick/i`, but the DCN inputs row labels it `dcn-tick` (MEAS `inputs row`), so the probe aborts after L45d-2 with a 30 s click timeout. Causa line: a latent bug in the shared builder (`isAbstract`/`isInterface`/`isPartial` have no getter and resolve to a same-named child); `cls.partial` falls back to the child again when the D field is unset (read, not measured).
+
+## 2026-11-08 — test: DCN drone run in the Simulation panel, crops (P-2026-11-08-0329)
+**Prompt**: `claude_2026-11-08_0329_prompt_dcn_l45d_visual.md`: probe `dcn-drone-run.ts` imports dcn-drone-objects.jjodel, opens the object diagram and the Simulation panel, Choices Random on a fixed seed, Reset, Ticks to Ready, takeOff, three Ticks; four crops and one MEAS per step. The first run stopped on the freeze (fixed by P-2026-11-08-0345); resumed from the chat after the tick selector fix.
+**Files touched**: 53606f71c `frontend/scripts/probe/dcn-drone-run.ts` (committed by 0345); 32a3e617e the same probe, the tick matched by its label `dcn-tick`; this entry; Status of this prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (probe only, no frontend/src change)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops read by the lane, chat to read them)
+**Notes**: Probe 5/5 PASS, page errors none, seed 4242, Choices Random. dji reaches Mode=Ready on Tick 20 (battery 100), the limit exactly; takeOff is trace 20 to 21, Mode=Flying, speed 1; three Ticks fire Mode::Flying drain (distance 3, battery 97). Crops 1-reset 2-ready 3-takeoff 4-flying in ~/.jjodel-lanes/P-2026-11-08-0329/crops/. The panel shows «15 defects: dji.power (no slot and no default); ...» over the heading. Selector fix 32a3e617e.
+**Prompt document name**: 2026-11-08 03:29
+
+**Ticket** (low): the inputs row labels the Tick button with its raw id `dcn-tick` (MEAS `tick button label`), where every invocation has a readable label. Also seen, not fixed: the last-step line repeats the label (`dji.takeOff() in Mode::Ready: dji.takeOff() in Mode::Ready fired`); the chips title lists `wau1: ownedSensors = temp`, one of four sensors; every input is on while Running, takeOff in Charging included.
