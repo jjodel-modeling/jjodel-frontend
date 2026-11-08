@@ -1394,3 +1394,22 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile (chat GO: executor and JjEL evaluator change only, no UI path)
 **Notes**: Zero conflicts, no union; merge-tree `7c9e5921e` equal to the staged tree. Probes 4/4 once. Trunk-tip vitest first ran beside the hook suite and showed 6 load reds (timeouts, budgets), all green alone (311/311). check:docs counts 5 checks, not the 4 the prompt states. Build 10m 15s under load average ~45. Lane board unchanged, not restarted.
 **Prompt document name**: 2026-11-07 16:43
+
+## 2026-11-08 — discovery: JjTL gaps on the generic Brief transformation (P-2026-11-08-0125)
+**Prompt**: `claude_2026-11-08_0125_prompt_jjtl_kernel_gaps_discovery.md`, Phase 1, unattended: the five JjTL limits the hardware Brief kernel transformation bends around, a node baseline on two Briefs, slices and decisions.
+**Files touched**: `docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md` (5ce412df7); this entry; the prompt's `Status:` line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; the two temporary probes were removed, tree clean
+**Out-of-scope changes**: yes — a second temporary probe, `kgaps_env_probe.test.ts`, written under `frontend/src/jjtl/executor/__tests__/`, run once and removed, never committed
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No JjTL diff since 02269f010. Baseline: arbiter 143 to 168 objects, 98 ms; core 2,031 to 2,524, 890 ms; both success, 0 warnings. Recommended S1 `envValue(name[, env])`, no grammar; items 4 and 5 need no JjTL change. Report: `docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md`.
+**Prompt document name**: 2026-11-08 01:25
+
+## 2026-11-08 — ticket: a JjTL demand used as a value gives a wrong target and success true
+**Ticket**: in a helper, `envLookup("x") + "_w"` gives `"[object Object]_w"` and `envLookup("w") + 1` gives `null`, the run reporting `success true` and no warning: the demand marker reaches JjEL's `+` as an object. Through a rule-body `let` both work. A failing builtin stops the run under R-FA-11; this does not.
+**Priority**: high
+**Found in**: P-2026-11-08-0125
+**Detail**: docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md
