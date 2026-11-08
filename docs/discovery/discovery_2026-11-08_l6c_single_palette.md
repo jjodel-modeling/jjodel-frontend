@@ -100,3 +100,55 @@ Crops, light theme, in `~/.jjodel-lanes/P-2026-11-08-2025/`: `crop_split_1600.pn
 - At 1280 the two app bar tabs are too narrow to show the text: the `Apartment · <viewpoint>` label passes as text and in the tooltip, and the crop shows only the model chip.
 - After a fit the Control wiring layout stands at about 10% in the left canvas, as E1 allows: inside the canvas, hard to read. The right pane's minimap covers part of Kitchen and Bathroom.
 - With the right pane active the rail's filter still reads Control wiring, the root viewpoint.
+
+## L6d: visible divider, inactive pane's commands disabled (P-2026-11-08-2045)
+
+Session b89ef4c2-88ae-4b8a-bdc8-bdd3381bd2b9, stopped at the context ceiling before this closure; closed by P-2026-11-08-2200 from `~/.jjodel-lanes/P-2026-11-08-2045/handoff.md`. Code at `efcda31f1`: `7dbaf45bb` F2, `f45805984` F1, `efcda31f1` F3. Probe: `~/.jjodel-lanes/P-2026-11-08-2045/gesture.mjs`, scene `l6d`, own Vite on 3790. Alfonso's visual GO 2026-11-08 21:55.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| typecheck | exit 0 |
+| build | exit 0 |
+| vitest: `canvasSplit.test.ts`, the five L6 files, the layout-key files, the files reading `EditorV2.tsx`, those naming `Toolbar.tsx`, `EditorV2.scss`, `abstract/style.scss` | 19 files, 254 passed |
+
+### Split of one model
+
+Pageerrors 0 in every run.
+
+| Run | W | Checks | Divider x..r, width | Rest colour, grip | Inactive toolbar disabled | Active toolbar disabled (own) |
+|---|---|---|---|---|---|---|
+| r1600-1 | 1600 | 45/45 | 597..603, 6 | rgb(203,213,225), rgb(148,163,184), 4x32 | 15 of 15 | 3 of 15 |
+| r1600-2 | 1600 | 45/45 | 597..603, 6 | same | 15 of 15 | 3 of 15 |
+| r1280-1 | 1280 | 45/45 | 457..463, 6 | same | 15 of 15 | 3 of 15 |
+| r1280-2 | 1280 | 45/45 | 457..463, 6 | same | 15 of 15 | 3 of 15 |
+
+The active pane's 3 are its own: Redo, and the two view controls the active viewpoint disables. r1600-1 ran before two probe-only fixes (wait 500 ms for the colour transition before reading it during a drag; zoom back before picking a node); the other three ran with them, r1600-2 with the first only. The earlier red runs were probe errors, none a product defect.
+
+### The other scenes
+
+| Scene | Result |
+|---|---|
+| single tab | 5/5 |
+| Refactoring split | 7/7; divider measured w 1, flex 0 0 1px, ew-resize, grip transparent 4x40, no ::before: none of the L6d rule reaches it |
+| 1730 demo | 15/15, errors 0 (`demo-l6d.json`) |
+| L6c scene, regression, not asked | 23/24; the one red is `cyan border on the right toolbar only`, which is what F2 removes |
+
+Measured besides: right-click and double-click on an inactive node open nothing and change nothing; Delete on the inactive pane deletes nothing (19 to 19 objects), the same on the active pane deletes (19 to 18); drag on the inactive pane moves nothing; first click switches the palette header, selection unchanged; second click selects; a press on a disabled toolbar control activates and runs nothing; divider drag +60 px gives +60 (395 to 455); clicking the other pane closes an open context menu (0 left).
+
+Crops, light theme, in `~/.jjodel-lanes/P-2026-11-08-2045/`: `crop_l6d_split_1600_right_active.png`, `crop_l6d_split_1600_divider_hover.png`, `crop_l6d_split_1280.png`.
+
+### Decisions recorded
+
+- **F1.** Rule beside the split rule in `abstract/style.scss`, same `:has` row selector, so the Refactoring divider and every other divider are out. `flex 0 0 6px`, `transform: none` (rc-dock's scaleX(3) would triple it), `::before` 1 px past each side = 8 px hit area, `::after` is the grip (4 x 32). Grip colour `var(--text-dim, #94a3b8)` on `--color-border-primary`. Hover and `:active`: both `#0ea5e9`, cursor `col-resize`.
+- **F3, toolbar.** One `<fieldset class="editor-v2-toolbar__commands" disabled>` around the controls, `display: contents`; new optional prop `commandsDisabled`. Controls match `:disabled`, their `.disabled` property stays false, so the ones disabled on their own remain distinguishable. Tooltips kept. The rail toggle is included.
+- **F3, canvas.** React capture handlers on the pane root, `paneGuardProps` in `EditorV2.tsx`, verdict in the pure `paneEventVerdict` (`utils/canvasSplit.ts`). Consumed events stop at the React root's capture. Wheel is not guarded. `preventDefault` is skipped on pointerdown and on keydown. Activation also focuses the pane root.
+- **Double-click on the inactive pane.** The browser's `detail > 1` on mousedown is the click count, no time window. The second press's pointerdown does reach the canvas; its mousedown, click and dblclick do not. Measured: nothing changes.
+- The 1730 demo is two tabs in one panel, not a split, so F3 and F1 do not reach it.
+
+### Findings
+
+- **Literal reading of "no element with a cyan top border".** Each toolbar still has one: `.toolbar-viewpoint-trigger`, a 1 px cyan border on all four sides, the picker's existing accent. Not D2's mark, not removed. The probe's check was narrowed to "only a top border".
+- **Wheel.** Only Ctrl+wheel (pinch) zooms, on both panes alike. Shift+wheel and plain wheel moved neither pane under Playwright, active included, despite `zoomActivationKeyCode="Shift"`. So nothing was lost by F3, but "pan by wheel" has nothing to keep.
+- The demo probe's `LANE` is hardcoded to `P-2026-11-08-1729/1730`; its output `demo-l6d.json` landed there and was moved to the 2045 folder. No other file there changed.

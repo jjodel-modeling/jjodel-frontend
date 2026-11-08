@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2045
 Chat: C-2026-11-08-1855
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · efcda31f1 · verifica visiva passata 2026-11-08 (Alfonso's visual GO 2026-11-08 21:55)
 Lane: full (TSX in editor-v2, SCSS; no critical zone, no core)
 Depends: P-2026-11-08-2025 (closure on multi-tab-l6b; it holds the active-pane rule of P-2026-11-08-1855, D1..D7, and E1..E4)
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit
