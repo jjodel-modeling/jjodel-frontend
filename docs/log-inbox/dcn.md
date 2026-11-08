@@ -486,3 +486,18 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: σ goes on the first holder of the first Slot (slots are objects, as in slotsOf); enum slots point to the literal. Outside-model targets and LiteralNull holders are listed in `unwritten`, for lane 5 to show. Bench 31/31, one survivor first. Typecheck, build 0; vitest 15500 passed, 3 known import reds. Temporary node_modules link (P14), removed. Red first at the import.
 **Prompt document name**: 2026-11-08 21:24
+
+## 2026-11-08 — feat: DCN snapshot written as a new model, layout, exact match (P-2026-11-08-2355)
+**Prompt**: `claude_2026-11-08_2157_prompt_dcn_s5_5_snapshot_write.md`, `claude_2026-11-08_2216_prompt_dcn_s5_5b_snapshot_write_cont.md`, `claude_2026-11-08_2320_prompt_dcn_s5_5c_snapshot_layout.md`, `claude_2026-11-08_2355_prompt_dcn_s5_5d_snapshot_close.md`, lanes full and critical, slice 5 lane 5 (R-DCN-30): write a run snapshot as a new model in one undo, keep the source layout, match source vertices by id, probe with edges on open; gates; closure
+**Files touched**: 3cc93959d, f26b6faa6, 31db26323, 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshotWrite.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotWrite.test.ts` (new); 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshot.ts`, `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts`; aa2c628f8, 50fe1ccbc `frontend/scripts/probe/dcn-snapshot.ts` (new); 795940ae1, 765f6068d `docs/discovery/lir_2026-11-08_dcn_snapshot_write.md` (new); docs commits: this entry, Status of the four prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 23:50 (P-2026-11-08-2320 stopped at the context ceiling, closure owed)
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (11 files, all in the prompts' DOVE: the writer, the plan and their two tests, the probe, the LIR, this inbox, the four prompts)
+**Layer Impact Report**: produced: docs/discovery/lir_2026-11-08_dcn_snapshot_write.md, with its addendum
+**Smoke visivo**: passato (crop of P-2026-11-08-2320 read by the chat 23:53, dji's seven rows visible)
+**Notes**: Objects the plan adds still get the Step 2bis grid, which supersedes the 2216 ticket for the rest. SN-24: source and snapshot draw 0 edges of 188 stored, same endpoints; the control on the 0 is the node count. Second cause (d): the overlap of 2320 seen only at the visual check. Bench 5/5 on sourceId, 19/19 on the layout. Vitest 15542 passed, 3 known import reds. Probe 24/24, ~/.jjodel-lanes/P-2026-11-08-2355.
+**Prompt document name**: 2026-11-08 23:55
+
+**Ticket** (low): the row template shows values[0] of a multi-valued slot.
