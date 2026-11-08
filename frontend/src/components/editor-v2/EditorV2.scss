@@ -4386,6 +4386,12 @@ body.header-variant-c {
     box-shadow: 0 2px 8px var(--node-shadow);
 }
 
+// Two canvases side by side (R-MT-24, P-2026-11-08-1633): the inline `right` adds the rail's
+// inset, and no rail lies over the second canvas.
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel ~ .dock-panel .react-flow__minimap {
+    right: 16px !important;
+}
+
 // TODO: cleanup — dead since the minimap stopped being portalled: no element carries
 // this class (measured 2026-08-25, zero consumers in src). Left in place per Rule 9.
 .editor-v2-minimap-portal {
