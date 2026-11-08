@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01DQt9R79sHuFgu9doZgQErw (Alfonso, «ok 
 Front: maintenance
 Depends: P-2026-11-08-1845, P-2026-11-08-2015
 Lane: full (five files, visible change on the Projects dashboard)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane dashboard-drop-import · 549c87a12 · verifica visiva passata 2026-11-08
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

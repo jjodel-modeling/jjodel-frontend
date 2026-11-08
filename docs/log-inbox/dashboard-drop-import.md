@@ -35,3 +35,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 20:15
 
 **Ticket** (found here, not fixed): the picker on `#/archive` still adds a duplicate name (`Turnstile copy` measured), because the store there does not hold the project list (report Q2). A `.pdf` dropped on the modal logs `invalid file` and shows no toast, left as it is by item 5, for lane B or C. Online, a failed POST alerts and the project is still created and counted as imported (`projects.ts`, `Online.import`), unchanged.
+
+## 2026-11-08 — feat(dashboard): import modal with drop area, empty state import (P-2026-11-08-2040)
+**Prompt**: lane B of the dashboard drop import: redesigned Import modal (label around a hidden multiple input, closes only on backdrop, close, Cancel, Esc), empty state copy and "Import .jjodel file" button behind an optional prop, DOM probe and crops.
+**Files touched**: `frontend/src/pages/AllProjects.tsx`, `frontend/src/pages/dashboard.scss`, `frontend/src/components/EmptyDashboard/EmptyDashboard.tsx`, `frontend/src/components/EmptyDashboard/empty-dashboard.scss`, `frontend/src/pages/components/catalog/Catalog.tsx` (549c87a12); this inbox entry and the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 4/4 sui crop (RC-23); sonda della corsia 34/34, porta 3057, offline, light
+**Notes**: No helper added: the backdrop test is one inline comparison, so no new file or unit test. A selection leaves the modal open, as the reset of the input implies; a drop closes it as before. The empty state button calls `ProjectsApi.import`. Copy and button only on All Projects. Probe used a synthetic DragEvent, not a CDP drag. Online path not run, hence Regressions unknown. Typecheck exit 0, vitest only the 3 known red files, build exit 0, check:docs 5/5.
+**Prompt document name**: 2026-11-08 20:40
+
+**Ticket** (found here, not fixed): a successful import from the modal shows no feedback, and after a selection the modal stays open, so only the cards behind the backdrop change; for lane C, which owns the toasts. A non-`.jjodel` file taken through the picker's "All files" option only logs `invalid file`, like the modal drop (lane A's ticket).
