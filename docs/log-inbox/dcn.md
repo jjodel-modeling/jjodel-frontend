@@ -466,9 +466,9 @@ active log is not touched by this lane.
 **Corregge**: —
 **Causa**: —
 **Regressions**: yes (4 tests of irActivityRender.test.ts, red because its mock lacked getSimDcnNode; fixed in the lane, no production behaviour affected)
-**Out-of-scope changes**: yes (test mock only, granted by the chat: one line in irActivityRender.test.ts)
+**Out-of-scope changes**: yes (test mock only, granted by the chat: one line in irActivityRender.test.ts; six repo files in all, the five of the DOVE and this mock)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crops read by the lane; 1-charging and 2-flying read by the chat 2026-11-08 20:58: the card is right; 3-stepback read by the lane only)
+**Smoke visivo**: passato (GO given; 1-charging and 2-flying read by the chat 2026-11-08 20:58: the card is right; 3-stepback read by the lane only)
 **Notes**: Probe 17/17, port 3142. Run twice: in the first the open panel hid the card in the crops, so it is hidden for the crop only. Ring absent on dji with enabled true. Typecheck, scripts, build 0; vitest 15465 passed, 3 known import reds. Stopped once: the card broke the mock in irActivityRender.test.ts (4 reds, under viewpoint/ir/); the chat granted one line. Column only around a card, Petri DOM unchanged. At this zoom the open panel covers dji's card.
 **Prompt document name**: 2026-11-08 20:42
 
