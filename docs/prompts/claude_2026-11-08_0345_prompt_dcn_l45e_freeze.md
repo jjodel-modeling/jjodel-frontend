@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0345
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · db9d66ddf
 Lane: full (fix; root cause first; `editor-v2/sim/` DCN branch and `model/simulation/dcn/`)
 Corregge: 2026-11-08 03:40 (P-2026-11-08-0329: Reset of the drone refuses the run, «The model cannot be frozen: an L proxy at globals.InstanceValue_3 ... .association.instanceof.superTypes.0.isAbstract»)
 Worktree: ~/jjodel-w-dcn-l45, branch dcn-l45, at the commit that adds this prompt
