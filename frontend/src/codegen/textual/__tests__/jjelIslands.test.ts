@@ -12,7 +12,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { textInputOf } from '../ui/TextualTab';
+import { printedJjel, textInputOf } from '../ui/TextualTab';
 import { classFeatures, jjelOf } from '../metamodel';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import { checkIslands, islandOffset, islandRange, jjelIslands, valueMap } from '../jjelIslands';
@@ -365,5 +365,36 @@ describe('checkIslands: `self.<f>` names a feature of the owner\'s class', () =>
 
     it('an island with no class gives no name diagnostic (dies on a missing class read as no features)', () => {
         expect(checkIslands([islandOf('"self.gard > 0"', 'expression')])).toEqual([]);
+    });
+});
+
+describe('printedJjel: the JjEL warnings of a printed text, read again at each reprint (lane TABFIX, P-2026-11-08-0859)', () => {
+    const baseIn = (style: NotationStyle) => ({ mm: NET_MM, grammar: deriveConcreteGrammar(deriveBaseGrammar(NET_MM), style) });
+    const objectsWith = (guard: string): TextObject[] => [
+        { id: 'n', cls: 'Net', slots: { name: 'N', transitions: ['t'] } },
+        { id: 't', cls: 'Transition', slots: { name: 'fire', guard, effect: null, note: 'self.count >' } },
+    ];
+    const printedIn = (style: NotationStyle, guard: string) => {
+        const base = baseIn(style);
+        return { base, text: printTextModel(base.grammar, objectsWith(guard)).text };
+    };
+
+    it('a style switch prints the malformed guard again and finds its warning on the token, in every style (dies on no recheck, on the islands read with the wrong style)', () => {
+        for (const style of [CLIKE_STYLE, PASCAL_STYLE, INDENT_STYLE]) {
+            const { base, text } = printedIn(style, 'self.count >');
+            const found = printedJjel(base, text);
+            expect(found.map(d => [text.slice(d.start, d.end), d.message])).toEqual([['>', 'Expected expression']]);
+        }
+    });
+
+    it('a well-formed print gives nothing, an EString is not checked (dies on every string read as JjEL)', () => {
+        const { base, text } = printedIn(CLIKE_STYLE, 'self.count > 0');
+        expect(printedJjel(base, text)).toEqual([]);
+    });
+
+    it('reads the parse it is given, not the text again (dies on the session\'s parse ignored)', () => {
+        const { base, text } = printedIn(CLIKE_STYLE, 'self.count >');
+        const other = printedIn(CLIKE_STYLE, 'self.count > 0');
+        expect(printedJjel(base, text, parseText(other.text, base.grammar))).toEqual([]);
     });
 });

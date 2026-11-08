@@ -340,6 +340,15 @@ export function agreedEvidence(sync: TextSync, text: string): { readonly spans: 
 }
 
 /**
+ * Lane TABFIX (P-2026-11-08-0859; R-TXT-55 F3): the JjEL warnings of a text the tab agrees with the model, so a reprint
+ * (a style switch included) finds them again, as the typing pause does. `given`: the session's parse, when it is of this
+ * text and this grammar.
+ */
+export function printedJjel(base: Pick<EditBase, 'mm' | 'grammar'>, text: string, given?: TextParseResult): JjelDiagnostic[] {
+    return checkIslands(jjelIslands(given ?? parseText(text, base.grammar), base.mm, base.grammar.style));
+}
+
+/**
  * A change of the model's print (a diagram edit, an undo, another tab): reprint when the editor holds no pending
  * edit, else keep the user's text and say the model changed. Never while the tab's own application runs: its result
  * becomes the new agreement when the run ends.
@@ -1489,6 +1498,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }));
     };
 
+    /** TABFIX: an agreed text's markers: no parse error to show, and its islands' JjEL warnings read again from the text. */
+    const setAgreedMarkers = (text: string, base: EditBase | null): void => {
+        if (!base) { setMarkers(null); return; }
+        const shared = sessionRef.current?.current();
+        setMarkers(null, [], printedJjel(base, text, shared && shared.text === text && shared.grammar === base.grammar ? shared.parsed : undefined));
+    };
+
     const updateUndoKey = (): void => {
         const editor = editorRef.current;
         undoKeyRef.current?.set(!!editor && appUndoKey(syncRef.current, editor.getValue()));
@@ -1516,7 +1532,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setDecorations(next.spans);
         setRefDecorations(next.refs);
         agree();
-        setMarkers(null);
+        setAgreedMarkers(next.text, r.base);
         staleRef.current = false;
         setStale(false);
         setConfirm(null);
@@ -1624,7 +1640,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const text = editor.getValue();
         if (text === sync.text) {
             restoreAgreed(text);
-            setMarkers(null);
+            setAgreedMarkers(text, r.base);
             setConfirm(null);
             if (staleRef.current) reprint(r); else setStatus({ kind: 'synced' });
             return;
@@ -1744,7 +1760,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             if (editor && sync && editor.getValue() === sync.text && !staleRef.current) {
                 pause.cancel();
                 restoreAgreed(sync.text);
-                setMarkers(null);
+                setAgreedMarkers(sync.text, readRef.current.base);
                 setConfirm(null);
                 setStatus({ kind: 'synced' });
                 return;
@@ -1923,7 +1939,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         }
         const r = readRef.current;
         syncRef.current = { text: editor.getValue(), model: r.view.text, ...(r.base ? { printed: agreedPrint(r.base) } : {}) };
-        if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
+        if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); setAgreedMarkers(editor.getValue(), r.base); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
