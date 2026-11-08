@@ -255,6 +255,36 @@ function cartesianProduct<T>(arrays: T[][]): T[][] {
     );
 }
 
+/** Several source models of one metamodel (R-JTG-26): an array whose items are all arrays. */
+function isSourceModelList(source: any): source is any[][] {
+    return Array.isArray(source) && source.length > 0 && source.every(Array.isArray);
+}
+
+/**
+ * The ids held by more than one model of the list, as an error message, or null.
+ * The trace keys a source element by id, so a shared id would merge two objects.
+ * A repeated id inside one model is left alone, as in a single model.
+ */
+function sharedSourceIdsError(models: any[][]): string | null {
+    const firstModelOf = new Map<any, number>();
+    const shared = new Map<any, [number, number]>();
+    models.forEach((model, index) => {
+        for (const item of model) {
+            const id = item?.id;
+            if (id === undefined || id === null) continue;
+            const first = firstModelOf.get(id);
+            if (first === undefined) firstModelOf.set(id, index);
+            else if (first !== index && !shared.has(id)) shared.set(id, [first, index]);
+        }
+    });
+    if (shared.size === 0) return null;
+    const limit = 5;
+    const shown = [...shared].slice(0, limit).map(([id, [a, b]]) => `'${id}' (models ${a + 1} and ${b + 1})`);
+    const more = shared.size > limit ? `, and ${shared.size - limit} more` : '';
+    return `The source models share ${shared.size} ${shared.size === 1 ? 'id' : 'ids'}: ${shown.join(', ')}${more}. ` +
+        'Ids must be unique across the source models: nothing was transformed.';
+}
+
 /**
  * Deep-copy a source model safely, handling circular references.
  * Falls back to the original value if serialization fails (e.g., due to proxies).
@@ -680,11 +710,23 @@ export class JjtlExecutor {
     /**
      * Execute the transformation on a source model
      * NOTE: Creates a deep copy of sourceModel to prevent mutation of the original data
+     *
+     * sourceModel may also be a list of models of one metamodel, each an array of
+     * objects: they are united here, so everything below sees one array (R-JTG-26).
      */
     async execute(sourceModel: any, targetMetamodel?: any): Promise<ExecutionResult> {
         // console.log('[JjTL Executor] Starting execution...');
         // console.log('[JjTL Executor] AST:', this.ast);
         // console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
+
+        if (isSourceModelList(sourceModel)) {
+            const sharedIds = sharedSourceIdsError(sourceModel);
+            if (sharedIds) {
+                this.errors.push(sharedIds);
+                return { success: false, errors: this.errors, warnings: this.warnings, stats: this.stats };
+            }
+            sourceModel = sourceModel.flat();
+        }
 
         // Flatten L-layer proxies into plain objects (shallow — one level only).
         // JSON.parse(JSON.stringify()) is NOT used because L-layer proxies have
