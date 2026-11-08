@@ -3329,3 +3329,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Prompt document name**: 2026-11-08 19:27
 
 **Ticket** (low): the confirm panel still reads `same name, paired by order` for homonyms now paired by content (crop 1-swap). T8c's probe check depends on that text, so changing it needs that check changed too.
+
+## 2026-11-08 — merge: textual-t8e-match into alfonso-frontend-jjtl (P-2026-11-08-2002)
+**Prompt**: `claude_2026-11-08_2002_prompt_merge_textual-t8e-match.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t8e-match` at `431448be5` into `alfonso-frontend-jjtl`, merge base `723bcabf6`, 10 commits on the branch side.
+**Files touched**: merge `3589668e7`: 12 files from the branch side (`docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1625_prompt_textual_t8e_match.md`, `docs/prompts/claude_2026-11-08_1705_prompt_textual_t8e_appcheck.md`, `docs/prompts/claude_2026-11-08_1718_prompt_textual_t8f_reorder_hole.md`, `docs/prompts/claude_2026-11-08_1927_prompt_textual_t8e_acceptance.md`, `frontend/src/codegen/textual/__tests__/calibration.test.ts`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3589668e7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15522 tests in 587 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: T8e crops 1-swap, 2-offscreen in ~/.jjodel-lanes/P-2026-11-08-1927/; 1-swap 20 runs, 0 holes, pairing 100%
+**Notes**: Rollback tag `pre-textual-t8e-match` on `7be5a7c57` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-2002/result.json`.
+**Prompt document name**: 2026-11-08 20:02
