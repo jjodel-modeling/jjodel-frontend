@@ -8,8 +8,10 @@ import { describe, it, expect } from 'vitest';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { TextObject } from '../metamodel';
 import { parseText } from '../parser';
+import type { SyntaxNode } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE } from '../style';
+import { textIdsOf } from '../textMatch';
 import { BOOL_CLIKE, BOOL_PASCAL, boolGrammar, boolObjects } from './boolCorpus';
 import { BOX, CASES, DIAMOND, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
 import { PORT_PASCAL, portGrammar, portObjects } from './portCorpus';
@@ -29,6 +31,8 @@ function fixtures(): { readonly name: string; readonly g: ConcreteGrammar; reado
         ...[DIAMOND, NON_DIAMOND, BOX, CASES, INNER, FIXTURE].flatMap((s, i) => [CLIKE_STYLE, LOWER].map(st => ({ name: `spec ${i}, ${st.id}`, g: grammarOf(s, st), objects: objectsOf(s) }))),
     ];
 }
+
+const objectIds = (n: SyntaxNode): string[] => [...(n.kind === 'object' ? [n.id] : []), ...n.children.flatMap(c => (c.kind === 'token' ? [] : objectIds(c)))];
 
 const printOf = (g: ConcreteGrammar, objects: readonly TextObject[]): string => {
     try { return printTextModel(g, objects).text; } catch (e) { return `throws: ${(e as Error).message}`; }
@@ -89,5 +93,50 @@ describe('T8a printer: ids on', () => {
         const text = printTextModel(withIds(lib.g), objs).text;
         expect(text).not.toMatch(/@id b 0/);
         expect(text).toMatch(/@id b1/);
+    });
+});
+
+describe('T8a reader', () => {
+    const ids = (text: string, g: ConcreteGrammar): Record<string, string> => {
+        const r = parseText(text, g);
+        return Object.fromEntries(textIdsOf(r.tree!, g));
+    };
+
+    it('gives each printed object its id back, under every style', () => {
+        for (const f of fixtures()) {
+            if (printOf(f.g, f.objects).startsWith('throws')) continue;
+            const g = withIds(f.g);
+            const p = printTextModel(g, f.objects);
+            const r = parseText(p.text, g);
+            const read = textIdsOf(r.tree!, g);
+            // The print's tree and the parse's have the same objects in the same order, model ids and parsed ids.
+            const asModel = new Map(objectIds(r.tree!).map((t, i) => [t, objectIds(p.tree!)[i]]));
+            expect(read.size, f.name).toBeGreaterThan(0);
+            for (const [t, id] of read) expect(id, f.name).toBe(asModel.get(t));
+        }
+    });
+
+    it('reads nothing from a text with no ids', () => {
+        for (const f of fixtures()) {
+            if (printOf(f.g, f.objects).startsWith('throws')) continue;
+            expect(textIdsOf(parseText(printOf(f.g, f.objects), f.g).tree!, f.g).size, f.name).toBe(0);
+        }
+    });
+
+    it('is not fooled by an ordinary comment, a comment of another shape, or one off the head line', () => {
+        const g = tolerantCases('clike')[0].g;
+        const base = 'Library city { // a note\n  books {\n    Book book0 { /* @id */\n      genre FICTION // @id b9\n    }\n    Book book1 { // @idb1\n      genre SCIENCE\n    }\n  }\n}';
+        expect(parseText(base, g).errors).toEqual([]);
+        expect(ids(base, g)).toEqual({});
+    });
+
+    it('reads the block form and the Pascal form', () => {
+        const g = tolerantCases('clike')[0].g;
+        const r = parseText('Library city { /* @id lib */\n  books {\n    Book book0 { genre FICTION } // @id b0\n  }\n}', g);
+        expect(r.errors).toEqual([]);
+        expect([...textIdsOf(r.tree!, g).values()]).toEqual(['lib', 'b0']);
+        const pg = tolerantCases('pascal')[0].g;
+        const pt = printTextModel(withIds(pg), libraryObjects(1, 0)).text;
+        expect(Object.values(ids(pt, pg))).toEqual(['lib', 'b0']);
     });
 });
