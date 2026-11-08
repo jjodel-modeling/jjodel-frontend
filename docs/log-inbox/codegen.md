@@ -3275,3 +3275,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — `npm run smoke` on this tree's Vite (:3868): RED once 5/2/0 on a cold server (`page.goto` 30 s timeout on two states, cause not proven), then GREEN 12/0/3 warm. Store list after a reorder: ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json. The list is store evidence; no human visual check ran.
 **Notes**: Probe on this tree, before / after: natural 7 holes in 80 / 0 in 80; forced (dispatch held 8 ms past the next settle) 19 in 20 / 0 in 20, 18 dispatches held. Reorder median 1886 / 1780 ms. Bound 1000 ms: worst gap measured 224.5 ms. Bench: four mutations of the new test all die. Vite must be restarted after an edit, or the probe's bare imports load second module instances. Not run: a plain reference slot, save and reopen.
 **Prompt document name**: 2026-11-08 17:59
+
+## 2026-11-08 — merge: jjscript-settle-inflight into alfonso-frontend-jjtl (P-2026-11-08-1912)
+**Prompt**: `claude_2026-11-08_1912_prompt_merge_jjscript-settle-inflight.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-settle-inflight` at `1da6899fe` into `alfonso-frontend-jjtl`, merge base `9cfe2bcc4`, 4 commits on the branch side.
+**Files touched**: merge `5239ad052`: 10 files from the branch side (`docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1759_prompt_jjscript_settle_inflight.md`, `frontend/src/jjscript/executor/__tests__/instanceDelete.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Operators.test.ts`, `frontend/src/jjscript/executor/__tests__/m1SetLists.test.ts`, `frontend/src/jjscript/executor/__tests__/settleInFlight.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5239ad052` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15488 tests in 586 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: settle fix: store list ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json, probe 0/80 natural and 0/20 forced holes
+**Notes**: Rollback tag `pre-jjscript-settle-inflight` on `ae12b41c5` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1912/result.json`.
+**Prompt document name**: 2026-11-08 19:12
