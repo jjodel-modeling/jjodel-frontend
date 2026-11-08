@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0808
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane multi-tab-l6 · 89fa42c59 · verifica visiva da fare (crops in ~/.jjodel-lanes/P-2026-11-08-1003/)
 Lane: full (no critical zone; makes §3.7 and §4.2 of the discovery reachable by a gesture, so it lands after L4 and L4b)
 Depends: L4 on the trunk (one populate owner per model, R-MT-17), L4b, L2, L3, L5 on the trunk; docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §2.1, §2.2, §7 row L6; R-MT-4, R-MT-9, R-MT-10, R-MT-24
 Worktree: ~/jjodel-w-mtl6, branch multi-tab-l6, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

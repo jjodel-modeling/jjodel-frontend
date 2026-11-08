@@ -288,3 +288,35 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; Alfonso's Ok 2026-11-08 07:37 on the 0150 crops, and the 0150 and 0245 measurements on the same code)
 **Notes**: Probes 17/17 once. Files on both sides: none; governance files on the branch: none. The 19 new tests counted on the merge from the two added files, byte-equal to d2b184780: vitest cannot start in the branch tree (no node_modules), not written there; a first static count said 18. Trunk-tip vitest at load 32: the 3 import reds plus an irCollapsedRender close timeout, 13/13 alone. check:docs 5/5, not the prompt's 4/4. Lane board unchanged, not restarted; 3001 up, not restarted.
 **Prompt document name**: 2026-11-08 07:37
+
+## 2026-11-08 — feat: a second tab on one model, Open in new tab and Open beside (multi-tab L6)
+**Prompt**: `claude_2026-11-08_0808_prompt_multi_tab_l6_second_tab.md`, lane full: tab-id helper `<modelId>~tab<N>`, decoding at the sites that read a tab id as a model id, `closeTabsForEntity` on every tab of the entity, `openBeside` by tab id, the two menu items on the model row. List widened by Alfonso's GO (RC-21) with `EditorSwitch.tsx`, `ModelTab.tsx`, `MyRcDock.tsx`. Closed by the continuation lanes P-2026-11-08-0852 (app check) and P-2026-11-08-1003 (paint fix of the beside panel).
+**Files touched**: `46cde4fdc` and the follow-up: the discovery note; `64b18a050` five test files, red; `89fa42c59` `modelTabId.ts` (new), `TabDataMaker.tsx`, `ModelTab.tsx`, `EditorSwitch.tsx`, `Dock.tsx`, `DockManager.tsx`, `MyRcDock.tsx`, `Navbar.tsx`, `TreeViewContent.tsx`; `7f8e8c0fb` `ScriptTab.scss` (the beside panel is painted); the discovery note, this entry and the three Status flips.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (app probes; the maximized fallback stays red, known limit; Alfonso's visual check due)
+**Notes**: Partial: known limits. On 7f8e8c0fb: typecheck exit 0, build passed, the 5 L6 test files 38 passed, check:docs exit 0; no full vitest (no TS changed). App: Open beside painted 3/3, 27 nodes, left 18; Refactoring split 8 nodes; demo 15/15. Red: maximized fallback, tab in a hidden placeholder. Console not observed. Cause c: discovery 2026-11-06 §2.2 missed three readers. Tables: `discovery_2026-11-08_l6_second_tab.md`.
+**Prompt document name**: 2026-11-08 08:08
+
+## 2026-11-08 — ticket: the Console reads the dock tab id as a model id
+**Ticket**: `components/editors/Console.tsx:846-848,1058-1059` resolve the active tab id with `fromPointer`. On a second tab of a model (`<modelId>~tab<N>`, L6) the lookup misses: no crash, but the Console sees no active model and `:1059` clears its node. Read from the code, not observed at runtime (`.console-tab-v2` is not mounted in the demo layout). JjScript is not affected: measured, it finds the model through the `EDITOR_TYPE_CHANGE` cache. The fix is `modelOfTabId` (`components/abstract/tabs/modelTabId.ts`) at those lines.
+**Priority**: medium
+**Found in**: P-2026-11-08-0808
+**Detail**: docs/discovery/discovery_2026-11-08_l6_second_tab.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l6 (P-2026-11-08-1156)
+**Prompt**: `claude_2026-11-08_1156_prompt_multi-tab-l6_take_trunk.md`: the trunk at `34a511ffb` into `multi-tab-l6`, one merge commit, `--no-ff`, before the branch's own merge (RC-14). Merge base `f64bd6592`, 74 commits on the trunk side, 8 on the branch side.
+**Files touched**: merge `7b4a75718`: the 45 files of the trunk side against the first parent (`git diff --name-only 7b4a75718^1 7b4a75718`), none by hand; both sides: `frontend/src/components/abstract/DockManager.tsx`, auto-merged, read top to bottom. Closure commit: this inbox and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on `7b4a75718`: typecheck exit 0; typecheck:scripts exit 0; vitest 15366 passed, 3 skipped, 584 files, the 3 files red at import (trunk 15328 + 38 of the branch); hooks 967; build exit 0; check:docs 5/5; check:scripts and check:addonly PASS. The visual probes were not rerun on the merge commit.
+**Out-of-scope changes**: no — above five files only as the merge the prompt names (RC-11), listed by the command in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok to the 0852 and 1003 crops, taken before the merge; no probe rerun on `7b4a75718`, the trunk merge lane reruns them.
+**Notes**: Vitest took three runs: at load 113-146 `tolerant.test.ts` broke its wall-clock guards (1726 and 1086 ms against 1000; 60 against 50 ms) and `irCollapsedRender` a hook timeout; both files green alone twice, run 3 green. `frontend/node_modules` absent: temporary symlink to the shared one (P14), removed after the gates. A hook run overran the tool timeout, stopped, rerun in the foreground. check:docs is 5/5 here, the prompt said 4/4.
+**Prompt document name**: 2026-11-08 11:56

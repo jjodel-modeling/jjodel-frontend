@@ -37,6 +37,7 @@ import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
+import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -703,9 +704,10 @@ function NavbarComponent(props: AllProps) {
             const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
             if (!activeId) return null;
             const state = store.getState() as any;
-            const raw = state[activeId] || state.idlookup?.[activeId];
+            const modelId = modelOfTabId(activeId);
+            const raw = state[modelId] || state.idlookup?.[modelId];
             if (!raw) return null;
-            return { id: activeId, isModel: raw.isMetamodel === false };
+            return { id: modelId, isModel: raw.isMetamodel === false };
         } catch { return null; }
     }, []);
 
@@ -1826,7 +1828,7 @@ function NavbarComponent(props: AllProps) {
                         // the backing DModel was deleted (or never existed) and the tab is
                         // a ghost: skip it instead of fabricating a placeholder "Unnamed M".
                         // Same existence-check pattern used in ProjectEditor.tsx:2343.
-                        const raw = (state as any)[id] || (state as any).idlookup?.[id];
+                        const raw = (state as any)[modelOfTabId(id)] || (state as any).idlookup?.[modelOfTabId(id)];
                         if (raw) {
                             title = raw.name || 'Unnamed';
                             type = raw.isMetamodel ? 'metamodel' : 'model';
