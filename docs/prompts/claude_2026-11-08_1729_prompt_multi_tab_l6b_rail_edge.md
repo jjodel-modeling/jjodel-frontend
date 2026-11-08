@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1729
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 0189a0928 · gates green (typecheck 0, build, check:docs, vitest 147 passed) · log entry in docs/log-inbox/multi-tab.md · Alfonso's visual GO pending
 Lane: full (layout only: SCSS; no critical zone, no core)
 Depends: P-2026-11-08-1608 and P-2026-11-08-1633 (closure 26b91eda8; `0aff5a02a` put the rail in its own column between the two canvases); R-MT-26
 Worktree: ~/jjodel-w-mtl6b, branch multi-tab-l6b, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

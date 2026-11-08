@@ -337,8 +337,8 @@ active log is not touched by this lane.
 **Ticket** (merge prompt, step 6): the `check:addonly` rollback names `3d0cc984d` as the pre-merge tip, but the tip before the merge was `af51a3094`, the prompt's own commit. Not triggered here; run as written it would also drop the prompt commit.
 
 ## 2026-11-08 — fix: the beside layout, rail column, width cap, app bar, minimap, toolbar (multi-tab L6b)
-**Prompt**: `claude_2026-11-08_1608_prompt_multi_tab_l6b_beside_layout.md` and its continuation `claude_2026-11-08_1633_prompt_multi_tab_l6b_finish.md`, lane full, layout only: side panels off the left canvas, the 710 cap lifted, the app bar listing the tab beside, the right minimap in its canvas, a toolbar of icons that scrolls in a narrow pane.
-**Files touched**: `6d229bff2` the note; `1cb96945d` `abstract/style.scss`; `0aff5a02a` `abstract/style.scss`, `properties-with-tree-view.scss`; `541ba4cb8` `Navbar.tsx`; `fa3b09e2f`, `b89421b06` `EditorV2.scss`; the note, this entry and the two Status flips.
+**Prompt**: `claude_2026-11-08_1608_prompt_multi_tab_l6b_beside_layout.md` and its continuations `claude_2026-11-08_1633_prompt_multi_tab_l6b_finish.md` and `claude_2026-11-08_1729_prompt_multi_tab_l6b_rail_edge.md`, lane full, layout only: side panels off the left canvas, the 710 cap lifted, the app bar listing the tab beside, the right minimap in its canvas, a toolbar of icons that scrolls in a narrow pane, and (1729) the rail at the window's edge in a split.
+**Files touched**: `6d229bff2` the note; `1cb96945d` `abstract/style.scss`; `0aff5a02a` `abstract/style.scss`, `properties-with-tree-view.scss`; `541ba4cb8` `Navbar.tsx`; `fa3b09e2f`, `b89421b06` `EditorV2.scss`; `0189a0928` `abstract/style.scss`, `EditorV2.scss`, `properties-with-tree-view.scss`; the note, this entry and the three Status flips.
 **Outcome**: ✅ completed
 **Corregge**: 2026-11-08 08:08
 **Causa**: (d)
@@ -346,5 +346,5 @@ active log is not touched by this lane.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (app probes at 1600 and 1280; Alfonso's visual check due)
-**Notes**: Typecheck 0, build 0, check:docs 0, vitest 12 files 147 passed. Split 3/3 at 1600 and 1280; single tab same as the base; Refactoring split as in 1003; demo 15/15. The divider was not dead: 1608's probe missed a half-pixel divider, no fix. Decision R-MT-26 kept every control. Tables and limits: `discovery_2026-11-08_l6b_beside_layout.md`.
-**Prompt document name**: 2026-11-08 16:33
+**Notes**: Typecheck 0, build 0, check:docs 0, vitest 12 files 147 passed. 1729, from Alfonso's look at the 1633 crops: the rail stood between the tabs; `0189a0928` puts its column after the last panel, at the window's edge. Split 3/3 at 1600 and 1280; single tab and Refactoring split same as 1633; demo 15/15. The divider was not dead (1608's probe). R-MT-26 kept every control. Tables and limits: `discovery_2026-11-08_l6b_beside_layout.md`.
+**Prompt document name**: 2026-11-08 17:29

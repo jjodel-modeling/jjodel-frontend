@@ -149,3 +149,44 @@ Limits, as measured or as noted:
 - At 1280 the app bar chips shrink to the icon and one letter (crop). Not compared with the trunk.
 - Inferred, not measured: `overflow-y: hidden` clips the cell's `margin-bottom: -1px`, so in the split its hairline can stop 1px above the rail's.
 - The crops of the split show the bars as the probe left them, scrolled to the views menu.
+
+## P-2026-11-08-1729: the rail at the window's edge
+
+Alfonso's look at the crops of 1633: in a split the rail stood between the two tabs. It sits now where it sits with a single tab, after the right panel. Fix `0189a0928`, three SCSS files, no TSX: the rail's column moves from after the first panel to after the last (`abstract/style.scss`), the inline `right` of `useCanvasPanelGap`, which measures the first panel, gives way to the stylesheet's `right` by `!important` (`properties-with-tree-view.scss`), and the pane rules of the toolbar's rail cell and of the minimap swap sides (`EditorV2.scss`).
+
+Tree `multi-tab-l6b`, probe `~/.jjodel-lanes/P-2026-11-08-1729/gesture.mjs`, light theme, three runs each, every run 18 of 18 checks, pageerrors 0:
+
+| Measure | 1600 (3 runs identical) | 1280 (3 runs identical) |
+|---|---|---|
+| Panels, x and w | 0, 600 / 601, 600 | 0, 460 / 461, 460 |
+| Gap between the panels | 1 px, the divider | 1 px, the divider |
+| Rail, x to right edge | 1200 to 1600 | 920 to 1280 |
+| Rail's left edge against the right panel's right edge | 1200 against 1201 (rounded; the panel ends at 1200) | 920 against 921 (rounded; the panel ends at 920) |
+| Left canvas | x 201 to 599, not under the rail | x 201 to 459, not under the rail |
+| Right canvas, flow | x 802 to 1599, 398 clear of the rail | x 662 to 1279, 258 clear of the rail |
+| Left minimap, right edge | 583 | 443 |
+| Right minimap, right edge | 1175, left of the rail | 895, left of the rail |
+| Right rail cell against the rail | within 1px | within 1px |
+| Toolbar controls reachable, left / right | all / all | all / all |
+| Divider drag, panels after | 339, 860 | 199, 720 |
+| Rail after the drag | 1200 to 1600 | 920 to 1280 |
+| App bar | Apartment, Office | Apartment, Office |
+
+Once each, 1600:
+
+| Scene | Result |
+|---|---|
+| Single tab against the 1633 run | same: canvas x 201 to 1599, rail cell x 1200 w 399, rail x 1200 to 1600, minimap x 973 to 1175, zoom 0.716, 18 nodes |
+| Refactoring split against the 1633 run | same measures once tab ids are stripped; sizes 640 / 960 |
+| 1730 two-model demo | 15 of 15, pageerrors 0 |
+
+Gates on `0189a0928`: typecheck exit 0, build exit 0, check:docs exit 0, vitest 12 files 147 passed (the same list as 1633).
+
+Probe changes against 1633's copy: the rail-cell check moved to the right pane; the check on the rail against the right canvas is replaced by seven on this finding (rail right of the right panel, at the window's edge, left canvas clear, right canvas on top up to the rail, right minimap clear of the rail, panels adjacent, the same after a drag). The probe writes the drag's grab point over the divider's x before it saves, so the JSON's 598.5 and 458.5 are not the divider's position: the table gives the gap instead.
+
+Limits, as measured or as read:
+
+- Read, not measured: the readers of `--jj-canvas-right-inset` other than the minimap still get the rail's inset in the left pane, where no rail lies: the JS helpers through `viewportInset.ts:16`, which reads `<body>`, and the CSS of `sim/`. In 1633 the same was true of the right pane; the swap moved it. SCSS cannot reach the JS readers.
+- Not probed: a split with the rail collapsed, or with Jodie docked. The new `right` is the stylesheet's own value, `--jj-jodie-dock-width`.
+- A long drag at 1280 leaves the left panel at 199, narrower than its 201 palette, so the left canvas has no visible width. rc-dock's minimum, as in 1633.
+- At 1280 the app bar chips shrink to the icon and one letter, as in the 1633 crop.
