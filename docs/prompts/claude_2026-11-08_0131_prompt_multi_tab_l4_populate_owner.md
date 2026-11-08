@@ -1,17 +1,17 @@
 # Multi-tab, lane L4: one populate owner per model, registries cleared by the last instance
 
-Prompt-ID: P-2026-11-08-0125
+Prompt-ID: P-2026-11-08-0131
 Chat: C-2026-11-07-0425
 Front: multi-tab
 Status: da eseguire
-Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23 «Si a tutto» for L4, launched with --critical-zone-goahead P-2026-11-08-0125)
+Lane: full (critical zone: useJjomSync.ts; standing go-ahead of Alfonso 2026-11-07 04:23 «Si a tutto» for L4, launched with --critical-zone-goahead P-2026-11-08-0131)
 Depends: L3 and L5 on the trunk (P-2026-11-07-1249, P-2026-11-07-1516), L4b on the trunk (P-2026-11-07-0833, `acquireProducerMount`), docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §3.2, §3.7, §7 row L4; R-MT-17
 Worktree: ~/jjodel-w-mtl4, branch multi-tab-l4, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)
 Request: https://claude.ai/code/session_01DQt9R2jWxTfKXT19Kf4HUW (Alfonso 2026-11-07 18:33 «via», L4 before L6 as the discovery orders them; 2026-11-08 00:03 «puoi procedere tu con i merge»)
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
-Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No subagents. No dev server and no app probe in this lane: the app measurement of §3.7 and §3.2, before and after, is a continuation lane on the same branch. Every reply opens with [P-2026-11-08-0125 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Every question with a recommendation carries it in one line: `Recommended: <one line>`. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; never cat a test or gate log; stop only processes you started, by PID. Context discipline: this front's lanes hit the ceiling; read only the line ranges you need, one commit per numbered item; if the context runs short, commit and stop with a handoff.
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No subagents. No dev server and no app probe in this lane: the app measurement of §3.7 and §3.2, before and after, is a continuation lane on the same branch. Every reply opens with [P-2026-11-08-0131 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Every question with a recommendation carries it in one line: `Recommended: <one line>`. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; never cat a test or gate log; stop only processes you started, by PID. Context discipline: this front's lanes hit the ceiling; read only the line ranges you need, one commit per numbered item; if the context runs short, commit and stop with a handoff.
 
 ## Contesto (non rifare l'analisi)
 
