@@ -56,3 +56,41 @@ The writes touch new records and reverse pointers on M2 only. No view, no viewpo
 | Save and reopen, identical state | unchanged path; the new model persists as any M1 | the probe serializes the source before and after |
 
 Uncertain propagation: none found that needs sync, port distribution or canvas-to-JjOM changes, so the lane proceeds.
+
+## Addendum 2026-11-08: the snapshot keeps the source layout (P-2026-11-08-2320)
+
+Why: on open, Step 2bis puts every object on a 200x120 grid and `temp` paints over the rows of `dji` (crop of P-2026-11-08-2216). The writer now creates the vertices itself. This addendum replaces the line «No DVertex» of the report above for objects that have a source vertex.
+
+```
+[x] D-layer (Redux raw data)       new records only: one DVertex per object with a source vertex
+[ ] L-layer (computed proxies)     called, not changed
+[ ] JjOM (model entities)          not reached
+[ ] Canvas v2-flow                 no code; reads the new vertices on open
+[ ] Canvas classic                 not reached
+[ ] Sync layer (useJjomSync hooks) not changed, not called by the write
+[x] Undo history                   same single entry
+[ ] Persistence (VersionFixer)     no schema change, no default-view source touched
+```
+
+Measured on `dcn-drone-objects.jjodel`, read only: 117 M1 vertices for 117 objects, all in the model's `v2-flow` graph (`_graph5`); the other graph of the model (`_graph4`) has no sub-elements. 51 of them carry `layoutByViewpoint`, keys `__abstract__` and the UML object viewpoint. That dictionary is what the canvas shows: `dji` has the seed (50, 6650) and the record (60, 2600) in the viewpoint, `temp` the seed (50, 7850) and the record (900, 2600). Stored sizes are 200x80 (111) and 200x120 (6), `isResized` false on all.
+
+**What changes.** After the slot writes, inside the same undo group, one `DVertex.new(0, object, graph, graph, undefined, new GraphSize(x, y, w, h))` per object with a source vertex, in the `v2-flow` graph `createModel` made, then two `SetFieldAction` on the new vertex only: `isResized` when the source's is true (`nodeSizing.ts` reads it as the gate on the stored size), `layoutByViewpoint` `+=` the source's dictionary when it has one (the write of `canvasToJjom.ts:79`). A view of the source is one of its layout records: the viewpoint ids are the project's, so they hold for the new model. Source vertex: the `DVertex` whose `model` is the object and whose `graph` is the source's `v2-flow` graph, as `useJjomSync` selects it.
+
+**Rule 12.** A bare loop, no TRANSACTION around `DVertex.new`, as Step 2bis. The two writes are `SetFieldAction` with no creator.
+
+**Graph id.** `Constructors.DGraph_makeID` increments a counter, so a second call names another graph: the id is the one taken when the graph is created.
+
+**Plan keys.** `SnapshotCreate` carries no source id and `simSnapshot.ts` is outside this lane's scope. The writer matches the creates to the source objects by owner, class and name, in the plan's order, owners first. Objects the plan adds match nothing. Two siblings with the same class and name could exchange vertices; they cannot be told apart by name anyway.
+
+**What does not change.** The source and its vertices (read only). `useJjomSync.ts`, `portDistribution.ts`, `canvasToJjom.ts`, `LModelElement`, `reducer`, `ProjectEditor`, no edit. Edges: none created here.
+
+**Cross-layer interaction.** On open:
+- Step 2bis reads `subElements` of the graph and creates a vertex only for objects with none: those the plan added keep the grid.
+- The early exit of `useJjomSync.ts:790-794` also requires `missingM1EdgeCount === 0`, so M1 edges are still created on open with every vertex present.
+- `autoLayoutOnOpen` runs only on a graph with no layout record. A source with records gives a snapshot with records, so it does not move them; a source with none gives a snapshot with none, and it runs as it would on the source.
+
+**Side-effect safety.** New records and their own fields only; one undo removes them with the model. A tab opened on the new model during the 2 s of the write could run Step 2bis before the vertices land: no tab is opened by the write, and the panel does not open one.
+
+Smoke scenarios, in the probe unless stated: every instance's vertex has the source's position and size; no node overlaps `dji`; source byte-equal; one undo removes all, vertices included; reopened Reset gives Flying. Open and save-reopen as above; Families.ecore import not run, no import or M2 path is touched.
+
+Uncertain propagation: none found that needs a core or §3.1 file, so the lane proceeds.
