@@ -4,7 +4,14 @@
  * then names, through the same `planTextEdit` the Text tab uses.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
+
+import { importStep } from '../ui/TextualTab';
 import { printTextModel } from '../printer';
 import { exportText, planTextImport, textFileName, textImportRows } from '../textFile';
 import type { TextImportBase } from '../textFile';
@@ -112,5 +119,30 @@ describe('T8b import rows', () => {
         const rows = textImportRows(base, imported);
         expect(rows).toContainEqual({ old: 'Book book0', new: null, reason: 'deleted', flagged: false });
         expect(rows).toContainEqual({ old: '—', new: 'Book novel', reason: 'created', flagged: false });
+    });
+});
+
+describe('T8b in the Text tab: what an imported file asks', () => {
+    it('no change: the status, no panel', () => {
+        expect(importStep(base, planTextImport(base, exported))).toEqual({ kind: 'unchanged' });
+    });
+
+    it('a change: the confirm panel with its row', () => {
+        expect(importStep(base, planTextImport(base, exported.replace('1901', '1950')))).toEqual({
+            kind: 'confirm', rows: [{ old: 'Book book1', new: 'Book book1', reason: 'changed: year', flagged: false }],
+        });
+    });
+
+    it('an uncertain match is confirmed in the same panel, before the changes', () => {
+        const step = importStep(base, planTextImport(base, plain.replace("book2", "book2x")));
+        expect(step.kind).toBe('confirm');
+        const rows = step.kind === 'confirm' ? step.rows : [];
+        expect(rows[0]?.reason).toMatch(/^renamed, \d+% of the values equal$/);
+    });
+
+    it('a broken file is refused with the parse reason, no panel', () => {
+        const step = importStep(base, planTextImport(base, exported.replace('1901', '1901 ]')));
+        expect(step.kind).toBe('refused');
+        expect(step.kind === 'refused' ? step.reasons[0] : '').toMatch(/error/);
     });
 });
