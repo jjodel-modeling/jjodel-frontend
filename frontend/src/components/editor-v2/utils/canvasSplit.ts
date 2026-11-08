@@ -31,3 +31,40 @@ export function activateCanvasPane<P>(split: CanvasSplit<P>, pane: P): CanvasSpl
 export function paneAcceptsPaletteDrop<P>(split: CanvasSplit<P>, pane: P): boolean {
     return !split.panes.includes(pane) || split.active === pane;
 }
+
+/** Only the active pane of a split runs commands (P-2026-11-08-2045); a canvas outside a split runs them as ever. */
+export function paneIsInactive<P>(split: CanvasSplit<P>, pane: P): boolean {
+    return split.panes.includes(pane) && split.active !== pane;
+}
+
+/** How far the click that activated a pane has gone: its pointerdown seen, then its mousedown too. */
+export type PaneActivation = 'none' | 'press' | 'click';
+
+export interface PaneEventVerdict {
+    /** The event stops here: nothing in the pane sees it. */
+    readonly consume: boolean;
+    /** The event makes the pane active. */
+    readonly activate: boolean;
+    readonly activation: PaneActivation;
+}
+
+/**
+ * What one event does on a pane. The pointerdown that activates a pane is consumed, with the rest of its click, and with
+ * a double-click it opens: a mousedown with detail > 1 is the browser's own count of it. Wheel events are not passed here.
+ */
+export function paneEventVerdict<P>(split: CanvasSplit<P>, pane: P, activation: PaneActivation, event: { type: string; detail?: number }): PaneEventVerdict {
+    const inactive = paneIsInactive(split, pane);
+    switch (event.type) {
+        case 'pointerdown':
+            // Still 'press' here means its mousedown never came (the browser sends none on a disabled control).
+            return inactive ? { consume: true, activate: true, activation: 'press' } : { consume: false, activate: false, activation: activation === 'press' ? 'none' : activation };
+        case 'mousedown':
+            if (activation === 'press') return { consume: true, activate: false, activation: 'click' };
+            if (activation === 'click' && (event.detail ?? 0) > 1) return { consume: true, activate: false, activation };
+            return { consume: inactive, activate: false, activation: 'none' };
+        case 'keydown':
+            return { consume: inactive, activate: false, activation };
+        default:
+            return { consume: inactive || activation !== 'none', activate: false, activation };
+    }
+}

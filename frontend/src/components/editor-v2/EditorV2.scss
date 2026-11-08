@@ -348,6 +348,16 @@
 // only wrong about it INSIDE this bar. Hence the descendant selector — (0,2,0) beats
 // their (0,1,0), which is what lets one `!important` override another — and hence no
 // edit to two sheets whose other consumers are fine as they are.
+// Wraps the toolbar's controls so the inactive pane of a split can disable them at once; adds no box of its own.
+.editor-v2-toolbar__commands {
+    display: contents;
+
+    &:disabled button {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+}
+
 .editor-v2-toolbar {
     // The groups themselves must be able to shrink before anything inside them can.
     .toolbar-group,

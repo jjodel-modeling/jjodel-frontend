@@ -127,7 +127,7 @@ import { getCompositionChildOptions, getCompatibleReferences, getCompatibleConta
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
-import { paneAcceptsPaletteDrop } from './utils/canvasSplit';
+import { paneAcceptsPaletteDrop, paneEventVerdict, paneIsInactive, type PaneActivation } from './utils/canvasSplit';
 import { useCanvasSplit } from './hooks/useCanvasSplit';
 import { PolymetricView } from '../polymetric';
 import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
@@ -593,6 +593,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const canvasSplit = useCanvasSplit(paneEl);
     const inCanvasSplit = paneEl !== null && canvasSplit.panes.includes(paneEl);
     const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
+    const paneActivationRef = useRef<PaneActivation>('none');
     const paneAcceptsDropRef = useRef(true);
     paneAcceptsDropRef.current = paneEl === null || paneAcceptsPaletteDrop(canvasSplit, paneEl);
     // The rail covers only the last pane of a split (P-2026-11-08-1729): any other canvas reserves nothing for it (D6).
@@ -5286,6 +5287,32 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
         />
     );
+    // In a split the inactive pane runs no command: its first press only activates it (P-2026-11-08-2045). Wheel events are not guarded, so it can still be looked at.
+    const guardPaneEvent = (event: React.SyntheticEvent) => {
+        if (!paneEl) return;
+        const verdict = paneEventVerdict(DockManager.getCanvasSplit(), paneEl, paneActivationRef.current, { type: event.type, detail: (event.nativeEvent as UIEvent).detail });
+        paneActivationRef.current = verdict.activation;
+        if (!verdict.consume) return;
+        event.stopPropagation();
+        // A cancelled pointerdown would suppress the mousedown the verdict counts on; a key keeps its browser default.
+        if (event.type !== 'pointerdown' && event.type !== 'keydown') event.preventDefault();
+        if (verdict.activate) {
+            DockManager.activateCanvasPane(paneEl);
+            paneEl.focus({ preventScroll: true });
+        }
+    };
+    const paneGuardProps = {
+        onPointerDownCapture: (event: React.PointerEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onKeyDownCapture: (event: React.KeyboardEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onMouseDownCapture: guardPaneEvent,
+        onPointerUpCapture: guardPaneEvent,
+        onMouseUpCapture: guardPaneEvent,
+        onClickCapture: guardPaneEvent,
+        onDoubleClickCapture: guardPaneEvent,
+        onContextMenuCapture: guardPaneEvent,
+        onDragStartCapture: guardPaneEvent,
+    };
+
     // In a split the active pane shows its palette in the first pane's slot, at the window's left edge; the other pane shows none.
     const paletteSlot = inCanvasSplit && canvasSplit.active === paneEl
         ? canvasSplit.panes[0].querySelector<HTMLElement>(':scope > .editor-v2-palette-slot')
@@ -5293,7 +5320,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div ref={setPaneEl} className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}${inCanvasSplit ? ' editor-v2--split-pane' : ''}${inCanvasSplit && canvasSplit.active === paneEl ? ' editor-v2--active-pane' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div ref={setPaneEl} className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}${inCanvasSplit ? ' editor-v2--split-pane' : ''}${inCanvasSplit && canvasSplit.active === paneEl ? ' editor-v2--active-pane' : ''}`} tabIndex={0} onKeyDown={onKeyDown} {...paneGuardProps}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <InstantiationProblemSync modelid={modelid} graphId={graphId} />
@@ -5304,6 +5331,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {inCanvasSplit ? (paletteSlot && createPortal(palette, paletteSlot)) : palette}
                 <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
+                        commandsDisabled={paneEl !== null && paneIsInactive(canvasSplit, paneEl)}
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}
