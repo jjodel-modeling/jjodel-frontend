@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1239
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 05dadce29 · gates green (typecheck 0, build, check:docs, vitest 15344 passed with the 3 baseline import reds, smoke GREEN) · probe 18/18 on 3548, crops in ~/.jjodel-lanes/P-2026-11-08-1239/ · verifica visiva: GO di Alfonso in attesa
 Lane: full, critical zone (viewpoint/ir/IRFormField.tsx), go-ahead by Alfonso 2026-11-08 12:26
 Depends: C2f (P-2026-11-08-0843, merged 29fcd307f), R-TXT-47 D5 and D6
 Worktree: ~/jjodel-w-textc2g, branch textual-c2g-align (from trunk 3d0cc984d, own node_modules)
