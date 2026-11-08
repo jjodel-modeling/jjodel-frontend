@@ -20,6 +20,10 @@ import { jjscriptThemeRules } from '../../../jjscript/editor/jjscriptLanguage';
 import { jjtlTheme } from '../../../jjtl/editor/jjtlTheme';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { formatText, formatTextRange, minimalEdit } from '../format';
+import { hoverCard, hoverLinks, hoverLinksMarkdown } from '../hoverCard';
+import type { HoverCard, HoverCardLines } from '../hoverCard';
+import { formatShortcut } from '../../../utils/keyboardShortcuts';
+import type { ShortcutConfig } from '../../../utils/keyboardShortcuts';
 import { analyzeText, completionsAt, ISLAND_TRIGGER, renameEdits, renameLocation, SEMANTIC_MODIFIERS, SEMANTIC_ROLES, triggeredCompletions } from '../languageService';
 import type { SemanticRole, TextAnalysis, TextCompletion, TextRange, TextSymbol } from '../languageService';
 import type { TextMetamodel } from '../metamodel';
@@ -33,8 +37,8 @@ export const EBNF_LANGUAGE_ID = 'jjodel-ebnf';
 export const TEXTUAL_THEME_ID = 'jjodel-textual-theme';
 /** The command a hover link runs (step B2, R-TXT-39 (3)): the caret to an offset of a Text tab's model, its line revealed. */
 export const TEXTUAL_REVEAL_COMMAND = 'jjodel.textual.reveal';
-/** The lines of uses a hover lists before it counts the rest. */
-const HOVER_USE_LINES = 12;
+/** The command of a hover's Pin link (lane D6, R-TXT-42): the card that stays open, at an offset of a Text tab's model. */
+export const TEXTUAL_PIN_COMMAND = 'jjodel.textual.pin';
 
 const tokenType = (role: SemanticRole): string => `textual-${role}`;
 
@@ -185,6 +189,36 @@ export function openTextualSession(model: Monaco.editor.ITextModel, input: Textu
 
 const readingOf = (model: Monaco.editor.ITextModel): TextualReading | null => sessions.get(model)?.current() ?? null;
 
+/** The shortcut of the pinned card (lane D6, report §2): shown in the hover, bound by PinnedHoverCard.tsx. */
+const PIN_SHORTCUT: ShortcutConfig = { key: 'H', modifiers: ['alt'] };
+const pinHandlers = new Map<Monaco.editor.ICodeEditor, (offset: number) => void>();
+const linesOf = (model: Monaco.editor.ITextModel): HoverCardLines => ({
+    lineOf: offset => model.getPositionAt(offset).lineNumber,
+    textOf: line => model.getLineContent(line),
+});
+
+/** The caret to an offset of the editor's model, its line revealed: a hover's links and the card's. */
+export function textualReveal(editor: Monaco.editor.ICodeEditor, offset: number): void {
+    const m = editor.getModel();
+    if (!m) return;
+    const p = m.getPositionAt(offset);
+    editor.setPosition(p);
+    editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
+    editor.focus();
+}
+
+/** What a card pinned at `offset` of a Text tab's model shows, or null where there is no hover. */
+export function textualHoverCard(model: Monaco.editor.ITextModel, offset: number): HoverCard | null {
+    const r = readingOf(model);
+    return r ? hoverCard(r.analysis, offset, linesOf(model)) : null;
+}
+
+/** The editor's card, called by the Pin link; returns the removal. */
+export function onTextualPin(editor: Monaco.editor.ICodeEditor, handler: (offset: number) => void): () => void {
+    pinHandlers.set(editor, handler);
+    return () => { if (pinHandlers.get(editor) === handler) pinHandlers.delete(editor); };
+}
+
 let registered = false;
 
 /** Registers the two languages, the providers and the theme, once; meant for the `beforeMount` prop of the editors. */
@@ -250,42 +284,26 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
     monaco.editor.registerCommand(TEXTUAL_REVEAL_COMMAND, (_accessor, uri: unknown, offset: unknown) => {
         if (typeof uri !== 'string' || typeof offset !== 'number') return;
         const editor = monaco.editor.getEditors().find(e => e.getModel()?.uri.toString() === uri);
-        const m = editor?.getModel();
-        if (!editor || !m) return;
-        const p = m.getPositionAt(offset);
-        editor.setPosition(p);
-        editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
-        editor.focus();
+        if (editor) textualReveal(editor, offset);
     });
-    const trusted = { enabledCommands: [TEXTUAL_REVEAL_COMMAND] };
-    const link = (model: Monaco.editor.ITextModel, label: string, offset: number): string =>
-        `[${label}](command:${TEXTUAL_REVEAL_COMMAND}?${encodeURIComponent(JSON.stringify([model.uri.toString(), offset]))})`;
-    const linksOf = (model: Monaco.editor.ITextModel, a: TextAnalysis, offset: number): string[] => {
-        const out: string[] = [];
-        const d = a.definitionAt(offset);
-        if (d) out.push(`${link(model, 'Go to definition', d.start)} · line ${model.getPositionAt(d.start).lineNumber}`);
-        // One link per line that uses the object declared or named here.
-        const lines = new Map<number, number>();
-        for (const r of a.referencesAt(offset, false)) {
-            const line = model.getPositionAt(r.start).lineNumber;
-            if (!lines.has(line)) lines.set(line, r.start);
-        }
-        if (!lines.size) return out;
-        const shown = [...lines].slice(0, HOVER_USE_LINES).map(([line, at]) => {
-            const text = model.getLineContent(line).trim();
-            return `${link(model, `line ${line}`, at)} \`${(text.length > 40 ? `${text.slice(0, 39)}…` : text).replace(/`/g, "'")}\``;
-        });
-        const more = lines.size > HOVER_USE_LINES ? [`and ${lines.size - HOVER_USE_LINES} more lines`] : [];
-        out.push([`Used on ${lines.size} line${lines.size === 1 ? '' : 's'}:`, ...shown, ...more].join('  \n'));
-        return out;
-    };
+    // Lane D6: the Pin link hands the offset to the card of the hovered model's editor.
+    monaco.editor.registerCommand(TEXTUAL_PIN_COMMAND, (_accessor, uri: unknown, offset: unknown) => {
+        if (typeof uri !== 'string' || typeof offset !== 'number') return;
+        const editor = monaco.editor.getEditors().find(e => e.getModel()?.uri.toString() === uri);
+        if (editor) pinHandlers.get(editor)?.(offset);
+    });
+    const trusted = { enabledCommands: [TEXTUAL_REVEAL_COMMAND, TEXTUAL_PIN_COMMAND] };
+    const commandLink = (command: string, model: Monaco.editor.ITextModel, label: string, offset: number): string =>
+        `[${label}](command:${command}?${encodeURIComponent(JSON.stringify([model.uri.toString(), offset]))})`;
     monaco.languages.registerHoverProvider(TEXTUAL_LANGUAGE_ID, {
         provideHover: (model, position) => {
             const r = readingOf(model);
             const offset = model.getOffsetAt(position);
             const h = r?.analysis.hoverAt(offset);
             if (!r || !h) return null;
-            const links = linksOf(model, r.analysis, offset).map(value => ({ value, isTrusted: trusted }));
+            const reveal = (label: string, at: number): string => commandLink(TEXTUAL_REVEAL_COMMAND, model, label, at);
+            const pin = `${commandLink(TEXTUAL_PIN_COMMAND, model, 'Pin', offset)} · ${formatShortcut(PIN_SHORTCUT)}`;
+            const links = [...hoverLinksMarkdown(hoverLinks(r.analysis, offset, linesOf(model)), reveal), pin].map(value => ({ value, isTrusted: trusted }));
             return { range: rangeOf(model, h), contents: [...h.contents.map(value => ({ value })), ...links] };
         },
     });
