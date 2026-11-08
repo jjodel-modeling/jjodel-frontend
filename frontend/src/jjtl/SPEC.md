@@ -977,7 +977,10 @@ The record of a run is `_state.generatedBy` on the output model: `transformation
 the dialog again for the same transformation reads the most recent record: when that has
 included models still compatible, and its primary is too, the dialog starts from that selection;
 otherwise, older records included, it starts as usual, on the first compatible model with nothing
-included (R-JTG-34; there is no re-run command). The megamodel reads `sourceModelId` only.
+included (R-JTG-34; there is no re-run command). The megamodel reads `sourceModelId` for the
+primary and `includedModelIds` for one `instanceInputOf` edge per included model, with pill
+`included` and the full text in the tooltip, and no `sourceOf` for them; a pair already drawn for
+a primary keeps that edge, and a record without the field draws none (R-JTG-35).
 
 The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
 P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
