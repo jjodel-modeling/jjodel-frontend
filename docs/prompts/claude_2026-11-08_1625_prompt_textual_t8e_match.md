@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1625
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane textual-t8e-match · 52c8422ea
 Lane: full (pure matcher changes with the T8d bench, one Text tab fix, tests, app check with crops)
 Depends: T8c, T8d (calibration bench), TABFIX (P-2026-11-08-0859)
 Worktree: ~/jjodel-w-textt8e, branch textual-t8e-match (from trunk f081ad4f2, own node_modules)

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1718
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane textual-t8e-match · 000a8f1f4
 Lane: full, root cause first (two-phase inside the lane: diagnosis report, then a fix only if it stays in frontend/src/codegen/textual/)
 Depends: T8e (P-2026-11-08-1625, 1705), T7 reorder path
 Worktree: ~/jjodel-w-textt8e, branch textual-t8e-match (same worktree; T8e is not merged until this is settled)

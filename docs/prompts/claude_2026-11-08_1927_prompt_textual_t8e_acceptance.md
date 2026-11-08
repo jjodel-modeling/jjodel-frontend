@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1927
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane textual-t8e-match · 52c8422ea
 Lane: full, verification and docs only (no source change)
 Depends: T8e (P-2026-11-08-1625, 1705, 1718), the settle fix (P-2026-11-08-1759, merged on the trunk), trunk merged into this branch at 16f7302f6
 Worktree: ~/jjodel-w-textt8e, branch textual-t8e-match

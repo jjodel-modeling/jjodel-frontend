@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1705
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane textual-t8e-match · 52c8422ea
 Lane: full, continuation of P-2026-11-08-1625 after its context ceiling (RC-51)
 Depends: P-2026-11-08-1625 (commits 723eb1233, ad25337a7, 52c8422ea; gates green on 52c8422ea), its ~/.jjodel-lanes/P-2026-11-08-1625/handoff.md and handoff.diff, table-before.md, table-after.md
 Worktree: ~/jjodel-w-textt8e, branch textual-t8e-match (same worktree)
