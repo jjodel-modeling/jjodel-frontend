@@ -130,3 +130,20 @@ Alfonso 16:23: «procedi in lane auto» on the candidate tickets.
 ### Awaiting Alfonso
 
 C2h merge as soon as the trunk is clean (the multi-tab chat must commit its two ticket blocks). T8f: fix the executor race (core, jjscript), then merge T8e; or merge T8e first. #682 residue: option B and the open questions.
+
+## Update 2026-11-08 (evening)
+
+Alfonso 16:23 «procedi in lane auto» on the candidate tickets, 17:58 «si a tutto» on the core fixes. All merged and pushed.
+
+- C2h (P-2026-11-08-1626, merge 936f8ac85): unnamed homonyms numbered on IR chips and the default view (one list is one reference slot of one object); stale comments fixed. Left: read-only rows IRFormField.tsx:217 and :360.
+- JjScript settle fix (P-2026-11-08-1759, core action.ts and instance.ts): settlePendingWrites also waits for dispatches in flight, bound 1000 ms (worst measured gap 225 ms). Reorder holes 7/80 to 0/80 natural, 19/20 to 0/20 forced; run time unchanged. Root cause found by T8f (P-2026-11-08-1718, report 000a8f1f4): the race predates T8e and hit any reorder since T7.
+- T8e (P-2026-11-08-1625, 1705, 1718, 1927, merge 3589668e7): thresholds as a MatchInput parameter, defaults 0.6 and 0.2 kept; homonyms paired by content (wrong uncertain 5564 to 213 over 30225 objects, no row worse); highlight on open for off-screen nodes via _lastSelected.node. Acceptance after the settle fix: 20 swaps, 0 holes, pairing 100%.
+- Option B (P-2026-11-08-1800, merge 93f7485a8, core reducer): a graph-only delta writes no undo entry; DGraph 4,0 in every measured case (was up to 7,2). Tickets #789 (M2 layout entry), #790 (vertex-only populate, R1), #791 (dead guard ModelTab.tsx:33-34), #792 (v2-flow id written twice). Discovery P-2026-11-08-1719 (report b41af1105); its card #780 still reads waiting:phase-2 though 1800 did phase 2.
+- Harness ticket #799: the first smoke after a cold Vite start times out on page.goto (seen in 1313, 1800, 1759).
+
+### Candidate tickets added
+
+- T8e: the confirm panel still says same name, paired by order for homonyms now paired by content.
+- C2h: index on the read-only rows of a frozen reference field.
+
+No lane of this chat running, no scheduled check left.
