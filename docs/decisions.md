@@ -7557,6 +7557,12 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-34** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 11:55, registered by P-2026-11-08-1200, evidence: measured, verified: none, reversible: trunk):
   the run dialog restores the last included selection on reopen, no re-run command. Evidence: the probe of
   P-2026-11-08-1230: reopening restores the pill and the primary, an older record restores nothing.
+- **R-JTG-35** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 16:04 and ratified by Alfonso 2026-11-08 16:49 as stated below, registered by P-2026-11-08-1612 and P-2026-11-08-1720, evidence: measured, verified: none, reversible: trunk):
+  ratified by Alfonso 2026-11-08 16:49: the megamodel draws one `instanceInputOf` edge per included model of a run, with
+  pill `included` and the full text `instanceInputOf (included)` in the tooltip; edges with a vertical segment in one
+  gap take separate vertical tracks 8px apart. Decided by the chat under delegation 2026-11-08 16:04: `includedModelIds`
+  is an optional field of `generatedBy`, and no migration: a record without it draws no included edge. Evidence:
+  `megamodel.test.ts`, `MegamodelEdge.test.ts`, the probe of P-2026-11-08-1612.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
@@ -7802,6 +7808,21 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   it; the handles of L4.3 stay as they are. The drone fixture moves `ownedSensors` and `WAU` to their classes. Reverse
   navigation through association-owned ends is not added: it would need backward references the binding cannot
   express (`featureSources` follows forward references only). Found by P-2026-11-07-1825 (F3).
+- **R-DCN-25** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run the object diagram shows one compartment per viewpoint under the slots of each instance, with the
+  dynamic classes as pills and the active ones highlighted. It is a run-time rendering only: the run never writes the
+  model (R-SIM).
+- **R-DCN-26** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run a slot of an inactive dynamic class is shown greyed with its kept value (R-DCN-3), and an active
+  class whose monitors run at the tick carries a monitor icon.
+- **R-DCN-27** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  «Save snapshot as object diagram» creates a new M1 model beside the original, named after it with the step
+  («drone (snapshot step 21)»), copying instances, links and the slot values of σ, in one undo group. The original
+  object diagram is not changed.
+- **R-DCN-28** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  Slice 5 implements coherence constraints as watches: φ as a state invariant, BoundedPersistence and BoundedResponse
+  as a counter automaton per instance, reported as watch hits (R-SIM-137). The batch of N Random runs estimating γ
+  (SoSyM, Definition 8) is a later slice.
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 

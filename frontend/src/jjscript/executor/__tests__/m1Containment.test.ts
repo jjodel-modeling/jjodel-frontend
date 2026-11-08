@@ -54,7 +54,7 @@ vi.mock('../resolvers', () => ({
 // Configurator and the Data Manager; both reach the store, so here they act on the in-memory one:
 // the plan deletes the instance alone, and applying it calls each `.delete()`, as
 // `deleteAdapter.applyDelete` does (`instanceDelete.test.ts` covers the plan itself).
-vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined }));
+vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined, dispatchesInFlight: () => 0 }));
 vi.mock('../../../components/editor-v2/hooks/shapeAdapter', () => ({
     makeShapeCtx: () => ({ shape: () => ({ enums: {}, classes: {} }) }),
 }));

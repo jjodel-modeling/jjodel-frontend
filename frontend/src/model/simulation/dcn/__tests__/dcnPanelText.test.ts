@@ -125,6 +125,20 @@ describe('dcnPanelText: the classification line (decision 5)', () => {
         ]);
     });
 
+    it('a multi-valued link lists all its targets by name, in order; a single-valued one reads σ (mutants: the first target only, the ids printed, many ignored, the order reversed)', () => {
+        const sensor = (id: string, name: string) => [id, { id, name, classifier: 'Sensor', links: new Map(), viewpoints: new Map() }] as const;
+        const wau = {
+            ...MODEL.model.instances.get('wau1')!,
+            links: new Map([
+                ['speed', { targets: ['s-temp', 's-wind', 's-rain'], many: true }],
+            ]),
+        };
+        const many: DcnStepModel = { ...MODEL, model: { ...MODEL.model, instances: new Map([...MODEL.model.instances, ['wau1', wau], sensor('s-temp', 'temp'), sensor('s-wind', 'wind'), sensor('s-rain', 'rain')]) } };
+        expect(dcnMarkingLine(sigma(), many, classified(['Ready'])).title.split('\n').pop()).toBe('wau1: speed = temp, wind, rain');
+        const single: DcnStepModel = { ...many, model: { ...many.model, instances: new Map([...many.model.instances, ['wau1', { ...wau, links: new Map([['speed', { targets: ['s-temp'], many: false }]]) }]]) } };
+        expect(dcnMarkingLine(sigma(), single, classified(['Ready'])).title.split('\n').pop()).toBe('wau1: speed = 3');
+    });
+
     it('in Flying the altitude slot is live, the Charging one stays dormant (mutant: dormancy read off the first dynamic class)', () => {
         expect(dcnMarkingLine(sigma(), MODEL, classified(['Flying'])).title.split('\n')[1])
             .toBe('dji: battery = 80, altitude = 0, rateSet = 0 (dormant)');
@@ -158,6 +172,11 @@ describe('dcnPanelText: the candidate labels (decision 5, R-DCN-22)', () => {
         expect(dcnCandidateLabel(MODEL, 'dji', nameOf, null)).toBe('dji');
     });
 
+    it('the Tick input reads Tick, its event id stays dcn-tick (mutant: the raw id printed)', () => {
+        expect(DCN_TICK_EVENT).toBe('dcn-tick');
+        expect(dcnCandidateLabel(MODEL, DCN_TICK_EVENT, nameOf, null)).toBe('Tick');
+    });
+
     it('a redefinition by itself names its class', () => {
         expect(dcnCandidateLabel(MODEL, 't_Flying_takeOff', nameOf, null)).toBe('dji.takeOff() in Mode::Flying');
     });
@@ -175,6 +194,25 @@ describe('dcnPanelText: the candidate labels (decision 5, R-DCN-22)', () => {
         expect(dcnLastStepText(discard, MODEL, nameOf, before, 'tick')).toBe('tick: discarded, no contribution accepted it');
         const refused: StepOutcome = { kind: 'inadmissible', label: label('t_Flying_takeOff') };
         expect(dcnLastStepText(refused, MODEL, nameOf, before, 'takeOff')).toBe('takeOff: refused, dji.takeOff() in Mode::Flying is not a candidate');
+    });
+
+    it('the label once: a press whose input is its own label reads the label alone, its arguments given (mutants: the input repeated, the arguments dropped, the comparison on the valued label)', () => {
+        const before = classified(['Flying']);
+        const fired: StepOutcome = { kind: 'fired', next: { state: sigma(), event: null }, label: label('t_takeOff') };
+        expect(dcnLastStepText(fired, MODEL, nameOf, before, 'dji.takeOff() + Mode::Flying')).toBe('dji.takeOff() + Mode::Flying fired');
+        const charged: StepOutcome = { kind: 'fired', next: { state: sigma(), event: null }, label: label('t_charge') };
+        expect(dcnLastStepText(charged, MODEL, nameOf, null, 'dji.charge(rate)', [{ element: 't_charge', attr: 'rate', value: 5 }])).toBe('dji.charge(rate = 5) fired');
+        const reason: HaltReason = { kind: 'unclassified', element: 'dji', viewpoint: 'Mode' };
+        const halted: StepOutcome = { kind: 'halted', reason, next: { state: sigma(), event: null }, label: label('t_takeOff') };
+        expect(dcnLastStepText(halted, MODEL, nameOf, before, 'dji.takeOff() + Mode::Flying')).toBe('dji.takeOff() + Mode::Flying halted the run: dji in no class of Mode');
+    });
+
+    it('a tick reads Tick once, then its contribution (mutants: the tick prefix kept, the input dropped)', () => {
+        const fired: StepOutcome = { kind: 'fired', next: { state: sigma(), event: null }, label: label('t_drain', DCN_TICK_EVENT) };
+        expect(dcnLastStepText(fired, MODEL, nameOf, classified(['Flying']), 'Tick')).toBe('Tick: Mode::Flying drain fired');
+        const reason: HaltReason = { kind: 'unclassified', element: 'dji', viewpoint: 'Mode' };
+        const halted: StepOutcome = { kind: 'halted', reason, next: { state: sigma(), event: null }, label: label('t_drain', DCN_TICK_EVENT) };
+        expect(dcnLastStepText(halted, MODEL, nameOf, classified(['Flying']), 'Tick')).toBe('Tick: Mode::Flying drain halted the run: dji in no class of Mode');
     });
 
     it('a core halt reads its kind and the slot (mutant: the slot dropped)', () => {

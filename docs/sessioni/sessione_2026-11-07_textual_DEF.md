@@ -117,3 +117,16 @@ Alfonso 11:59: «GO» on C2f; on #682 a container create is one Undo step, «dec
 - #682: duplicate graphs after undo below a tab open.
 
 No lane of this chat running, no scheduled check left.
+
+## Update 2026-11-08 (afternoon)
+
+Alfonso 16:23: «procedi in lane auto» on the candidate tickets.
+
+- C2h (P-2026-11-08-1626, branch textual-c2h-index, docs 21c46e67a): unnamed homonyms numbered on IR chips and on the default view (one list is one reference slot of one object); stale comments fixed. Crops 1-chips (viewed) and 2-default-view, app check 29/29, smoke green. Chat widened the scope to IRFormField.tsx :84 and :277-298 for the chips. NOT merged yet: ~/jjodel-release carries another chat's uncommitted ticket blocks in docs/log-inbox/harness.md and jjodie-ui.md since 16:09, so lane-run merge --direct refuses. Left: read-only rows IRFormField.tsx:217 and :360 still label one target at a time.
+- T8e (P-2026-11-08-1625 and 1705, branch textual-t8e-match, 723eb1233, ad25337a7, 52c8422ea): thresholds as a MatchInput parameter (defaults 0.6 and 0.2 unchanged, Recommended keep); homonyms paired by content (wrong uncertain 5564 to 213 over 30225 objects, no row worse); off-screen highlight on open from _lastSelected.node. App check found an intermittent null hole after a reorder apply. NOT merged, no log entry yet.
+- T8f (P-2026-11-08-1718, report 000a8f1f4 docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md): the hole is a race in the JjScript executor: settlePendingWrites (jjscript/executor/commands/instance.ts:411-413) waits only for its own dispatch, a write flushed by the 300 ms interval (reducer.ts:1549) is in flight, the next += reads the stale list and writes past the end (reducer.ts:285-289). Predates T8e: any reorder since T7 can hit it (15 holes in 160 reorders). Candidate: settle also waits for in-flight dispatches, 0 holes in 80 runs, served to the probe only. Parked for Alfonso (outside codegen/textual).
+- #682 residue (P-2026-11-08-1719, report b41af1105 docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md): predates #682. Graph creation on tab open is an ordinary write forced into a merge (reducer.ts:1300-1301, first-wins :1354); Undo below it orphans 2 graphs per descent, the tab rebuilds under a new id; the ModelTab.tsx:33-34 guard is dead. Recommended option B: a delta that only lengthens root graphs writes no entry; held 4, 0 in a served-reducer trial. Parked for Alfonso, four open questions in the report.
+
+### Awaiting Alfonso
+
+C2h merge as soon as the trunk is clean (the multi-tab chat must commit its two ticket blocks). T8f: fix the executor race (core, jjscript), then merge T8e; or merge T8e first. #682 residue: option B and the open questions.

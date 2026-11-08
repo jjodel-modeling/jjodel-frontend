@@ -131,7 +131,7 @@ import type { DcnCompileInput } from '../../../model/simulation/dcn/dcnCompile';
 import { readDcnModel } from '../../../model/simulation/dcn/dcnHandles';
 import { dcnNucleus, readDcnStep } from '../../../model/simulation/dcn/dcnStep';
 import type { DcnClassification, DcnNucleus, DcnStepModel } from '../../../model/simulation/dcn/dcnStep';
-import { dcnCandidateLabel, dcnDefectsLine, dcnLastStepText, dcnMarkingChips, dcnMarkingLine } from '../../../model/simulation/dcn/dcnPanelText';
+import { dcnCandidateLabel, dcnDefectsLine, dcnInputOffWords, dcnLastStepText, dcnMarkingChips, dcnMarkingLine } from '../../../model/simulation/dcn/dcnPanelText';
 // A cycle at module level, used inside functions on both sides only (report F2, P-2026-11-08-0248).
 import { dcnInputOf } from '../problems/dcnToProblems';
 
@@ -906,6 +906,21 @@ function startDcnRun(
 function runCandidates(run: SimRun, cfg: NetConfiguration, guards: GuardOracle): CandidateSet {
     const d = dcnRunOf(run.net);
     return d ? d.nucleus.candidates(cfg, guards) : candidates(run.net, cfg, guards);
+}
+
+/**
+ * Why a DCN input is off in the live configuration, `null` when it has a
+ * candidate; `null` on a Petri run. An input that asks may have a candidate
+ * once answered (R-SIM-88): a precondition that cannot be read before the
+ * answer is waiting, not false.
+ */
+export function dcnInputOff(run: SimRun, event: string, lookup: Lookup): string | null {
+    const d = dcnRunOf(run.net);
+    if (!d) return null;
+    const cs = d.nucleus.candidates({ state: run.config.state, event }, run.guards);
+    if (cs.candidates.length > 0) return null;
+    if (inputAsks(run, event).length > 0 && cs.evaluated.some(e => e.outcome.kind === 'defect')) return null;
+    return dcnInputOffWords(d.model, event, id => elementName(lookup, id), d.nucleus.classify(run.config.state));
 }
 
 // ---------------------------------------------------------------------------

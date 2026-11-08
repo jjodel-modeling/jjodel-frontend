@@ -20,12 +20,16 @@
  */
 
 import type { DcnEntry } from './dcnCompile';
+import { DCN_TICK_EVENT } from './dcnCompile';
 import type { DcnClassification, DcnStepModel } from './dcnStep';
 import { DCN_SYNC_SELECTOR } from './dcnStep';
 import type { CompiledNet, HaltReason, SimState, StepOutcome } from '../netTypes';
 
 /** The heading of the σ line of a DCN run. */
 export const DCN_PANEL_HEADING = 'Classification';
+
+/** The Tick input as the panel names it; its event id stays `DCN_TICK_EVENT` in tests, probes and the trace. */
+export const DCN_TICK_LABEL = 'Tick';
 
 /** An id to the name the panel prints. */
 export type DcnNameOf = (id: string) => string;
@@ -70,6 +74,13 @@ function isActive(m: DcnStepModel, c: DcnClassification | null, instance: string
     return false;
 }
 
+/** A slot's value in the title: a multi-valued link lists its targets by name (σ holds the first), anything else reads σ. */
+function slotText(state: SimState, m: DcnStepModel, instance: string, attr: string): string {
+    const link = m.model.instances.get(instance)?.links.get(attr);
+    if (link?.many && link.targets.length > 0) return link.targets.map(t => m.model.instances.get(t)?.name ?? t).join(', ');
+    return String(state.attrs.get(instance)?.get(attr));
+}
+
 /** The σ line of a DCN run and its title (see the module comment). */
 export function dcnMarkingLine(state: SimState, m: DcnStepModel, c: DcnClassification): { line: string; title: string } {
     const byInstance: string[] = [];
@@ -85,7 +96,7 @@ export function dcnMarkingLine(state: SimState, m: DcnStepModel, c: DcnClassific
     for (const [instance, slots] of m.model.compiled.slots) {
         const values = [...slots].map(([attr, slot]) => {
             const dormant = slot.dormantOwner !== null && !isActive(m, c, instance, slot.dormantOwner);
-            return `${attr} = ${String(state.attrs.get(instance)?.get(attr))}${dormant ? ' (dormant)' : ''}`;
+            return `${attr} = ${slotText(state, m, instance, attr)}${dormant ? ' (dormant)' : ''}`;
         });
         slotLines.push(`${m.model.instances.get(instance)?.name ?? instance}: ${values.join(', ')}`);
     }
@@ -100,14 +111,17 @@ export function dcnMarkingChips(m: DcnStepModel, c: DcnClassification): DcnMarki
 const classRef = (e: DcnEntry, nameOf: DcnNameOf): string =>
     `${e.viewpoint === null ? '' : `${nameOf(e.viewpoint)}::`}${e.dynamicClass === null ? '' : nameOf(e.dynamicClass)}`;
 
+const TICK_PREFIX = 'tick: ';
+
 /** A transition of the DCN net as the choice list and the inputs row show it (see the module comment). */
 export function dcnCandidateLabel(
     m: DcnStepModel, transitionId: string, nameOf: DcnNameOf, c: DcnClassification | null, values?: readonly DcnArgument[],
 ): string {
     if (transitionId === DCN_SYNC_SELECTOR) return 'sync';
+    if (transitionId === DCN_TICK_EVENT) return DCN_TICK_LABEL;
     const e = m.model.compiled.entries.get(transitionId);
     if (e === undefined) return nameOf(transitionId);
-    if (e.kind === 'tick') return `tick: ${classRef(e, nameOf)} ${nameOf(e.element)}`;
+    if (e.kind === 'tick') return `${TICK_PREFIX}${classRef(e, nameOf)} ${nameOf(e.element)}`;
     const args = e.inputs.map(i => {
         const given = values?.find(v => v.element === i.element && v.attr === i.attr);
         return given === undefined ? i.attr : `${i.attr} = ${String(given.value)}`;
@@ -120,6 +134,14 @@ export function dcnCandidateLabel(
         .filter((r): r is DcnEntry => r !== undefined && r.dynamicClass !== null && isActive(m, c, r.instance, r.dynamicClass))
         .map(r => classRef(r, nameOf));
     return [call, ...active].join(' + ');
+}
+
+/** Why an input of the DCN run has no candidate in `c`: its owner class is inactive, else its precondition is false; the Tick has no contribution. */
+export function dcnInputOffWords(m: DcnStepModel, input: string, nameOf: DcnNameOf, c: DcnClassification | null): string {
+    if (input === DCN_TICK_EVENT) return 'no monitor of an active class contributes';
+    const e = m.model.compiled.entries.get(input);
+    if (e !== undefined && e.dynamicClass !== null && !isActive(m, c, e.instance, e.dynamicClass)) return `not in ${classRef(e, nameOf)}`;
+    return 'precondition false';
 }
 
 /** What a halt says after `halted the run: `. */
@@ -138,11 +160,17 @@ export function dcnLastStepText(
 ): string {
     const chosen = outcome.label.selector;
     const label = (): string => dcnCandidateLabel(m, chosen ?? '', nameOf, c, values);
+    // The input once: a press whose input is the candidate's own label reads the label alone, a tick's contribution follows `Tick: `.
+    const said = (): string => {
+        if (input === dcnCandidateLabel(m, chosen ?? '', nameOf, c)) return label();
+        const tick = m.model.compiled.entries.get(chosen ?? '')?.kind === 'tick';
+        return `${input}: ${tick ? label().slice(TICK_PREFIX.length) : label()}`;
+    };
     switch (outcome.kind) {
         case 'fired':
-            return `${input}: ${label()} fired`;
+            return `${said()} fired`;
         case 'halted':
-            return `${input}: ${label()} halted the run: ${haltWords(outcome.reason, m, nameOf)}`;
+            return `${said()} halted the run: ${haltWords(outcome.reason, m, nameOf)}`;
         case 'discard':
             return `${input}: discarded, no contribution accepted it`;
         case 'quiescence':

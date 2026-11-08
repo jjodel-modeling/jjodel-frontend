@@ -3212,3 +3212,79 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: #682 crops 1-create-undo, 2-move-undo, 3-container in ~/.jjodel-lanes/P-2026-11-08-1202/ checked by the chat; smoke control of P-2026-11-08-1313: control green, HEAD green twice after one cold page.goto timeout
 **Notes**: Rollback tag `pre-undo-682-create-entry` on `445cb8f42` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1344/result.json`.
 **Prompt document name**: 2026-11-08 13:44
+
+## 2026-11-08 — ticket: undo: an M2 tab open writes a layout entry of its own
+**Ticket**: An M2 tab open adds an undo entry of its own: 2 `SetField ... layoutByViewpoint` about 299 ms after the populate, consistent with the open-time ELK pass of `EditorV2.tsx:635-636`; the chain through `handleAutoLayout` was not traced. Measured with option B in place: `CASE=m2`, dispatch `C2`, stack 3>4, so one Undo reverts only a layout. An M1 tab with no vertices has none. Left out of P-2026-11-08-1800 by decision 2.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: undo: a vertex-only populate merges into the entry below
+**Ticket**: A tab open that adds vertices to graphs that already exist still takes the legacy merge: the delta has `vertexs` and no `graphs`, so option B does not cover it. Measured before and after option B (`CASE=r1`, same result): `vertexs:1>2` merges into the entry below (`d3>3`); the Undo of that entry reverts root `vertexs` 2>1 while `DVertex` stays at 2, so one record is out of the root array. No rebuild, no growth, Redo restores it. Left out of P-2026-11-08-1800 by decision 3.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: tabs: the graph rebuild guard of ModelTab is dead
+**Ticket**: The rebuild guard of `ModelTab.tsx:33-34` is dead (and the same at `MetamodelTab.tsx:152-155`, read only): `Constructors.DGraph_makeID(model.id)` makes a fresh id at each call, so `DPointerTargetable.pendingCreation[graphid]` is never set for it and two mounted tabs on a model with no graph can both create one. With option B the Undo that triggered it no longer reverts `graphs` (`CASE=m1two`, 4 `DGraph`, 0 orphans, no second classic graph). Two tabs mounting at once on a model with no graph was not run.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — ticket: sync: the v2-flow graph id is written twice in root graphs
+**Ticket**: A clean tab open leaves the v2-flow graph id twice in root `graphs`: `[g4, g5, g5]`, measured again with option B on `CASE=m2`, `m1` and `m1two`. `useJjomSync.ts:815` adds it with `SetRootFieldAction.new('graphs', graphId, '+=', true)` after `DGraph.new`, which appears to have added it already (root 4>6 with one `DGraph` added). No consumer of root `graphs` was checked for the duplicate.
+**Priority**: low
+**Found in**: P-2026-11-08-1800
+**Detail**: docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md
+
+## 2026-11-08 — fix(undo): a graph-only delta writes no undo entry (P-2026-11-08-1800)
+**Prompt**: `claude_2026-11-08_1800_prompt_undo_tab_graphs_option_b.md`, option B of discovery P-2026-11-08-1719 (Alfonso 17:58): a delta that lengthens root `graphs` and writes no model root writes no undo entry; tests, gates, app check, four tickets.
+**Files touched**: six, all declared: `docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md` in 0cc6165c5; `frontend/src/redux/reducer/reducer.ts` and `frontend/src/redux/reducer/__tests__/undoGroup.test.ts` in eeb5f10c4; uncommitted (RC-17): this inbox and the Status lines of the prompts of 18:00 and 17:19.
+**Outcome**: ✅ completed. `undoGroup.test.ts` 59 passed, 7 red before the code, mutation bench 15 of 15 killed (commit message). Typecheck exit 0; build exit 0; check:docs exit 0; full vitest: the 3 baseline import reds plus `irCollapsedRender.test.ts` (Chromium `afterAll` timeout under load), 13 of 13 alone. App probe port 3800, exit 0, no page errors: M2, M1, two tabs, empty stack: `DGraph` 4, orphans 0 at every Undo and Redo, no rebuild dispatch; deeper Undos on M1: the Undo of the model's creation leaves its 2 graphs as orphans (decision 4), Redo back to 4, 0; transformation path: one entry, one Undo removes model and graph, same as before the fix.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown (tests, smoke and probe show none; the transformation was driven by its real calls from the page, not through the UI, and Alfonso's visual GO is pending)
+**Out-of-scope changes**: no (six files, above five, listed in Files touched and in the prompt)
+**Layer Impact Report**: produced (docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md)
+**Smoke visivo**: passato — `npm run smoke` on this tree's Vite, port 3800: RED once 10/1/0 (`page.goto` timeout on the first state after a Vite restart), then GREEN 12/0/3 warm; crops 1-m1-undo and 2-two-tabs viewed by the lane on a model with no elements, so they show the tabs and not a populated canvas; Alfonso's GO pending
+**Notes**: Guard off the group route and off a group's tail, as the prompt asked: a tab opened with a group's entry on top still composes into it (test pins it). Transformation measured with the real calls from the page, not through the UI. Without a group the same creation merges into the entry below, unchanged. Smoke cold RED on page.goto, then GREEN warm. Limits and measures: LIR. Tickets #789 to #792.
+**Prompt document name**: 2026-11-08 18:00
+
+## 2026-11-08 — merge: undo-tab-graphs-b into alfonso-frontend-jjtl (P-2026-11-08-1858)
+**Prompt**: `claude_2026-11-08_1858_prompt_merge_undo-tab-graphs-b.md`, a direct merge by `lane-run merge --direct`, no session: `undo-tab-graphs-b` at `f0d8d31a3` into `alfonso-frontend-jjtl`, merge base `2df3c9a32`, 6 commits on the branch side.
+**Files touched**: merge `93f7485a8`: 7 files from the branch side (`docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md`, `docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1719_prompt_discovery_undo_tab_open_graphs.md`, `docs/prompts/claude_2026-11-08_1800_prompt_undo_tab_graphs_option_b.md`, `frontend/src/redux/reducer/__tests__/undoGroup.test.ts`, `frontend/src/redux/reducer/reducer.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `93f7485a8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15485 tests in 585 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: option B crops 1-m1-undo, 2-two-tabs in ~/.jjodel-lanes/P-2026-11-08-1800/ checked by the chat; app check DGraph 4,0 all cases; smoke green warm after one cold page.goto timeout
+**Notes**: Rollback tag `pre-undo-tab-graphs-b` on `9440e9fdd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1858/result.json`.
+**Prompt document name**: 2026-11-08 18:58
+
+## 2026-11-08 — fix(jjscript): settle waits for in-flight dispatches (P-2026-11-08-1759)
+**Prompt**: `claude_2026-11-08_1759_prompt_jjscript_settle_inflight.md`, T8f option A, core change approved by Alfonso 2026-11-08 17:58: the JjScript settle also waits for dispatches already flushed and not yet in the store, bounded, with tests, gates and app acceptance by the T8f probe.
+**Files touched**: `515caad54` docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md; `fac890de5` frontend/src/redux/action/action.ts, frontend/src/jjscript/executor/commands/instance.ts, frontend/src/jjscript/executor/__tests__/settleInFlight.test.ts (new), and the action mock in instanceDelete, m1Containment, m1Operators, m1SetLists `.test.ts`; this entry and the prompt's Status line, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0; vitest 15431 passed, 3 skipped, the 3 known import reds only; build exit 0; check:docs run after this entry.
+**Out-of-scope changes**: no. More than five files (RC-11), all named by the prompt's scope: the two sources, the new test, four test mocks that need the new export, the LIR, this entry, the Status line.
+**Layer Impact Report**: produced — docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md
+**Smoke visivo**: passato — `npm run smoke` on this tree's Vite (:3868): RED once 5/2/0 on a cold server (`page.goto` 30 s timeout on two states, cause not proven), then GREEN 12/0/3 warm. Store list after a reorder: ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json. The list is store evidence; no human visual check ran.
+**Notes**: Probe on this tree, before / after: natural 7 holes in 80 / 0 in 80; forced (dispatch held 8 ms past the next settle) 19 in 20 / 0 in 20, 18 dispatches held. Reorder median 1886 / 1780 ms. Bound 1000 ms: worst gap measured 224.5 ms. Bench: four mutations of the new test all die. Vite must be restarted after an edit, or the probe's bare imports load second module instances. Not run: a plain reference slot, save and reopen.
+**Prompt document name**: 2026-11-08 17:59
+
+## 2026-11-08 — merge: jjscript-settle-inflight into alfonso-frontend-jjtl (P-2026-11-08-1912)
+**Prompt**: `claude_2026-11-08_1912_prompt_merge_jjscript-settle-inflight.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-settle-inflight` at `1da6899fe` into `alfonso-frontend-jjtl`, merge base `9cfe2bcc4`, 4 commits on the branch side.
+**Files touched**: merge `5239ad052`: 10 files from the branch side (`docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1759_prompt_jjscript_settle_inflight.md`, `frontend/src/jjscript/executor/__tests__/instanceDelete.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Operators.test.ts`, `frontend/src/jjscript/executor/__tests__/m1SetLists.test.ts`, `frontend/src/jjscript/executor/__tests__/settleInFlight.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5239ad052` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15488 tests in 586 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: settle fix: store list ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json, probe 0/80 natural and 0/20 forced holes
+**Notes**: Rollback tag `pre-jjscript-settle-inflight` on `ae12b41c5` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1912/result.json`.
+**Prompt document name**: 2026-11-08 19:12

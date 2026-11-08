@@ -1600,3 +1600,35 @@ Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closur
 **Smoke visivo**: passato — chat, unattended: Include pills: multi-value select with pills, crops checked by the chat
 **Notes**: Rollback tag `pre-jjtl-include-pills` on `fb108b065` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1359/result.json`.
 **Prompt document name**: 2026-11-08 13:59
+
+## 2026-11-08 — ticket: two conformsTo pills touch model nodes in the megamodel
+**Ticket**: In the megamodel, two `conformsTo` label pills touch the nodes `model_1` and `model_1 (1)`. Reproduction: on a project with a metamodel and three source models, run a transformation from the dialog on a primary and two included models, open the megamodel, compare the rect of every label pill with the rect of every node; the probe check «no label pill covers or is covered by a node» lists exactly those two pills and none of the input pills. Pre-existing, not caused by P-2026-11-08-1612: `conformsTo` routes are vertical-sided, get track offset 0 and keep their pill position, and the same pills sat there in the crop taken before that lane's change. Not fixed.
+**Priority**: low
+**Found in**: P-2026-11-08-1612
+**Detail**: docs/discovery/discovery_2026-11-08_jjtl_megamodel_included.md
+
+## 2026-11-08 — feat(megamodel): an input edge per included model, tracks in a gap (P-2026-11-08-1720)
+**Prompt**: P-2026-11-08-1720, continuation of P-2026-11-08-1612 after its context ceiling: the two code commits, the answers of the chat to the two open points, a ticket for the `conformsTo` pills, R-JTG-35, SPEC §9, the report addendum, full gates. No merge.
+**Files touched**: `295c5429b`: `megamodelInference.ts`, `megamodel.test.ts`. `7c172384a`: `MegamodelEdge.ts`, `MegamodelView.tsx`, `MegamodelEdge.test.ts`. `17abe0030`: `frontend/src/jjtl/SPEC.md`. `f28299521`: `docs/decisions.md`. `f9ca9cd8c`: `docs/discovery/discovery_2026-11-08_jjtl_megamodel_included.md`. This inbox and the `Status:` lines of `claude_2026-11-08_1612_prompt_jjtl_megamodel_included.md` and `claude_2026-11-08_1720_prompt_megamodel_included_close.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown: unit suite unchanged except the 3 known import reds, but the tracks apply to every edge kind and were probed on one megamodel only.
+**Out-of-scope changes**: no, but above five files (RC-11), all named by the prompt and the handoff and listed under Files touched. `MegamodelView.tsx` is beyond the «in `MegamodelEdge.ts` only» of the GO of 16:49, because the view has to call `verticalTrackOffsets`; report §8. Temporary and removed: the `frontend/node_modules` symlink.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe of P-2026-11-08-1612 on this code, not rerun here, crop viewed and accepted by the chat: three distinct tracks, short pills. One assertion failed on two pre-existing `conformsTo` pills: ticket above, card #781.
+**Notes**: Typecheck and build exit 0; full vitest 15450 passed, 3 skipped, only the 3 known files failing at import. Answers of the chat: included models get `instanceInputOf` only; its default visibility is unchanged, so a multi-source run shows its included edges only once the kind is turned on. Ticket priority low chosen by this lane. Mutation benches in the commit bodies and report §8.
+**Prompt document name**: 2026-11-08 17:20
+
+## 2026-11-08 — merge: jjtl-megamodel-included into alfonso-frontend-jjtl (P-2026-11-08-1842)
+**Prompt**: `claude_2026-11-08_1842_prompt_merge_jjtl-megamodel-included.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-megamodel-included` at `8d695c689` into `alfonso-frontend-jjtl`, merge base `4c51808e8`, 11 commits on the branch side.
+**Files touched**: merge `ea9bacb81`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-08_jjtl_megamodel_included.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1612_prompt_jjtl_megamodel_included.md`, `docs/prompts/claude_2026-11-08_1720_prompt_megamodel_included_close.md`, `frontend/src/components/megamodel/MegamodelEdge.ts`, `frontend/src/components/megamodel/MegamodelView.tsx`, `frontend/src/components/megamodel/__tests__/MegamodelEdge.test.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ea9bacb81` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15466 tests in 585 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Megamodel: included edges on separate tracks, crop checked by the chat
+**Notes**: Rollback tag `pre-jjtl-megamodel-included` on `34677007c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1842/result.json`.
+**Prompt document name**: 2026-11-08 18:42
