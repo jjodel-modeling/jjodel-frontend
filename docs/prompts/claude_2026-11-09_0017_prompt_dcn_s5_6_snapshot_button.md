@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0017
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: eseguito 2026-11-09 · lane full · 55fe8cbb8
+Status: eseguito 2026-11-09 · lane full · 55fe8cbb8 · verifica visiva passata 2026-11-09
 Lane: full (UI: SimulationPanel.tsx and its stylesheet; probe and crops)
 Depends: lanes 4, 5 (`saveRunSnapshot` in sim/simSnapshotWrite.ts, 220791eb5) on dcn-s5; R-DCN-27, R-DCN-30; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §B (Gesture)
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt

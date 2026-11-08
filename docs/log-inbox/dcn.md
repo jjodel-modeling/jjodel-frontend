@@ -511,6 +511,6 @@ active log is not touched by this lane.
 **Regressions**: unknown
 **Out-of-scope changes**: no (6 files, all in the DOVE of the prompt: panel, helper, its test, probe, this inbox, the prompt; the stylesheet needed no change)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crops 1-button and 2-saved read by the lane, chat to read them)
+**Smoke visivo**: passato (GO given; 1-button and 2-saved read by the chat 2026-11-09 00:47: camera button last in the transport row, Saved as drone (snapshot step 24))
 **Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
 **Prompt document name**: 2026-11-09 00:17
