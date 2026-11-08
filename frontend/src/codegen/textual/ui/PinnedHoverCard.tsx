@@ -8,7 +8,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type * as Monaco from 'monaco-editor';
 import ReactMarkdown from 'react-markdown';
-import { cardLimits, cardLineInView, cardTabTarget } from '../hoverCard';
+import { cardLimits, cardLineInView, cardTabTarget, pointerClearOfHover } from '../hoverCard';
 import type { CardLimits, HoverCard } from '../hoverCard';
 
 const WIDGET_ID = 'jjodel.textual.pinnedHover';
@@ -37,6 +37,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
     const anchorRef = useRef<Monaco.IPosition | null>(null);
     const wantsFocusRef = useRef(false);
     const hoverOptionRef = useRef<Monaco.editor.IEditorHoverOptions | null>(null);
+    const hoverLeftFromRef = useRef<{ x: number; y: number } | null>(null);
     const host = useMemo(() => document.createElement('div'), []);
 
     const limitsNow = (): CardLimits => {
@@ -77,7 +78,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
 
     // The two ways in: the hover's link at the hovered offset, the shortcut at the caret. A second pin replaces the card.
     useEffect(() => {
-        const pin = (offset: number): void => {
+        const pin = (offset: number, fromHover: boolean): void => {
             const m = editor.getModel();
             const next = m ? ui.textualHoverCard(m, offset) : null;
             if (!m || !next) return;
@@ -86,12 +87,15 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
             anchorRef.current = anchor;
             wantsFocusRef.current = true;
             // Monaco's hover stays over the card while the pointer is on it; with these two off, the pointer's next move hides it.
-            hoverOptionRef.current ??= editor.getOption(monaco.editor.EditorOption.hover);
-            editor.updateOptions({ hover: { enabled: false, sticky: false } });
+            if (fromHover) {
+                hoverOptionRef.current ??= editor.getOption(monaco.editor.EditorOption.hover);
+                hoverLeftFromRef.current = null;
+                editor.updateOptions({ hover: { enabled: false, sticky: false } });
+            }
             setLimits(limitsNow());
             setCard(next);
         };
-        const off = ui.onTextualPin(editor, pin);
+        const off = ui.onTextualPin(editor, offset => pin(offset, true));
         const action = editor.addAction({
             id: PIN_ACTION_ID,
             label: 'Pin hover card',
@@ -100,7 +104,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
             run: () => {
                 const m = editor.getModel();
                 const p = editor.getPosition();
-                if (m && p) pin(m.getOffsetAt(p));
+                if (m && p) pin(m.getOffsetAt(p), false);
             },
         });
         return () => { off(); action.dispose(); };
@@ -133,8 +137,14 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
             editor.onDidScrollChange(check),
             editor.onDidChangeHiddenAreas(check),
             editor.onDidLayoutChange(() => { check(); setLimits(limitsNow()); }),
-            // A microtask: Monaco's own listener has to see this move with the hover still off.
-            editor.onMouseMove(e => { if (!rootRef.current?.contains(e.target.element)) queueMicrotask(restoreHover); }),
+            // Off the card and off the old hover, the hover comes back: back too soon, the token under the pointer shows a new
+            // one over the card. A microtask: Monaco's own listener has to see this move with the hover still off.
+            editor.onMouseMove(e => {
+                if (!hoverOptionRef.current || rootRef.current?.contains(e.target.element)) return;
+                const at = { x: e.event.posx, y: e.event.posy };
+                hoverLeftFromRef.current ??= at;
+                if (pointerClearOfHover(hoverLeftFromRef.current, at)) queueMicrotask(restoreHover);
+            }),
         ];
         return () => subscriptions.forEach(s => s.dispose());
     }, [editor, monaco, open]);

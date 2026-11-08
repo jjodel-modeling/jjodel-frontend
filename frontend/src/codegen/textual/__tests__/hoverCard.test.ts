@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { cardLimits, cardLineInView, cardTabTarget, hoverCard, hoverLinks, hoverLinksMarkdown } from '../hoverCard';
+import { cardLimits, cardLineInView, cardTabTarget, hoverCard, hoverLinks, hoverLinksMarkdown, pointerClearOfHover } from '../hoverCard';
 import type { HoverCardAnalysis, HoverCardLines } from '../hoverCard';
 import type { TextRange } from '../languageService';
 
@@ -137,5 +137,20 @@ describe('cardTabTarget', () => {
     it('enters from the card itself at either end', () => {
         expect(cardTabTarget(-1, 3, false)).toBe(0);
         expect(cardTabTarget(-1, 3, true)).toBe(2);
+    });
+});
+
+describe('pointerClearOfHover: when the pointer has left the hover the pin came from', () => {
+    const from = { x: 100, y: 100 };
+
+    it('is not clear at the place the pointer started from, nor at the distance itself', () => {
+        expect(pointerClearOfHover(from, from)).toBe(false);
+        expect(pointerClearOfHover(from, { x: 500, y: 100 })).toBe(false);
+    });
+
+    it('is clear past the distance, on either axis or on both', () => {
+        expect(pointerClearOfHover(from, { x: 501, y: 100 })).toBe(true);
+        expect(pointerClearOfHover(from, { x: 100, y: 501 })).toBe(true);
+        expect(pointerClearOfHover(from, { x: 400, y: 400 })).toBe(true);
     });
 });

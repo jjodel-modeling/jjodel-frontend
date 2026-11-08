@@ -13,6 +13,8 @@ const USE_TEXT_MAX = 40;
 const CARD_MAX_WIDTH = 480;
 const CARD_MAX_HEIGHT = 320;
 const CARD_MIN_HEIGHT = 96;
+/** Monaco's public API gives no hover rect: a hover's far corner from its Pin link, in px. */
+const HOVER_CLEAR_DISTANCE = 400;
 
 export type HoverCardAnalysis = Pick<TextAnalysis, 'definitionAt' | 'referencesAt' | 'hoverAt'>;
 
@@ -95,6 +97,11 @@ export function cardLimits(layout: { readonly contentWidth: number; readonly hei
         maxWidth: Math.min(CARD_MAX_WIDTH, layout.contentWidth),
         maxHeight: Math.min(CARD_MAX_HEIGHT, Math.max(CARD_MIN_HEIGHT, Math.floor((layout.height - layout.lineHeight) / 2))),
     };
+}
+
+/** Whether the pointer has travelled off the hover it pinned from, so a hover it starts now cannot be that one's place, over the card. */
+export function pointerClearOfHover(from: { readonly x: number; readonly y: number }, to: { readonly x: number; readonly y: number }): boolean {
+    return Math.hypot(to.x - from.x, to.y - from.y) > HOVER_CLEAR_DISTANCE;
 }
 
 /** The index Tab moves to among `count` focusable items, wrapping; `at` is -1 on the card itself. */
