@@ -247,3 +247,26 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 
 **Probe results** (chat, 2026-11-07 18:04, on `4b665664a`, owed by P-2026-11-07-1620 which stopped at the context ceiling): onto-s2-instantiate 22/22 (S2-1m included), onto-s3a-slot-problems 8/8 (default export), onto-s3b-ghost-rows 6/6 (uml-s3b); 1-minute load 20.2 to 15.0; logs in `~/.jjodel-lanes/P-2026-11-07-1620/`.
+
+## 2026-11-08 — feat: onto binding editor with Detect, probe and bench (P-2026-11-08-0151)
+**Prompt**: three lanes of the «Instances of» front in one entry: the discovery of the rail section and the binding declaration (P-2026-11-08-0049), lane B, the binding editor with Detect and one row in Info (P-2026-11-08-0113, cut at its context ceiling), and this continuation: probe, regression, mutants, docs.
+**Files touched**: `docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md` (e138a09ca); `model/ontological/bindingDetect.ts` and its test, `editor-v2/onto/OntoBindingModal.tsx` and `.scss`, `editors/Info.tsx` (c55874212); `scripts/probe/onto-binding-editor.ts` (d680fce0d); this inbox and the `Status:` of the three prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (eleven files across three lanes, each declared in its prompt or its rule-19 reply, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe crops b1, b2, b3, b8 in `~/.jjodel-lanes/P-2026-11-08-0151/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1..Q8 of discovery §6 adopted as recommended, unattended (RC-21). Own choices: Confirm allowed with checkBindings defects (R-VAL-4), blocked only when the bag does not decode; value kinds editable, not addable (ticket). Undo: Cmd+Z after Confirm drops the key (gone, no empty bag); Cmd+Z after Remove restores it byte-equal. Probe 10/10, s2 22/22 (started at load 21.2, gate 20: breach), s3a 8/8, mutants 3/3 red. Bench, crops: ~/.jjodel-lanes/P-2026-11-08-0151/.
+**Prompt document name**: 2026-11-08 01:51
+
+**Ticket** (proposed, low): a row corrected by hand shows the `checkBindings` message with raw ids, «The defining feature is owned by Pointer…_USER_40, the slot metaclass is Pointer…_USER_44», not the class names (crop `b3-row-corrected-by-hand.png`). The message is built in `bindingCheck.ts`, outside lane B's files.
+
+**Ticket** (proposed, low): the `link` record lists the object-only roles (Generalization, General, Abstract flag, Feature type, Default value) as empty rows with no verdict; Detect does not search them (question 3), and the probe's B-2 admits them as such. Hiding them on `link` is a UI choice for Alfonso.
+
+## 2026-11-08 — ticket: value kinds can be edited in the binding editor but not added
+**Ticket**: `OntoBindingModal` shows one row pair per `valueKinds` entry that Detect proposed, and offers no way to add one. On a metamodel that is not UML, where Detect proposes nothing, a hand declaration cannot carry `valueKinds`, so the slots it binds cannot create values. Lane B's own choice, declared in its handoff as a limit.
+**Priority**: medium
+**Found in**: P-2026-11-08-0113
+**Detail**: docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md

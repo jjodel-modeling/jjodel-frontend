@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-0113
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (new pure module, a modal, one row in `Info.tsx`; no core change; Layer Impact Report: not-required, declared)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · c55874212
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 00:35: «rail e dichiarazione e procedi in /lane auto»; the discovery's recommended answers adopted unattended, RC-21)
 Depends: P-2026-11-08-0049
 Corregge: —

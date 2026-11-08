@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-0151
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (continuation of P-2026-11-08-0113 after its context ceiling; probe, bench and docs only)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · d680fce0d
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 00:35: «rail e dichiarazione e procedi in /lane auto»)
 Depends: P-2026-11-08-0113
 Corregge: —
