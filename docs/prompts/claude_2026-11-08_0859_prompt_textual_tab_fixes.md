@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0859
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 55ac2cc03, c53f1419d, eb6c08382 (red first, bench 19/19) · gates green (vitest: 3 baseline import reds) · probe 19/19, crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/
 Lane: full (three small fixes in the Text tab, tests, app check with crops)
 Depends: F1c, F1e, E2b, T8c (all on the trunk)
 Worktree: ~/jjodel-w-texttabfix, branch textual-tab-fixes (from trunk e1f06117c, own node_modules)
