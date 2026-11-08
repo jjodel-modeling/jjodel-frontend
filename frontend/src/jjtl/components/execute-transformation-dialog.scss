@@ -234,6 +234,26 @@ $transition-fast: 150ms ease;
     }
 }
 
+// Opens upward, over the primary select and its count: downward it would cover
+// the label of the next field. The cap keeps it below the hint of the select.
+.execute-include-list.execute-include-popover {
+    top: auto;
+    bottom: 100%;
+    max-height: 72px;
+}
+
+// Two classes: the app-wide `.form-group label` and `.form-group input` reach the row.
+.execute-include-list .execute-include-row {
+    display: flex;
+}
+
+.execute-include-list .execute-include-checkbox {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+}
+
 // ============================================
 // Execution Preview
 // ============================================

@@ -323,13 +323,14 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                             {isIncludeListOpen && (
                                                 <div
                                                     id="execute-include-list"
-                                                    className="execute-include-list"
+                                                    className="execute-include-list execute-include-popover"
                                                     role="group"
                                                     aria-label="Also include"
                                                 >
                                                     {includableModels.map((model) => (
-                                                        <label key={model.id} className="execute-include-item">
+                                                        <label key={model.id} className="execute-include-item execute-include-row">
                                                             <input
+                                                                className="execute-include-checkbox"
                                                                 type="checkbox"
                                                                 checked={includedIds.includes(model.id)}
                                                                 onChange={() => toggleIncluded(model.id)}
