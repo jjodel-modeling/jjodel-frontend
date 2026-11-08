@@ -1478,3 +1478,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: comparison and method call on a demand stop the run, full suite green
 **Notes**: Rollback tag `pre-jjtl-demand-cmp` on `e1f06117c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0901/result.json`.
 **Prompt document name**: 2026-11-08 09:01
+
+## 2026-11-08 — feat(jjtl): several source models of one metamodel, executor side (P-2026-11-08-0836)
+**Prompt**: `claude_2026-11-08_0836_prompt_jjtl_multi_model_source_executor.md`, lane full, unattended: slice S3 of R-JTG-26, the executor takes a list of source models of one metamodel, tests first, shared id an error, node probe on a split Brief against the single-model hash.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/multi-model-source.test.ts` (cc1ce544f); `frontend/src/jjtl/SPEC.md` (202b32efc); `docs/decisions.md` R-JTG-31 (a2ea341bb); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15278 passed, 0 failed tests, 30 new; no existing expectation changed; typecheck exit 0, build exit 0
+**Out-of-scope changes**: no — six files, all named by the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe: the core Brief split into 4 models (38, 919, 949, 125 objects) gives 2a34b97ab348ce64, as the single model, in both list orders. Beyond moving objects only the 7 new roots lose `_containerId`; in the app the kernel's `lib` containment must become a reference. `source` inside a rule is the current element, so the union is read through `data`. Suite: the 3 known import failures, plus a Chromium hook timeout in irCollapsedRender, green rerun alone (g).
+**Prompt document name**: 2026-11-08 08:36
