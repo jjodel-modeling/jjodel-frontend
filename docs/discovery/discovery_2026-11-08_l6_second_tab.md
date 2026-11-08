@@ -111,3 +111,22 @@ L6 cannot land inside the declared list. Smallest option: extend it by `EditorSw
 `ModelTab.tsx` (an optional tab id and initial viewpoint, absent props equal to today) and
 `MyRcDock.tsx` (decode at `:594`), with both menu items on the M1 `ModelNode` row of
 `TreeViewContent.tsx` only.
+
+## Resolution and known limits (added after Alfonso's GO, 2026-11-08)
+
+The list was widened as recommended: `EditorSwitch.tsx`, `ModelTab.tsx`, `MyRcDock.tsx`. Both menu items are on
+the M1 `ModelNode` row of `TreeViewContent.tsx` only. Code: `89fa42c59`.
+
+- **No second tab on a metamodel in this lane.** A metamodel owns no tab viewpoint (§4); `openBeside` returns
+  false for a suffixed id on a metamodel, and `openModelTab` and `openModelTabBeside` do nothing on one.
+- **A tab in the right panel does not drive the side panels and is never focused** (`Dock.tsx:360`, R-MT-24,
+  `isActiveDockTab` reads `children[0]` only). It keeps the viewpoint it was opened on and does not write the root.
+- **Two more readers take the tab id for a model id, found after §2 and left unchanged (outside the list).**
+  `jjscript/executor/utils.ts:103-107,146-148` and `components/editors/Console.tsx:846-848,1058-1059`. On a
+  second tab the lookup misses: no crash (`fromPointer` inside `try`, null handled), but the script context
+  and the Console see no active model, and `:1059` clears the Console's node as «from a different metamodel».
+- **A third, fixed in `Navbar.tsx`.** The tab-strip loop (`:1830`) skipped a tab whose id resolves to nothing as a
+  ghost, which would have dropped every second tab from the strip; it decodes now.
+- **Not executed by the bench** (node environment, no DOM): the mount write and the props passed through
+  `ModelTab`, the `Navbar.tsx` decoding, the `TreeViewContent.tsx` menu. They go to the app check of the
+  continuation lane.
