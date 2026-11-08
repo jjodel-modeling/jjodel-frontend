@@ -1051,3 +1051,8 @@ Expected: `lane-run merge` refuses, or moves to the next free minute, when docs/
 Workaround until fixed: before acting on a merge result, read the merge commit's subject, not only the lane folder.
 **Priority**: medium
 **Found in**: P-2026-11-07-1834
+
+## 2026-11-08 — ticket: lane-run merge template: rollback reset names the commit before the prompt commit
+**Ticket**: The merge prompt template of `lane-run merge` writes a step-6 rollback `git reset --hard <sha>` that names the commit before the true pre-merge tip, so it would also drop the merge prompt commit. Seen in P-2026-11-08-1247 (sha 3d0cc984d instead of af51a3094). The rollback was not triggered.
+**Priority**: medium
+**Found in**: P-2026-11-08-1247
