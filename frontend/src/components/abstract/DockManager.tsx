@@ -13,6 +13,7 @@ import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
 import { JjtlTransformation, TransformationAST } from '../../jjtl/types';
 import { MetamodelElement } from '../../jjtl/views/MetamodelTreeView';
 import type { ExecutionResult } from '../../jjtl/executor';
+import type { RunRecord } from '../../jjtl/components/sourceSelection';
 
 @RuntimeAccessible('DockManager')
 class DockManager {
@@ -464,6 +465,7 @@ class DockManager {
      * @param availableModels - Optional list of models available for transformation execution
      * @param existingModelNames - Optional list of existing model names (to prevent duplicates)
      * @param onExecuteTransformation - Optional callback when transformation is executed
+     * @param getLastRun - Optional getter for the record of the last run of this transformation
      */
     static openTransformation(
         transformation: JjtlTransformation,
@@ -474,7 +476,8 @@ class DockManager {
         getTargetMetamodel?: () => MetamodelElement[],
         availableModels?: ModelOption[],
         existingModelNames?: string[],
-        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<ExecutionResult | void>
+        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST, includedModelIds?: string[]) => Promise<ExecutionResult | void>,
+        getLastRun?: () => RunRecord | null
     ): void {
         // console.log('[DockManager] openTransformation called', {
         //     transformationId: transformation?.id,
@@ -538,7 +541,8 @@ class DockManager {
             existingModelNames: existingModelNames || [],
             onSave: explicitSave,
             onCodeChange: debouncedSync,
-            onExecuteTransformation: onExecuteTransformation
+            onExecuteTransformation: onExecuteTransformation,
+            getLastRun: getLastRun
         });
 
         try {

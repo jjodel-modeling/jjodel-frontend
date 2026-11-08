@@ -1426,3 +1426,149 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: The red check is Check C on an entry of another front, `docs/log-inbox/dcn.md:320` (Notes of 505 characters, merge P-2026-11-08-0154), already on the trunk before this merge. This branch adds docs only. Left to the owner of that front; `lane-run go` refuses a blocked merge, so this closure is by hand.
 **Prompt document name**: 2026-11-08 02:29
+
+## 2026-11-08 — fix(jjtl): envValue, and a demand used as an operand stops the run (P-2026-11-08-0740)
+**Prompt**: `claude_2026-11-08_0740_prompt_jjtl_envvalue_and_demand_as_value.md`, lane full, unattended: register the seven ratified recommendations of the kernel-gaps report, implement S1 `envValue` and S2 the demand-as-value error, tests first, full suite, node baseline on the two Briefs.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/env-value.test.ts` (a35b54454); `executor.ts`, `__tests__/demand-as-value.test.ts` (93cf9f04b); `frontend/src/jjtl/SPEC.md` (0fbc6a015); `docs/decisions.md` R-JTG-23..29 (1f163a4d8); this entry; the prompt's `Status:` line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15193 passed, 0 failed tests, 12 new; no existing expectation changed; both Brief hashes unchanged
+**Out-of-scope changes**: no — seven files, all named by the prompt's DOVE; the baseline probe was copied, run and removed as asked
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Baseline: arbiter `5c0d9731c4bb9632`, core `2a34b97ab348ce64`, success true, 0 warnings. S2 lives in a `JjelEvaluator` subclass in `executor.ts` (operator nodes mark their operands), nothing outside `jjtl/`. Interpolation holes not covered: JjTL lexes no interpolation. Suite: the 3 known import failures, plus Chromium `afterAll` timeouts in `irSelectionRing`/`irCollapsedRender`, green rerun alone (g).
+**Prompt document name**: 2026-11-08 07:40
+
+## 2026-11-08 — merge: jjtl-envvalue into alfonso-frontend-jjtl (P-2026-11-08-0814)
+**Prompt**: `claude_2026-11-08_0814_prompt_merge_jjtl-envvalue.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-envvalue` at `a9ac45e81` into `alfonso-frontend-jjtl`, merge base `ce18b0c02`, 7 commits on the branch side.
+**Files touched**: merge `2f389051a`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_0740_prompt_jjtl_envvalue_and_demand_as_value.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/demand-as-value.test.ts`, `frontend/src/jjtl/executor/__tests__/env-value.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2f389051a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15214 tests in 576 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: S1 and S2: full suite green, kernel baselines unchanged
+**Notes**: Rollback tag `pre-jjtl-envvalue` on `f64bd6592` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0814/result.json`.
+**Prompt document name**: 2026-11-08 08:14
+
+## 2026-11-08 — fix(jjtl): a demand compared or called stops the run (P-2026-11-08-0835)
+**Prompt**: `claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`, lane fast, unattended: extend R-JTG-25 to comparisons and to a method call on a demand, a property read stays as it is; tests first on both parser paths, one row after R-JTG-29.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/demand-as-value.test.ts` (d2fabcef7, comment 6d753475c); `frontend/src/jjtl/SPEC.md` (5e10ad449); `docs/decisions.md` R-JTG-30 (0da9a8a2e); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15246 passed, 0 failed tests, 26 new; no existing expectation changed; typecheck exit 0
+**Out-of-scope changes**: no — six files, all named by the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Comparisons needed no code: the Binary branch of P-2026-11-08-0740 already marks every binary operator, so those 16 tests were green before the change. Only the method-call receiver is new. The prompt says a property read stays a warning: measured, it reads null with no warning at all, kept unchanged and pinned. Suite: the 3 known import failures, plus Chromium afterAll timeouts in irSelectionRing/irCollapsedRender, green rerun alone (g).
+**Prompt document name**: 2026-11-08 08:35
+
+## 2026-11-08 — merge: jjtl-demand-cmp into alfonso-frontend-jjtl (P-2026-11-08-0901)
+**Prompt**: `claude_2026-11-08_0901_prompt_merge_jjtl-demand-cmp.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-demand-cmp` at `e48d462c9` into `alfonso-frontend-jjtl`, merge base `65c095682`, 7 commits on the branch side.
+**Files touched**: merge `6fde8bad1`: 6 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/demand-as-value.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6fde8bad1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15251 tests in 577 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: comparison and method call on a demand stop the run, full suite green
+**Notes**: Rollback tag `pre-jjtl-demand-cmp` on `e1f06117c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0901/result.json`.
+**Prompt document name**: 2026-11-08 09:01
+
+## 2026-11-08 — feat(jjtl): several source models of one metamodel, executor side (P-2026-11-08-0836)
+**Prompt**: `claude_2026-11-08_0836_prompt_jjtl_multi_model_source_executor.md`, lane full, unattended: slice S3 of R-JTG-26, the executor takes a list of source models of one metamodel, tests first, shared id an error, node probe on a split Brief against the single-model hash.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/multi-model-source.test.ts` (cc1ce544f); `frontend/src/jjtl/SPEC.md` (202b32efc); `docs/decisions.md` R-JTG-31 (a2ea341bb); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15278 passed, 0 failed tests, 30 new; no existing expectation changed; typecheck exit 0, build exit 0
+**Out-of-scope changes**: no — six files, all named by the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe: the core Brief split into 4 models (38, 919, 949, 125 objects) gives 2a34b97ab348ce64, as the single model, in both list orders. Beyond moving objects only the 7 new roots lose `_containerId`; in the app the kernel's `lib` containment must become a reference. `source` inside a rule is the current element, so the union is read through `data`. Suite: the 3 known import failures, plus a Chromium hook timeout in irCollapsedRender, green rerun alone (g).
+**Prompt document name**: 2026-11-08 08:36
+
+## 2026-11-08 — merge: jjtl-multi-source into alfonso-frontend-jjtl (P-2026-11-08-0939)
+**Prompt**: `claude_2026-11-08_0939_prompt_merge_jjtl-multi-source.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-multi-source` at `eeabc2c1f` into `alfonso-frontend-jjtl`, merge base `18ce96017`, 6 commits on the branch side.
+**Files touched**: merge `4f5404338`: 6 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_0836_prompt_jjtl_multi_model_source_executor.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/multi-model-source.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4f5404338` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15297 tests in 578 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: S3: several source models of one metamodel, kernel baseline unchanged
+**Notes**: Rollback tag `pre-jjtl-multi-source` on `49cd0871d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0939/result.json`.
+**Prompt document name**: 2026-11-08 09:39
+
+## 2026-11-08 — fix(jjtl): a property read on a demand warns (P-2026-11-08-1025)
+**Prompt**: `claude_2026-11-08_1025_prompt_jjtl_demand_property_read_warning.md`, lane fast, unattended: a property read on a demand warns naming rule, source element and property and still reads null; tests first on both parser paths; one row after R-JTG-30.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/demand-as-value.test.ts` (6555ebdd0); `frontend/src/jjtl/SPEC.md` (1ee641a82); `docs/decisions.md` R-JTG-32 (0264b6d75); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 08:35 `claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`
+**Causa**: (c)
+**Regressions**: no — full vitest 15308 passed, 0 failed tests, the 3 known import failures; typecheck exit 0; check:docs exit 0; kernel baseline SHA prefixes unchanged, 0 warnings
+**Out-of-scope changes**: no — six files, above the five of RC-11, all named by the prompt's DOVE: executor.ts, demand-as-value.test.ts, SPEC.md, decisions.md, this inbox, the prompt's Status
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The row asked «after R-JTG-30» is R-JTG-32, after R-JTG-31, which landed meanwhile. One warning per property, expression and source element: a rule run on N elements warns N times, since the warning must name the element. The test that pinned no warning is replaced. Bench in 6555ebdd0: four mutations, all killed. A read in the JjEL argument of resolve has no position, that argument is evaluated outside evaluateExpression.
+**Prompt document name**: 2026-11-08 10:25
+
+## 2026-11-08 — merge: jjtl-demand-read into alfonso-frontend-jjtl (P-2026-11-08-1041)
+**Prompt**: `claude_2026-11-08_1041_prompt_merge_jjtl-demand-read.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-demand-read` at `e55692902` into `alfonso-frontend-jjtl`, merge base `b3b82d861`, 5 commits on the branch side.
+**Files touched**: merge `b173e1fa7`: 6 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1025_prompt_jjtl_demand_property_read_warning.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/demand-as-value.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b173e1fa7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15311 tests in 578 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: property read on a demand warns, full suite green
+**Notes**: Rollback tag `pre-jjtl-demand-read` on `b3b82d861` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1041/result.json`.
+**Prompt document name**: 2026-11-08 10:41
+
+## 2026-11-08 — ticket: envLookup on an unbound name is null, so + "_w" succeeds
+**Ticket**: `envLookup` on an unbound name returns `null`, not a demand, so a demand-as-operand error never fires: `name := envLookup("x") + "_w"` with `x` unbound succeeds and names every object `_w`. `SPEC.md` §10 lists `envLookup(n) + "_w"` as an error, without excepting an unbound name.
+
+Reproduction, on the real executor (`execute` with the lexer and parser, as `jjtl/components/__tests__/sourceSelection.test.ts` calls them), three `Class` source objects, a target class `Table` with attribute `name`, and the rule:
+
+    Class c -> Table {
+        name := envLookup("x") + "_w"
+    }
+
+Measured 2026-11-08: `{"success":true,"errors":[],"warnings":[],"names":["_w","_w","_w"]}`.
+
+Read: `frontend/src/jjtl/executor/executor.ts:3362-3366`, where an absent closure yields `null`. `envValue` on the same name throws. Not fixed: whether an unbound `envLookup` should stop the run, warn, or stay `null` is a decision of its own.
+**Priority**: medium
+**Found in**: P-2026-11-08-1026
+**Detail**: docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md
+
+## 2026-11-08 — feat(jjtl): several source models in the run dialog, closed with two visual fixes (P-2026-11-08-1120)
+**Prompt**: P-2026-11-08-1120, continuation of P-2026-11-08-1026 after its context ceiling: commit the dialog as it stood, fix the checkbox of the «Also include» rows and the open list covering the next label, finish report, SPEC §9, log, Status lines, ticket for the envLookup candidate.
+**Files touched**: d2e654cf0: `components/abstract/DockManager.tsx`, `components/project/ProjectEditor.tsx`, `jjtl/components/ExecuteTransformationDialog.tsx`, `JjtlDevelopmentEnv.tsx`, `execute-transformation-dialog.scss`, `sourceSelection.ts`, `__tests__/sourceSelection.test.ts`. af756e1ea: the dialog and its `.scss`. 7849b01ca: `jjtl/SPEC.md`. 67e2f1a7f: `docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md`. This entry, the two prompt Status lines, the ticket block.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 10:26
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: yes, seven code files against the prompt's own scope, above five (RC-11): `sourceSelection.ts`, its test, the dialog's `.scss` and `DockManager.tsx` were not named by P-2026-11-08-1026; reasons in the report §1.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe, unattended, 33/33; three crops viewed. The list over the primary select is a perceptual judgement left to Alfonso.
+**Notes**: Typecheck and build exit 0; full vitest 15328 passed, 3 skipped, only the 3 known files failing at import. The upward list stops at the hint's box (394.5). Evidence and decisions D1 to D7: the report. The cause of the checkbox is `.form-group input` and `.form-group label`, measured on the running dialog; the file holding them was not located.
+**Prompt document name**: 2026-11-08 11:20
+
+## 2026-11-08 — merge: jjtl-multi-source-app into alfonso-frontend-jjtl (P-2026-11-08-1147)
+**Prompt**: `claude_2026-11-08_1147_prompt_merge_jjtl-multi-source-app.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-multi-source-app` at `1afa8ebb4` into `alfonso-frontend-jjtl`, merge base `e88ab3d06`, 7 commits on the branch side.
+**Files touched**: merge `1828934f1`: 12 files from the branch side (`docs/discovery/discovery_2026-11-08_jjtl_multi_source_app.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-08_1026_prompt_jjtl_multi_source_app.md`, `docs/prompts/claude_2026-11-08_1120_prompt_jjtl_multi_source_app_close.md`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/components/ExecuteTransformationDialog.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1828934f1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15331 tests in 579 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: S4: run dialog with Also include, crops checked by the chat
+**Notes**: Rollback tag `pre-jjtl-multi-source-app` on `e88ab3d06` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1147/result.json`.
+**Prompt document name**: 2026-11-08 11:47

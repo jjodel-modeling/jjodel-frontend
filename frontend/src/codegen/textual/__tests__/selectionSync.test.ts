@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
+import { CARET_EXPLICIT, canvasNodeOf, canvasVertexIds, heldOnOpen, innermostSpanAt, isUserCaretMove, lastSelectedOf, nextSelected, revealedRange, selectedSpans } from '../selectionSync';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan } from '../printer';
@@ -259,5 +259,26 @@ describe('lastSelectedOf', () => {
     it('is nothing for no selection or several: a caret in any of them selects it alone', () => {
         expect(lastSelectedOf([])).toBeNull();
         expect(lastSelectedOf(['a', 'b'])).toBeNull();
+    });
+});
+
+describe('heldOnOpen: the canvas selection read once when the tab opens over it (lane TABFIX, P-2026-11-08-0859)', () => {
+    const lookup = { v1: { model: 'e1' }, v2: { model: 'e2' }, plain: {} };
+
+    it('the selected nodes give their model elements, in the order given (dies on the node ids kept, on the order lost)', () => {
+        expect(heldOnOpen([], ['v2', 'v1'], lookup)).toEqual(['e2', 'e1']);
+    });
+
+    it('a node that is its own element stays, one with no D-object is left out (dies on the resolver replaced by a map)', () => {
+        expect(heldOnOpen([], ['plain', 'ghost'], lookup)).toEqual(['plain']);
+    });
+
+    it('nothing selected, or nothing resolved, reads nothing (dies on an empty list applied)', () => {
+        expect(heldOnOpen([], [], lookup)).toBeNull();
+        expect(heldOnOpen([], ['ghost'], lookup)).toBeNull();
+    });
+
+    it('a selection the listener already holds is not read over (dies on the held guard dropped)', () => {
+        expect(heldOnOpen(['e9'], ['v1'], lookup)).toBeNull();
     });
 });

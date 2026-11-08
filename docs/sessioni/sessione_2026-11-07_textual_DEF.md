@@ -79,3 +79,25 @@ On Alfonso's «decidi tu» (00:24) the chat continued with F2 and T8. All on the
 New candidate ticket: the import confirm panel has no Cancel button (it closes on typing, a model change or a new Import).
 
 No lane running, no scheduled check left. Next on Alfonso's go: T8c (re-import dialog), T8d (calibration), tickets D2d, C2f, #682, E3 low, and the candidate tickets above.
+
+## Update 2026-11-08 (morning)
+
+On Alfonso's «Procedi con tutto in lane auto» (07:36) the chat ran the remaining queue. Trunk closures pushed: D2d f4dc218c3, T8c d1daf6d2f, T8d e1f06117c, Text tab fixes 813c8a206.
+
+- T8c, re-import dialog with counts and uncertain rows (P-2026-11-08-0739 and 0802): merged.
+- T8d, calibration bench of the match cascade (P-2026-11-08-0831): tests only. Recommended and taken: keep RENAME_THRESHOLD 0.6 and RENAME_MARGIN 0.2; the wrong pairings come from homonym order, not from the thresholds. Table in ~/.jjodel-lanes/P-2026-11-08-0831/calibration-table.md.
+- Text tab fixes (P-2026-11-08-0859, card #751): JjEL warnings survive a reprint and a style switch; a tab opened with canvas nodes selected highlights them at once; unnamed homonyms in the confirm panel read «Transition (unnamed) 1», «2». Probe 19/19. Known limit: the on-open read uses .react-flow__node.selected, so a selected node scrolled out of view is not highlighted on open.
+- E3 low ticket: dropped (Alfonso 07:42, «Non ricordo»).
+- Prompt-ID collision once more (0737 with the multi-tab merge, T8c renumbered to 0739). Evidence for #720.
+
+### Parked for Alfonso
+
+- C2f, critical zone (P-2026-11-08-0843, branch textual-c2f-labels, code 78a5bc7e6..9c44d338a with the LIR): hard stop at the context ceiling with items 1 to 4 done. Field reads Port (unnamed), list rows indexed, picker no longer shows raw ids; smoke green, vitest green but the 3 import reds. Missing: the log entry; the Status flips are uncommitted in the worktree. Needs Alfonso's visual GO on the crops in ~/.jjodel-lanes/P-2026-11-08-0843/ and a decision: IR chips still read : Port (namelessTargetLabel, R-TXT-47 D5/D6) while the widgets read Port (unnamed). Chat recommendation: align both on Port (unnamed) in a separate lane with a new decision row.
+- #682, canvas create without its own undo step (P-2026-11-08-0916, report docs/discovery/discovery_2026-11-08_canvas_create_undo_682.md on branch disc-682-canvas-undo, 2eb74325d). The rule sits in frontend/src/redux/reducer/reducer.ts:1290. Recommended: option 1 with the compose branch, about 6 lines; a delta touching root objects is no longer forced into a merge, graph-only merges use composeUndoDeltas. Open questions in §10 of the report: adopt as core change with its Phase 2, extend to M2, container create as one step, creates inside the 450 ms window, separate ticket for the index oddity at :1284.
+
+### Candidate tickets added
+
+- T8d: a threshold parameter in MatchInput, to measure other values; content-aware pairing of homonyms.
+- Text tab: highlight on open for selected nodes outside the viewport (needs a selection query, not the DOM).
+
+No lane of this chat running, no scheduled check left. Next on Alfonso's go: C2f GO and label decision, #682 option choice, the candidate tickets.

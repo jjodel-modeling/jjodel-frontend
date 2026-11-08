@@ -8,6 +8,8 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
@@ -17,7 +19,9 @@ import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan } from '../printer';
 import { textualNotation } from '../syntaxRecord';
-import { diffText, planTextEdit } from '../textDiff';
+import { diffText, planRows, planTextEdit } from '../textDiff';
+import TextConfirmPanel, { homonymIndexes, panelRows } from '../ui/TextConfirmPanel';
+import type { TextConfirmPanelProps } from '../ui/TextConfirmPanel';
 import type { DiffOp, ObjectRef, PlanInput } from '../textDiff';
 import { defaultedSlots, referencedElsewhere } from '../textApply';
 import { BOX, CASES, DIAMOND, GARAGE, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
@@ -151,6 +155,8 @@ interface EditOptions {
     readonly referencedElsewhere?: ReadonlySet<string>;
     readonly ordered?: PlanInput['ordered'];
     readonly confirmed?: PlanInput['confirmed'];
+    /** T8c: the uncertain pairings the panel unticked. */
+    readonly unpaired?: PlanInput['unpaired'];
     /** A cut pasted whole (D-5 of T7): the model object's span is carried to the parsed object of that name, as the Text tab does. */
     readonly pasted?: readonly (readonly [id: string, name: string])[];
 }
@@ -183,6 +189,7 @@ function edit(c: Case, replacements: readonly (readonly [string, string])[], o: 
         ...(o.referencedElsewhere ? { referencedElsewhere: o.referencedElsewhere } : {}),
         ...(o.ordered ? { ordered: o.ordered } : {}),
         ...(o.confirmed ? { confirmed: o.confirmed } : {}),
+        ...(o.unpaired ? { unpaired: o.unpaired } : {}),
     });
     return { printed, text, parsed, plan };
 }
@@ -884,6 +891,134 @@ describe('a reference the user did not retype keeps its target (R-TXT-35)', () =
     });
 });
 
+// ---- The plan's rows (step T8c) -----------------------------------------------------------------------------------
+
+describe('the plan rows of the confirm panel (T8c, R-TXT-55 F10)', () => {
+    const rowsOf = (c: Case, e: ReturnType<typeof edit>, referenced?: ReadonlySet<string>) =>
+        planRows({ diff: e.plan.diff!, mm: c.mm, grammar: c.g, model: c.objects, parsed: e.parsed, ...(referenced ? { referencedElsewhere: referenced } : {}) });
+
+    it('each uncertain pairing carries its score: a rename its similarity, a homonym the share of equal values (mutants: score dropped, ticked pairing not counted)', () => {
+        const renamed = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const tid = renamed.plan.diff!.match.matches.find(m => m.model === 'b4')!.text;
+        expect(rowsOf(LIBRARY_CASE, renamed).rows.filter(r => r.kind === 'uncertain'))
+            .toEqual([{ kind: 'uncertain', text: tid, model: 'b4', by: 'rename', score: 1, ticked: true, features: ['name'] }]);
+        // Ticked, the rename is a change of b4.
+        expect(rowsOf(LIBRARY_CASE, renamed).counts).toEqual({ changes: 1, creates: 0, deletes: 0 });
+
+        const c = specCase(FIXTURE);
+        const homonyms = edit(c, [['size 2', 'size 5']]);
+        const scores = new Map(rowsOf(c, homonyms).rows.flatMap(r => (r.kind === 'uncertain' ? [[r.model, r.score] as const] : [])));
+        expect([...scores.keys()]).toEqual(['p1', 'p2', 'l1', 'l2']);
+        expect(scores.get('p1')).toBe(1);
+        expect(scores.get('p2')).toBeGreaterThan(0);
+        expect(scores.get('p2')).toBeLessThan(1);
+    });
+
+    it('unticking a pairing applies it as a create plus a delete, and its row stays, unticked (mutants: unpaired ignored, certain pairing unpaired)', () => {
+        const asked = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const tid = asked.plan.diff!.match.matches.find(m => m.model === 'b4')!.text;
+        const e = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { unpaired: [{ text: tid, model: 'b4' }] });
+        expect(e.plan.diff!.match.matches.some(m => m.model === 'b4')).toBe(false);
+        expect(e.plan.diff!.match.deleted).toEqual(['b4']);
+        expect(e.plan.diff!.match.created).toEqual([tid]);
+        expect(e.plan.diff!.ops).toContainEqual({ op: 'delete', model: 'b4' });
+        expect(e.plan.diff!.ops).toContainEqual({ op: 'create', text: tid, cls: 'Book', into: { owner: { model: 'lib' }, feature: 'books' } });
+        expect(codes(e.plan)).toEqual([]);
+        expect(e.plan.lines).toContain('delete spqr');
+        expect(e.plan.lines!.filter(l => l.startsWith('create instance of Book'))).toHaveLength(1);
+        const { rows, counts } = rowsOf(LIBRARY_CASE, e);
+        expect(rows.find(r => r.kind === 'uncertain')).toMatchObject({ text: tid, model: 'b4', by: 'rename', score: 1, ticked: false });
+        expect(counts).toEqual({ changes: 0, creates: 1, deletes: 1 });
+        // A pairing the cascade no longer proposes is no unticked row.
+        const stale = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { unpaired: [{ text: tid, model: 'b3' }] });
+        expect(stale.plan.diff!.match.matches.find(m => m.model === 'b4')).toMatchObject({ by: 'rename', uncertain: true });
+        // Nor is a certain one: in the editor the span pairs b4.
+        const inEditor = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { spans: true });
+        const sid = inEditor.plan.diff!.match.matches.find(m => m.model === 'b4')!.text;
+        const kept = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { spans: true, unpaired: [{ text: sid, model: 'b4' }] });
+        expect(kept.plan.lines).toEqual(['set spqr.name = "rome"']);
+    });
+
+    it('counts the changes, creates and deletes, one row each (mutant: a count off its list)', () => {
+        const e = edit(LIBRARY_CASE, [['1980', '1981'], ['\n        borrowedBy bob', ''], ['\n    Member bob {}', ''], ['    Member ann {}', '    Member ann {}\n    Member cid {}']], { spans: true });
+        const { rows, counts } = rowsOf(LIBRARY_CASE, e);
+        // b4's borrowedBy bob goes with bob: `delete` clears it, so b4 is no change.
+        expect(counts).toEqual({ changes: 1, creates: 1, deletes: 1 });
+        const cid = e.plan.diff!.match.created[0];
+        expect(rows).toEqual([
+            { kind: 'change', text: expect.any(String), model: 'b2', features: ['year'] },
+            { kind: 'create', text: cid },
+            { kind: 'delete', model: 'm2', flagged: false },
+        ]);
+    });
+
+    it('a delete of an object another model references is flagged, any other is not (mutant: flag on every delete)', () => {
+        const e = edit(LIBRARY_CASE, [['\n        borrowedBy bob', ''], ['\n    Member bob {}', ''], ['\n    Member ann {}', '']], { spans: true });
+        const deletes = rowsOf(LIBRARY_CASE, e, new Set(['m2'])).rows.filter(r => r.kind === 'delete');
+        expect(deletes).toEqual([{ kind: 'delete', model: 'm1', flagged: false }, { kind: 'delete', model: 'm2', flagged: true }]);
+    });
+
+    it('the ids of a file are a field of the diff input: evidence 0 pairs by them (T8b typed them around it)', () => {
+        const printed = printTextModel(LIBRARY_CASE.g, LIBRARY_CASE.objects);
+        const text = printed.text.replace('Book spqr', 'Book rome');
+        const parsed = parseText(text, LIBRARY_CASE.g);
+        const t = parsed.objects.find(o => o.slots.name === 'rome')!;
+        const diff = diffText({ mm: LIBRARY_MM, grammar: LIBRARY_CASE.g, model: LIBRARY_CASE.objects, parsed, ids: new Map([[t.id, 'b4']]) });
+        expect(diff.match.matches.find(m => m.model === 'b4')).toEqual({ text: t.id, model: 'b4', by: 'id', uncertain: false });
+    });
+});
+
+describe('the confirm panel shows the plan rows (T8c, F10)', () => {
+    const rowsCase = () => edit(LIBRARY_CASE, [['1980', '1981'], ['\n        borrowedBy bob', ''], ['\n    Member bob {}', ''], ['    Member ann {}', '    Member ann {}\n    Member cid {}']],
+        { spans: true, referencedElsewhere: new Set(['m2']) });
+    const panelOf = (e: ReturnType<typeof edit>, referenced?: ReadonlySet<string>) =>
+        panelRows({ plan: e.plan, parsed: e.parsed, mm: LIBRARY_MM, grammar: LIBRARY_CASE.g, model: LIBRARY_CASE.objects, ...(referenced ? { referencedElsewhere: referenced } : {}) });
+    const html = (props: Partial<TextConfirmPanelProps> & Pick<TextConfirmPanelProps, 'rows'>) =>
+        renderToStaticMarkup(createElement(TextConfirmPanel, { onConfirm: () => {}, busy: false, ...props }));
+
+    it('labels each row: the changes, the creations, the deletions, a cross-model one flagged (mutant: plan rows unread)', () => {
+        const { rows, counts } = panelOf(rowsCase(), new Set(['m2']));
+        expect(counts).toEqual({ changes: 1, creates: 1, deletes: 1 });
+        expect(rows).toEqual([
+            { old: 'Book cosmos', new: 'Book cosmos', reason: 'changed: year', flagged: false },
+            { old: '—', new: 'Member cid', reason: 'created', flagged: false },
+            { old: 'Member bob', new: null, reason: 'deleted, referenced from another model', flagged: true },
+        ]);
+    });
+
+    it('an uncertain row carries its pairing, score and tick; unticked, it reads as a creation and a deletion (mutant: pairing dropped)', () => {
+        const asked = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const tid = asked.plan.diff!.match.matches.find(m => m.model === 'b4')!.text;
+        expect(panelOf(asked).rows).toEqual([
+            { old: 'Book spqr', new: 'Book rome', reason: 'renamed, changes name', flagged: false, pairing: { text: tid, model: 'b4', score: 1, ticked: true } },
+        ]);
+        const off = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { unpaired: [{ text: tid, model: 'b4' }] });
+        expect(panelOf(off).rows).toEqual([
+            { old: 'Book spqr', new: 'Book rome', reason: 'not paired: created and deleted', flagged: false, pairing: { text: tid, model: 'b4', score: 1, ticked: false } },
+            { old: '—', new: 'Book rome', reason: 'created', flagged: false },
+            { old: 'Book spqr', new: null, reason: 'deleted', flagged: false },
+        ]);
+    });
+
+    it('the bar holds the counts, Confirm and Cancel; a row its checkbox and score; a cross-model deletion the error token (mutants: no counts, no Cancel)', () => {
+        const asked = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const { rows, counts } = panelOf(asked);
+        const out = html({ rows, counts, onCancel: () => {}, onTick: () => {} });
+        expect(out).toContain('1 change, 0 creations, 0 deletions');
+        expect(out).toMatch(/<button[^>]*>.*Confirm<\/button>/);
+        expect(out).toMatch(/<button[^>]*title="Close the panel and apply nothing"[^>]*>.*Cancel<\/button>/);
+        expect(out).toMatch(/<input type="checkbox"[^>]*checked=""/);
+        expect(out).toContain('100%');
+        const flagged = panelOf(rowsCase(), new Set(['m2']));
+        expect(html({ rows: flagged.rows, counts: flagged.counts })).toMatch(/textual-tab__confirm-row--flagged"><td><span class="textual-tab__issue--error">Member bob/);
+        // Without counts and Cancel, the T6b bar as it was.
+        const before = html({ rows: [{ old: 'Book dune', new: null, reason: 'deleted, referenced from another model', flagged: true }] });
+        expect(before).toContain('1 change to confirm before the text is applied');
+        expect(before).not.toContain('Cancel');
+        expect(before).not.toContain('checkbox');
+    });
+});
+
 // ---- The readers of the lookup ----------------------------------------------------------------------------------
 
 describe('what the lookup gives the diff', () => {
@@ -950,5 +1085,68 @@ describe('applyTextEdit', () => {
         expect(await applyTextEdit('M', plan)).toEqual({ applied: 6, failed: 0 });
         expect(run.calls).toHaveLength(before + 1);
         expect(run.calls[before].script.split('\n')).toEqual(['set root.files -= readme', 'set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
+    });
+});
+
+describe('the index of unnamed homonyms in the confirm panel (lane TABFIX, P-2026-11-08-0859)', () => {
+    it('no homonyms: nothing indexed (dies on an index given to every entry)', () => {
+        expect(homonymIndexes([])).toEqual([]);
+        expect(homonymIndexes([null, null])).toEqual([null, null]);
+        expect(homonymIndexes(['Item'])).toEqual([null]);
+    });
+
+    it('two and three of a class read 1, 2 and 1, 2, 3 (dies on the count from 0, on the threshold at three)', () => {
+        expect(homonymIndexes(['Item', 'Item'])).toEqual([1, 2]);
+        expect(homonymIndexes(['Item', 'Item', 'Item'])).toEqual([1, 2, 3]);
+    });
+
+    it('two classes each with one: no index; each class counts on its own (dies on one counter for all classes)', () => {
+        expect(homonymIndexes(['Item', 'Tag'])).toEqual([null, null]);
+        expect(homonymIndexes(['Item', 'Tag', 'Item', 'Tag'])).toEqual([1, 1, 2, 2]);
+    });
+
+    it('named objects are untouched and do not count (dies on a named entry counted)', () => {
+        expect(homonymIndexes([null, 'Item', null])).toEqual([null, null, null]);
+        expect(homonymIndexes(['Item', null, 'Item'])).toEqual([1, null, 2]);
+    });
+
+    const itemsOf = (replacements: readonly (readonly [string, string])[]): [string, string | null][] => {
+        const { c, parsed, plan } = editAnon(replacements);
+        return panelRows({ plan, parsed, mm: c.mm, grammar: c.g, model: c.objects }).rows
+            .filter(r => r.old.startsWith('Item') || r.new?.startsWith('Item')).map(r => [r.old, r.new]);
+    };
+
+    it('one row keeps its label (dies on an index without a homonym)', () => {
+        expect(itemsOf([['size 10', 'size 20']])).toEqual([['Item (unnamed)', 'Item (unnamed)']]);
+    });
+
+    it('two rows read the same index in both cells (dies on the cells numbered apart, on the label not read)', () => {
+        expect(itemsOf([['size 10', 'size 20'], ['size 12', 'size 22']])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+        ]);
+    });
+
+    it('the index follows the text, not the rows: a creation written first reads 1, listed after the change (dies on the row order)', () => {
+        expect(itemsOf([['items {', 'items {\n    Item {\n      size 5\n    }'], ['size 12', 'size 22']])).toEqual([
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+            ['—', 'Item (unnamed) 1'],
+        ]);
+    });
+
+    it('uncertain pairings of unnamed objects read their index too, in both cells (dies on the pair rows left out)', () => {
+        const { c, parsed, plan } = editAnon([['size 10', 'size 20'], ['size 11', 'size 21']], { lost: ['i0', 'i1'] });
+        const rows = panelRows({ plan, parsed, mm: c.mm, grammar: c.g, model: c.objects }).rows.filter(r => r.pairing);
+        expect(rows.map(r => [r.old, r.new])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', 'Item (unnamed) 2'],
+        ]);
+    });
+
+    it('a deletion has no place in the text and comes after (dies on a deletion ordered first)', () => {
+        expect(itemsOf([['size 10', 'size 20'], [ITEM(12), '']])).toEqual([
+            ['Item (unnamed) 1', 'Item (unnamed) 1'],
+            ['Item (unnamed) 2', null],
+        ]);
     });
 });

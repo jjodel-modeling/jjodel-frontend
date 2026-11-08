@@ -7507,6 +7507,47 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   same error as for rule and nested targets, nothing is written. Only the shape of the creation stays unchecked in a
   let body. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900, `06ce85232`). Rewritten 2026-11-04 (P-2026-11-04-1442):
   the first text said the abstract class stayed unchecked and the amendment said the opposite; this text keeps the amendment.
+- **R-JTG-23** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  `envValue(name[, env])` returns the value bound to `name` as bound, never a demand: a string a string, an integer an
+  integer, a source element the element. The second argument, an `extendEnv` marker, is the environment read instead of
+  the current one. Extends R-JTG-11; `envLookup` stays unchanged. Evidence: §3.3 and §3.4 (4) of
+  `docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md`, `env-value.test.ts`.
+- **R-JTG-24** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  an unbound name in `envValue` stops the run as R-FA-11 asks of a failing builtin, naming the rule and the source
+  element (R-FA-13); `envHas` is the test. `envLookup` keeps `null` for an unbound name. Evidence: `env-value.test.ts`.
+- **R-JTG-25** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  a demand (of a called rule or of `envLookup`) used as a value in an expression stops the run, worded as R-FA-12
+  (rule and source element); before, `envLookup(n) + "_w"` wrote `"[object Object]_w"` and `envLookup("w") + 1` wrote
+  `null`, with `success true`. A demand that a binding places stays legal. Implemented for the operands of binary and
+  unary operators. Extends R-FA-11. Evidence: cases A and C of the report's §3.3, `demand-as-value.test.ts`.
+- **R-JTG-26** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  several source models start as several models of one metamodel: their objects are united in pass 1 and the trace
+  keys by source id as now; typed `from A, B` is a later step. Not implemented (slices S3, S4 of the report, §4).
+- **R-JTG-27** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the run dialog keeps a primary source model plus an «also include» list of further models of the same metamodel.
+  Not implemented (slice S4 of the report).
+- **R-JTG-28** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  matching on supertypes follows R-JTG-3: of the rules whose source class is the instance's class or a supertype, the
+  most specific wins; two of equal specificity are an error naming both. Not implemented (slice S5 of the report, §5).
+- **R-JTG-29** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the dynamic visibility of a caller's JjEL variables inside a helper body (report §3.2) is to be closed, after a lane
+  measures what relies on it. Not implemented.
+- **R-JTG-30** (2026-11-08, ratified by Alfonso 2026-11-08 08:33, registered by P-2026-11-08-0835, evidence: measured, verified: none, reversible: trunk):
+  R-JTG-25 extends to a comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`) with a demand as an operand and to a method call,
+  plain or null-safe, whose receiver is a demand: the run stops, same wording. A property read on a demand
+  (`envLookup(n).name`) does not stop the run and reads `null`, as R-FA-12 leaves a read on a missing feature (measured:
+  no warning is logged). Extends R-JTG-25, which stays unchanged. Evidence: `demand-as-value.test.ts`.
+- **R-JTG-31** (2026-11-08, ratified by Alfonso 2026-11-08 10:22, registered by P-2026-11-08-0836, evidence: measured, verified: none, reversible: trunk):
+  taken by P-2026-11-08-0836. The list of source models of R-JTG-26 reaches the executor as an array of arrays of objects (an array whose items are
+  all arrays): no change to the signature of `execute`, an array mixing objects and arrays stays a single model. The
+  trace's `modelName` stays the one metamodel name for every source element, not one per model as the report's S3 had
+  it: the list carries no model names and R-JTG-26 keys the trace by id. Evidence: `multi-model-source.test.ts`.
+- **R-JTG-32** (2026-11-08, decided by the chat under Alfonso's «decidi tu» 2026-11-08 10:22, registered by P-2026-11-08-1025, evidence: measured, verified: none, reversible: trunk):
+  a property read on a demand, plain or null-safe (`envLookup(n).name`, `mk(c)?.name`), gives a warning naming the rule,
+  the source element and the property, once per property, expression and source element, and still reads `null`, the
+  treatment R-FA-12 gives a read on a missing feature. Not an error: a read is not a use as a value. The run stays
+  `success true`. Replaces the «no warning is logged» that R-JTG-30 measured, which stays unchanged as the record of
+  that measure. Evidence: `demand-as-value.test.ts`.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
@@ -7845,6 +7886,8 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   prompt: `openBeside` addresses the tab by `modelId`, so it must accept the id of a second tab on the same model; what
   happens when it returns false (fall back to a new tab or disable the item) is the lane's recommendation. Known limit,
   unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
+- **R-MT-25** (2026-11-08, ratified by Alfonso 2026-11-08 08:34 «Ok su tutto», evidence: read, verified: none, reversible: trunk).
+  **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
 
 ## Superate
 

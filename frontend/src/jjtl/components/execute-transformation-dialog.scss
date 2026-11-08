@@ -154,6 +154,107 @@ $transition-fast: 150ms ease;
 }
 
 // ============================================
+// Also include (R-JTG-27)
+// ============================================
+
+// The list floats over what follows: opening it moves nothing in the dialog.
+.execute-include {
+    position: relative;
+    margin-top: $spacing-sm;
+}
+
+.execute-include-toggle {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-xs 0;
+    border: none;
+    background: none;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-accent;
+    cursor: pointer;
+
+    i {
+        font-size: $font-size-xs;
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+}
+
+.execute-include-count {
+    margin-left: auto;
+    font-size: $font-size-xs;
+    font-weight: 400;
+    color: $color-text-secondary;
+}
+
+.execute-include-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    max-height: 136px;
+    padding: $spacing-xs;
+    overflow-y: auto;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    box-shadow: 0 8px 16px $color-accent-light;
+}
+
+.execute-include-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: 0;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    cursor: pointer;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+    }
+
+    input {
+        margin: 0;
+        accent-color: $color-accent;
+    }
+
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// Opens upward, over the primary select and its count: downward it would cover
+// the label of the next field. The cap keeps it below the hint of the select.
+.execute-include-list.execute-include-popover {
+    top: auto;
+    bottom: 100%;
+    max-height: 72px;
+}
+
+// Two classes: the app-wide `.form-group label` and `.form-group input` reach the row.
+.execute-include-list .execute-include-row {
+    display: flex;
+}
+
+.execute-include-list .execute-include-checkbox {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+}
+
+// ============================================
 // Execution Preview
 // ============================================
 

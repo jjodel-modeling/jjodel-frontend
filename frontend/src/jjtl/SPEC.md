@@ -113,7 +113,7 @@ transformation  = "transformation" IDENTIFIER NEWLINE*
 modelList       = IDENTIFIER ( "," IDENTIFIER )* ;
 ```
 
-**Current implementation:** Single model per `from`/`to`. Multi-model is Phase 1 future work.
+**Current implementation:** Single model per `from`/`to`. Multi-model is Phase 1 future work. Several source models of the one `from` metamodel need no grammar: they are a list handed to the executor (§4.2).
 
 **Example:**
 ```jjtl
@@ -461,6 +461,19 @@ on a contained class that was silently empty now produces output, and `source` /
 Each contained object carries `_containerId`, the id of the object that owns it through
 a containment feature; `parent` resolves through it (§7.3).
 
+**Several source models of one metamodel (R-JTG-26).** The source may also be a list of
+models, each an array of objects: an array whose items are **all** arrays. The signature of
+`execute` does not change, and an array mixing objects and arrays stays a single model.
+The objects are united in list order before pass 1, so rules, the trace, implicit
+resolution, `resolve()` and `data` see one array, and a reference (`{ __ref: id }`) can
+point into another model of the list. A list of one model is that model. There is no
+grammar for it: `from` still names one metamodel, and a typed `from A, B` is a later step.
+
+Ids must be unique across the models, because the trace keys a source element by id: when
+two models hold the same id the run stops before pass 1 with `success: false`, no target
+model, and one error naming up to five shared ids with the models that hold them (models
+are counted from 1). A repeated id inside one model is not checked, as in a single model.
+
 ### 4.3 Guard Evaluation
 
 The `where` expression is evaluated with a per-instance context. Source instance properties are bound as context variables (all non-`__` prefixed properties). The result is coerced to boolean:
@@ -710,7 +723,18 @@ The app's write-back of several targets per source element is B2 (list below).
   `Env`. `extendEnv(names, values)` returns a frame over the current environment, every value a
   closure over the current environment, which is its binding site. `envHas(name)` tests a name;
   `envLookup(name)` yields the bound value, lowered under the closure's environment and not the
-  caller's, so names are not captured.
+  caller's, so names are not captured. `envValue(name[, env])` (P-2026-11-08-0740) returns the
+  bound value as bound, never a demand: a string a string, an integer an integer, a source
+  element the element, so it can be concatenated, computed with and navigated (`envValue("s").name`)
+  in a called rule, a helper body, a guard or a `forall` collection; with a second argument, an
+  `extendEnv` marker, it reads that environment instead of the current one. An unbound name
+  stops the run as a failing builtin does (§10); `envHas` is the test.
+- **A demand is not a value.** The demand of a called rule or of `envLookup` is carried out only
+  where a binding places it: as a binding's whole value, an element of a list, a branch of
+  `if-then-else`, an argument of a call, or a `let` (R-JTG-15). As the operand of an operator
+  (`envLookup(n) + "_w"`, `envLookup("w") + 1`, `-envLookup("w")`, `1 - mk(c)`) it stops the run
+  (P-2026-11-08-0740, §10); before, `+` wrote `"[object Object]_w"` or `null` with `success true`.
+  Read a bound value with `envValue`, or bind the demand with `let` first.
 - **Implicit resolution under an environment.** Under a non-empty environment, a source element
   reached by a binding is lowered by its matched rule under that environment, once per
   (rule, source, environment), and its targets are traced with that key; environments compare
@@ -938,6 +962,21 @@ store on each access), maps each object to `{ id, name, className, __type, ...fe
 wraps reference values as `{ __ref: pointerId }` and enum values as the literal's **name**,
 and computes `_containerId` for contained objects. See §4.2.
 
+A run has one primary model and, optionally, further models of the same metamodel, chosen in
+the «Also include» list of the run dialog (R-JTG-27, P-2026-11-08-1026). Each is converted the
+same way. With none included the executor receives the primary's array, as ever; otherwise the
+list of §4.2, primary first (`components/sourceSelection.ts`, `buildSourceArgument`). The output
+model's name comes from the dialog either way. Jjodel ids are global, so models of one project
+do not clash; a root of one model keeps no `_containerId`, and a reference into another model is
+an ordinary `{ __ref: id }`. A shared id is an error of the run, shown like any other (§4.2).
+
+The record of a run is `_state.generatedBy` on the output model: `transformationId`,
+`sourceModelId`, `timestamp` and, only when models were included, `includedModelIds`. Opening
+the dialog again for the same transformation reads the most recent record: when that has
+included models still compatible, and its primary is too, the dialog starts from that selection;
+otherwise, older records included, it starts as usual, on the first compatible model with nothing
+checked. The megamodel reads `sourceModelId` only.
+
 The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
 P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
 containment alike, is always a list, `[]` when empty and a one-element list for one value; a
@@ -1044,6 +1083,10 @@ that could not be placed is reported as above.
 | Expression evaluation error | Log warning, return `null` |
 | Builtin call that fails inside an expression (`range(null)`, a helper, a called rule) | **Error** on both parse paths, never a warning with `null` (R-FA-11): `Builtin 'range' failed in expression at line L, column C (rule 'Core -> M', source element 's'): <reason>`, naming the rule and the source element with the wording of a failing method (R-FA-13): those being evaluated when the builtin failed, the location that of the outermost expression. The same in a binding, a `where` guard, a `forall` collection and a helper body. In a feature or attribute mapping the mapping stops (`Failed to map ...`); in a `where` guard the run stops (`Execution failed: ...`). A call to a name that resolves to nothing (`Function 'f' is not defined`) stays an expression evaluation error |
 | JjEL method that fails inside an expression: a method the value's type does not have (`"4".log2()`), or a library method that throws (`4.toFixed(200)`) | **Error** on both parse paths, as a failing builtin (R-FA-12, extends R-FA-11): `Method 'log2' failed in expression at line L, column C (rule 'Core -> Module', source element 'rv_mc4'): Unknown method 'log2' for type String...`: the location is that of the outermost expression, the rule and the source element those being evaluated when the method failed. The same in a binding, a `where` guard (the run stops), a `forall` collection and a helper body. Out of it, unchanged, a warning with `null`: a method called on null (a missing feature reads as null: `Cannot call method 'log2' on null`) and a call on a model element that has no feature of that name (`c.nofeature()`, a missing feature). A failure inside a lambda passed to a collection method is the lambda's own: it stops only if it is itself a failed builtin or method |
+| `envValue(name)` with `name` unbound in the environment read | **Error**, as a failing builtin (R-FA-11, R-FA-13): `Builtin 'envValue' failed in expression at line L, column C (rule '...', source element '...'): 'nope' is not bound in the environment; envHas tests it`. `envLookup` keeps `null` for an unbound name |
+| A demand (of a called rule, or of `envLookup`) used as the operand of a binary or unary operator (`envLookup(n) + "_w"`, `envLookup("w") + 1`) | **Error** on both parse paths, worded as a failing builtin (R-FA-12, R-FA-13), naming the builtin or the called rule: `Builtin 'envLookup' failed in expression at line L, column C (rule '...', source element '...'): its result, a demand, is an operand of '+'; a demand is carried out only where a binding places it; bind it with let, or read a bound value with envValue`. A demand that a binding places (bare, in a list, in a branch of `if-then-else`, as a call argument, in a `let`) is not affected (§5.3.3) |
+| A demand compared (`envLookup(n) == "x"`, any of `==`, `!=`, `<`, `<=`, `>`, `>=`), or the receiver of a method call, plain or null-safe (`envLookup(n).toUpper()`, `mk(c).toString()`) | **Error**, as the row above (R-JTG-30): `...: its result, a demand, is an operand of '=='; ...` or `...: its result, a demand, is the receiver of method 'toUpper'; ...`. A property read on a demand (`envLookup(n).name`) does not stop the run: see the next row |
+| A property read on a demand, plain or null-safe (`envLookup(n).name`, `mk(c)?.name`) | Warning, and the read gives `null`, as a read on a missing feature (R-FA-12); the run stays `success true` (R-JTG-32): `Read of property 'name' on a demand in expression at line L, column C (rule '...', source element '...'): the result of 'envLookup', a demand, has no properties; the value is null; a demand is carried out only where a binding places it; bind it with let, or read a bound value with envValue`. One warning per property, expression and source element |
 | Property path not found | Return `null` after trying all 4 strategies |
 | Value mapping: no match | Return `null` |
 | Object creation error | Log warning, assign `null` |

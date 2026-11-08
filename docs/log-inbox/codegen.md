@@ -3030,3 +3030,98 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — probe on port 3738, crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/, same list, row `effect` focused
 **Notes**: Cause: skeleton.scss:101 global `.monaco-scrollable-element { left: 30px !important }` (#206) shifted the list 30 px in a 428 px box. Fix: list at left 0, row padded 30 px left, under `.textual-tab__body`. Row right 2377.44 to 2347.44 vs widget 2348.44 (+29 to -1 px); height 20, y 308, label x 1971.44, icon x 1951.44 unchanged. The blue bar now also covers the left 30 px band. Gates: typecheck 0, build, check:docs, textual vitest 1320 passed.
 **Prompt document name**: 2026-11-08 07:38
+
+## 2026-11-08 — merge: textual-d2d-suggest into alfonso-frontend-jjtl (P-2026-11-08-0803)
+**Prompt**: `claude_2026-11-08_0803_prompt_merge_textual-d2d-suggest.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d2d-suggest` at `c0fd90739` into `alfonso-frontend-jjtl`, merge base `ce18b0c02`, 3 commits on the branch side.
+**Files touched**: merge `faf11a4fe`: 3 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0738_prompt_textual_d2d_suggest.md`, `frontend/src/codegen/textual/ui/TextualTab.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `faf11a4fe` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15186 tests in 574 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D2d crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d2d-suggest` on `bcd38ed2e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0803/result.json`.
+**Prompt document name**: 2026-11-08 08:03
+
+## 2026-11-08 — feat(codegen): T8c, the re-import dialog in the confirm panel (P-2026-11-08-0739)
+**Prompt**: `claude_2026-11-08_0739_prompt_textual_t8c_dialog.md` (R-TXT-55 F10) and its continuation `claude_2026-11-08_0802_prompt_textual_t8c_continuation.md` after the context ceiling: plan rows with scores, an unticked pairing applied as create plus delete, explicit `ids` field; the panel with counts, a checkbox and score per uncertain row, cross-model deletes in red, Cancel; one component for edit and re-import.
+**Files touched**: `frontend/src/codegen/textual/textDiff.ts`, `__tests__/textDiff.test.ts` in 66c612ab3; `ui/TextConfirmPanel.tsx`, `ui/TextualTab.tsx`, `textFile.ts` in acf1391ee; uncommitted: this entry, the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — the untick wiring in `ui/TextualTab.tsx` and `textFile.ts` (re-plan on tick, optional `unpaired` param of `planEdit` and `planTextImport`) goes beyond the DOVE's "ids field and Cancel wiring"; files in scope, function not.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe ALL PASS (run t8c-probe2), crops 1-counts, 2-uncertain, 3-untick, 4-cancel in `~/.jjodel-lanes/P-2026-11-08-0739/`
+**Notes**: Red first both commits; bench1 8/8, bench2 6/6 killed. Probe run 1 failed 1-counts by a probe bug (export lacks a trailing newline, the added Event fell into the last @id comment); fixed in probe.mjs, rerun ALL PASS. App: untick deletes by id and creates one Transition, one undo step; Cancel leaves model and undo stack unchanged. Gates: typecheck 0; vitest 3 baseline import reds, 2 load reds green alone (irCollapsedRender, laneBoard); build 0; check:docs 0; codegen-lazy ALL GREEN.
+**Prompt document name**: 2026-11-08 07:39
+
+**Ticket** (candidate, low): nameless homonyms all read `Transition (unnamed)` in the panel's model and text cells, so the user tells the rows apart only by order and score; a distinguishing label (e.g. event and next state) is a lane of its own.
+
+## 2026-11-08 — merge: textual-t8c-dialog into alfonso-frontend-jjtl (P-2026-11-08-0829)
+**Prompt**: `claude_2026-11-08_0829_prompt_merge_textual-t8c-dialog.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t8c-dialog` at `948b1402b` into `alfonso-frontend-jjtl`, merge base `ce18b0c02`, 6 commits on the branch side.
+**Files touched**: merge `41e635098`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0739_prompt_textual_t8c_dialog.md`, `docs/prompts/claude_2026-11-08_0802_prompt_textual_t8c_continuation.md`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/textDiff.ts`, `frontend/src/codegen/textual/textFile.ts`, `frontend/src/codegen/textual/ui/TextConfirmPanel.tsx`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `41e635098` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15222 tests in 576 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: T8c crops 1-counts, 2-uncertain, 4-cancel in ~/.jjodel-lanes/P-2026-11-08-0739/ checked by the chat
+**Notes**: Rollback tag `pre-textual-t8c-dialog` on `e8b279b0d` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0829/result.json`.
+**Prompt document name**: 2026-11-08 08:29
+
+## 2026-11-08 — test(codegen): T8d, calibration bench of the match thresholds (P-2026-11-08-0831)
+**Prompt**: `claude_2026-11-08_0831_prompt_textual_t8d_calibration.md` (R-TXT-55 F8, R-TXT-21 (7), risk R6): a bench of scripted edits re-imported without ids on the 16 Briefs and the state-machine fixture, the numbers in a table in the lane folder; no threshold change.
+**Files touched**: `frontend/src/codegen/textual/__tests__/calibration.test.ts` (new) in b6b40a7fd; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: matchObjects takes no threshold parameter: only 0.6 and 0.2 measured, no other value run. 30225 objects: 5564 wrong, all uncertain (5562 homonym order, 2 rename), 73 missed. Table: `~/.jjodel-lanes/P-2026-11-08-0831/calibration-table.md`. One Brief plan refused unwritable, counted. Gates: typecheck 0; vitest 3 baseline import reds, 2 load reds green alone (irCollapsedRender, irSelectionRing); check:docs 0.
+**Prompt document name**: 2026-11-08 08:31
+
+**Ticket** (candidate, medium): without ids, nameless siblings pair by order, so deleting one Brief `Instruction` shifts every later pairing (delete one: 1547 wrong uncertain rows of 4144 objects) and an unedited Brief already shows 276 uncertain rows of 361 objects. No rename threshold reaches step 2; a content-aware pairing of homonyms is a lane of its own.
+
+## 2026-11-08 — merge: textual-t8d-calibration into alfonso-frontend-jjtl (P-2026-11-08-0845)
+**Prompt**: `claude_2026-11-08_0845_prompt_merge_textual-t8d-calibration.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t8d-calibration` at `3cddca7d3` into `alfonso-frontend-jjtl`, merge base `948b1402b`, 3 commits on the branch side.
+**Files touched**: merge `9e2d896b9`: 3 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0831_prompt_textual_t8d_calibration.md`, `frontend/src/codegen/textual/__tests__/calibration.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9e2d896b9` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15225 tests in 577 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile, tests only (T8d calibration bench)
+**Notes**: Rollback tag `pre-textual-t8d-calibration` on `d1daf6d2f` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0845/result.json`.
+**Prompt document name**: 2026-11-08 08:45
+
+## 2026-11-08 — fix(codegen): TABFIX, three Text tab candidate tickets (P-2026-11-08-0859)
+**Prompt**: `claude_2026-11-08_0859_prompt_textual_tab_fixes.md`: JjEL warnings survive a reprint, E2b highlight on open over an existing canvas selection, an index for unnamed homonyms in the T8c confirm panel.
+**Files touched**: `55ac2cc03` ui/TextualTab.tsx, __tests__/jjelIslands.test.ts; `c53f1419d` selectionSync.ts, ui/TextualTab.tsx, __tests__/selectionSync.test.ts; `eb6c08382` ui/TextConfirmPanel.tsx, __tests__/textDiff.test.ts (all under frontend/src/codegen/textual/); uncommitted: this entry, the prompt's Status
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — the JjEL recheck also runs on the first print on open, beyond "after a reprint"; file in scope, behaviour not. Six files, listed above, all inside the prompt's DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: probe 19/19 PASS on 3859 (DemoESM, red before the fixes), read from Monaco's markers, decorations and the DOM; crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/, checked by the session
+**Notes**: Selection read from `.react-flow__node.selected` (the event has no pull form): a node out of view is not in the DOM and is not read. No visibility hook: a hidden tab stays mounted and the listener covers it (not run in the app). Also rechecked on text brought back to agreed. Bench 19/19 killed. Gates: typecheck 0; vitest 3 baseline import reds; build 0; check:docs 0; codegen-lazy ALL GREEN.
+**Prompt document name**: 2026-11-08 08:59
+
+## 2026-11-08 — merge: textual-tab-fixes into alfonso-frontend-jjtl (P-2026-11-08-0932)
+**Prompt**: `claude_2026-11-08_0932_prompt_merge_textual-tab-fixes.md`, a direct merge by `lane-run merge --direct`, no session: `textual-tab-fixes` at `0b56563f7` into `alfonso-frontend-jjtl`, merge base `e1f06117c`, 5 commits on the branch side.
+**Files touched**: merge `49cd0871d`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0859_prompt_textual_tab_fixes.md`, `frontend/src/codegen/textual/__tests__/jjelIslands.test.ts`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/ui/TextConfirmPanel.tsx`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `49cd0871d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15267 tests in 577 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: TABFIX crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/ checked by the chat; probe 19/19
+**Notes**: Rollback tag `pre-textual-tab-fixes` on `18ce96017` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0932/result.json`.
+**Prompt document name**: 2026-11-08 09:32
