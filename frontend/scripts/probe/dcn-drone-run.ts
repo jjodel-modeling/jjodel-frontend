@@ -28,8 +28,8 @@ const FILE = process.env.DCN_FILE || `${homedir()}/jjodel-demo-exports/dcn/dcn-d
 const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-0329/crops`).replace(/\/$/, '');
 const SEED = Number(process.env.DCN_SEED || 4242);
 const MAX_TICKS = 20;
-// The Tick button's label in the inputs row, matched exactly (P-2026-11-08-0345 measured `dcn-tick`, the raw id).
-const TICK_LABEL = 'dcn-tick';
+// The Tick button's label in the inputs row, matched exactly (P-2026-11-08-1606; the event id stays `dcn-tick`).
+const TICK_LABEL = 'Tick';
 const TICK = new RegExp(`^${TICK_LABEL}$`);
 
 const { ev } = await import('./bpmn-lanes-fixture.ts');
@@ -141,6 +141,8 @@ try {
     meas('inputs row', s1.inputs);
     meas('tick button label', s1.inputs.filter((i) => /tick/i.test(i.text)).map((i) => i.text));
     check('L45d-2 the heading is the DCN one', s1.sections.includes(DCN_PANEL_HEADING), { sections: s1.sections, expected: DCN_PANEL_HEADING });
+    const takeOffInput = (st: PanelState) => st.inputs.find((i) => /^dji\.takeOff\(/.test(i.text));
+    check('L46-1 takeOff is disabled after Reset (Charging)', takeOffInput(s1)?.on === false, { takeOff: takeOffInput(s1), chips: s1.chips });
 
     // Tick until dji is Ready.
     const ready = (s: PanelState) => s.chips.some((c) => /^dji\.Mode = Ready$/.test(c));
@@ -156,6 +158,7 @@ try {
         check('L45d-3 dji reaches Mode = Ready within 20 ticks', false, { ticks, status: s.pill, line: s.line, chips: s.chips, title: s.chipsTitle });
         throw new Error('dji never reached Ready');
     }
+    check('L46-2 takeOff is enabled in Ready', takeOffInput(s)?.on === true, { takeOff: takeOffInput(s), chips: s.chips });
     await shoot(page, '2-ready');
     meas('step 2-ready', { classification: s.chipsTitle?.split('\n')[0] ?? null, line: s.line, slots: s.chipsTitle });
 
