@@ -38,6 +38,10 @@
  *   - object level (L2.5): the slots S2 synthesized for `dji`, `chargeRate` among them with its default; zero
  *     `instantiation` findings on every instance, computed and in the registry, after «Sync slots» too; the
  *     conformance problems left on the whole model, listed. One screenshot of the object diagram (light theme).
+ *   - R-DCN-29 (P-2026-11-08-1939): the object level is drawn in the `UML object diagram` viewpoint (the views copied
+ *     from uml-class-object-fixture, the DCN metaclasses hidden too), active in the export: the six instances with
+ *     their slots as rows and no other node, counted on the built project and on the export imported in a new page;
+ *   - the containment writes the build lost and re-applied (one MEAS line each, L-1 counts them and never fails).
  * With GV_SAVE set the project is exported, before the seeded attributes, as dcn-drone.jjodel (class level) and,
  * after the object level, as dcn-drone-objects.jjodel.
  *
@@ -48,7 +52,7 @@
  *       GV_SAVE   opt-in: the directory the project is exported to (bpmn-lanes-fixture `saveScene`)
  */
 import { chromium, type Page } from '@playwright/test';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { setTheme, SETTLE_MS } from '../smoke/states.ts';
 
@@ -59,7 +63,7 @@ mkdirSync(OUT, { recursive: true });
 const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-0011/crops`).replace(/\/$/, '');
 // The BPMN fixture's `shoot` writes into its GV_OUT: set before it is loaded, so the screenshots land here.
 process.env.GV_OUT = OUT;
-const { buildLinks, buildMetamodel, buildModelShell, buildObjects, createProject, ev, openPage, saveScene, shoot } = await import('./bpmn-lanes-fixture.ts');
+const { buildLinks, buildMetamodel, buildModelShell, buildObjects, buildViewpoint, createProject, ev, openPage, pickViewpoint, saveScene, shoot } = await import('./bpmn-lanes-fixture.ts');
 
 const PROJECT = 'DCN drone';
 const EXPORT_FILE = 'dcn-drone.jjodel';
@@ -443,7 +447,7 @@ const ACTIVE_PANE = '.dock-tabpane-active .react-flow';
  * them, over the class level. The writes are S2's (`resolveVertexLayoutWrite` under the layout in force, one
  * TRANSACTION of SetFieldAction only, rule 12). Returns the objects laid out and the vertices of the first and last cell.
  */
-async function layoutObjectLevel(page: Page, columns: Array<[string, number, number?]>, y0: number) {
+async function layoutObjectLevel(page: Page, columns: Array<[string, number, number?]>, y0: number, withSlots = true) {
     return ev<{ objects: string[]; vertices: number; first: string | null; last: string | null }>(page, `
         const j = await import('/src/joiner/index.ts');
         const lk = await import('/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts');
@@ -454,7 +458,7 @@ async function layoutObjectLevel(page: Page, columns: Array<[string, number, num
         const pos = [];
         for (const [obj, x, top] of a.columns) { const y0 = top ?? a.y0;
             pos.push([obj, x, y0]);
-            fv(obj, 'slots').forEach((sl, i) => { const y = y0 + 300 + i * 170; pos.push([sl, x, y]);
+            if (a.withSlots) fv(obj, 'slots').forEach((sl, i) => { const y = y0 + 300 + i * 170; pos.push([sl, x, y]);
                 const vs = fv(sl, 'values'); const vx = x + 330 + Math.max(0, vs.length - 1) * 150;
                 vs.forEach((v, k) => pos.push([v, vx, y + k * 170])); });
         }
@@ -468,7 +472,7 @@ async function layoutObjectLevel(page: Page, columns: Array<[string, number, num
         });
         const far = pos.reduce((m, p) => (p[1] + p[2] > m[1] + m[2] ? p : m), pos[0]);
         return { objects: pos.map((p) => p[0]), vertices: n, first: vOf(pos[0][0])[0] ?? null, last: vOf(far[0])[0] ?? null };`,
-        { columns, y0 }, 1500);
+        { columns, y0, withSlots }, 1500);
 }
 
 /**
@@ -476,7 +480,7 @@ async function layoutObjectLevel(page: Page, columns: Array<[string, number, num
  * view by the tree's reveal (`SELECT_NODE`: the far cell, then the first, so every node of it is mounted, the canvas
  * rendering only the visible ones), then the picture framed on its drawn nodes (as `shoot` frames every node).
  */
-async function shootObjects(page: Page, objectIds: string[], path: string, modelId: string, reveal: Array<string | null>) {
+async function shootObjects(page: Page, objectIds: string[], path: string, modelId: string, reveal: Array<string | null>, atFrame?: () => Promise<void>) {
     const hide = page.locator('button[aria-label="Hide the side panel"]:visible');
     if (await hide.count()) { await hide.first().click(); await page.waitForTimeout(900); }
     const size0 = page.viewportSize();
@@ -516,7 +520,138 @@ async function shootObjects(page: Page, objectIds: string[], path: string, model
     await page.waitForTimeout(400);
     await page.locator(ACTIVE_PANE).first().screenshot({ path });
     meas('screenshot', path);
+    if (atFrame) await atFrame();
     if (size0) await page.setViewportSize(size0);
+}
+
+/**
+ * A containment write of `syncCreateCompositionLink` is lost about once per build (P-2026-11-08-1939, ticket in its log entry). Each link
+ * missing from its slot after the settle is written again, one MEAS line per loss, at most three rounds; then the slot gets the plan's order,
+ * since a late write lands last. The edge is created only if the loss took it too: a second one would be drawn twice. Returns the losses.
+ */
+async function repairContainment(page: Page, ids: Record<string, { obj: string; vertex: string }>, containment: Array<[string, string, string]>) {
+    await page.waitForTimeout(SETTLE_MS);
+    const lost: Array<{ link: string; attempt: number; edges: number }> = [];
+    const touched = new Set<string>();
+    const pairs = containment.map(([o, f, t]) => [ids[o].obj, f, ids[t].obj]);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        const gone = await ev<number[]>(page, `${VIEW_JS}
+            return a.map(([o, f, t], i) => { const v = slot(o, f); return v && (v.values || []).includes(t) ? -1 : i; }).filter((i) => i >= 0);`, pairs, 0);
+        if (!gone.length) break;
+        for (const i of gone) {
+            const [o, f, t] = containment[i];
+            const link = `${o}.${f}->${t}`;
+            const edges = await ev<number>(page, `const idl = w.store.getState().idlookup;
+                const edges = Object.keys(idl).filter((id) => idl[id] && /Edge/.test(String(idl[id].className)) && idl[id].start === a.pv && idl[id].end === a.cv).length;
+                if (edges === 0) { const c2j = await import('/src/components/editor-v2/sync/canvasToJjom.ts'); c2j.syncCreateCompositionLink(a.pv, a.cv, a.f); }
+                else { const r = w.LPointerTargetable.fromPointer(a.po)['$' + a.f]; r.values = [...(r.__raw.values || []).filter((v) => v != null && v !== ''), a.co]; }
+                return edges;`, { pv: ids[o].vertex, cv: ids[t].vertex, po: ids[o].obj, co: ids[t].obj, f }, 700);
+            meas('lost containment write', { link, attempt, edges });
+            lost.push({ link, attempt, edges });
+            touched.add(`${o}\n${f}`);
+        }
+        await page.waitForTimeout(SETTLE_MS);
+    }
+    for (const key of touched) {
+        const [o, f] = key.split('\n');
+        await ev(page, `const r = w.LPointerTargetable.fromPointer(a.po)['$' + a.f]; r.values = a.order; return 1;`,
+            { po: ids[o].obj, f, order: containment.filter((c) => c[0] === o && c[1] === f).map((c) => ids[c[2]].obj) }, 700);
+    }
+    if (containment.length) {
+        const [o, , t] = containment[0];
+        meas('edge query control (edges of the first containment link)', await ev<number>(page, `const idl = w.store.getState().idlookup;
+            return Object.keys(idl).filter((id) => idl[id] && /Edge/.test(String(idl[id].className)) && idl[id].start === a[0] && idl[id].end === a[1]).length;`, [ids[o].vertex, ids[t].vertex], 0));
+    }
+    return lost;
+}
+
+// ── The UML object diagram viewpoint (R-DCN-29), copied from uml-class-object-fixture: importing it sets GV_OUT ─────
+
+const VP_OBJECT = 'UML object diagram';
+const I = (prop: string) => ({ from: 'intrinsic', prop });
+const P = (expr: string) => ({ from: 'path', expr });
+const L = (text: string) => ({ from: 'literal', text });
+const not = (arg: unknown) => ({ op: 'not', arg });
+const exists = (path: string) => ({ op: 'exists', path });
+const kind = (c: string, path?: string) => path ? { op: 'isKind', class: c, path } : { op: 'isKind', class: c };
+const hidden = (cls: string): [string, Record<string, unknown>] =>
+    [cls, { kind: 'vertex', metaclasses: [cls], label: `${cls} (not drawn)`, visible: false, priority: 5, shape: { form: 'rect' } }];
+const BOX = { form: 'rect', fill: '#ffffff', border: { width: 1 }, cornerRadius: 0 };
+const IS_LINK = exists('$classifier.value.$memberEnds.values[0]');
+const slotHead = [P('$definingFeature.value.$name.value'), L(' = ')];
+const OBJECT_VIEWS: Array<[string, Record<string, unknown>]> = [
+    ['InstanceSpecification', { kind: 'vertex', metaclasses: ['InstanceSpecification'], label: 'Object', predicate: not(IS_LINK),
+        shape: { ...BOX, labels: [
+            { position: 'top', source: I('name'), style: { fontWeight: 'normal', underline: true } },
+            { position: 'top', source: P('$classifier.value.$name.value'), style: { fontWeight: 'normal', underline: true } }] },
+        fieldCompartments: [{ id: 'slots', title: 'Slots', separator: true, rowFormat: { segments: [{ kind: 'name' }] },
+            source: { from: 'children', filter: kind('Slot') } }] }],
+    ['InstanceSpecification', { kind: 'edge', metaclasses: ['InstanceSpecification'], label: 'Link', priority: 1, predicate: IS_LINK,
+        edge: { source: '$slots.values[0].$values.values[0].$instance.value', target: '$slots.values[1].$values.values[0].$instance.value',
+            line: { style: 'solid', width: 1 }, terminations: { sourceEnd: 'none', targetEnd: 'none' },
+            labels: { center: P('$classifier.value.$name.value'),
+                sourceEnd: { role: P('$slots.values[0].$definingFeature.value.$name.value') },
+                targetEnd: { role: P('$slots.values[1].$definingFeature.value.$name.value') } } } }],
+    ['Slot', { kind: 'row', metaclasses: ['Slot'], label: 'Slot (instance value)', priority: 1, predicate: exists('$values.values[0].$instance.value'),
+        template: [...slotHead, P('$values.values[0].$instance.value.$name.value')] }],
+    ['Slot', { kind: 'row', metaclasses: ['Slot'], label: 'Slot (null)', priority: 1, predicate: kind('LiteralNull', '$values.values[0]'),
+        template: [...slotHead, L('null')] }],
+    ['Slot', { kind: 'row', metaclasses: ['Slot'], label: 'Slot (literal)', template: [...slotHead, P('$values.values[0].$value.value')] }],
+    ...['Package', 'Class', 'DataType', 'PrimitiveType', 'Enumeration', 'Association', 'Generalization', 'Property', 'Operation',
+        'Parameter', 'EnumerationLiteral', 'Slot', 'LiteralInteger', 'LiteralString', 'LiteralBoolean', 'LiteralNull', 'InstanceValue',
+        // The drone's own metaclasses, which the UML fixture does not have.
+        'StaticClass', 'Viewpoint', 'DynamicClass', 'Monitor', 'CoherenceConstraint', 'BoundedPersistence', 'BoundedResponse'].map(hidden),
+];
+
+type ObjectCensus = { active: string | null; instances: Array<{ name: string; ir: boolean; rows: string[] }>; others: string[]; overlaps: string[] };
+/** What the canvas of the active pane draws for the object level: the instances with their rows, any other node, overlapping boxes. */
+const objectCensus = (page: Page) => page.evaluate((root) => {
+    const w = window as any; const idl = w.store.getState().idlookup;
+    const instances: ObjectCensus['instances'] = []; const others: string[] = []; const boxes: Array<[string, number, number, number, number]> = [];
+    for (const el of Array.from(document.querySelectorAll(`${root} .react-flow__node`)) as HTMLElement[]) {
+        const obj = idl[idl[el.dataset.id ?? '']?.model]; const meta = obj && idl[obj.instanceof]?.name;
+        if (meta !== 'InstanceSpecification') { others.push(`${meta}:${obj?.name}`); continue; }
+        instances.push({ name: obj.name, ir: !!el.querySelector('.ir-node-content'),
+            rows: Array.from(el.querySelectorAll('.ir-compartment .ir-row')).map((r) => r.textContent ?? '') });
+        const m = el.style.transform.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+        if (m) boxes.push([obj.name, +m[1], +m[2], el.offsetWidth, el.offsetHeight]);
+    }
+    const overlaps = boxes.flatMap((a, i) => boxes.slice(i + 1).filter((b) => a[1] < b[1] + b[3] && b[1] < a[1] + a[3] && a[2] < b[2] + b[4] && b[2] < a[2] + a[4]).map((b) => `${a[0]}/${b[0]}`));
+    return { active: w.LProject.getProject().activeViewpoint?.name ?? null, instances, others, overlaps };
+}, ACTIVE_PANE) as Promise<ObjectCensus>;
+/** Six instances, each drawn by the IR with `rows[name]` slot rows, and nothing else on the canvas. */
+const censusOk = (c: ObjectCensus, rows: Record<string, number>) => c.active === VP_OBJECT && c.others.length === 0 && c.overlaps.length === 0
+    && c.instances.length === Object.keys(rows).length && c.instances.every((i) => i.ir && i.rows.length === rows[i.name]);
+
+/** The export imported in a new page, no viewpoint picked: its object diagram as it opens. */
+async function reimported(file: string, shot: string, rows: Record<string, number>) {
+    const { page, errors } = await openPage(browser);
+    await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(5000);
+    const imported = await ev<{ id: string | null }>(page, `
+        const api = await import('/src/api/persistance/projects.ts');
+        const list = () => JSON.parse(localStorage.getItem('projects') || '[]');
+        const before = list().length;
+        await api.ProjectsApi.importFromText(a);
+        for (let i = 0; i < 75 && list().length <= before; i++) await new Promise((r) => setTimeout(r, 200));
+        const l = list(); return { id: l.length > before ? l[l.length - 1].id : null };`, readFileSync(file, 'utf8'), 0);
+    if (!imported.id) { check('RT-1 the export opens in the UML object viewpoint', false, imported); await page.context().close(); return; }
+    await page.goto(`${URL}/#/project?id=${imported.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(9000);
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    const opened = await ev<{ model: string; objects: string[]; vertices: string[] }>(page, `
+        const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
+        const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(w.LPointerTargetable.fromPointer(m.id));
+        const idl = w.store.getState().idlookup;
+        const objects = Object.keys(idl).filter((id) => idl[id] && idl[idl[id].instanceof] && idl[idl[id].instanceof].name === 'InstanceSpecification');
+        const set = new Set(objects);
+        return { model: m.id, objects, vertices: Object.keys(idl).filter((id) => idl[id] && set.has(idl[id].model) && /Vertex/.test(String(idl[id].className))) };`, undefined, 8000);
+    let census: ObjectCensus | null = null;
+    await shootObjects(page, opened.objects, shot, opened.model, [opened.vertices[opened.vertices.length - 1] ?? null, opened.vertices[0] ?? null], async () => { census = await objectCensus(page); });
+    meas('object diagram of the export', census);
+    check('RT-1 the export opens in the UML object viewpoint: the six instances drawn with it, their slots as rows, no other node, no overlap',
+        !!census && censusOk(census, rows) && errors.length === 0, { census, errors: errors.slice(0, 3) });
+    await page.context().close();
 }
 
 // ── The scene ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -576,6 +711,9 @@ try {
     check('every object of the plan was created with its vertex', Object.keys(ids).length === plan.objects.length,
         { planned: plan.objects.length, made: Object.keys(ids).length, missing: plan.objects.map((o) => o[0]).filter((k) => !ids[k]) });
     await buildLinks(page, ids, plan.containment, []);
+    const lostLinks = await repairContainment(page, ids, plan.containment);
+    out.lostContainment = lostLinks;
+    check('L-1 containment writes lost by the build, counted (a report, it never fails: the checks below judge the final state)', true, { losses: lostLinks.length, lost: lostLinks });
     await setReferences(page, ids, plan.references);
     const unnamed = await ev<string[]>(page, `const skipped = [];
         for (const [key, obj, n] of a) { const o = w.LPointerTargetable.fromPointer(obj); if (o.$name) o.$name.values = [n]; else skipped.push(key); }
@@ -878,10 +1016,29 @@ try {
     const laid = await layoutObjectLevel(page, INSTANCES.map(([n], i): [string, number, number?] => i < 2 ? [instOf(n), 60 + i * 700] : [instOf(n), [760, 1140, 2210, 1830][i - 2], 3150]), 2600);
     meas('object level laid out', { objects: laid.objects.length, vertices: laid.vertices });
     await page.waitForTimeout(SETTLE_MS);
-    await shootObjects(page, laid.objects, `${CROPS}/dcn-drone-objects-light.png`, shell.modelId, [laid.last, laid.first]);
+
+    // R-DCN-29: the UML object viewpoint, active in the export; the instances on a grid of their own in it (the layout is per viewpoint).
+    const vpObject = await buildViewpoint(page, VP_OBJECT, OBJECT_VIEWS);
+    meas('object viewpoint', vpObject);
+    check('O-7 every view of the UML object viewpoint is built', vpObject.made.length === OBJECT_VIEWS.length && vpObject.made.every((m) => !/:undefined$/.test(m)), vpObject.made);
+    await pickViewpoint(page, VP_OBJECT);
+    await page.waitForTimeout(SETTLE_MS);
+    const grid = await layoutObjectLevel(page, INSTANCES.map(([n], i): [string, number, number?] => [instOf(n), 60 + (i % 3) * 420, 2600 + Math.floor(i / 3) * 420]), 2600, false);
+    meas('object level laid out in the UML object viewpoint', { objects: grid.objects.length, vertices: grid.vertices });
+    await page.waitForTimeout(SETTLE_MS);
+    const rowsOf = Object.fromEntries(INSTANCES.map(([n]) => [n, slotsOf[n].length]));
+    let drawn: ObjectCensus | null = null;
+    await shootObjects(page, grid.objects, `${CROPS}/dcn-drone-objects-light.png`, shell.modelId, [grid.last, grid.first], async () => { drawn = await objectCensus(page); });
+    meas('object diagram', drawn);
+    out.objectDiagram = drawn;
+    check('O-8 the object diagram uses the UML object viewpoint: the six instances drawn with it, their slots as rows, no other node, no overlap', !!drawn && censusOk(drawn, rowsOf), { drawn, rowsOf });
     await saveScene(page, EXPORT_OBJECTS_FILE);
     const fileObjects = process.env.GV_SAVE ? `${process.env.GV_SAVE.replace(/\/$/, '')}/${EXPORT_OBJECTS_FILE}` : null;
     check('EX-2 the project is exported with the object level', !!fileObjects && existsSync(fileObjects), { file: fileObjects });
+    if (fileObjects && existsSync(fileObjects)) await reimported(fileObjects, `${CROPS}/dcn-drone-objects-reimported-light.png`, rowsOf);
+    // The seeds below are made on the abstract syntax, as before this viewpoint existed.
+    await pickViewpoint(page, 'Abstract syntax');
+    await page.waitForTimeout(SETTLE_MS);
 
     // Seeded: one Integer attribute per dynamic class, to measure the order of the closure and dormantOwner.
     const seeds: ModelPlan['objects'] = DYNAMIC.map((d, i) => [`seed_${d}`, 'Property', `seed_${d}`, 60 + i * 300, 2400, null]);

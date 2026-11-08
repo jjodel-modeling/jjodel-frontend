@@ -1,6 +1,6 @@
 {
-  "url": "http://localhost:3147",
-  "at": "2026-11-08T15:56:37.476Z",
+  "url": "http://localhost:3086",
+  "at": "2026-11-08T19:22:04.111Z",
   "metamodel": {
     "classes": [
       {
@@ -325,12 +325,12 @@
       },
       "Property.visibility": {
         "type": "VisibilityKind",
-        "typeId": "Pointer1794153534361_USER_192",
+        "typeId": "Pointer1794165816597_USER_192",
         "d": "none"
       },
       "Property.aggregation": {
         "type": "AggregationKind",
-        "typeId": "Pointer1794153534964_USER_199",
+        "typeId": "Pointer1794165817202_USER_199",
         "d": "none"
       },
       "Property.isDerived": {
@@ -345,7 +345,7 @@
       },
       "Operation.visibility": {
         "type": "VisibilityKind",
-        "typeId": "Pointer1794153534361_USER_192",
+        "typeId": "Pointer1794165816597_USER_192",
         "d": "none"
       },
       "LiteralInteger.value": {
@@ -687,298 +687,299 @@
     "connectives": "jjel",
     "alertForm": "firstSingle"
   },
+  "lostContainment": [],
   "ids": {
     "pkg": {
-      "obj": "Pointer1794153586115_USER_237",
-      "vertex": "Pointer1794153586117_USER_241"
+      "obj": "Pointer1794165868421_USER_237",
+      "vertex": "Pointer1794165868424_USER_241"
     },
     "String": {
-      "obj": "Pointer1794153586420_USER_242",
-      "vertex": "Pointer1794153586420_USER_247"
+      "obj": "Pointer1794165868681_USER_242",
+      "vertex": "Pointer1794165868682_USER_247"
     },
     "Integer": {
-      "obj": "Pointer1794153586706_USER_248",
-      "vertex": "Pointer1794153586707_USER_253"
+      "obj": "Pointer1794165868939_USER_248",
+      "vertex": "Pointer1794165868940_USER_253"
     },
     "Boolean": {
-      "obj": "Pointer1794153587012_USER_254",
-      "vertex": "Pointer1794153587013_USER_259"
+      "obj": "Pointer1794165869196_USER_254",
+      "vertex": "Pointer1794165869197_USER_259"
     },
     "SensorStatus": {
-      "obj": "Pointer1794153587295_USER_260",
-      "vertex": "Pointer1794153587296_USER_266"
+      "obj": "Pointer1794165869453_USER_260",
+      "vertex": "Pointer1794165869453_USER_266"
     },
     "lit_OK": {
-      "obj": "Pointer1794153587628_USER_267",
-      "vertex": "Pointer1794153587629_USER_272"
+      "obj": "Pointer1794165869718_USER_267",
+      "vertex": "Pointer1794165869719_USER_272"
     },
     "lit_Fault": {
-      "obj": "Pointer1794153587912_USER_273",
-      "vertex": "Pointer1794153587913_USER_278"
+      "obj": "Pointer1794165870028_USER_273",
+      "vertex": "Pointer1794165870028_USER_278"
     },
     "lit_Calibrating": {
-      "obj": "Pointer1794153588230_USER_279",
-      "vertex": "Pointer1794153588231_USER_284"
+      "obj": "Pointer1794165870327_USER_279",
+      "vertex": "Pointer1794165870328_USER_284"
     },
     "Drone": {
-      "obj": "Pointer1794153588511_USER_285",
-      "vertex": "Pointer1794153588512_USER_294"
+      "obj": "Pointer1794165870615_USER_285",
+      "vertex": "Pointer1794165870616_USER_294"
     },
     "p_Drone_distance": {
-      "obj": "Pointer1794153588823_USER_295",
-      "vertex": "Pointer1794153588825_USER_308"
+      "obj": "Pointer1794165870942_USER_295",
+      "vertex": "Pointer1794165870944_USER_308"
     },
     "p_Drone_speed": {
-      "obj": "Pointer1794153589133_USER_309",
-      "vertex": "Pointer1794153589134_USER_322"
+      "obj": "Pointer1794165871238_USER_309",
+      "vertex": "Pointer1794165871240_USER_322"
     },
     "p_Drone_power": {
-      "obj": "Pointer1794153589415_USER_323",
-      "vertex": "Pointer1794153589417_USER_336"
+      "obj": "Pointer1794165871526_USER_323",
+      "vertex": "Pointer1794165871528_USER_336"
     },
     "p_Drone_battery": {
-      "obj": "Pointer1794153589713_USER_337",
-      "vertex": "Pointer1794153589714_USER_350"
+      "obj": "Pointer1794165871821_USER_337",
+      "vertex": "Pointer1794165871822_USER_350"
     },
     "p_Drone_vmax": {
-      "obj": "Pointer1794153590035_USER_351",
-      "vertex": "Pointer1794153590036_USER_364"
+      "obj": "Pointer1794165872123_USER_351",
+      "vertex": "Pointer1794165872125_USER_364"
     },
     "Mode": {
-      "obj": "Pointer1794153590320_USER_365",
-      "vertex": "Pointer1794153590321_USER_371"
+      "obj": "Pointer1794165872438_USER_365",
+      "vertex": "Pointer1794165872438_USER_371"
     },
     "Charging": {
-      "obj": "Pointer1794153590641_USER_372",
-      "vertex": "Pointer1794153590642_USER_380"
+      "obj": "Pointer1794165872730_USER_372",
+      "vertex": "Pointer1794165872731_USER_380"
     },
     "p_Charging_chargeRate": {
-      "obj": "Pointer1794153590950_USER_381",
-      "vertex": "Pointer1794153590951_USER_394"
+      "obj": "Pointer1794165873067_USER_381",
+      "vertex": "Pointer1794165873069_USER_394"
     },
     "mon_Charging_charge": {
-      "obj": "Pointer1794153591245_USER_395",
-      "vertex": "Pointer1794153591245_USER_399"
+      "obj": "Pointer1794165873347_USER_395",
+      "vertex": "Pointer1794165873347_USER_399"
     },
     "Ready": {
-      "obj": "Pointer1794153591528_USER_400",
-      "vertex": "Pointer1794153591528_USER_408"
+      "obj": "Pointer1794165873635_USER_400",
+      "vertex": "Pointer1794165873635_USER_408"
     },
     "op_Ready_takeOff": {
-      "obj": "Pointer1794153591842_USER_409",
-      "vertex": "Pointer1794153591843_USER_418"
+      "obj": "Pointer1794165873951_USER_409",
+      "vertex": "Pointer1794165873952_USER_418"
     },
     "Flying": {
-      "obj": "Pointer1794153592156_USER_419",
-      "vertex": "Pointer1794153592157_USER_427"
+      "obj": "Pointer1794165874261_USER_419",
+      "vertex": "Pointer1794165874262_USER_427"
     },
     "op_Flying_rampUp": {
-      "obj": "Pointer1794153592413_USER_428",
-      "vertex": "Pointer1794153592413_USER_437"
+      "obj": "Pointer1794165874542_USER_428",
+      "vertex": "Pointer1794165874543_USER_437"
     },
     "op_Flying_rampDown": {
-      "obj": "Pointer1794153592722_USER_438",
-      "vertex": "Pointer1794153592723_USER_447"
+      "obj": "Pointer1794165874823_USER_438",
+      "vertex": "Pointer1794165874824_USER_447"
     },
     "mon_Flying_drain": {
-      "obj": "Pointer1794153593038_USER_448",
-      "vertex": "Pointer1794153593038_USER_452"
+      "obj": "Pointer1794165875138_USER_448",
+      "vertex": "Pointer1794165875139_USER_452"
     },
     "Empty": {
-      "obj": "Pointer1794153593318_USER_453",
-      "vertex": "Pointer1794153593319_USER_461"
+      "obj": "Pointer1794165875442_USER_453",
+      "vertex": "Pointer1794165875443_USER_461"
     },
     "WeatherAssessmentUnit": {
-      "obj": "Pointer1794153593651_USER_462",
-      "vertex": "Pointer1794153593652_USER_471"
+      "obj": "Pointer1794165875747_USER_462",
+      "vertex": "Pointer1794165875748_USER_471"
     },
     "Alert": {
-      "obj": "Pointer1794153593959_USER_472",
-      "vertex": "Pointer1794153593960_USER_478"
+      "obj": "Pointer1794165876053_USER_472",
+      "vertex": "Pointer1794165876054_USER_478"
     },
     "Safe": {
-      "obj": "Pointer1794153594238_USER_479",
-      "vertex": "Pointer1794153594239_USER_487"
+      "obj": "Pointer1794165876365_USER_479",
+      "vertex": "Pointer1794165876365_USER_487"
     },
     "Moderate": {
-      "obj": "Pointer1794153594541_USER_488",
-      "vertex": "Pointer1794153594541_USER_496"
+      "obj": "Pointer1794165876660_USER_488",
+      "vertex": "Pointer1794165876661_USER_496"
     },
     "Adverse": {
-      "obj": "Pointer1794153594843_USER_497",
-      "vertex": "Pointer1794153594844_USER_505"
+      "obj": "Pointer1794165876969_USER_497",
+      "vertex": "Pointer1794165876970_USER_505"
     },
     "Sensor": {
-      "obj": "Pointer1794153595137_USER_506",
-      "vertex": "Pointer1794153595138_USER_515"
+      "obj": "Pointer1794165877273_USER_506",
+      "vertex": "Pointer1794165877274_USER_515"
     },
     "TempSensor": {
-      "obj": "Pointer1794153595425_USER_516",
-      "vertex": "Pointer1794153595425_USER_525"
+      "obj": "Pointer1794165877554_USER_516",
+      "vertex": "Pointer1794165877555_USER_525"
     },
     "p_TempSensor_value": {
-      "obj": "Pointer1794153595733_USER_526",
-      "vertex": "Pointer1794153595734_USER_539"
+      "obj": "Pointer1794165877841_USER_526",
+      "vertex": "Pointer1794165877842_USER_539"
     },
     "p_TempSensor_unit": {
-      "obj": "Pointer1794153596030_USER_540",
-      "vertex": "Pointer1794153596031_USER_553"
+      "obj": "Pointer1794165878151_USER_540",
+      "vertex": "Pointer1794165878152_USER_553"
     },
     "p_TempSensor_status": {
-      "obj": "Pointer1794153596335_USER_554",
-      "vertex": "Pointer1794153596336_USER_567"
+      "obj": "Pointer1794165878442_USER_554",
+      "vertex": "Pointer1794165878443_USER_567"
     },
     "op_TempSensor_injectFailure": {
-      "obj": "Pointer1794153596663_USER_568",
-      "vertex": "Pointer1794153596664_USER_577"
+      "obj": "Pointer1794165878764_USER_568",
+      "vertex": "Pointer1794165878765_USER_577"
     },
     "op_TempSensor_reset": {
-      "obj": "Pointer1794153596958_USER_578",
-      "vertex": "Pointer1794153596959_USER_587"
+      "obj": "Pointer1794165879081_USER_578",
+      "vertex": "Pointer1794165879082_USER_587"
     },
     "WindSensor": {
-      "obj": "Pointer1794153597258_USER_588",
-      "vertex": "Pointer1794153597259_USER_597"
+      "obj": "Pointer1794165879384_USER_588",
+      "vertex": "Pointer1794165879385_USER_597"
     },
     "p_WindSensor_speed": {
-      "obj": "Pointer1794153597554_USER_598",
-      "vertex": "Pointer1794153597555_USER_611"
+      "obj": "Pointer1794165879672_USER_598",
+      "vertex": "Pointer1794165879673_USER_611"
     },
     "p_WindSensor_unit": {
-      "obj": "Pointer1794153597877_USER_612",
-      "vertex": "Pointer1794153597878_USER_625"
+      "obj": "Pointer1794165879980_USER_612",
+      "vertex": "Pointer1794165879981_USER_625"
     },
     "p_WindSensor_status": {
-      "obj": "Pointer1794153598174_USER_626",
-      "vertex": "Pointer1794153598175_USER_639"
+      "obj": "Pointer1794165880284_USER_626",
+      "vertex": "Pointer1794165880285_USER_639"
     },
     "op_WindSensor_injectFailure": {
-      "obj": "Pointer1794153598459_USER_640",
-      "vertex": "Pointer1794153598460_USER_649"
+      "obj": "Pointer1794165880589_USER_640",
+      "vertex": "Pointer1794165880590_USER_649"
     },
     "op_WindSensor_reset": {
-      "obj": "Pointer1794153598771_USER_650",
-      "vertex": "Pointer1794153598772_USER_659"
+      "obj": "Pointer1794165880870_USER_650",
+      "vertex": "Pointer1794165880871_USER_659"
     },
     "RainSensor": {
-      "obj": "Pointer1794153599066_USER_660",
-      "vertex": "Pointer1794153599067_USER_669"
+      "obj": "Pointer1794165881178_USER_660",
+      "vertex": "Pointer1794165881179_USER_669"
     },
     "p_RainSensor_intensity": {
-      "obj": "Pointer1794153599354_USER_670",
-      "vertex": "Pointer1794153599355_USER_683"
+      "obj": "Pointer1794165881476_USER_670",
+      "vertex": "Pointer1794165881477_USER_683"
     },
     "p_RainSensor_unit": {
-      "obj": "Pointer1794153599680_USER_684",
-      "vertex": "Pointer1794153599682_USER_697"
+      "obj": "Pointer1794165881767_USER_684",
+      "vertex": "Pointer1794165881768_USER_697"
     },
     "p_RainSensor_status": {
-      "obj": "Pointer1794153599968_USER_698",
-      "vertex": "Pointer1794153599969_USER_711"
+      "obj": "Pointer1794165882093_USER_698",
+      "vertex": "Pointer1794165882094_USER_711"
     },
     "p_RainSensor_presence": {
-      "obj": "Pointer1794153600269_USER_712",
-      "vertex": "Pointer1794153600270_USER_725"
+      "obj": "Pointer1794165882381_USER_712",
+      "vertex": "Pointer1794165882382_USER_725"
     },
     "op_RainSensor_injectFailure": {
-      "obj": "Pointer1794153600573_USER_726",
-      "vertex": "Pointer1794153600574_USER_735"
+      "obj": "Pointer1794165882681_USER_726",
+      "vertex": "Pointer1794165882682_USER_735"
     },
     "op_RainSensor_reset": {
-      "obj": "Pointer1794153600868_USER_736",
-      "vertex": "Pointer1794153600868_USER_745"
+      "obj": "Pointer1794165882981_USER_736",
+      "vertex": "Pointer1794165882982_USER_745"
     },
     "HumiditySensor": {
-      "obj": "Pointer1794153601170_USER_746",
-      "vertex": "Pointer1794153601171_USER_755"
+      "obj": "Pointer1794165883281_USER_746",
+      "vertex": "Pointer1794165883282_USER_755"
     },
     "p_HumiditySensor_relative": {
-      "obj": "Pointer1794153601471_USER_756",
-      "vertex": "Pointer1794153601473_USER_769"
+      "obj": "Pointer1794165883596_USER_756",
+      "vertex": "Pointer1794165883597_USER_769"
     },
     "p_HumiditySensor_unit": {
-      "obj": "Pointer1794153601779_USER_770",
-      "vertex": "Pointer1794153601781_USER_783"
+      "obj": "Pointer1794165883880_USER_770",
+      "vertex": "Pointer1794165883881_USER_783"
     },
     "p_HumiditySensor_status": {
-      "obj": "Pointer1794153602078_USER_784",
-      "vertex": "Pointer1794153602079_USER_797"
+      "obj": "Pointer1794165884185_USER_784",
+      "vertex": "Pointer1794165884187_USER_797"
     },
     "op_HumiditySensor_injectFailure": {
-      "obj": "Pointer1794153602362_USER_798",
-      "vertex": "Pointer1794153602362_USER_807"
+      "obj": "Pointer1794165884480_USER_798",
+      "vertex": "Pointer1794165884481_USER_807"
     },
     "op_HumiditySensor_reset": {
-      "obj": "Pointer1794153602671_USER_808",
-      "vertex": "Pointer1794153602672_USER_817"
+      "obj": "Pointer1794165884773_USER_808",
+      "vertex": "Pointer1794165884774_USER_817"
     },
     "gen_TempSensor": {
-      "obj": "Pointer1794153602972_USER_818",
-      "vertex": "Pointer1794153602973_USER_822"
+      "obj": "Pointer1794165885094_USER_818",
+      "vertex": "Pointer1794165885094_USER_822"
     },
     "gen_WindSensor": {
-      "obj": "Pointer1794153603283_USER_823",
-      "vertex": "Pointer1794153603283_USER_827"
+      "obj": "Pointer1794165885388_USER_823",
+      "vertex": "Pointer1794165885388_USER_827"
     },
     "gen_RainSensor": {
-      "obj": "Pointer1794153603584_USER_828",
-      "vertex": "Pointer1794153603584_USER_832"
+      "obj": "Pointer1794165885685_USER_828",
+      "vertex": "Pointer1794165885685_USER_832"
     },
     "gen_HumiditySensor": {
-      "obj": "Pointer1794153603880_USER_833",
-      "vertex": "Pointer1794153603881_USER_837"
+      "obj": "Pointer1794165885994_USER_833",
+      "vertex": "Pointer1794165885995_USER_837"
     },
     "DroneWAU": {
-      "obj": "Pointer1794153604167_USER_838",
-      "vertex": "Pointer1794153604168_USER_845"
+      "obj": "Pointer1794165886279_USER_838",
+      "vertex": "Pointer1794165886280_USER_845"
     },
     "end_DroneWAU_drone": {
-      "obj": "Pointer1794153604474_USER_846",
-      "vertex": "Pointer1794153604475_USER_859"
+      "obj": "Pointer1794165886620_USER_846",
+      "vertex": "Pointer1794165886621_USER_859"
     },
     "end_DroneWAU_WAU": {
-      "obj": "Pointer1794153604774_USER_860",
-      "vertex": "Pointer1794153604775_USER_873"
+      "obj": "Pointer1794165886889_USER_860",
+      "vertex": "Pointer1794165886890_USER_873"
     },
     "WAUSensors": {
-      "obj": "Pointer1794153605080_USER_874",
-      "vertex": "Pointer1794153605081_USER_881"
+      "obj": "Pointer1794165887190_USER_874",
+      "vertex": "Pointer1794165887191_USER_881"
     },
     "end_WAUSensors_wau": {
-      "obj": "Pointer1794153605370_USER_882",
-      "vertex": "Pointer1794153605371_USER_895"
+      "obj": "Pointer1794165887489_USER_882",
+      "vertex": "Pointer1794165887490_USER_895"
     },
     "end_WAUSensors_ownedSensors": {
-      "obj": "Pointer1794153605671_USER_896",
-      "vertex": "Pointer1794153605672_USER_909"
+      "obj": "Pointer1794165887780_USER_896",
+      "vertex": "Pointer1794165887782_USER_909"
     },
     "seed_Charging": {
-      "obj": "Pointer1794153710460_USER_1383",
-      "vertex": "Pointer1794153710463_USER_1396"
+      "obj": "Pointer1794166084971_USER_1593",
+      "vertex": "Pointer1794166084973_USER_1606"
     },
     "seed_Ready": {
-      "obj": "Pointer1794153710725_USER_1397",
-      "vertex": "Pointer1794153710727_USER_1410"
+      "obj": "Pointer1794166085242_USER_1607",
+      "vertex": "Pointer1794166085243_USER_1620"
     },
     "seed_Flying": {
-      "obj": "Pointer1794153711069_USER_1411",
-      "vertex": "Pointer1794153711071_USER_1424"
+      "obj": "Pointer1794166085555_USER_1621",
+      "vertex": "Pointer1794166085557_USER_1634"
     },
     "seed_Empty": {
-      "obj": "Pointer1794153711332_USER_1425",
-      "vertex": "Pointer1794153711334_USER_1438"
+      "obj": "Pointer1794166085825_USER_1635",
+      "vertex": "Pointer1794166085826_USER_1648"
     },
     "seed_Safe": {
-      "obj": "Pointer1794153711608_USER_1439",
-      "vertex": "Pointer1794153711610_USER_1452"
+      "obj": "Pointer1794166086135_USER_1649",
+      "vertex": "Pointer1794166086137_USER_1662"
     },
     "seed_Moderate": {
-      "obj": "Pointer1794153711908_USER_1453",
-      "vertex": "Pointer1794153711910_USER_1466"
+      "obj": "Pointer1794166086437_USER_1663",
+      "vertex": "Pointer1794166086439_USER_1676"
     },
     "seed_Adverse": {
-      "obj": "Pointer1794153712219_USER_1467",
-      "vertex": "Pointer1794153712221_USER_1480"
+      "obj": "Pointer1794166086744_USER_1677",
+      "vertex": "Pointer1794166086746_USER_1690"
     }
   },
   "parseStored": {
@@ -1078,59 +1079,59 @@
   "binding": {
     "objectRecord": {
       "name": "object",
-      "typeReference": "Pointer1794153525076_USER_166",
-      "slotContainer": "Pointer1794153525479_USER_168",
-      "definingFeature": "Pointer1794153526285_USER_170",
-      "valueHolder": "Pointer1794153526687_USER_172",
-      "featureContainer": "Pointer1794153518172_USER_144",
+      "typeReference": "Pointer1794165807293_USER_166",
+      "slotContainer": "Pointer1794165807695_USER_168",
+      "definingFeature": "Pointer1794165808502_USER_170",
+      "valueHolder": "Pointer1794165808905_USER_172",
+      "featureContainer": "Pointer1794165800385_USER_144",
       "generalization": {
-        "via": "Pointer1794153517367_USER_142",
-        "general": "Pointer1794153522609_USER_156"
+        "via": "Pointer1794165799576_USER_142",
+        "general": "Pointer1794165804853_USER_156"
       },
-      "abstractFlag": "Pointer1794153535971_USER_205",
-      "featureType": "Pointer1794153523060_USER_158",
-      "defaultValue": "Pointer1794153540814_USER_211",
+      "abstractFlag": "Pointer1794165818211_USER_205",
+      "featureType": "Pointer1794165805259_USER_158",
+      "defaultValue": "Pointer1794165823053_USER_211",
       "valueKinds": [
         {
           "when": "primitive:Boolean",
-          "create": "Pointer1794153497151_USER_76",
-          "field": "Pointer1794153544040_USER_215"
+          "create": "Pointer1794165779311_USER_76",
+          "field": "Pointer1794165826287_USER_215"
         },
         {
           "when": "primitive:String",
-          "create": "Pointer1794153496749_USER_73",
-          "field": "Pointer1794153543232_USER_214"
+          "create": "Pointer1794165778904_USER_73",
+          "field": "Pointer1794165825479_USER_214"
         },
         {
           "when": "primitive:Integer",
-          "create": "Pointer1794153496347_USER_70",
-          "field": "Pointer1794153542426_USER_213"
+          "create": "Pointer1794165778499_USER_70",
+          "field": "Pointer1794165824669_USER_213"
         },
         {
           "when": "instance",
-          "create": "Pointer1794153497956_USER_82",
-          "field": "Pointer1794153527493_USER_174"
+          "create": "Pointer1794165780120_USER_82",
+          "field": "Pointer1794165809711_USER_174"
         }
       ],
       "featureSources": [
         {
           "path": [
-            "Pointer1794153527896_USER_176",
-            "Pointer1794153528701_USER_178",
-            "Pointer1794153529509_USER_180"
+            "Pointer1794165810115_USER_176",
+            "Pointer1794165810944_USER_178",
+            "Pointer1794165811752_USER_180"
           ]
         }
       ]
     },
     "linkRecord": {
       "name": "link",
-      "typeReference": "Pointer1794153525076_USER_166",
-      "slotContainer": "Pointer1794153525479_USER_168",
-      "definingFeature": "Pointer1794153526285_USER_170",
-      "valueHolder": "Pointer1794153526687_USER_172",
-      "featureContainer": "Pointer1794153520588_USER_150"
+      "typeReference": "Pointer1794165807293_USER_166",
+      "slotContainer": "Pointer1794165807695_USER_168",
+      "definingFeature": "Pointer1794165808502_USER_170",
+      "valueHolder": "Pointer1794165808905_USER_172",
+      "featureContainer": "Pointer1794165802808_USER_150"
     },
-    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1794153525076_USER_166\",\"slotContainer\":\"Pointer1794153525479_USER_168\",\"definingFeature\":\"Pointer1794153526285_USER_170\",\"valueHolder\":\"Pointer1794153526687_USER_172\",\"featureContainer\":\"Pointer1794153518172_USER_144\",\"generalization\":{\"via\":\"Pointer1794153517367_USER_142\",\"general\":\"Pointer1794153522609_USER_156\"},\"abstractFlag\":\"Pointer1794153535971_USER_205\",\"featureType\":\"Pointer1794153523060_USER_158\",\"defaultValue\":\"Pointer1794153540814_USER_211\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1794153497151_USER_76\",\"field\":\"Pointer1794153544040_USER_215\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1794153496749_USER_73\",\"field\":\"Pointer1794153543232_USER_214\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1794153496347_USER_70\",\"field\":\"Pointer1794153542426_USER_213\"},{\"when\":\"instance\",\"create\":\"Pointer1794153497956_USER_82\",\"field\":\"Pointer1794153527493_USER_174\"}],\"featureSources\":[{\"path\":[\"Pointer1794153527896_USER_176\",\"Pointer1794153528701_USER_178\",\"Pointer1794153529509_USER_180\"]}]}]}",
+    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1794165807293_USER_166\",\"slotContainer\":\"Pointer1794165807695_USER_168\",\"definingFeature\":\"Pointer1794165808502_USER_170\",\"valueHolder\":\"Pointer1794165808905_USER_172\",\"featureContainer\":\"Pointer1794165800385_USER_144\",\"generalization\":{\"via\":\"Pointer1794165799576_USER_142\",\"general\":\"Pointer1794165804853_USER_156\"},\"abstractFlag\":\"Pointer1794165818211_USER_205\",\"featureType\":\"Pointer1794165805259_USER_158\",\"defaultValue\":\"Pointer1794165823053_USER_211\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1794165779311_USER_76\",\"field\":\"Pointer1794165826287_USER_215\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1794165778904_USER_73\",\"field\":\"Pointer1794165825479_USER_214\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1794165778499_USER_70\",\"field\":\"Pointer1794165824669_USER_213\"},{\"when\":\"instance\",\"create\":\"Pointer1794165780120_USER_82\",\"field\":\"Pointer1794165809711_USER_174\"}],\"featureSources\":[{\"path\":[\"Pointer1794165810115_USER_176\",\"Pointer1794165810944_USER_178\",\"Pointer1794165811752_USER_180\"]}]}]}",
     "decoded": {
       "ok": true
     },
@@ -1153,23 +1154,23 @@
       "simViewpoints"
     ],
     "stc": {
-      "staticClass": "Pointer1794153498358_USER_85",
-      "viewpoints": "Pointer1794153527896_USER_176",
-      "dynamicClasses": "Pointer1794153528701_USER_178",
-      "invariant": "Pointer1794153547271_USER_219",
+      "staticClass": "Pointer1794165780551_USER_85",
+      "viewpoints": "Pointer1794165810115_USER_176",
+      "dynamicClasses": "Pointer1794165810944_USER_178",
+      "invariant": "Pointer1794165829525_USER_219",
       "operation": [
-        "Pointer1794153518977_USER_146",
-        "Pointer1794153530332_USER_182"
+        "Pointer1794165801192_USER_146",
+        "Pointer1794165812559_USER_182"
       ],
-      "precondition": "Pointer1794153548890_USER_221",
+      "precondition": "Pointer1794165831147_USER_221",
       "body": [
-        "Pointer1794153549707_USER_222",
-        "Pointer1794153550514_USER_223"
+        "Pointer1794165831954_USER_222",
+        "Pointer1794165832768_USER_223"
       ],
-      "redefines": "Pointer1794153531942_USER_186",
-      "monitor": "Pointer1794153531138_USER_184",
-      "overlapping": "Pointer1794153545653_USER_217",
-      "complete": "Pointer1794153546462_USER_218"
+      "redefines": "Pointer1794165814174_USER_186",
+      "monitor": "Pointer1794165813366_USER_184",
+      "overlapping": "Pointer1794165827913_USER_217",
+      "complete": "Pointer1794165828717_USER_218"
     },
     "ontoKept": true,
     "profile": {
@@ -1397,42 +1398,42 @@
   },
   "instantiate": {
     "dji": {
-      "instance": "Pointer1794153660849_USER_1017",
+      "instance": "Pointer1794165945988_USER_1017",
       "ok": true,
       "slots": 7,
       "values": 2,
       "problems": []
     },
     "wau1": {
-      "instance": "Pointer1794153665174_USER_1087",
+      "instance": "Pointer1794165950293_USER_1087",
       "ok": true,
       "slots": 1,
       "values": 0,
       "problems": []
     },
     "temp": {
-      "instance": "Pointer1794153667275_USER_1101",
+      "instance": "Pointer1794165952486_USER_1101",
       "ok": true,
       "slots": 3,
       "values": 2,
       "problems": []
     },
     "wind": {
-      "instance": "Pointer1794153670252_USER_1144",
+      "instance": "Pointer1794165955704_USER_1144",
       "ok": true,
       "slots": 3,
       "values": 2,
       "problems": []
     },
     "rain": {
-      "instance": "Pointer1794153673291_USER_1187",
+      "instance": "Pointer1794165958749_USER_1187",
       "ok": true,
       "slots": 4,
       "values": 3,
       "problems": []
     },
     "humidity": {
-      "instance": "Pointer1794153676252_USER_1244",
+      "instance": "Pointer1794165962052_USER_1244",
       "ok": true,
       "slots": 3,
       "values": 2,
@@ -1684,6 +1685,70 @@
     "n": 0,
     "violations": []
   },
+  "objectDiagram": {
+    "active": "UML object diagram",
+    "instances": [
+      {
+        "name": "dji",
+        "ir": true,
+        "rows": [
+          "distance = 0",
+          "speed = 0",
+          "power = 0",
+          "battery = 80",
+          "vmax = 15",
+          "WAU = wau1",
+          "chargeRate = 1"
+        ]
+      },
+      {
+        "name": "wau1",
+        "ir": true,
+        "rows": [
+          "ownedSensors = temp"
+        ]
+      },
+      {
+        "name": "temp",
+        "ir": true,
+        "rows": [
+          "value = 20",
+          "unit = °C",
+          "status = OK"
+        ]
+      },
+      {
+        "name": "wind",
+        "ir": true,
+        "rows": [
+          "speed = 3",
+          "unit = m/s",
+          "status = OK"
+        ]
+      },
+      {
+        "name": "rain",
+        "ir": true,
+        "rows": [
+          "intensity = 0",
+          "unit = mm/h",
+          "status = OK",
+          "presence = false"
+        ]
+      },
+      {
+        "name": "humidity",
+        "ir": true,
+        "rows": [
+          "relative = 45",
+          "unit = %",
+          "status = OK"
+        ]
+      }
+    ],
+    "others": [],
+    "overlaps": []
+  },
   "closuresSeeded": {
     "Drone": {
       "features": [
@@ -1734,7 +1799,7 @@
   },
   "errors": [],
   "checks": {
-    "pass": 26,
+    "pass": 30,
     "fail": 0
   }
 }
