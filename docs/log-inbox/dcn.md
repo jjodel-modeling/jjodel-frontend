@@ -374,3 +374,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 03:29
 
 **Ticket** (low): the inputs row labels the Tick button with its raw id `dcn-tick` (MEAS `tick button label`), where every invocation has a readable label. Also seen, not fixed: the last-step line repeats the label (`dji.takeOff() in Mode::Ready: dji.takeOff() in Mode::Ready fired`); the chips title lists `wau1: ownedSensors = temp`, one of four sensors; every input is on while Running, takeOff in Charging included.
+
+## 2026-11-08 — merge: dcn-l45 into alfonso-frontend-jjtl (P-2026-11-08-0430)
+**Prompt**: `claude_2026-11-08_0430_prompt_merge_dcn-l45.md`, lane full (merge; zero conflicts measured): bring `dcn-l45` at 1d2691776 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 089b39fc9; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 617ad7579 (merge) — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simBridge.ts`, `simRoleStatus.ts`, two tests), `frontend/src/jjscript/executor/commands/eval.ts` and `classShellFlags.test.ts`, `frontend/src/model/simulation/dcn/dcnPanelText.ts` and its test, `frontend/scripts/probe/dcn-drone-run.ts`, two discovery reports, five prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 569 passed files, 15165 passed and 2 skipped (expected 15139 + 26), 0 failed, the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-0329, crops read by the chat C-2026-11-06-2159 at 04:24)
+**Notes**: Zero conflicts, no union; merge tree c43096b29 equal to the merge-tree measure; 6 probes once each. Branch vitest not run in /Users/alfonso/jjodel-w-dcn-l45 (no node_modules; writing forbidden): 26 new tests counted at 1d2691776 (+6, +3, +4, +13), matched on the merge. check:docs reports 5/5, not the 4/4 of the prompt. Lane board not restarted (no change). App check by P-2026-11-08-0329, crops read by the chat 04:24.
+**Prompt document name**: 2026-11-08 04:30
