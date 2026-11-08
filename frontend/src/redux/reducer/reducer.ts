@@ -1145,6 +1145,9 @@ let undoGroupTail: GObject | null = null;
 const UNDO_MODEL_ROOTS = ['objects', 'classs', 'enumerators', 'packages'];
 let undoCreateEntry: GObject | null = null;
 
+/** A delta that lengthens root `graphs` and writes none of these is a tab being opened, not an edit: see `_reducer`. */
+const UNDO_NOT_A_TAB_OPEN_ROOTS = [...UNDO_MODEL_ROOTS, 'models', 'm1models', 'm2models'];
+
 export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
     undoGroupTail = null;
     if (undoGroup) { undoGroup.depth++; return; }
@@ -1292,6 +1295,9 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
             const allowMerge = true; // switch for debugging
             const atGroupTail = !!undoGroupTail && pastDelta === undoGroupTail;
+            // A tab being opened: no entry, no merge. In the stack it would revert root `graphs` while its records stay,
+            // and the open tab would rebuild the graphs under new ids at every Undo below it.
+            if (!atGroupTail && (ret as GObject).graphs?.length > (oldState as GObject).graphs?.length && !UNDO_NOT_A_TAB_OPEN_ROOTS.some((k) => (delta as GObject)[k])) return ret;
             const createsModelElement = !atGroupTail && UNDO_MODEL_ROOTS.some((k) => (ret as GObject)[k]?.length > (oldState as GObject)[k]?.length);
             let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>, createsModelElement);
             // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
