@@ -6,6 +6,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../components/common/Button';
 import { isModelCompatibleWithSource } from './sourceConformance';
+import { orderIncludedIds, restoredSources } from './sourceSelection';
+import type { RunRecord } from './sourceSelection';
 import '../../components/CreateProjectDialog/create-project-dialog.scss';
 import './execute-transformation-dialog.scss';
 
@@ -22,7 +24,7 @@ export interface ModelOption {
 export interface ExecuteTransformationDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onExecute: (sourceModelId: string, outputModelName: string) => Promise<void>;
+    onExecute: (sourceModelId: string, outputModelName: string, includedModelIds?: string[]) => Promise<void>;
     transformationName: string;
     sourceMetamodelName: string;
     /** Identity of the source metamodel; when present, conformance is matched by ID (name is fallback) */
@@ -32,6 +34,8 @@ export interface ExecuteTransformationDialogProps {
     availableModels: ModelOption[];
     /** Existing model names to avoid duplicates */
     existingModelNames: string[];
+    /** Reads the record of the last run of this transformation, when the dialog opens */
+    getLastRun?: () => RunRecord | null;
 }
 
 export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogProps> = ({
@@ -44,14 +48,18 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     targetMetamodelName,
     availableModels,
     existingModelNames,
+    getLastRun,
 }) => {
     const [sourceModelId, setSourceModelId] = useState('');
+    const [includedIds, setIncludedIds] = useState<string[]>([]);
+    const [isIncludeListOpen, setIsIncludeListOpen] = useState(false);
     const [outputModelName, setOutputModelName] = useState('');
     const [errors, setErrors] = useState<{ source?: string; output?: string }>({});
     const [isExecuting, setIsExecuting] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const wasOpenRef = useRef(false);
+    const includeRef = useRef<HTMLDivElement>(null);
 
     // Filter models that conform to the source metamodel
     // Uses robust matching that tries multiple possible field names
@@ -103,7 +111,11 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     useEffect(() => {
         if (isOpen && !wasOpenRef.current) {
             // Dialog just opened - initialize form
-            setSourceModelId(compatibleModels.length > 0 ? compatibleModels[0].id : '');
+            // A new run starts from the selection of the last one only if that one included models
+            const restored = restoredSources(getLastRun?.(), compatibleModels.map(m => m.id));
+            setSourceModelId(restored?.primaryId ?? (compatibleModels.length > 0 ? compatibleModels[0].id : ''));
+            setIncludedIds(restored?.includedIds ?? []);
+            setIsIncludeListOpen(false);
             setOutputModelName(generateDefaultOutputName());
             setErrors({});
             setIsExecuting(false);
@@ -128,6 +140,16 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen]);
 
+    // Close the "Also include" list on a click outside it
+    useEffect(() => {
+        if (!isIncludeListOpen) return;
+        const handleMouseDown = (e: MouseEvent) => {
+            if (!includeRef.current?.contains(e.target as Node)) setIsIncludeListOpen(false);
+        };
+        document.addEventListener('mousedown', handleMouseDown);
+        return () => document.removeEventListener('mousedown', handleMouseDown);
+    }, [isIncludeListOpen]);
+
     const validate = (): boolean => {
         const newErrors: typeof errors = {};
 
@@ -145,6 +167,8 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         return Object.keys(newErrors).length === 0;
     };
 
+    const effectiveIncludedIds = orderIncludedIds(compatibleModels.map(m => m.id), includedIds, sourceModelId);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // console.log('[ExecuteTransformationDialog] handleSubmit called');
@@ -158,10 +182,12 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         // console.log('[ExecuteTransformationDialog] Calling onExecute with:', { sourceModelId, outputModelName: outputModelName.trim() });
 
         try {
-            await onExecute(sourceModelId, outputModelName.trim());
+            await onExecute(sourceModelId, outputModelName.trim(), effectiveIncludedIds);
             // console.log('[ExecuteTransformationDialog] onExecute completed successfully');
             // Reset and close on success
             setSourceModelId('');
+            setIncludedIds([]);
+            setIsIncludeListOpen(false);
             setOutputModelName('');
             setErrors({});
             onClose();
@@ -173,6 +199,8 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
     const handleCancel = () => {
         setSourceModelId('');
+        setIncludedIds([]);
+        setIsIncludeListOpen(false);
         setOutputModelName('');
         setErrors({});
         setIsExecuting(false);
@@ -189,6 +217,13 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     if (!isOpen) return null;
 
     const noCompatibleModels = compatibleModels.length === 0;
+    // On the count of compatible models, not of the others: emptying the primary must not make the row appear
+    const showIncludeList = compatibleModels.length > 1;
+    const includableModels = compatibleModels.filter(m => m.id !== sourceModelId);
+
+    const toggleIncluded = (id: string) => {
+        setIncludedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+    };
 
     return (
         <div className="dialog-overlay" onClick={handleOverlayClick}>
@@ -253,6 +288,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                         value={sourceModelId}
                                         onChange={(e) => {
                                             setSourceModelId(e.target.value);
+                                            setIncludedIds(ids => ids.filter(id => id !== e.target.value));
                                             if (errors.source) setErrors({ ...errors, source: undefined });
                                         }}
                                         disabled={isExecuting}
@@ -268,6 +304,44 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                     <span className="form-count">
                                         {compatibleModels.length} model{compatibleModels.length !== 1 ? 's' : ''} available
                                     </span>
+                                    {showIncludeList && (
+                                        <div className="execute-include" ref={includeRef}>
+                                            <button
+                                                type="button"
+                                                className="execute-include-toggle"
+                                                aria-expanded={isIncludeListOpen}
+                                                aria-controls="execute-include-list"
+                                                onClick={() => setIsIncludeListOpen(open => !open)}
+                                                disabled={isExecuting}
+                                            >
+                                                <i className={`bi bi-chevron-${isIncludeListOpen ? 'up' : 'down'}`} />
+                                                <span>Also include</span>
+                                                <span className="execute-include-count">
+                                                    {effectiveIncludedIds.length} of {includableModels.length} selected
+                                                </span>
+                                            </button>
+                                            {isIncludeListOpen && (
+                                                <div
+                                                    id="execute-include-list"
+                                                    className="execute-include-list"
+                                                    role="group"
+                                                    aria-label="Also include"
+                                                >
+                                                    {includableModels.map((model) => (
+                                                        <label key={model.id} className="execute-include-item">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={includedIds.includes(model.id)}
+                                                                onChange={() => toggleIncluded(model.id)}
+                                                                disabled={isExecuting}
+                                                            />
+                                                            <span>{model.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Output Model Name */}
@@ -307,6 +381,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                                 {sourceModelId ?
                                                     compatibleModels.find(m => m.id === sourceModelId)?.name || 'Unknown'
                                                     : '—'}
+                                                {effectiveIncludedIds.length > 0 && ` +${effectiveIncludedIds.length}`}
                                             </span>
                                         </div>
                                         <i className="bi bi-arrow-right" />
