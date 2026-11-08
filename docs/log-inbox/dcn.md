@@ -327,5 +327,5 @@ active log is not touched by this lane.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (docs and probe only; gates verified by the chat C-2026-11-06-2159)
-**Notes**: Stopped once: the textual-t8a-ids merge (94a55a92d, code) landed on this prompt's commit; the chat accepted c8153d84a as pre-merge tip, reset target and step-7 base. Union byte-identical to trunk file plus the branch's added lines; 11 probes once each. The branch adds no vitest test (its probe is outside the include; counted from the diff, its tree has no node_modules). Lane board not restarted (no change). Prompt defect: step 6's reset target 8329dbbb3 was the prompt's parent, not the pre-merge tip.
+**Notes**: Stopped once: the textual-t8a-ids merge (94a55a92d, code) landed on this prompt's commit; the chat accepted c8153d84a as pre-merge tip, reset target and step-7 base. Union byte-identical to trunk file plus the branch's added lines; 11 probes once each. The branch adds no vitest test (its probe is outside the include; counted from the diff, no node_modules in its tree). Lane board not restarted (no change).
 **Prompt document name**: 2026-11-08 01:54
