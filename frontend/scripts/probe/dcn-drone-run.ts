@@ -28,6 +28,9 @@ const FILE = process.env.DCN_FILE || `${homedir()}/jjodel-demo-exports/dcn/dcn-d
 const CROPS = (process.env.DCN_CROPS || `${homedir()}/.jjodel-lanes/P-2026-11-08-0329/crops`).replace(/\/$/, '');
 const SEED = Number(process.env.DCN_SEED || 4242);
 const MAX_TICKS = 20;
+// The Tick button's label in the inputs row, matched exactly (P-2026-11-08-0345 measured `dcn-tick`, the raw id).
+const TICK_LABEL = 'dcn-tick';
+const TICK = new RegExp(`^${TICK_LABEL}$`);
 
 const { ev } = await import('./bpmn-lanes-fixture.ts');
 
@@ -136,6 +139,7 @@ try {
 
     const s1 = await step(page, model.id, '1-reset', true);
     meas('inputs row', s1.inputs);
+    meas('tick button label', s1.inputs.filter((i) => /tick/i.test(i.text)).map((i) => i.text));
     check('L45d-2 the heading is the DCN one', s1.sections.includes(DCN_PANEL_HEADING), { sections: s1.sections, expected: DCN_PANEL_HEADING });
 
     // Tick until dji is Ready.
@@ -143,7 +147,7 @@ try {
     let s = s1;
     let ticks = 0;
     while (!ready(s) && ticks < MAX_TICKS && s.pill === 'Running') {
-        await press(page, /^tick/i);
+        await press(page, TICK);
         ticks++;
         s = await step(page, model.id, `tick ${ticks}`, false);
     }
@@ -166,7 +170,7 @@ try {
 
     let s4 = s3;
     for (let i = 1; i <= 3 && s4.pill === 'Running'; i++) {
-        await press(page, /^tick/i);
+        await press(page, TICK);
         s4 = await step(page, model.id, `flying tick ${i}`, false);
     }
     await shoot(page, '4-flying');
