@@ -501,3 +501,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 23:55
 
 **Ticket** (low): the row template shows values[0] of a multi-valued slot.
+
+## 2026-11-09 — feat: DCN Save snapshot button in the Simulation panel (P-2026-11-09-0017)
+**Prompt**: `claude_2026-11-09_0017_prompt_dcn_s5_6_snapshot_button.md`, the button after Stop for a DCN run, its line, the probe by the button, crops.
+**Files touched**: 0e71ec074 `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/simSnapshotButton.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotButton.test.ts` (new); 55fe8cbb8 `frontend/scripts/probe/dcn-snapshot.ts`; this inbox; the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no (6 files, all in the DOVE of the prompt: panel, helper, its test, probe, this inbox, the prompt; the stylesheet needed no change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops 1-button and 2-saved read by the lane, chat to read them)
+**Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
+**Prompt document name**: 2026-11-09 00:17
