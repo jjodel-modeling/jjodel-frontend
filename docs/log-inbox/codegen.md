@@ -3262,3 +3262,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: option B crops 1-m1-undo, 2-two-tabs in ~/.jjodel-lanes/P-2026-11-08-1800/ checked by the chat; app check DGraph 4,0 all cases; smoke green warm after one cold page.goto timeout
 **Notes**: Rollback tag `pre-undo-tab-graphs-b` on `9440e9fdd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1858/result.json`.
 **Prompt document name**: 2026-11-08 18:58
+
+## 2026-11-08 — fix(jjscript): settle waits for in-flight dispatches (P-2026-11-08-1759)
+**Prompt**: `claude_2026-11-08_1759_prompt_jjscript_settle_inflight.md`, T8f option A, core change approved by Alfonso 2026-11-08 17:58: the JjScript settle also waits for dispatches already flushed and not yet in the store, bounded, with tests, gates and app acceptance by the T8f probe.
+**Files touched**: `515caad54` docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md; `fac890de5` frontend/src/redux/action/action.ts, frontend/src/jjscript/executor/commands/instance.ts, frontend/src/jjscript/executor/__tests__/settleInFlight.test.ts (new), and the action mock in instanceDelete, m1Containment, m1Operators, m1SetLists `.test.ts`; this entry and the prompt's Status line, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0; vitest 15431 passed, 3 skipped, the 3 known import reds only; build exit 0; check:docs run after this entry.
+**Out-of-scope changes**: no. More than five files (RC-11), all named by the prompt's scope: the two sources, the new test, four test mocks that need the new export, the LIR, this entry, the Status line.
+**Layer Impact Report**: produced — docs/discovery/lir_2026-11-08_jjscript_settle_inflight.md
+**Smoke visivo**: passato — `npm run smoke` on this tree's Vite (:3868): RED once 5/2/0 on a cold server (`page.goto` 30 s timeout on two states, cause not proven), then GREEN 12/0/3 warm. Store list after a reorder: ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json. The list is store evidence; no human visual check ran.
+**Notes**: Probe on this tree, before / after: natural 7 holes in 80 / 0 in 80; forced (dispatch held 8 ms past the next settle) 19 in 20 / 0 in 20, 18 dispatches held. Reorder median 1886 / 1780 ms. Bound 1000 ms: worst gap measured 224.5 ms. Bench: four mutations of the new test all die. Vite must be restarted after an edit, or the probe's bare imports load second module instances. Not run: a plain reference slot, save and reopen.
+**Prompt document name**: 2026-11-08 17:59
