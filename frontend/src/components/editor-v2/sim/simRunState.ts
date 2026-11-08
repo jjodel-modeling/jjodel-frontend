@@ -303,7 +303,13 @@ export function simReset(modelId: string, run: SimRun): void {
 export function withInputs(run: SimRun, values: readonly InputValue[]): SimRun {
     const given = new Map<string, SimValue>();
     for (const v of values) {
-        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) given.set(`${v.element}\u0000${v.attr}`, v.value);
+        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) {
+            given.set(`${v.element}\u0000${v.attr}`, v.value);
+        } else if (run.inputs?.get(v.element)?.some(i => i.element === v.element && i.attr === v.attr)) {
+            // A DCN argument (R-DCN-15): its element is the transition, `self` in the body is the instance; a slot of that name keeps σ.
+            const instance = run.net.transitions.find(t => t.id === v.element)?.origin[0];
+            if (instance !== undefined && !run.net.declared.get(instance)?.has(v.attr)) given.set(`${instance}\u0000${v.attr}`, v.value);
+        }
     }
     const over = (s: SimStateAccess): SimStateAccess => ({
         ...s,

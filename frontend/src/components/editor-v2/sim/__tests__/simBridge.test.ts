@@ -3195,6 +3195,9 @@ const DCN_FEATURES: Record<string, { className: 'DAttribute' | 'DReference'; nam
     D_litValue: { className: 'DAttribute', name: 'value', father: 'D_LitInt' },
     D_precondition: { className: 'DAttribute', name: 'precondition', father: 'D_Operation' },
     D_monitors: { className: 'DReference', name: 'monitors', father: 'D_Dynamic' },
+    D_ownedParameters: { className: 'DReference', name: 'ownedParameters', father: 'D_Operation' },
+    D_rangeMin: { className: 'DAttribute', name: 'rangeMin', father: 'D_Property' },
+    D_rangeMax: { className: 'DAttribute', name: 'rangeMax', father: 'D_Property' },
 };
 
 const DCN_ONTO = JSON.stringify({
@@ -3372,5 +3375,54 @@ describe('DCN L4.6: an input is on only when admissible (P-2026-11-08-1606)', ()
     it('a Petri run is never off through here (mutant: the check on a Petri net)', () => {
         const lookup = buildLookup(ROLES, TURNSTILE);
         expect(dcnInputOff(started(lookup), 'whatever', lookup)).toBeNull();
+    });
+});
+
+describe('DCN L4.6: the arguments of an invocation reach its body (P-2026-11-08-1606, ticket of P-2026-11-08-0315)', () => {
+    const argLookup = (body: string, pre?: string, parameter = 'rate') => dcnLookup({ ...DCN_BAG, simPrecondition: 'D_precondition' }, 0, {
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_charge'], D_viewpoints: ['vp_Mode'] } },
+        op_charge: { cls: 'D_Operation', name: 'charge', slots: { D_body: [body], D_ownedParameters: ['par_rate'], ...(pre ? { D_precondition: [pre] } : {}) } },
+        par_rate: { cls: 'D_Property', name: parameter, slots: { D_type: ['Integer'], D_rangeMin: [0], D_rangeMax: [10] } },
+    } as Record<string, Obj & { name?: string }>);
+    const start = (lookup: Lookup) => {
+        const { run } = dcnStarted(lookup);
+        simReset('M', run);
+        return { run, id: run.alphabet[0] };
+    };
+    const alt = () => getSimRun('M')!.config.state.attrs.get('dji')?.get('alt');
+
+    it('the value given reaches the body through self.[rate], as an R-SIM-88 input reads (mutants: the argument not overlaid, keyed on the transition)', () => {
+        const lookup = argLookup('self.alt := self.[rate]');
+        const { run, id } = start(lookup);
+        expect(inputAsks(run, id).map(a => a.attr)).toEqual(['rate']);
+        const p = pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 5 }]);
+        expect(p.outcome?.kind).toBe('fired');
+        expect(alt()).toBe(5);
+        expect(p.lastStep).toBe('charge: dji.charge(rate = 5) fired');
+    });
+
+    it('a precondition reads the argument: waiting before the answer, then decided by it (mutants: a defect read as off, the guards not overlaid)', () => {
+        const lookup = argLookup('self.alt := self.[rate]', 'self.[rate] > 0');
+        const { run, id } = start(lookup);
+        expect(dcnInputOff(run, id, lookup)).toBeNull();
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 0 }]).outcome?.kind).toBe('discard');
+        expect(alt()).toBe(0);
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 3 }]).outcome?.kind).toBe('fired');
+        expect(alt()).toBe(3);
+    });
+
+    it('an argument named as a slot never shadows σ (mutant: the slot check dropped)', () => {
+        const lookup = argLookup('self.alt := self.[speed]', undefined, 'speed');
+        const { id } = start(lookup);
+        pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'speed', value: 7 }]);
+        expect(alt()).toBe(0);
+    });
+
+    it('a name that is no argument of the transition is ignored (mutant: any attr of a transition overlaid)', () => {
+        const lookup = argLookup('self.alt := self.[nosuch]');
+        const { id } = start(lookup);
+        const p = pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 1 }, { element: id, attr: 'nosuch', value: 9 }]);
+        expect(p.outcome?.kind).toBe('halted');
+        expect(alt()).toBe(0);
     });
 });
