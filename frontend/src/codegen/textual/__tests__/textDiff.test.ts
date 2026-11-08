@@ -8,6 +8,8 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
@@ -18,6 +20,8 @@ import { printTextModel } from '../printer';
 import type { ObjectSpan, RefSpan } from '../printer';
 import { textualNotation } from '../syntaxRecord';
 import { diffText, planRows, planTextEdit } from '../textDiff';
+import TextConfirmPanel, { panelRows } from '../ui/TextConfirmPanel';
+import type { TextConfirmPanelProps } from '../ui/TextConfirmPanel';
 import type { DiffOp, ObjectRef, PlanInput } from '../textDiff';
 import { defaultedSlots, referencedElsewhere } from '../textApply';
 import { BOX, CASES, DIAMOND, GARAGE, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
@@ -961,6 +965,57 @@ describe('the plan rows of the confirm panel (T8c, R-TXT-55 F10)', () => {
         const t = parsed.objects.find(o => o.slots.name === 'rome')!;
         const diff = diffText({ mm: LIBRARY_MM, grammar: LIBRARY_CASE.g, model: LIBRARY_CASE.objects, parsed, ids: new Map([[t.id, 'b4']]) });
         expect(diff.match.matches.find(m => m.model === 'b4')).toEqual({ text: t.id, model: 'b4', by: 'id', uncertain: false });
+    });
+});
+
+describe('the confirm panel shows the plan rows (T8c, F10)', () => {
+    const rowsCase = () => edit(LIBRARY_CASE, [['1980', '1981'], ['\n        borrowedBy bob', ''], ['\n    Member bob {}', ''], ['    Member ann {}', '    Member ann {}\n    Member cid {}']],
+        { spans: true, referencedElsewhere: new Set(['m2']) });
+    const panelOf = (e: ReturnType<typeof edit>, referenced?: ReadonlySet<string>) =>
+        panelRows({ plan: e.plan, parsed: e.parsed, mm: LIBRARY_MM, grammar: LIBRARY_CASE.g, model: LIBRARY_CASE.objects, ...(referenced ? { referencedElsewhere: referenced } : {}) });
+    const html = (props: Partial<TextConfirmPanelProps> & Pick<TextConfirmPanelProps, 'rows'>) =>
+        renderToStaticMarkup(createElement(TextConfirmPanel, { onConfirm: () => {}, busy: false, ...props }));
+
+    it('labels each row: the changes, the creations, the deletions, a cross-model one flagged (mutant: plan rows unread)', () => {
+        const { rows, counts } = panelOf(rowsCase(), new Set(['m2']));
+        expect(counts).toEqual({ changes: 1, creates: 1, deletes: 1 });
+        expect(rows).toEqual([
+            { old: 'Book cosmos', new: 'Book cosmos', reason: 'changed: year', flagged: false },
+            { old: '—', new: 'Member cid', reason: 'created', flagged: false },
+            { old: 'Member bob', new: null, reason: 'deleted, referenced from another model', flagged: true },
+        ]);
+    });
+
+    it('an uncertain row carries its pairing, score and tick; unticked, it reads as a creation and a deletion (mutant: pairing dropped)', () => {
+        const asked = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const tid = asked.plan.diff!.match.matches.find(m => m.model === 'b4')!.text;
+        expect(panelOf(asked).rows).toEqual([
+            { old: 'Book spqr', new: 'Book rome', reason: 'renamed, changes name', flagged: false, pairing: { text: tid, model: 'b4', score: 1, ticked: true } },
+        ]);
+        const off = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { unpaired: [{ text: tid, model: 'b4' }] });
+        expect(panelOf(off).rows).toEqual([
+            { old: 'Book spqr', new: 'Book rome', reason: 'not paired: created and deleted', flagged: false, pairing: { text: tid, model: 'b4', score: 1, ticked: false } },
+            { old: '—', new: 'Book rome', reason: 'created', flagged: false },
+            { old: 'Book spqr', new: null, reason: 'deleted', flagged: false },
+        ]);
+    });
+
+    it('the bar holds the counts, Confirm and Cancel; a row its checkbox and score; a cross-model deletion the error token (mutants: no counts, no Cancel)', () => {
+        const asked = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        const { rows, counts } = panelOf(asked);
+        const out = html({ rows, counts, onCancel: () => {}, onTick: () => {} });
+        expect(out).toContain('1 change, 0 creations, 0 deletions');
+        expect(out).toMatch(/<button[^>]*>.*Confirm<\/button>/);
+        expect(out).toMatch(/<button[^>]*title="Close the panel and apply nothing"[^>]*>.*Cancel<\/button>/);
+        expect(out).toMatch(/<input type="checkbox"[^>]*checked=""/);
+        expect(out).toContain('100%');
+        const flagged = panelOf(rowsCase(), new Set(['m2']));
+        expect(html({ rows: flagged.rows, counts: flagged.counts })).toMatch(/textual-tab__confirm-row--flagged"><td><span class="textual-tab__issue--error">Member bob/);
+        // Without counts and Cancel, the T6b bar as it was.
+        const before = html({ rows: [{ old: 'Book dune', new: null, reason: 'deleted, referenced from another model', flagged: true }] });
+        expect(before).toContain('1 change to confirm before the text is applied');
+        expect(before).not.toContain('Cancel');
+        expect(before).not.toContain('checkbox');
     });
 });
 

@@ -18,7 +18,7 @@ import type { TextParseResult } from './parser';
 import { printTextModel } from './printer';
 import type { UnprintedObject } from './printer';
 import { planTextEdit } from './textDiff';
-import type { ApplyRefusal, DiffOp, PlanInput, TextEditPlan } from './textDiff';
+import type { ApplyRefusal, DiffOp, Pairing, PlanInput, TextEditPlan } from './textDiff';
 import { identityOf, textIdsOf } from './textMatch';
 import type { ConfirmRow } from './ui/TextConfirmPanel';
 
@@ -55,9 +55,9 @@ export function textFileName(modelName: string): string {
     return `${modelName || 'model'}.txt`;
 }
 
-/** A file's text planned against the model, with no carried spans; `confirmed` as in the Text tab's panel. */
+/** A file's text planned against the model, with no carried spans; `confirmed` and `unpaired` (T8c) as in the Text tab's panel. */
 export function planTextImport(base: TextImportBase, text: string, evidence: TextImportEvidence = {},
-                               confirmed?: readonly ApplyRefusal['code'][]): TextImport {
+                               confirmed?: readonly ApplyRefusal['code'][], unpaired?: readonly Pairing[]): TextImport {
     const parsed = parseText(text, base.grammar);
     const ids = parsed.tree ? textIdsOf(parsed.tree, base.grammar) : new Map<string, string>();
     // The ids are the diff input's evidence 0 (`DiffInput.ids`), which `diffText` hands to `matchObjects`.
@@ -68,6 +68,7 @@ export function planTextImport(base: TextImportBase, text: string, evidence: Tex
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
         ...(evidence.reserved ? { reserved: evidence.reserved } : {}),
         ...(confirmed ? { confirmed } : {}),
+        ...(unpaired?.length ? { unpaired } : {}),
     };
     return { text, parsed, plan: planTextEdit(input), ids };
 }

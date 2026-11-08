@@ -49,7 +49,7 @@ import type { CanvasSelectionDetail } from '../../../components/editor-v2/utils/
 import { getNodeProblemsSnapshot, subscribe as subscribeProblems } from '../../../components/editor-v2/problems/registry';
 import type { ReprintResult } from '../textReprint';
 import { CONFIRMABLE, deletedObjects, planTextEdit } from '../textDiff';
-import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
+import type { ApplyRefusal, Pairing, PlanCounts, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { exportText, planTextImport, textFileName, textImportRows } from '../textFile';
 import type { TextImport } from '../textFile';
 import { identityOf, matchObjects } from '../textMatch';
@@ -65,7 +65,7 @@ import type { TextMetamodel, TextObject } from '../metamodel';
 import { checkIslands, jjelIslands } from '../jjelIslands';
 import type { JjelDiagnostic } from '../jjelIslands';
 import type { NewModelReading } from '../modelLines';
-import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
+import TextConfirmPanel, { confirmRows, needsConfirmation, panelRows } from './TextConfirmPanel';
 import type { ConfirmRow } from './TextConfirmPanel';
 import type { TextualSession } from './textualMonaco';
 import SyntaxForm from './SyntaxForm';
@@ -438,11 +438,12 @@ export function instanceNames(lookup: Readonly<Record<string, any>>, base: Pick<
 
 /**
  * Parses the text and plans its application on the base, with the spans the editor carried over the edit (R-TXT-22)
- * and the reference tokens it carried (`refs`, R-TXT-35: a token the user did not retype keeps its target).
+ * and the reference tokens it carried (`refs`, R-TXT-35: a token the user did not retype keeps its target). T8c:
+ * `unpaired`, the uncertain pairings the panel unticked, each a creation and a deletion.
  */
 export function planEdit(base: EditBase, text: string, carried: readonly ObjectSpan[], evidence: EditEvidence = {},
                          confirmed?: readonly ApplyRefusal['code'][], refs: readonly RefSpan[] = [],
-                         given?: TextParseResult): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
+                         given?: TextParseResult, unpaired?: readonly Pairing[]): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
     // Step B1: the providers' parse of this very text, grammar and carried tokens, when the caller has it.
     const parsed = given ?? parseText(text, base.grammar, { keep: refs });
     const plan = planTextEdit({
@@ -451,8 +452,23 @@ export function planEdit(base: EditBase, text: string, carried: readonly ObjectS
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
         ...(evidence.reserved ? { reserved: evidence.reserved } : {}),
         ...(confirmed ? { confirmed } : {}),
+        ...(unpaired?.length ? { unpaired } : {}),
     });
     return { parsed, plan };
+}
+
+/** T8c: the panel's list of unticked pairings after one checkbox changes. */
+function toggledPairings(unpaired: readonly Pairing[] = [], p: Pairing, ticked: boolean): Pairing[] {
+    const rest = unpaired.filter(x => x.text !== p.text || x.model !== p.model);
+    return ticked ? rest : [...rest, p];
+}
+
+/** T8c: what the confirm panel shows for a text, an edit's or an imported file's, and the pairings unticked in it. */
+interface ConfirmState {
+    readonly text: string;
+    readonly rows: readonly ConfirmRow[];
+    readonly counts?: PlanCounts;
+    readonly unpaired?: readonly Pairing[];
 }
 
 /** T8b (R-TXT-55 F10): what an imported file's plan asks of the Text tab: a refusal, no change, or the confirm panel's rows. */
@@ -754,7 +770,9 @@ type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind:
     /** T7 D-5: a cut's objects wait for their paste. */
     | { readonly kind: 'cut'; readonly count: number }
     /** C3b: the deletions of the edit wait for a confirmation; `kept`, the user cancelled them. */
-    | ({ readonly kind: 'guard' } & DeletionGuard) | { readonly kind: 'kept' };
+    | ({ readonly kind: 'guard' } & DeletionGuard) | { readonly kind: 'kept' }
+    /** T8c: the confirm panel's Cancel: nothing applied. */
+    | { readonly kind: 'cancelled' };
 
 /** The bar's line for an edit status, and whether it reads as an error. */
 export function editStatusText(s: EditStatus): { readonly text: string; readonly error: boolean } {
@@ -773,6 +791,7 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
             error: false,
         };
         case 'kept': return { text: 'Not applied · deletions cancelled', error: true };
+        case 'cancelled': return { text: 'Not applied · cancelled', error: false };
         case 'apply': case 'applying': return { text: 'Applying…', error: false };
         case 'applied': return s.failed
             ? { text: `Applied, ${s.failed} line${s.failed === 1 ? '' : 's'} failed`, error: true }
@@ -1206,9 +1225,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
-    const [confirm, setConfirm] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
     // T8b: an imported file's text and its rows, until confirmed; the file input behind the Import action.
-    const [imported, setImported] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    const [imported, setImported] = useState<ConfirmState | null>(null);
     const importInputRef = useRef<HTMLInputElement>(null);
     // L1b (R-TXT-49 D3): the syntax draft, owned here and shared by the Syntax form and the EBNF mode; only where Save
     // can write it. Without a writer the EBNF stays the stored one, read only.
@@ -1236,7 +1255,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const refDecorationsRef = useRef<{ ids: string[]; refs: Map<string, RefSpan> }>({ ids: [], refs: new Map() });
     const clipRef = useRef<CutClip | null>(null);
     // C3b: the text whose deletions the guard asks about, while it asks, and the refusals the panel confirmed for it.
-    const guardTextRef = useRef<{ readonly text: string; readonly confirmed?: readonly ApplyRefusal['code'][] } | null>(null);
+    const guardTextRef = useRef<{ readonly text: string; readonly confirmed?: readonly ApplyRefusal['code'][]; readonly unpaired?: readonly Pairing[] } | null>(null);
     // R-TXT-35 (P-2026-11-03-1535): the rewrite of the paths runs; a token was held under the caret.
     const rewritingRef = useRef(false);
     const heldRef = useRef(false);
@@ -1593,9 +1612,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     /**
      * Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms; `deletions`,
-     * from the guard's Confirm, applies the deletions it asked about.
+     * from the guard's Confirm, applies the deletions it asked about; `unpaired`, from the panel, the pairings unticked.
      */
-    const readEdit = (confirmed?: readonly ApplyRefusal['code'][], deletions = false): void => {
+    const readEdit = (confirmed?: readonly ApplyRefusal['code'][], deletions = false, unpaired?: readonly Pairing[]): void => {
         guardTextRef.current = null;
         const editor = editorRef.current;
         const sync = syncRef.current;
@@ -1614,7 +1633,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const shared = sessionRef.current?.current();
         const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
         const carried = carriedSpans();
-        const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse);
+        const { parsed, plan } = planEdit(r.base, text, carried, ev, confirmed, carriedRefs(), reuse, unpaired);
         setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : [], checkIslands(jjelIslands(parsed, r.base.mm, r.base.grammar.style)));
         const read: GuardRead = { grammar: r.base.grammar, text, parsed, carried };
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones. D1: an object
@@ -1629,13 +1648,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             return;
         }
         setConfirm(d.kind === 'confirm'
-            ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
+            ? { text, ...panelRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }), ...(unpaired?.length ? { unpaired } : {}) }
             : null);
         // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first. D1: so
         // does an object commented out, whatever else the pause carries.
         const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan, read) : null;
         if (guard) {
-            guardTextRef.current = { text, ...(confirmed ? { confirmed } : {}) };
+            guardTextRef.current = { text, ...(confirmed ? { confirmed } : {}), ...(unpaired?.length ? { unpaired } : {}) };
             setStatus({ kind: 'guard', ...guard });
             return;
         }
@@ -1649,7 +1668,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const editor = editorRef.current;
         const asked = guardTextRef.current;
         if (!editor) return;
-        if (asked?.text === editor.getValue()) readEdit(asked.confirmed, true); else readEdit();
+        if (asked?.text === editor.getValue()) readEdit(asked.confirmed, true, asked.unpaired); else readEdit();
     };
 
     /** C3b: Cancel keeps the text and the model; the next edit reads the text again. */
@@ -1789,7 +1808,24 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const editor = editorRef.current;
         if (!confirm || !editor || editor.getValue() !== confirm.text) { setConfirm(null); return; }
         setConfirm(null);
-        readEdit(['uncertain', 'referenced']);
+        readEdit(['uncertain', 'referenced'], false, confirm.unpaired);
+    };
+
+    /** T8c: a pairing's checkbox: the same text planned again with the pairings unticked, so the rows and counts follow. */
+    const onTick = (p: Pairing, ticked: boolean): void => {
+        const editor = editorRef.current;
+        const r = readRef.current;
+        if (!confirm || !editor || !r.base || editor.getValue() !== confirm.text) { setConfirm(null); return; }
+        const unpaired = toggledPairings(confirm.unpaired, p, ticked);
+        const ev = evidence(r.base);
+        const { parsed, plan } = planEdit(r.base, confirm.text, carriedSpans(), ev, undefined, carriedRefs(), undefined, unpaired);
+        setConfirm({ text: confirm.text, ...panelRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }), unpaired });
+    };
+
+    /** T8c: the panel's Cancel: closed, nothing applied; the text stays as typed, and the next edit reads it again. */
+    const onCancel = (): void => {
+        setConfirm(null);
+        setStatus({ kind: 'cancelled' });
     };
 
     /** T8b (R-TXT-17): the model's text with the ids of its objects, downloaded as a file named after the model. */
@@ -1806,19 +1842,39 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
             const r = readRef.current;
             if (!r.base) return;
             const ev = evidence(r.base);
-            const step = importStep(r.base, planTextImport(r.base, text, ev), ev.referencedElsewhere);
-            setImported(step.kind === 'confirm' ? { text, rows: step.rows } : null);
+            const planned = planTextImport(r.base, text, ev);
+            const step = importStep(r.base, planned, ev.referencedElsewhere);
+            setImported(step.kind === 'confirm'
+                ? { text, ...panelRows({ plan: planned.plan, parsed: planned.parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
+                : null);
             setStatus(step.kind === 'confirm' ? { kind: 'confirm' } : step);
         });
+    };
+
+    /** T8c: a pairing's checkbox in the imported file's panel: the file planned again with the pairings unticked. */
+    const onImportTick = (p: Pairing, ticked: boolean): void => {
+        const r = readRef.current;
+        if (!imported || !r.base) return;
+        const unpaired = toggledPairings(imported.unpaired, p, ticked);
+        const ev = evidence(r.base);
+        const planned = planTextImport(r.base, imported.text, ev, undefined, unpaired);
+        setImported({ text: imported.text, ...panelRows({ plan: planned.plan, parsed: planned.parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }), unpaired });
+    };
+
+    /** T8c: the imported file's Cancel: the panel closes and the model is not touched. */
+    const onImportCancel = (): void => {
+        setImported(null);
+        setStatus({ kind: 'cancelled' });
     };
 
     /** T8b: the confirmed file, planned again on the model as it is now, applied in one undo step (`applyTextEdit`). */
     const onImportConfirm = async (): Promise<void> => {
         const r = readRef.current;
         const text = imported?.text;
+        const unpaired = imported?.unpaired;
         setImported(null);
         if (!r.base || text === undefined) return;
-        const { plan } = planTextImport(r.base, text, evidence(r.base), CONFIRMABLE);
+        const { plan } = planTextImport(r.base, text, evidence(r.base), CONFIRMABLE, unpaired);
         if (!plan.lines) { setStatus({ kind: 'refused', reasons: plan.refusals.map(x => x.message) }); return; }
         setStatus({ kind: 'applying' });
         let failed = 0;
@@ -2084,10 +2140,12 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                             </div>
                         )}
                         {mode === 'text' && imported && imported.rows.length > 0 && (
-                            <TextConfirmPanel rows={imported.rows} busy={status.kind === 'applying'} onConfirm={() => { void onImportConfirm(); }} />
+                            <TextConfirmPanel rows={imported.rows} busy={status.kind === 'applying'} onConfirm={() => { void onImportConfirm(); }}
+                                              {...(imported.counts ? { counts: imported.counts } : {})} onTick={onImportTick} onCancel={onImportCancel} />
                         )}
                         {mode === 'text' && !imported && confirm && confirm.rows.length > 0 && (
-                            <TextConfirmPanel rows={confirm.rows} busy={status.kind === 'applying'} onConfirm={onConfirm} />
+                            <TextConfirmPanel rows={confirm.rows} busy={status.kind === 'applying'} onConfirm={onConfirm}
+                                              {...(confirm.counts ? { counts: confirm.counts } : {})} onTick={onTick} onCancel={onCancel} />
                         )}
                         {mode === 'text' && status.kind === 'guard' && (
                             <section className="textual-tab__confirm" aria-label="Deletions to confirm">
