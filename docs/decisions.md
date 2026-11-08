@@ -6708,6 +6708,9 @@ P-2026-10-20-1835.
   selected class, `Class.ownedAttributes`. A classifier keeps the capital (`Class1`), a property goes through
   `instanceName` (`property1`). One undo entry each; only the position of the new vertex is written, because a fixed height
   would clip the rows added later.
+  Amended 2026-11-08 (P-2026-11-08-2146, P-2026-11-08-2214): a Generalization drawn at `class` with a declared
+  `generalization.via` goes in that feature of its source classifier (`Class.generalizations`), not through the container
+  chain (`generalizationSlot`, `instantiate.ts`); one undo entry, through the reducer's undo group.
 - **R-OI-23** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
   **At `class`, with a binding, a right click on the empty pane opens «New ▸» with the rail's items, and a classifier lands
   at the click.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). Disabled entries keep

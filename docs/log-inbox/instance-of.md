@@ -340,3 +340,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (P-2026-11-08-2041): a second link between the same pair is not prevented; UML allows it unless the association is unique, and uniqueness is not read.
 
 **Ticket** (P-2026-11-08-2041): a drag dropped away from a target handle writes nothing and says nothing. Aimed at the nearest handle of any kind, the reversed drag opened no menu. With no wait for the handles under the pointer, the class-tab drag made nothing in two of three runs, one of them aimed at a target handle. Aimed at a target handle after a 400 ms wait, both worked in every run. A source handle under the drop, and handles not yet drawn, are the likely causes, inferred and not isolated.
+
+## 2026-11-08 — fix: class diagram defects, one undo for the generalization, handle reach (P-2026-11-08-2214)
+**Prompt**: two lanes in one entry: P-2026-11-08-2146, the three defects of levels lane 2 (empty new attribute, class header clipping, Generalization at the model root) and the handle-reach measure, cut at its context ceiling; this continuation, S2-L28, the probes, the docs.
+**Files touched**: `editor-v2/hooks/instantiate.ts`, `editor-v2/EditorV2.tsx`, `editor-v2/hooks/__tests__/classElement.test.ts` (a5f657409); `editor-v2/EditorV2.tsx` (a102c23a5); `scripts/probe/onto-s2-instantiate.ts`, `scripts/probe/onto-s4-links.ts` (4ee0983ac); `docs/decisions.md` R-OI-22 amendment, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 17:53
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (nine files across two lanes, over the five of RC-11, listed above; `EditorV2.tsx` in this lane within the prompt's limit, 16 lines)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (three crops in `~/.jjodel-lanes/P-2026-11-08-2214/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S2 57/57, S4 14/14, binding editor 10/10; vitest 96/96 (classElement, instantiate, undoGroup), typecheck 0, build 0. No unit test for the group: `EditorV2.tsx` does not import in the bench, S2-L28 is its test. The inverse lost in the merge is read at `reducer.ts:1336` and confirmed by the fix, the delta itself was not dumped. Level `both` measured on this tree, not on the base before a5f657409. Logs and crops in `~/.jjodel-lanes/P-2026-11-08-2214/`.
+**Prompt document name**: 2026-11-08 22:14
+
+**Root causes and fixes, 2146** (a5f657409). A new attribute was created without defaults: it now gets `String` and multiplicity [1] where the metaclass has those features, and renders `+ property1 : String`. The class header clipped because the node did not grow with a new row: the height now grows, grow-only, in the same undo group (Book 220x82 to 220x100, undo gives 220x82 back). The Generalization took the container chain to the model root: at `class` with a declared `generalization.via` it goes in that feature of its source (`generalizationSlot`).
+
+**S2-L28** (measured, three runs on port 3097). Before the fix one Cmd+Z left the Generalization: 112 objects, 111 expected. Control (a), no click on the edge first: the same failure; the edge click itself writes no undo entry (22 to 22), so the click was not the cause. Control (b), the same drag at level `both`: the same failure (113, 112 expected), so the 2146 owner branch was not the cause. Trace: the undo stack goes 21 to 20 at 250 ms with the object's id still in idlookup, back to 21 at 500 ms with a new entry (three DEdge and the DGraph). The popped entry carried `mergeCounter`, the reducer's legacy merge (`U.objectMergeInPlace`, newer wins). Fix (a102c23a5): at `class` with a declared `generalization.via`, `handleObjectEdgeSelected` opens the reducer's undo group and closes it once the owner's write has landed, 8 s at most. After it: 21 to 20, the id gone, no new entry, S2-L28 PASS; an undo right after the edge click removes it too.
+
+**Handle reach** (S4-11, zoom 1, both tabs). A drop 0, 15 or 30 screen px from the target handle connects (class tab: one Generalization; object tab: the link menu); at 45, 60 or 90 px it does not. Consistent with `connectionRadius={40}` in `EditorV2.tsx`.
+
+## 2026-11-08 — ticket: one undo does not remove an object-as-edge outside level class
+**Ticket**: `handleObjectEdgeSelected` (`EditorV2.tsx`) opens an undo group only at level `class` with a declared `generalization.via`. At level `both` on uml-s3b one Cmd+Z after the same drag leaves the object (113 objects, 112 expected), through the reducer's legacy merge of the deferred writes. Other notations share the path and were not measured.
+**Priority**: medium
+**Found in**: P-2026-11-08-2214
+**Detail**: `~/.jjodel-lanes/P-2026-11-08-2214/probe-onto-s2-instantiate.log`

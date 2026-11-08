@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-2146
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (outside the critical zone; three defects found by levels lane 2)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · a5f657409
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 12:25 finding 2: the class diagram creates classes, attributes and associations as the metamodel and its bindings define them; the chat's fix of lane 2's measured defects, announced to Alfonso 19:31)
 Depends: P-2026-11-08-2041
 Corregge: P-2026-11-08-1753
