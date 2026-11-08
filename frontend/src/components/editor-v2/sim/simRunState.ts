@@ -58,6 +58,9 @@ import { useSyncExternalStore } from 'react';
 import { isMarked, presentationOf } from '../../../model/simulation/netStep';
 import { nucleusOf } from './simNucleus';
 import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState';
+import { dcnRunOf } from './simDcnRuns';
+import { dcnNodeStateOf } from '../../../model/simulation/dcn/dcnCanvasState';
+import type { DcnNodeState } from '../../../model/simulation/dcn/dcnCanvasState';
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, SimState, SimStateAccess, SimValue, StepOutcome,
 } from '../../../model/simulation/netTypes';
@@ -261,6 +264,39 @@ export function getSimNodeState(objectId: string): SimNodeState | null {
     for (const [modelId, r] of runs) {
         const s = nodeStateOf(shown(modelId, r), objectId, shownBefore(modelId, r));
         if (s) return s;
+    }
+    return null;
+}
+
+/** Per shown record, as `enabledCache` (simCanvasState.ts): a commit replaces the record, a view has its own. */
+const dcnNodeCache = new WeakMap<SimRun, Map<string, DcnNodeState | null>>();
+
+/** The card of an object on one shown record; `null` when the run is not DCN or the object is no instance of it. */
+function dcnNodeOf(record: SimRun, objectId: string): DcnNodeState | null {
+    const dcn = dcnRunOf(record.net);
+    if (!dcn) return null;
+    let byObject = dcnNodeCache.get(record);
+    if (byObject === undefined) {
+        byObject = new Map();
+        dcnNodeCache.set(record, byObject);
+    }
+    let node = byObject.get(objectId);
+    if (node === undefined) {
+        node = dcnNodeStateOf(dcn.model.model, dcn.nucleus, record.config.state, record.net.initial, objectId, dcn.nameOf);
+        byObject.set(objectId, node);
+    }
+    return node;
+}
+
+/**
+ * What the run card of a DCN instance shows (R-DCN-29), on the step its run
+ * shows (R-SIM-106), static slots against σ0. `null` when no run is DCN or knows
+ * the object as an instance. Read on the `'mark'` version, as `getSimNodeState`.
+ */
+export function getSimDcnNode(objectId: string): DcnNodeState | null {
+    for (const [modelId, r] of runs) {
+        const node = dcnNodeOf(shown(modelId, r), objectId);
+        if (node) return node;
     }
     return null;
 }

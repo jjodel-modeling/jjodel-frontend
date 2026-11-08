@@ -120,6 +120,8 @@ import type {
 import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { nucleusOf, petriNucleus } from './simNucleus';
+import { dcnRunOf, registerDcnRun } from './simDcnRuns';
+import type { DcnRunText } from './simDcnRuns';
 import { storedProfile } from './simRoleStatus';
 import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
@@ -130,7 +132,7 @@ import { compileDcn, DCN_TICK_EVENT } from '../../../model/simulation/dcn/dcnCom
 import type { DcnCompileInput } from '../../../model/simulation/dcn/dcnCompile';
 import { readDcnModel } from '../../../model/simulation/dcn/dcnHandles';
 import { dcnNucleus, readDcnStep } from '../../../model/simulation/dcn/dcnStep';
-import type { DcnClassification, DcnNucleus, DcnStepModel } from '../../../model/simulation/dcn/dcnStep';
+import type { DcnClassification } from '../../../model/simulation/dcn/dcnStep';
 import { dcnCandidateLabel, dcnDefectsLine, dcnInputOffWords, dcnLastStepText, dcnMarkingChips, dcnMarkingLine } from '../../../model/simulation/dcn/dcnPanelText';
 // A cycle at module level, used inside functions on both sides only (report F2, P-2026-11-08-0248).
 import { dcnInputOf } from '../problems/dcnToProblems';
@@ -812,20 +814,6 @@ export function startRun(
 // The DCN run (lane L4.5, P-2026-11-08-0248 decisions 1-4, P-2026-11-08-0303)
 // ---------------------------------------------------------------------------
 
-/** What the text readers of a DCN run need beyond its net: the step model and the nucleus. */
-interface DcnRunText {
-    readonly model: DcnStepModel;
-    readonly nucleus: DcnNucleus;
-}
-
-/** The DCN runs by their net, set by `startDcnRun`: the readers taking a net dispatch to the DCN twins through it. */
-const dcnRuns = new WeakMap<object, DcnRunText>();
-
-/** The DCN part of the run of `net`, `undefined` for a Petri run. */
-function dcnRunOf(net: object): DcnRunText | undefined {
-    return dcnRuns.get(net);
-}
-
 /** The classification of the live run of `net`, when `net` is its net; `null` otherwise. */
 function liveClassification(net: Pick<CompiledNet, 'modelId'>, d: DcnRunText): DcnClassification | null {
     const run = getSimRun(net.modelId);
@@ -876,7 +864,7 @@ function startDcnRun(
     const stepModel = readDcnStep(input, model);
     const nucleus = dcnNucleus(stepModel, snapshot);
     const net = nucleus.net;
-    dcnRuns.set(net, { model: stepModel, nucleus });
+    registerDcnRun(net, { model: stepModel, nucleus, nameOf: id => elementName(lookup, id) });
     const entries = [...compiled.entries.values()];
     const invocations = entries.filter(e => e.kind === 'invocation' && !stepModel.redefines.has(e.id)).map(e => e.id);
     const inputs = new Map(entries.filter(e => e.inputs.length > 0).map(e => [e.id, e.inputs] as const));

@@ -23,7 +23,7 @@ import { encodeWatches } from '../../../../model/simulation/watchCodec';
 import type { WatchRecord } from '../../../../model/simulation/watchCodec';
 import type { WatchResult } from '../../../../model/simulation/watchEvaluator';
 import {
-    __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
+    __resetSimRunsForTests, configAt, getSimActiveIds, getSimDcnNode, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
 } from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
 import { nucleusOf } from '../simNucleus';
@@ -3424,5 +3424,95 @@ describe('DCN L4.6: the arguments of an invocation reach its body (P-2026-11-08-
         const p = pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 1 }, { element: id, attr: 'nosuch', value: 9 }]);
         expect(p.outcome?.kind).toBe('halted');
         expect(alt()).toBe(0);
+    });
+});
+
+describe('DCN slice 5: getSimDcnNode, the run card of the shown step (P-2026-11-08-1905, R-DCN-29, R-SIM-106)', () => {
+    /** Ready renamed Charging, so speed 0 reads as the drone on its pad; Flying carries the monitor drain. */
+    const BAG = { ...DCN_BAG, simMonitor: 'D_monitors' };
+    const EXTRA: Record<string, Obj & { name?: string }> = {
+        dc_Ready: { cls: 'D_Dynamic', name: 'Charging', slots: { D_invariant: ['self.speed == 0'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'], D_monitors: ['mon_drain'] } },
+        mon_drain: { cls: 'D_Operation', name: 'drain', slots: { D_body: ['self.alt := self.alt + 1'] } },
+    };
+    function reset(speed = 0) {
+        const lookup = dcnLookup(BAG, speed, EXTRA);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        return { lookup, run, takeOff: () => pressInput('M', run.alphabet.find(id => id !== 'dcn-tick')!, undefined, lookup, 'takeOff') };
+    }
+    const active = (objectId: string) => getSimDcnNode(objectId)?.viewpoints.flatMap(v => v.classes.filter(c => c.active).map(c => c.name));
+
+    it('no run gives null (mutant: an empty card when no run answers)', () => {
+        expect(getSimDcnNode('dji')).toBeNull();
+    });
+
+    it('a Petri run gives null, on an element it marks (mutant: the guard on a run that is not DCN dropped)', () => {
+        simReset('M', started(buildLookup(ROLES, TURNSTILE)));
+        expect(getSimActiveIds('M')).toEqual(['Locked']);
+        expect(getSimDcnNode('Locked')).toBeNull();
+    });
+
+    it('a DCN run at Reset gives the Charging data: the classes of the viewpoint, no static slot changed (mutant: startDcnRun does not register the run)', () => {
+        reset();
+        expect(getSimDcnNode('dji')).toMatchObject({
+            viewpoints: [{ name: 'Mode', classes: [{ name: 'Charging', active: true }, { name: 'Flying', active: false }] }],
+            monitors: [],
+            changedStatic: [],
+        });
+    });
+
+    it('an object of a DCN run that is no instance gives null, a Slot or an unknown id (mutant: the card of any id)', () => {
+        reset();
+        expect(getSimDcnNode('s_speed')).toBeNull();
+        expect(getSimDcnNode('nosuch')).toBeNull();
+    });
+
+    it('monitors carry the names of the model read at Reset, not the ids (mutant: the id as the name in the registry)', () => {
+        reset(1);
+        expect(getSimDcnNode('dji')?.monitors).toEqual([{ viewpoint: 'Mode', dynamicClass: 'Flying', names: ['drain'] }]);
+    });
+
+    it('after a step the live record drives the result, and σ0 is the reset of changedStatic (mutants: the shown state as the reset, σ0 as the current state)', () => {
+        const { takeOff } = reset();
+        expect(takeOff().outcome?.kind).toBe('fired');
+        expect(active('dji')).toEqual(['Flying']);
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([{ name: 'speed', reset: 0, current: 1 }]);
+        expect(takeOff().outcome?.kind).toBe('fired');
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([
+            { name: 'speed', reset: 0, current: 2 },
+            { name: 'alt', reset: 0, current: 5 },
+        ]);
+    });
+
+    it('step back on the slider returns the earlier data, Back to live the later one (mutant: the live run read instead of the shown one)', () => {
+        const { takeOff } = reset();
+        takeOff();
+        simSetView('M', 0);
+        expect(active('dji')).toEqual(['Charging']);
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([]);
+        simSetView('M', null);
+        expect(active('dji')).toEqual(['Flying']);
+    });
+
+    it('two calls on one record return the same object, on the live and on a viewed record; a commit gives a new one (mutants: no cache, a cache not per record)', () => {
+        const { takeOff } = reset();
+        const atReset = getSimDcnNode('dji');
+        expect(atReset).not.toBeNull();
+        expect(getSimDcnNode('dji')).toBe(atReset);
+        takeOff();
+        const afterStep = getSimDcnNode('dji');
+        expect(afterStep).not.toBe(atReset);
+        expect(getSimDcnNode('dji')).toBe(afterStep);
+        simSetView('M', 0);
+        const viewed = getSimDcnNode('dji');
+        expect(viewed).not.toBe(afterStep);
+        expect(getSimDcnNode('dji')).toBe(viewed);
+    });
+
+    it('a Petri run of another model, started first, does not hide the DCN instance (mutant: the first run answers for every object)', () => {
+        simReset('X', started(buildLookup(ROLES, TURNSTILE)));
+        reset();
+        expect(active('dji')).toEqual(['Charging']);
     });
 });
