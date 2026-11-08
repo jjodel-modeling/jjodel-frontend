@@ -51,8 +51,11 @@ export interface JjtlDevelopmentEnvProps {
     onExecuteTransformation?: (
         sourceModelId: string,
         outputModelName: string,
-        ast: import('../types').TransformationAST
+        ast: import('../types').TransformationAST,
+        includedModelIds?: string[]
     ) => Promise<import('../executor').ExecutionResult | void>;
+    /** Reads the record of the last run of this transformation */
+    getLastRun?: () => import('./sourceSelection').RunRecord | null;
 }
 
 type BottomPanelTab = 'problems' | 'trace' | 'output';
@@ -83,6 +86,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     onSave,
     onCodeChange,
     onExecuteTransformation,
+    getLastRun,
 }) => {
     // State
     const [code, setCode] = useState(initialCode);
@@ -295,11 +299,12 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     }, [addOutputMessage]);
 
     // Handle actual transformation execution from dialog
-    const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string) => {
+    const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string, includedModelIds: string[] = []) => {
         // Clear previous output and start logging
         clearOutput();
         addOutputMessage('Starting transformation execution...');
         addOutputMessage(`Source model: ${sourceModelId}`);
+        if (includedModelIds.length > 0) addOutputMessage(`Also included: ${includedModelIds.join(', ')}`);
         addOutputMessage(`Output model: ${outputModelName}`);
 
         // console.log('[JjtlDevelopmentEnv] handleExecuteTransformation called');
@@ -343,7 +348,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 addOutputMessage(`Processing ${currentAst.mappings?.length || 0} mappings...`);
                 const startTime = performance.now();
                 // console.log('[JjtlDevelopmentEnv] Calling onExecuteTransformation...');
-                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
+                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst, includedModelIds);
                 const executionTimeMs = Math.round(performance.now() - startTime);
                 // console.log('[JjtlDevelopmentEnv] onExecuteTransformation returned:', {
                 //     hasResult: !!result,
@@ -928,6 +933,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 targetMetamodelName={targetMetamodelName}
                 availableModels={availableModels}
                 existingModelNames={existingModelNames}
+                getLastRun={getLastRun}
             />
         </div>
     );

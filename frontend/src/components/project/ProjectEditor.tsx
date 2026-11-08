@@ -37,6 +37,8 @@ import { NewViewpointDialog } from './NewViewpointDialog';
 import { NewModelDialog } from '../NewModelDialog/NewModelDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
+import { buildRunRecord, buildSourceArgument, latestRunOf } from '../../jjtl/components/sourceSelection';
+import type { RunRecord } from '../../jjtl/components/sourceSelection';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import { EnvGenWizardModal, EnvGenPersistence } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
@@ -1415,12 +1417,25 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return val;
         };
 
+        // The record of the last run of this transformation, read fresh from the store:
+        // `availableModels` is a snapshot of when the tab was opened, without the later output models.
+        const getLastRun = (): RunRecord | null => {
+            const idlookup = (store.getState() as any)?.idlookup || {};
+            const records: Array<RunRecord | undefined> = [];
+            for (const key in idlookup) {
+                const item = idlookup[key];
+                if (item?.className === 'DModel') records.push(item._state?.generatedBy);
+            }
+            return latestRunOf(records, transformation.id);
+        };
+
         // Callback when transformation is executed
         // Returns ExecutionResult so JjtlDevelopmentEnv can update trace display
         const handleExecuteTransformation = async (
             sourceModelId: string,
             outputModelName: string,
-            ast: TransformationAST
+            ast: TransformationAST,
+            includedModelIds: string[] = []
         ): Promise<ExecutionResult | void> => {
             // Guard against double execution (React StrictMode, button+form submit, etc.)
             if (isExecutingTransformation) {
@@ -1453,6 +1468,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     isExecutingTransformation = false;
                     return;
                 }
+                const includedModels = includedModelIds.map(id => models.find(m => m.id === id));
+                if (includedModels.some(m => !m)) {
+                    U.alert('e', 'Error', `Source model not found`);
+                    isExecutingTransformation = false;
+                    return;
+                }
 
                 // Use the current transformation from the enclosing closure
                 // (previously: transformations.find(t => t.targetMetamodelId) which always returned the FIRST one)
@@ -1473,22 +1494,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Read ONCE per Execute: the getter rescans the whole store on each access.
                 // Behavioural change: the set of instances a transformation sees no longer
                 // depends on which rules are written (see SPEC.md §9.1).
-                const allSourceObjects: LObject[] =
-                    (sourceModel as any).allSubObjects || sourceModel.objects || [];
-                // Filter out null/undefined entries: the collection can contain broken
-                // pointers (e.g. deleted DObjects) that dereference to undefined and
-                // would crash downstream property accesses like `obj.instanceof`.
-                const sourceObjects = allSourceObjects.filter((obj: LObject | null | undefined) => {
-                    if (!obj) {
-                        //console.warn('[ProjectEditor] Skipping null/undefined object in source model');
-                        return false;
-                    }
-                    return true;
-                });
+                const readSourceObjects = (model: LModel): LObject[] => {
+                    const allSourceObjects: LObject[] =
+                        (model as any).allSubObjects || model.objects || [];
+                    // Filter out null/undefined entries: the collection can contain broken
+                    // pointers (e.g. deleted DObjects) that dereference to undefined and
+                    // would crash downstream property accesses like `obj.instanceof`.
+                    return allSourceObjects.filter((obj: LObject | null | undefined) => {
+                        if (!obj) {
+                            //console.warn('[ProjectEditor] Skipping null/undefined object in source model');
+                            return false;
+                        }
+                        return true;
+                    });
+                };
                 // console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
 
 
-                const sourceModelData = sourceObjects.map((obj: LObject) => {
+                const serializeSourceObject = (obj: LObject) => {
                     // Resolve className with multiple fallback paths
                     let className = '';
 
@@ -1588,14 +1611,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     }
 
                     return result;
-                });
+                };
+                const sourceModelData = readSourceObjects(sourceModel).map(obj => serializeSourceObject(obj));
+                // The primary first, then the included ones (R-JTG-31); with none it is the primary's array.
+                const includedModelsData = (includedModels as LModel[]).map(
+                    m => readSourceObjects(m).map(obj => serializeSourceObject(obj))
+                );
 
                 // Source data is now safe to pass directly: reference values
                 // are wrapped as { __ref: PointerId } (no L-layer proxies),
                 // and attribute values are primitives from __raw.values.
                 console.log('[ProjectEditor] sourceModelData built, handing to executor');
                 console.time('[TIMING] JSON deep copy (now pass-through)');
-                const sourceModelDataCopy = sourceModelData;
+                const sourceModelDataCopy = buildSourceArgument(sourceModelData, includedModelsData);
                 console.timeEnd('[TIMING] JSON deep copy (now pass-through)');
 
                 // Execute transformation
@@ -1778,11 +1806,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     // STEP 5b: Tag model as generated by transformation
                     SetFieldAction.new(dModel.id, '_state', {
-                        generatedBy: {
-                            transformationId: transformation.id,
-                            sourceModelId: sourceModelId,
-                            timestamp: Date.now(),
-                        }
+                        generatedBy: buildRunRecord(transformation.id, sourceModelId, includedModelIds, Date.now())
                     }, '', false);
                     console.timeEnd('[TIMING] SetFieldActions');
 
@@ -2452,7 +2476,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             getTargetMetamodel,
             availableModels,
             existingModelNames,
-            handleExecuteTransformation
+            handleExecuteTransformation,
+            getLastRun
         );
     };
 
