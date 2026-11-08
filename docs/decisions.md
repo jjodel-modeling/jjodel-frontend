@@ -7870,6 +7870,8 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   prompt: `openBeside` addresses the tab by `modelId`, so it must accept the id of a second tab on the same model; what
   happens when it returns false (fall back to a new tab or disable the item) is the lane's recommendation. Known limit,
   unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
+- **R-MT-25** (2026-11-08, ratified by Alfonso 2026-11-08 08:34 «Ok su tutto», evidence: read, verified: none, reversible: trunk).
+  **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
 
 ## Superate
 
