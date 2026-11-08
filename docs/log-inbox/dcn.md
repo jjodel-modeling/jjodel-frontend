@@ -303,3 +303,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Zero conflicts, index tree equal to merge-tree 13fc4ed9f; three probes once each. The branch tree has no node_modules: its 12 new tests were counted on the two test files (6 + 6), and the merged run matched, 15084, 0 failed, 3 import reds. Trunk-tip baseline: two hook tests timed out under load, 967/967 alone and on the merge. check:docs 5/5. Tip moved after the merge (multi-tab-l5, 46554f772, 28e16543b), these files untouched.
 **Prompt document name**: 2026-11-08 00:40
+
+## 2026-11-08 — test: DCN drone object diagram on R-OI instantiation (P-2026-11-08-0011, P-2026-11-08-0057)
+**Prompt**: `claude_2026-11-08_0011_prompt_dcn_l25_object_diagram.md` (L2.5: class-owned ends per R-DCN-24, dormant `Charging.chargeRate`, dcn roles bag; object level through S2 `instantiate`, measures, export, light screenshot), stopped at the context ceiling, and its continuation `claude_2026-11-08_0057_prompt_dcn_l25_objects_cont.md` (rerun, screenshot, exports, commits).
+**Files touched**: `f097a2847` `frontend/scripts/probe/dcn-drone-fixture.ts` (0011's rewrite plus 0057's object-level grid: values past the slot's chips, sensors in a band under wau1 clear of its values); `a6c855081` `docs/discovery/assets/dcn-drone/` `dcn-drone.json`, `dcn-drone-class-level-light.png`, `dcn-drone-objects-light.png` (new); this commit: this entry and the Status of the two prompts. Split in two commits, not one as the prompt asked: the P13 guard rejects docs and code in one commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. No `frontend/src` change; probe runs 4 to 7 DONE pass=25 fail=0, page errors none; tsc on the probe file exit 0; check:scripts PASS.
+**Out-of-scope changes**: no (7 files over three commits, all in the prompt's DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: screenshot read by the lane, chat to read it (`docs/discovery/assets/dcn-drone/dcn-drone-objects-light.png`: six instances, 36 nodes, no overlap)
+**Notes**: MEAS: dji 7 slots, chargeRate=1 dormant under Charging; wau1.ownedSensors holds the 4 sensors; 0 instantiation and 0 dcn problems. 16 type_mismatch warnings on Action bodies expected (charge, takeOff, rampUp 2, rampDown 2, drain 2, injectFailure 4, reset 4), fixed on trunk by P-2026-11-08-0010. Run 3 was a load flake: 4 green runs after, no fix. Four sensors, not two: the Alert invariants read all four. Both exports from run 7, roles bound, simProfile dynamicClassification.
+**Prompt document name**: 2026-11-08 00:57
