@@ -4261,7 +4261,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const outsideMap = container ? measureOutsideLabels(container) : new Map();
             // Across graphVertex containers (S6): bottom-up by container, each laid-out container a block one level up;
             // with no container that declares a layout, today's flat run (utils/elkContainers.ts).
-            const layoutKey = getActiveLayoutKey();
+            // The canvas's own key, the one its sync reads (E4, P-2026-11-08-2025): the root's would move the other pane of a split.
+            const layoutKey = tabLayoutKey();
             const result = await computeContainedAutoLayout(currentNodes, currentEdges, {
                 profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id),
                 containment: irContainmentRef.current.model,
@@ -4279,14 +4280,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const s = result.sizes.get(n.id);
                 return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
             });
-            if (moved.length > 0) syncPositionBatchToJjom(moved);
+            if (moved.length > 0) syncPositionBatchToJjom(moved, layoutKey);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
                 const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
-                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })), layoutKey);
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
@@ -4345,7 +4346,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const n of layoutedNodes) {
             updates.push({ id: n.id, x: n.position.x, y: n.position.y });
         }
-        if (updates.length > 0) syncPositionBatchToJjom(updates);
+        if (updates.length > 0) syncPositionBatchToJjom(updates, tabLayoutKey());
 
         // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
         // applyDistribution alone only re-indexes handles and inherits the side that
