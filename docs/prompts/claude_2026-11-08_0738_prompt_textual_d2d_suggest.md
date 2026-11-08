@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0738
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane fast · 0d5044329 · gates green (typecheck 0, build, check:docs, textual vitest 33 files 1320 passed) · overflow 29 px to -1 px measured, crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/ · log entry in docs/log-inbox/codegen.md, uncommitted (RC-17)
 Lane: fast (CSS of the Text tab's suggest widget; crops)
 Worktree: ~/jjodel-w-textd2d, branch textual-d2d-suggest (from trunk ce18b0c02, own node_modules)
 Request: Alfonso 2026-11-08 07:36 «Procedi con tutto in lane auto»

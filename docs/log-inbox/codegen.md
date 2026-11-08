@@ -3017,3 +3017,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: T8b crops 1-export-button, 3-import-confirm, 4-applied in ~/.jjodel-lanes/P-2026-11-08-0206/ checked by the chat
 **Notes**: Rollback tag `pre-textual-t8b-file` on `089b39fc9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0246/result.json`.
 **Prompt document name**: 2026-11-08 02:46
+
+## 2026-11-08 — fix(codegen): D2d, suggest row inside the Text tab's widget (P-2026-11-08-0738)
+**Prompt**: Ticket D2d (lane D2c): the selected row of the Text tab's suggest widget overflows the widget's right edge. Measure it, find the rule, fix it scoped to the Text tab, light theme only, crops 1-before and 2-after.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.scss` (`0d5044329`); this entry and the Status of the prompt file, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-06 22:13
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe on port 3738, crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/, same list, row `effect` focused
+**Notes**: Cause: skeleton.scss:101 global `.monaco-scrollable-element { left: 30px !important }` (#206) shifted the list 30 px in a 428 px box. Fix: list at left 0, row padded 30 px left, under `.textual-tab__body`. Row right 2377.44 to 2347.44 vs widget 2348.44 (+29 to -1 px); height 20, y 308, label x 1971.44, icon x 1951.44 unchanged. The blue bar now also covers the left 30 px band. Gates: typecheck 0, build, check:docs, textual vitest 1320 passed.
+**Prompt document name**: 2026-11-08 07:38
