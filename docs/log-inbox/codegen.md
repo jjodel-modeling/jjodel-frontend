@@ -3030,3 +3030,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — probe on port 3738, crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/, same list, row `effect` focused
 **Notes**: Cause: skeleton.scss:101 global `.monaco-scrollable-element { left: 30px !important }` (#206) shifted the list 30 px in a 428 px box. Fix: list at left 0, row padded 30 px left, under `.textual-tab__body`. Row right 2377.44 to 2347.44 vs widget 2348.44 (+29 to -1 px); height 20, y 308, label x 1971.44, icon x 1951.44 unchanged. The blue bar now also covers the left 30 px band. Gates: typecheck 0, build, check:docs, textual vitest 1320 passed.
 **Prompt document name**: 2026-11-08 07:38
+
+## 2026-11-08 — merge: textual-d2d-suggest into alfonso-frontend-jjtl (P-2026-11-08-0803)
+**Prompt**: `claude_2026-11-08_0803_prompt_merge_textual-d2d-suggest.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d2d-suggest` at `c0fd90739` into `alfonso-frontend-jjtl`, merge base `ce18b0c02`, 3 commits on the branch side.
+**Files touched**: merge `faf11a4fe`: 3 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0738_prompt_textual_d2d_suggest.md`, `frontend/src/codegen/textual/ui/TextualTab.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `faf11a4fe` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15186 tests in 574 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D2d crops 1-before, 2-after in ~/.jjodel-lanes/P-2026-11-08-0738/ checked by the chat
+**Notes**: Rollback tag `pre-textual-d2d-suggest` on `bcd38ed2e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0803/result.json`.
+**Prompt document name**: 2026-11-08 08:03
