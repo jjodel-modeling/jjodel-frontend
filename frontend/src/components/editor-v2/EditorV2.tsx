@@ -78,7 +78,7 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption } from './hooks/instantiate';
+import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption } from './hooks/instantiate';
 import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
 import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
@@ -1115,7 +1115,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         compatibleRefs: CompatibleReference[];
         /** IR connect rules applicable to this pair (object-as-edge creation entries). */
         objectEdgeMatches?: IRConnectRuleMatch[];
+        /** Associations a link can be made of between the pair (S4, R-OI-24). */
+        linkMatches?: LinkOption[];
     } | null>(null);
+    const runLinkRef = useRef<(option: LinkOption) => void>(() => {});
     const handleM1ReferenceSelectedRef = useRef<(ref: MetaclassReference, conn?: Connection) => void>(() => {});
     const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
@@ -2002,17 +2005,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             mi.allClasses,
                         );
 
+                        // S4 (R-OI-24): at `instance` and `both` a drag between two instances also offers a link
+                        // of every association whose ends accept them. At `class` the drag stays as it was.
+                        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                        const linkMatches = ontoLevelOf(get, viewpointIdRef.current) === 'class'
+                            ? []
+                            : linkOptions(get, get(connection.source)?.model, get(connection.target)?.model);
+
                         if (compatibleRefs.length === 0 && connectMatches.length === 0) {
-                            return; // no compatible refs — ignore
+                            // No match opens nothing; one is auto-selected (Q7); two up go to the popup below.
+                            if (linkMatches.length === 0) return; // no compatible refs — ignore
+                            if (linkMatches.length === 1) {
+                                runLinkRef.current(linkMatches[0]);
+                                return;
+                            }
                         }
 
-                        if (compatibleRefs.length === 1 && connectMatches.length === 0) {
+                        if (compatibleRefs.length === 1 && connectMatches.length === 0 && linkMatches.length === 0) {
                             // Auto-select: skip popup, create edge directly
                             handleM1ReferenceSelectedRef.current(compatibleRefs[0].ref, connection);
                             return;
                         }
 
-                        if (compatibleRefs.length === 0 && connectMatches.length === 1) {
+                        if (compatibleRefs.length === 0 && connectMatches.length === 1 && linkMatches.length === 0) {
                             // Auto-create: single applicable IR rule, no direct reference
                             handleObjectEdgeSelectedRef.current(connectMatches[0], connection);
                             return;
@@ -2024,6 +2039,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
                             objectEdgeMatches: connectMatches,
+                            linkMatches,
                         });
                     }
                     return;
@@ -3304,6 +3320,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
     }, [placementAt]);
+
+    // A link between two instances (R-OI-24): the record re-read from the store, the queue of instantiate, one undo entry.
+    const runLink = useCallback((option: LinkOption) => {
+        if (!modelid) return;
+        const record = linkRecord((id: string) => (store.getState() as any)?.idlookup?.[id], modelid);
+        if (!record) return;
+        void instantiateLink(option.id, record, option.ends, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] link:', result.problems);
+        });
+    }, [modelid]);
+    runLinkRef.current = runLink;
 
     // A class-level element (R-OI-21): one undo entry, the queue of instantiate, the plan read at the gesture.
     const runClassPlan = useCallback((plan: ClassElementPlan | { error: string }, click?: { x: number; y: number }) => {
@@ -5315,11 +5342,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     options={pendingM1Connection.compatibleRefs}
                     onSelect={(ref) => handleM1ReferenceSelected(ref)}
                     onCancel={() => setPendingM1Connection(null)}
-                    objectEdgeOptions={(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
-                        key: `${m.edgeClass.id}_${i}`,
-                        label: `New ${m.edgeClass.name}`,
-                    }))}
+                    objectEdgeOptions={[
+                        ...(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
+                            key: `${m.edgeClass.id}_${i}`,
+                            label: `New ${m.edgeClass.name}`,
+                        })),
+                        ...(pendingM1Connection.linkMatches ?? []).map(o => ({ key: `link:${o.id}`, label: `New ${o.name}` })),
+                    ]}
                     onSelectObjectEdge={(key) => {
+                        const link = (pendingM1Connection.linkMatches ?? []).find(o => `link:${o.id}` === key);
+                        if (link) {
+                            setPendingM1Connection(null);
+                            runLink(link);
+                            return;
+                        }
                         const matches = pendingM1Connection.objectEdgeMatches ?? [];
                         const idx = matches.findIndex((m, i) => `${m.edgeClass.id}_${i}` === key);
                         if (idx >= 0) handleObjectEdgeSelected(matches[idx]);

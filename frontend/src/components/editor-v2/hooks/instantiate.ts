@@ -45,7 +45,7 @@
  */
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
-import { featureClosure, instantiableClassifiers, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
+import { featureClosure, instantiableClassifiers, linkEnds, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
 import { classRailGroups, containerFor, type ClassRailGroup } from '../../../model/ontological/classRail';
 import { sketchOfMetamodel } from '../sim/metamodelSketch';
 import { authoredDefaultSize } from '../nodes/nodeSizing';
@@ -456,6 +456,46 @@ export function synthesisPlan(get: DGet, binding: OntoBinding, classifierId: str
     plan.cycles = cycles;
     plan.slots = features.map(feature => plannedSlot(get, view, binding, modelId, roles, feature));
     return plan;
+}
+
+/** An association a link can be made of between two instances: `ends` are the two instances, in `memberEnds` order. */
+export interface LinkOption extends CreationOption {
+    ends: [string, string];
+}
+
+/** The `link` record of the model's metamodel, `null` without one. */
+export function linkRecord(get: DGet, modelId: string): OntoBinding | null {
+    return readOntoBindings(get, modelId).find(b => b.name === LINK_RECORD) ?? null;
+}
+
+/** The associations whose two ends accept the classifiers of the two instances, generalizations included (R-OI-5), sorted
+ *  by name. Empty unless both are instances under the `object` record of one model. */
+export function linkOptions(get: DGet, sourceId: unknown, targetId: unknown): LinkOption[] {
+    if (!isId(sourceId) || !isId(targetId)) return [];
+    const modelId = modelOf(get, sourceId);
+    if (modelId === undefined || modelOf(get, targetId) !== modelId) return [];
+    const link = linkRecord(get, modelId);
+    const object = objectRecord(get, modelId);
+    if (!link || !object || !instanceObjectRecord(get, modelId, sourceId) || !instanceObjectRecord(get, modelId, targetId)) return [];
+    const view = ontoReadView(get);
+    return creationOptions(get, link, modelId).flatMap(({ id, name }) => {
+        const ends = linkEnds(view, link, object, id, sourceId, targetId);
+        return ends ? [{ id, name, ends }] : [];
+    });
+}
+
+/** What `instantiateLink` will create: `synthesisPlan` for the association, each end's slot holding one instance value
+ *  that names its instance, the slots in `memberEnds` order. Pure. */
+export function linkPlan(get: DGet, link: OntoBinding, associationId: string, ends: readonly [string, string]): SynthesisPlan | { error: string } {
+    const plan = synthesisPlan(get, link, associationId);
+    if ('error' in plan) return plan;
+    if (plan.slots.length !== 2 || plan.valueKey === null) return { error: 'a link needs two ends and a value holder' };
+    // A record without value kinds reads those of `object` (R-OI-8: the same relation).
+    const kind = (link.valueKinds ?? objectRecord(get, plan.modelId)?.valueKinds ?? []).find(k => k.when === 'instance');
+    const metaclass = kind ? get(kind.create)?.name : undefined;
+    const field = kind ? get(kind.field)?.name : undefined;
+    if (!isId(metaclass) || !isId(field)) return { error: 'the record has no instance value kind' };
+    return { ...plan, slots: plan.slots.map((slot, i) => ({ ...slot, value: { metaclass, seed: { [field]: ends[i] } } })) };
 }
 
 /** The names the slot roles of `binding` resolve to: the container on the instance, its type, the defining feature and
@@ -942,13 +982,23 @@ export function instantiate(
     return queued(() => instantiateNow(classifierId, record, placeAt, viewpoint));
 }
 
-/** One instantiation of `instantiate`, its undo group open while it writes. */
+/**
+ * Make the link of `associationId` between `ends` (R-OI-5, R-OI-24): the instance, one slot per end and the value naming
+ * its instance, in the queue and the one undo group of `instantiate`. A link draws as an edge, so no position is written.
+ */
+export function instantiateLink(
+    associationId: string, record: OntoBinding, ends: readonly [string, string], viewpoint?: string | null,
+): Promise<InstantiateResult> {
+    return queued(() => instantiateNow(associationId, record, () => null, viewpoint, ends));
+}
+
+/** One instantiation of `instantiate`, or with `ends` of `instantiateLink`, its undo group open while it writes. */
 async function instantiateNow(
-    classifierId: string, record: OntoBinding, placeAt?: InstancePlacement, viewpoint?: string | null,
+    classifierId: string, record: OntoBinding, placeAt?: InstancePlacement, viewpoint?: string | null, ends?: readonly [string, string],
 ): Promise<InstantiateResult> {
     const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
-    const plan = synthesisPlan(get, record, classifierId);
+    const plan = ends ? linkPlan(get, record, classifierId, ends) : synthesisPlan(get, record, classifierId);
     if ('error' in plan) {
         result.problems.push(plan.error);
         return result;
