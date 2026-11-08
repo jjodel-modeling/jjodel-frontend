@@ -38,6 +38,11 @@ export interface NotationStyle {
     readonly indent: number;
     /** A blank line before each containment, except at the start of a body (step T4, a syntax annotation's style option). */
     readonly blankBeforeContainment?: boolean;
+    /**
+     * Ids in the text (step T8a; R-TXT-18, R-TXT-55 F9): each head line ends with a comment `@id <id>` of the first object
+     * it starts, in the style's comment syntax. Off in the Text tab; the exported file turns it on (T8b).
+     */
+    readonly printIds?: boolean;
 }
 
 export const CLIKE_STYLE: NotationStyle = {

@@ -3,6 +3,9 @@
  * of an edited text is. Pure, on plain objects (metamodel.ts), so it tests without the app.
  *
  * The evidence, strongest first:
+ * 0. The id in the text (step T8a; R-TXT-18, R-TXT-55 F9), the `@id` comment at the end of the object's head line
+ *    (`textIdsOf`): the model object of that id and class. An id the model does not hold, or holds for another class, is
+ *    no evidence; an id on two objects pairs neither of them by id, with a warning.
  * 1. The previous print's spans (R-TXT-22), as the editor carries them over the edit (decorations): a parsed object
  *    whose span overlaps a model object's carried span by at least half of their union, same class, is that object.
  *    A span collapsed to nothing (a cut) is no evidence.
@@ -23,10 +26,12 @@
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import { classFeatures, isOuterRef } from './metamodel';
 import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
-import type { SyntaxNode, TextParseResult } from './parser';
+import { commentsOf } from './parser';
+import type { SyntaxNode, TextNode, TextParseResult } from './parser';
+import { ID_COMMENT_TAG } from './printer';
 import type { ObjectSpan } from './printer';
 
-export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
+export type MatchEvidence = 'id' | 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
 
 export interface ObjectMatch {
     /** The parsed object's id. */
@@ -47,6 +52,16 @@ export interface TextMatch {
     readonly created: readonly string[];
     /** The model objects no parsed object matches, in model order. */
     readonly deleted: readonly string[];
+    /** T8a: one per id the text repeats; absent when there is none. */
+    readonly warnings?: readonly MatchWarning[];
+}
+
+/** T8a (R-TXT-18): an id written on several objects of the text, which pairs none of them by id. */
+export interface MatchWarning {
+    readonly id: string;
+    /** The parsed objects that carry it, in text order. */
+    readonly text: readonly string[];
+    readonly message: string;
 }
 
 /** R-TXT-21 (7): the cascade's thresholds, to be calibrated in step T8. */
@@ -142,6 +157,49 @@ export interface MatchInput {
     readonly previous?: readonly ObjectSpan[];
     /** Parsed objects whose container is unknown (orphans of a broken parse): never matched by step 2. */
     readonly unplaced?: ReadonlySet<string>;
+    /** T8a: the id each parsed object's head comment carries (`textIdsOf`); absent or empty when the text has none. */
+    readonly ids?: ReadonlyMap<string, string>;
+}
+
+/**
+ * T8a (R-TXT-55 F9): the id each object of a parsed text carries, by parsed id. A comment of the shape `@id <id>` (in
+ * the style's line or block form, nothing else in it) on a line belongs to the first object that starts on that line,
+ * the outermost at one offset, as the printer writes it (`printTextModel` with `printIds`); one on a line no object
+ * starts on is not an id, nor is any other comment. A second id comment on one line is ignored.
+ */
+export function textIdsOf(tree: TextNode, g: ConcreteGrammar): Map<string, string> {
+    const { line, block } = g.style.comments;
+    const shape = new RegExp(`^\\s*${ID_COMMENT_TAG}\\s+(\\S+)\\s*$`);
+    const idIn = (text: string): string | undefined => {
+        const body = line && text.startsWith(line) ? text.slice(line.length)
+            : block && text.length >= block[0].length + block[1].length && text.startsWith(block[0]) && text.endsWith(block[1]) ? text.slice(block[0].length, text.length - block[1].length)
+                : undefined;
+        return body === undefined ? undefined : shape.exec(body)?.[1];
+    };
+    // The offset each line starts at, from the text the tokens hold byte for byte.
+    const text = tree.tokens.map(t => t.leading + t.raw + t.trailing).join('');
+    const lineStarts = [0];
+    for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineStarts.push(i + 1);
+    const lineOf = (at: number): number => {
+        let lo = 0;
+        let hi = lineStarts.length - 1;
+        while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= at) lo = mid; else hi = mid - 1; }
+        return lo;
+    };
+    // Pre-order is text order, a container before what it contains: the first object seen on a line heads it.
+    const heads = new Map<number, string>();
+    const walk = (n: SyntaxNode): void => {
+        if (n.kind === 'object' && n.end > n.start && !heads.has(lineOf(n.start))) heads.set(lineOf(n.start), n.id);
+        for (const c of n.children) if (c.kind !== 'token') walk(c);
+    };
+    walk(tree);
+    const out = new Map<string, string>();
+    for (const c of commentsOf(tree, g)) {
+        const id = idIn(c.text);
+        const head = id === undefined ? undefined : heads.get(lineOf(c.start));
+        if (head !== undefined && !out.has(head)) out.set(head, id!);
+    }
+    return out;
 }
 
 /** Matches the parsed objects to the model objects (R-TXT-18, R-TXT-22). */
@@ -156,6 +214,26 @@ export function matchObjects(input: MatchInput): TextMatch {
     const toModel = new Map<string, ObjectMatch>();
     const taken = new Set<string>();
     const accept = (m: ObjectMatch): void => { toModel.set(m.text, m); taken.add(m.model); };
+
+    // 0. Ids in the text (T8a): an id on two objects is no evidence for either, and a warning.
+    let warnings: MatchWarning[] | undefined;
+    if (input.ids?.size) {
+        const holders = new Map<string, TextObject[]>();
+        for (const t of parsed.objects) {
+            const id = input.ids.get(t.id);
+            if (id === undefined) continue;
+            const ts = holders.get(id);
+            if (ts) ts.push(t); else holders.set(id, [t]);
+        }
+        for (const [id, ts] of holders) {
+            if (ts.length > 1) {
+                (warnings ??= []).push({ id, text: ts.map(t => t.id), message: `The id ${id} is written on ${ts.length} objects: none of them keeps it.` });
+                continue;
+            }
+            const m = modelById.get(id);
+            if (m && m.cls === ts[0].cls && !taken.has(m.id)) accept({ text: ts[0].id, model: m.id, by: 'id', uncertain: false });
+        }
+    }
 
     // 1. Spans (R-TXT-22).
     if (input.previous?.length) {
@@ -239,6 +317,7 @@ export function matchObjects(input: MatchInput): TextMatch {
         matches: parsed.objects.flatMap(t => { const m = toModel.get(t.id); return m ? [m] : []; }),
         created: parsed.objects.filter(t => !toModel.has(t.id)).map(t => t.id),
         deleted: model.filter(m => !taken.has(m.id)).map(m => m.id),
+        ...(warnings ? { warnings } : {}),
     };
 }
 
