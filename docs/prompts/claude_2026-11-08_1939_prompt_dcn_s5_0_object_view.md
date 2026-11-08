@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1939
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 13ff7af42
 Lane: full (probe fixture and exports only; no frontend/src)
 Depends: R-DCN-29 (the drone fixture gains the UML object viewpoint); discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §A (H2 falsified) and §D lane 0
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt

@@ -441,3 +441,20 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Registry in simDcnRuns.ts; it gains nameOf (the lookup at Reset), since simRunState has no lookup. Tests in simBridge.test.ts on real startRun and presses. Bench 12/12. Typecheck 0; vitest 15464 passed, 3 known import reds, tolerant.test.ts load red (timing, 91 vs 50 ms), alone 64/64; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after.
 **Prompt document name**: 2026-11-08 19:05
+
+## 2026-11-08 — test: DCN drone object level in the UML object viewpoint (P-2026-11-08-1939)
+**Prompt**: `claude_2026-11-08_1939_prompt_dcn_s5_0_object_view.md`, lane full, slice 5 lane 0 (R-DCN-29): the UML object views copied into the drone fixture, both exports, screenshots and `dcn-drone.json` regenerated, a check on the export's viewpoint, run probe once, screenshot read. Answer of the chat after the stop on the lost links: re-apply them after `buildLinks`, one MEAS per loss, a non-failing count.
+**Files touched**: 13ff7af42 `frontend/scripts/probe/dcn-drone-fixture.ts`, `docs/discovery/assets/dcn-drone/` (class-level and object-level png, `dcn-drone.json`); outside the repo `~/jjodel-demo-exports/dcn/dcn-drone.jjodel`, `dcn-drone-objects.jjodel` (previous ones in `~/.jjodel-lanes/P-2026-11-08-1939/prev/`); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (six repo files, all in the DOVE of the prompt: the fixture, three assets, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (screenshot read by the lane: six instances with slot rows, readable, no overlap; chat to read it)
+**Notes**: Fixture 30/30 (O-7, O-8, RT-1, L-1 new), dcn and instantiation problems zero, conformant. Run probe 9/9, no selector changed, Ready on Tick 20. Exports from the green run; earlier runs: 4 edited and 1 on HEAD each lost one link. The green run, with a settle added after buildLinks, lost none: the re-apply branch is unexercised. Own 3x2 grid in the viewpoint. check:scripts 0, tsc on the fixture 0; repo typecheck, vitest, build not run (no frontend/src change).
+**Prompt document name**: 2026-11-08 19:39
+
+**Ticket** (high, for a diagnosis lane): a containment write from `syncCreateCompositionLink` is lost about once per fixture build: 5 of 5 runs, load 3-13, also on unmodified HEAD, a different link each time (`WindSensor.ownedAttributes->p_WindSensor_speed`, `pkg.packagedElements->Boolean`, `TempSensor.ownedOperations->op_TempSensor_injectFailure` twice, `TempSensor.ownedAttributes->p_TempSensor_value`). Cause not diagnosed. A sixth run, with a settle added after `buildLinks`, lost none (L-1 counts 0): one observation, not a cause. The fixture now re-applies a lost link and L-1 reports it without failing.
+
+**Ticket** (low): the copied row template shows `values[0]` only, so `wau1` reads `ownedSensors = temp` while the slot holds the four sensors. Kept as copied, by the chat's answer.
