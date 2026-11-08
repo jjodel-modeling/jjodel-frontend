@@ -7542,6 +7542,12 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   all arrays): no change to the signature of `execute`, an array mixing objects and arrays stays a single model. The
   trace's `modelName` stays the one metamodel name for every source element, not one per model as the report's S3 had
   it: the list carries no model names and R-JTG-26 keys the trace by id. Evidence: `multi-model-source.test.ts`.
+- **R-JTG-32** (2026-11-08, decided by the chat under Alfonso's «decidi tu» 2026-11-08 10:22, registered by P-2026-11-08-1025, evidence: measured, verified: none, reversible: trunk):
+  a property read on a demand, plain or null-safe (`envLookup(n).name`, `mk(c)?.name`), gives a warning naming the rule,
+  the source element and the property, once per property, expression and source element, and still reads `null`, the
+  treatment R-FA-12 gives a read on a missing feature. Not an error: a read is not a use as a value. The run stays
+  `success true`. Replaces the «no warning is logged» that R-JTG-30 measured, which stays unchanged as the record of
+  that measure. Evidence: `demand-as-value.test.ts`.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
