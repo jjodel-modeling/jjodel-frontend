@@ -218,17 +218,113 @@ Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
         expect(error).toContain(`${RULE_MK_CONST}: its result, a demand, is the receiver of method 'toString'; ${ADVICE}`);
     });
 
-    it('a property read on a demand does not stop the run: it reads null (R-FA-12)', async () => {
+    /** The warnings of a read on a demand, after checking that the run went through. */
+    const reads = (result: any): string[] => {
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        return result.warnings.filter((w: string) => w.startsWith('Read of property'));
+    };
+
+    it('a property read on envLookup warns and reads null (R-FA-12)', async () => {
         const result = await run(`
 rule mk(v, env: Env) -> Ref {
     name := envLookup(v.name).name
 }
 
 Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
-        expect(result.warnings).toEqual([]);
-        expect(result.errors).toEqual([]);
-        expect(result.success).toBe(true);
+        expect(result.warnings).toHaveLength(1);
+        expect(reads(result)[0]).toMatch(/^Read of property 'name' on a demand in expression at line 6, column \d+/);
+        expect(reads(result)[0]).toContain(`${RULE_MK_VAR}: the result of 'envLookup', a demand, has no properties; the value is null; ${ADVICE}`);
         expect(result.targetModel!.roots.map(term)).toEqual(['Ref(null)']);
+    });
+
+    it('a null-safe property read on envLookup warns the same', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := envLookup(v.name)?.name
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        expect(result.warnings).toHaveLength(1);
+        expect(reads(result)[0]).toMatch(/^Read of property 'name' on a demand in expression at line 6, column \d+/);
+        expect(reads(result)[0]).toContain(`${RULE_MK_VAR}: the result of 'envLookup', a demand, has no properties; the value is null; ${ADVICE}`);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Ref(null)']);
+    });
+
+    it("a property read on a called rule's result warns, naming the rule", async () => {
+        const result = await run(`
+rule one(c) -> Const {
+    value := 1
+}
+
+rule mk(c, env: Env) -> Const {
+    value := one(c).value
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(result.warnings).toHaveLength(1);
+        expect(reads(result)[0]).toMatch(/^Read of property 'value' on a demand in expression at line 10, column \d+/);
+        expect(reads(result)[0]).toContain(`${RULE_MK_CONST}: the result of 'one', a demand, has no properties; the value is null; ${ADVICE}`);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Const(null)']);
+    });
+
+    it('the same property read twice in one expression warns once', async () => {
+        const result = await run(`
+rule mk(c, env: Env) -> Const {
+    value := envLookup("w").a == envLookup("w").a
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(reads(result)).toHaveLength(1);
+    });
+
+    it('two properties read in one expression warn once each', async () => {
+        const result = await run(`
+rule mk(c, env: Env) -> Const {
+    value := envLookup("w").a == envLookup("w").b
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(reads(result).map(w => w.match(/property '(\w+)'/)![1]).sort()).toEqual(['a', 'b']);
+    });
+
+    it('a read in a helper body called twice for one element warns once', async () => {
+        const result = await run(`
+helper tag(n: String) -> String { envLookup(n).name }
+
+rule mk(c, env: Env) -> Const {
+    value := tag("w") == tag("w")
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(reads(result)).toHaveLength(1);
+    });
+
+    it('the same expression on two source elements warns once for each', async () => {
+        const result = await run(`
+rule mk(c, env: Env) -> Const {
+    value := envLookup("w").a
+}
+
+Main m = mk(m.expr, ${ENV})`, [
+            ...CONST_SOURCE,
+            el('m2', 'Main', { expr: { __ref: 'c2' } }),
+            el('c2', 'Const', { value: 2, _containerId: 'm2' }),
+        ]);
+        const warned = reads(result);
+        expect(warned).toHaveLength(2);
+        expect(warned[0]).toContain("source element 'Const 'c1''");
+        expect(warned[1]).toContain("source element 'Const 'c2''");
+    });
+
+    it('a read in the argument of resolve warns too', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := resolve(envLookup(v.name).name)
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        expect(reads(result)).toHaveLength(1);
     });
 
     it('a value bound by let compares and takes methods: the same expressions succeed', async () => {
