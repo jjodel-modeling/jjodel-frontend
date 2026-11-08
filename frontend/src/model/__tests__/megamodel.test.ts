@@ -15,9 +15,28 @@ import {
 } from '../megamodelPersistence'
 import type { Megamodel, MegamodelEdge, MegamodelSerialized } from '../megamodel'
 
+import { buildRunRecord } from '../../jjtl/components/sourceSelection'
+
 // ============================================================
 // Fixtures
 // ============================================================
+
+/** A run of t1 on p, with the included models given, read by the megamodel (R-JTG-35). */
+function runArtifacts(runs: Array<{ id: string, generatedBy: any }>): ProjectArtifacts {
+    return makeArtifacts({
+        models: [
+            { id: 'p', name: 'Primary', instanceofMetamodelId: 'mm1' },
+            { id: 'a', name: 'IncA', instanceofMetamodelId: 'mm1' },
+            { id: 'b', name: 'IncB', instanceofMetamodelId: 'mm1' },
+            { id: 'c', name: 'IncC', instanceofMetamodelId: 'mm1' },
+            ...runs.map(r => ({ id: r.id, name: r.id, instanceofMetamodelId: 'mm2', generatedBy: r.generatedBy })),
+        ],
+    })
+}
+
+function inputsOf(artifacts: ProjectArtifacts) {
+    return inferMegamodelEdges(artifacts).filter(e => e.type === 'instanceInputOf')
+}
 
 function makeArtifacts(overrides: Partial<ProjectArtifacts> = {}): ProjectArtifacts {
     return {
@@ -102,6 +121,92 @@ describe('inferMegamodelEdges', () => {
             metamodels: [{ id: 'mm1', name: 'PetriNet', usesMetamodelIds: [] }],
         }))
         expect(empty.filter(e => e.type === 'uses')).toHaveLength(0)
+    })
+
+    describe('included models of a run (R-JTG-35)', () => {
+        const included = (edges: MegamodelEdge[]) => edges.filter(e => e.metadata?.included).map(e => e.source.id)
+
+        it('a run with nothing included draws the primary alone', () => {
+            const edges = inputsOf(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t1', 'p', [], 1) }]))
+            expect(edges.map(e => e.source.id)).toEqual(['p'])
+            expect(edges[0].metadata).toBeUndefined()
+        })
+
+        it('a legacy record without the field draws as before', () => {
+            const edges = inputsOf(runArtifacts([{ id: 'g', generatedBy: { transformationId: 't1', sourceModelId: 'p', timestamp: 1 } }]))
+            expect(edges.map(e => e.source.id)).toEqual(['p'])
+        })
+
+        it('one included model adds one edge, of the kind of the primary, to the transformation', () => {
+            const edges = inputsOf(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t1', 'p', ['a'], 1) }]))
+            expect(edges).toHaveLength(2)
+            expect(edges[0].metadata).toBeUndefined()
+            expect(edges[1]).toMatchObject({
+                id: 'derived_a_instanceInputOf_t1',
+                source: { id: 'a', type: 'model', name: 'IncA' },
+                target: { id: 't1', type: 'transformation' },
+                type: 'instanceInputOf',
+                origin: 'derived',
+                metadata: { included: true },
+            })
+        })
+
+        it('three included models add three edges, in run order', () => {
+            const edges = inputsOf(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t1', 'p', ['c', 'a', 'b'], 1) }]))
+            expect(edges.map(e => e.source.id)).toEqual(['p', 'c', 'a', 'b'])
+            expect(included(edges)).toEqual(['c', 'a', 'b'])
+        })
+
+        it('adds no other edge kind for an included model', () => {
+            const edges = inferMegamodelEdges(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t1', 'p', ['a'], 1) }]))
+            expect(edges.filter(e => e.source.id === 'a').map(e => e.type).sort()).toEqual(['conformsTo', 'instanceInputOf'])
+            expect(edges.filter(e => e.target.id === 'a')).toHaveLength(0)
+        })
+
+        it('skips an included model that is gone, and a run whose transformation is gone', () => {
+            expect(included(inputsOf(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t1', 'p', ['gone', 'a'], 1) }])))).toEqual(['a'])
+            expect(inputsOf(runArtifacts([{ id: 'g', generatedBy: buildRunRecord('t9', 'p', ['a'], 1) }]))).toHaveLength(0)
+        })
+
+        it('a pair is drawn once, however many runs include it', () => {
+            const edges = inputsOf(runArtifacts([
+                { id: 'g1', generatedBy: buildRunRecord('t1', 'p', ['a'], 1) },
+                { id: 'g2', generatedBy: buildRunRecord('t1', 'p', ['a'], 2) },
+            ]))
+            expect(included(edges)).toEqual(['a'])
+        })
+
+        it('a model that is primary of another run keeps the unmarked edge, whichever run comes first', () => {
+            const includedFirst = [
+                { id: 'g1', generatedBy: buildRunRecord('t1', 'p', ['a'], 1) },
+                { id: 'g2', generatedBy: buildRunRecord('t1', 'a', [], 2) },
+            ]
+            for (const runs of [includedFirst, [...includedFirst].reverse()]) {
+                const fromA = inputsOf(runArtifacts(runs)).filter(e => e.source.id === 'a')
+                expect(fromA).toHaveLength(1)
+                expect(fromA[0].metadata).toBeUndefined()
+            }
+        })
+
+        it('a new run with another selection leaves the older record and its edges alone', () => {
+            const older = buildRunRecord('t1', 'p', ['a'], 1)
+            const snapshot = JSON.stringify(older)
+            const edges = inputsOf(runArtifacts([
+                { id: 'g1', generatedBy: older },
+                { id: 'g2', generatedBy: buildRunRecord('t1', 'p', ['b'], 2) },
+            ]))
+            expect(JSON.stringify(older)).toBe(snapshot)
+            expect(included(edges)).toEqual(['a', 'b'])
+        })
+
+        it('the record keeps the run order and draws the same after a JSON round trip', () => {
+            const record = buildRunRecord('t1', 'p', ['c', 'a'], 1)
+            expect(record.includedModelIds).toEqual(['c', 'a'])
+            const saved = JSON.parse(JSON.stringify({ _state: { generatedBy: record } }))
+            expect(saved._state.generatedBy).toEqual(record)
+            expect(inputsOf(runArtifacts([{ id: 'g', generatedBy: saved._state.generatedBy }])))
+                .toEqual(inputsOf(runArtifacts([{ id: 'g', generatedBy: record }])))
+        })
     })
 
     it('produces inputOf edge: metamodel → transformation', () => {
