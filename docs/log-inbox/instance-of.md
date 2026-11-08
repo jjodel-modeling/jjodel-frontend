@@ -317,3 +317,26 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (the three points of the 1753 handoff, measured by P-2026-11-08-1822). (1) Stray node or composition edge: none drawn, a new Class adds one node and no edge (S2-L12), a new attribute no node and no edge (S2-L18); the D-layer gains one vertex and one edge record for each, drawn by no view. (2) The attribute draws as a row of its class, `property1 : [ 0 .. 0 ]` with no visibility and no type, unlike the fixture's rows; in `class-new-attribute.png` the 83 px node clips Book's header with the third row in, not diagnosed. (3) The class view's edge drag Book → Publication creates a Generalization with no picker: specific Book, general Publication, one undo entry, one edge drawn. It is a root object of the model, not in `Book.generalizations`, so it differs from the fixture's composition (`Classifier.generalizations`). The rail item stays disabled (S2-L22).
 
 **Own choices** (lane 2, from its handoff, also in R-OI-21..23): the group titles; an association told apart by the `link` record; the Attributes item needs a selected class and the node menu keeps its own; two qualifying pairs do not guess, the element is a root; a classifier keeps the capital and a property goes through `instanceName`; only the position is written (`slots: null`); the class payload shares `ONTO_DRAG_MIME` with shape `{ classElement: id }`.
+
+## 2026-11-08 — feat: a link drawn between two instances, probe, bench (P-2026-11-08-2041)
+**Prompt**: two lanes in one entry: lane 3 of the levels front, S4, the drag between two instances that makes a link (P-2026-11-08-2012, cut at its context ceiling after the code); this continuation, the placement by R-OI-22, the probe, four regressions, the mutants, the docs.
+**Files touched**: `editor-v2/EditorV2.tsx`, `editor-v2/hooks/instantiate.ts`, `model/ontological/bindingReader.ts`, `editor-v2/hooks/__tests__/linkInstance.test.ts` (d9b1912f9); `editor-v2/hooks/instantiate.ts` (21cf3a99e); `scripts/probe/onto-s4-links.ts` (2bed6cb5c); `docs/decisions.md` R-OI-24, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (nine files across two lanes, over the five of RC-11, listed above; the 2012 lane gave its list in chat before the diff)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (three crops in `~/.jjodel-lanes/P-2026-11-08-2041/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S4 14/14 on uml-s3b; S2 52/52, s3a 8/8, s3b 6/6, binding editor 10/10. Mutants red and reverted, `~/.jjodel-lanes/P-2026-11-08-2041/bench.txt`: closure, ends swapped, outside the queue in vitest; placement dropped red on S4-3b only, vitest does not see it. Probe faults fixed: `history` also names an EnumerationLiteral; edge ids carry the link id; the drop waits for a target handle. R-OI-25 and R-OI-26 not needed.
+**Prompt document name**: 2026-11-08 20:41
+
+**Layer Impact Report, summary** (P-2026-11-08-2012, in chat before the diff). D-layer and JjOM gain a link InstanceSpecification, two Slots and two InstanceValues through `createInstance` in the queue and undo group of `instantiate`, with no new D class or field, no TRANSACTION, no vertex or edge creator. Canvas v2-flow gains one branch in `onConnectEnd`. Sync layer and persistence untouched. `useIRContainment.ts` and `irEdgeViews.ts` unchanged.
+
+**Q6** (measured by the probe). At the first viewport of the object tab no node is mounted: the five instances lie past the canvas, `nature`'s box projects to x 2205 on a canvas 1238 wide. Framed, `nature` mounts. Nothing to fix. It fits rendering only what is visible; that cause was not isolated.
+
+**Ticket** (P-2026-11-08-2041): the popup header reads «Link Reference» for a link too; `M1ReferencePopup.tsx`, out of scope.
+
+**Ticket** (P-2026-11-08-2041): a second link between the same pair is not prevented; UML allows it unless the association is unique, and uniqueness is not read.
+
+**Ticket** (P-2026-11-08-2041): a drag dropped away from a target handle writes nothing and says nothing. Aimed at the nearest handle of any kind, the reversed drag opened no menu. With no wait for the handles under the pointer, the class-tab drag made nothing in two of three runs, one of them aimed at a target handle. Aimed at a target handle after a 400 ms wait, both worked in every run. A source handle under the drop, and handles not yet drawn, are the likely causes, inferred and not isolated.

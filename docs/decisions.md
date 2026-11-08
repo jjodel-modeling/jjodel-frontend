@@ -6714,6 +6714,19 @@ P-2026-10-20-1835.
   the rail's hints; Property is enabled only with a class selected when the menu opens. Without a binding the pane menu
   stays absent. Amends R-OI-20 on the pane menu and on the «Declare binding…» empty state, which it left without a home at
   `class`.
+- **R-OI-24** (2026-11-08, provisional, evidence: measured, verified: probe, reversible: branch).
+  **At `instance` and `both`, an edge dragged from one instance to another makes a link of an association whose two ends
+  accept them; at `class` the drag stays as it was.** Go-ahead by Alfonso, 2026-11-08 20:11 («1 yes» to the lane and its
+  critical zone; «2 drawing it from the source to the target object»); the rest decided by the lane and the chat
+  `C-2026-10-25-2159`. The menu lists the associations of R-OI-5 as `New <association>`, with the pair's references and
+  connect rules when it has any; no match writes nothing, and a sole link auto-selects. An association takes exactly two
+  member ends; the slots keep `memberEnds` order whichever way the drag ran, and when both orders fit the source takes the
+  first end. The end type is read through `link.featureType ?? object.featureType` and the value kinds through
+  `link.valueKinds ?? object.valueKinds`; the closure and the classifier come from the `object` record, and both ends must
+  be under it, so a link or a class is no end. The link, its two slots and their instance values are one undo entry, in the
+  queue of `instantiate`, and no vertex is written: the link draws as one edge. It goes in the container of R-OI-22 for its
+  metaclass, on the UML fixture `Package.packagedElements`, and a root without one. A second link between the same pair is
+  allowed: UML allows it unless the association is unique.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
