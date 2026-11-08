@@ -22,8 +22,9 @@ Reducer history:
         entry, inside the 450 ms window too (decisions 1, 2, 4). The other two guards of isRelevantChangeCheck stay:
         no entry before the first interaction or before globalcanundostate.
     (b) A delta carrying one of those four roots is no longer forced to merge by the graph-key rule.
-    (c) A merge of a delta that touches the graph root arrays, and any merge into an entry opened by a create (the
-        container append, a SetField-only batch, decision 3), composes exactly with composeUndoDeltas.
+    (c) A merge into an entry opened by a create composes exactly with composeUndoDeltas: the sync's vertex and the
+        container append (a SetField-only batch, decision 3). A delta that adds a graph does not, and a merge into any
+        other entry keeps the legacy merge: see the amendment below.
   - What does NOT change: the state each action produces; the undo group route :1279 and the tail branch :1300, so a
     late create on a group's tail still folds into it; the time-window merge of two non-graph writes, objectMergeInPlace
     (R-UNDO-5); noUndo; the transient fast path; R-UNDO-2 gating; a delete inside the window (only a lengthening opens
@@ -61,3 +62,13 @@ no page errors.
 
 So `enumerators` and `packages` show the defect of `classs` and are in the rule (decision 2). The append of case H arrives in the
 batch of the sync's vertex, and a SetField-only append is possible in the window: both compose into the create's entry.
+
+## Amendment: the compose branch is narrower than §7 of the discovery
+
+§7 composes every delta that touches the graph roots. Measured on that shape, log `.agent-logs/probe682-s7b-20261108-123645.log`:
+opening a metamodel tab merges its `DGraph` and `DVertex` records into the entry on top of the stack, and the Undo of that entry
+deletes them. The open tab rebuilds its graph under a new id (`graph4` to `graph7`) and the rebuild pushes an entry, so the depth
+was still 25 after that Undo (one Undo measured). With the legacy merge those records were never in the entry.
+
+So the compose branch takes only a merge into an entry opened by a create, and not a delta carrying `graphs`. Every other merge is
+as on HEAD. Decision 4 asked exactly that («merge into the create's entry»); only §7's wider condition is not adopted.
