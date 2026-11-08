@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1606
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: eseguito 2026-11-08 · lane full · 4bf647cf4 · crops letti dalla lane, verifica visiva della chat da fare
+Status: eseguito 2026-11-08 · lane full · 4bf647cf4 · verifica visiva passata 2026-11-08
 Lane: full (slice 4 polish; `editor-v2/sim/` and `model/simulation/dcn/`; code and gates, then one probe run)
 Depends: P-2026-11-08-0430 (dcn-l45 on the trunk, 617ad7579), findings of P-2026-11-08-0329 (log entry in docs/log-inbox/dcn.md)
 Worktree: ~/jjodel-w-dcn-l46, branch dcn-l46, at the commit that adds this prompt on top of the trunk

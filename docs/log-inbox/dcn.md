@@ -397,7 +397,7 @@ active log is not touched by this lane.
 **Regressions**: no
 **Out-of-scope changes**: no (nine files, all in the DOVE of the prompt: dcnPanelText.ts and test, simBridge.ts and test, SimulationPanel.tsx, simRunState.ts, the probe, this inbox, the prompt)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crops 1-reset, 3-takeoff in ~/.jjodel-lanes/P-2026-11-08-1606/crops/ read by the lane; chat to read them)
+**Smoke visivo**: passato (crops read by the chat 2026-11-08 16:23: Tick label, takeOff greyed in Charging and in Flying, rampUp/rampDown on in Flying)
 **Notes**: Gates: typecheck, typecheck:scripts, build, check:scripts exit 0; vitest 3 known import reds, 15441 passed. Bench 19/20 killed; survivor: the panel `on` line, held by probe L46-1/2. Probe 7/7, seed 4242, 20 Ticks to Ready. Item 5 measured failing; fixed for `self.[rate]`, the R-SIM-88 read form. Item 4 uses the DCN links, since σ holds the first target. `dcnClassificationLine` of the prompt is `dcnMarkingLine`. Causa: findings seen only in the L4.5 visual check.
 **Prompt document name**: 2026-11-08 16:06
 
