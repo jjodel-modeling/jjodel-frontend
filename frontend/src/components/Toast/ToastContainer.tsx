@@ -15,15 +15,14 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
     onRemove,
     position = 'bottom-right',
 }) => {
-    if (toasts.length === 0) return null;
-
+    // Rendered also when empty: a live region announces only what is added after it exists.
     // Portaled to <body>. #root is position:fixed (index.scss), which makes it a
     // stacking context, so --z-toast only ranked the container inside #root: the
     // right rail, a body-level sibling at z-index 900, painted over it. The toast
     // was only ever visible in the strip below the rail, which is the strip that
     // covers the status bar.
     return createPortal(
-        <div className={`jj-toast-container jj-toast-container--${position}`}>
+        <div className={`jj-toast-container jj-toast-container--${position}`} aria-live="polite">
             {toasts.map(toast => (
                 <Toast
                     key={toast.id}

@@ -15,7 +15,7 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     U,
-    Try, TRANSACTION, L
+    Try, TRANSACTION, L, R
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 import { Badge } from '../../components/common/Badge';
@@ -41,8 +41,10 @@ import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
-import { importJjodelFiles } from '../../api/persistance/jjodelImport';
+import { toast } from '../../components/Toast';
 import { useDashboardFileDrag } from './useDashboardFileDrag';
+import { DropImportPanel, useDropImport } from './DropImportPanel';
+import type { DropImportToast } from './DropImportPanel';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
@@ -257,10 +259,19 @@ type ProjectDashboardProps = {
     project?: LProject;
 }
 
+const raiseDropImportToast = ({ projectId, ...detail }: DropImportToast) => toast({
+    ...detail,
+    action: projectId === undefined ? undefined : {
+        label: 'Open project',
+        onClick: () => R.navigate(`/project?id=${projectId}`, true),
+    },
+});
+
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
     const fileDrag = useDashboardFileDrag(active);
+    const dropImport = useDropImport(ProjectsApi.importFromText, toasts => toasts.forEach(raiseDropImportToast));
 
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.
@@ -285,18 +296,13 @@ function GenericDashboard(props: DashProps): any {
         fileDrag.trackLeave(e);
     };
 
-    const handleDrop = async (e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         fileDrag.trackDrop();
 
         // preventDefault stays on every page, so a drop never leaves the app; only All Projects imports.
         if (active !== 'All') return;
-        const results = await importJjodelFiles(e.dataTransfer.files, ProjectsApi.importFromText);
-        for (const result of results) {
-            if (result.ok) U.alert('i', 'Project imported', `"${result.file.name}" has been imported successfully.`);
-            else if (result.reason === 'extension') U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
-            else U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
-        }
+        dropImport.importFiles(e.dataTransfer.files);
     };
 
     // Two-column layout on every dashboard page. The right context panel was removed on
@@ -340,6 +346,7 @@ function GenericDashboard(props: DashProps): any {
                     <div className="dashboard-drop-overlay__text">Release to add the project to your library. Only .jjodel files are imported, anything else is skipped.</div>
                 </div>
             )}
+            {dropImport.view && <DropImportPanel view={dropImport.view} onClose={dropImport.close} />}
         </div>
         <StatusBar />
     </>);
