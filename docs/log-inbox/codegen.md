@@ -2952,3 +2952,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — unattended, probe `~/.jjodel-lanes/P-2026-11-08-0027/probe.mjs` (run3.log, 13/13; run-red.log without the listener: step 2 red, tp's whole span 8-13); crops 0-start, 1-click-object, 2-click-feature, 3-caret, 4-closed in the same folder
 **Notes**: Ids (step 0, `ids.log`): every generated span's `elementId` (coin, push, tp) is among the tab's span ids. R5: dedup by id, the reveal replaces the whole-span highlight of the canvas echo of the same element; another canvas selection ends it. Mutation bench in `b4ebab7ab`. GeneratorPane and TextualTab do not load in the bench (joiner, monaco): their red is the app probe.
 **Prompt document name**: 2026-11-08 00:27
+
+## 2026-11-08 — merge: textual-f2-reveal into alfonso-frontend-jjtl (P-2026-11-08-0122)
+**Prompt**: `claude_2026-11-08_0122_prompt_merge_textual-f2-reveal.md`, a direct merge by `lane-run merge --direct`, no session: `textual-f2-reveal` at `f476d9e83` into `alfonso-frontend-jjtl`, merge base `819c700b5`, 6 commits on the branch side.
+**Files touched**: merge `3da1b61e7`: 7 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0027_prompt_textual_f2_reveal.md`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts`, `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/ui/GeneratorPane.tsx`, `frontend/src/events/registry.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3da1b61e7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15107 tests in 568 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: F2 crops 1-click-object, 2-click-feature, 4-closed in ~/.jjodel-lanes/P-2026-11-08-0027/ checked by the chat
+**Notes**: Rollback tag `pre-textual-f2-reveal` on `2375441e3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0122/result.json`.
+**Prompt document name**: 2026-11-08 01:22
