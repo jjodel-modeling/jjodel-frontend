@@ -473,3 +473,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-08 20:42
 
 **Ticket** (medium): the panel Classification chips do not follow the viewed step at step back (R-SIM-106): with the timeline at step 0 the card reads Charging while the chips read `dji.Mode = Flying` (probe MEAS `card step back`, `panelChips`).
+
+## 2026-11-08 — feat: DCN snapshot copy, the pure plan (P-2026-11-08-2124)
+**Prompt**: `claude_2026-11-08_2124_prompt_dcn_s5_4_snapshot_plan.md`, lane full, slice 5 lane 4 (R-DCN-27, R-DCN-30): `planSnapshot`, the ordered list of operations that copy an M1 model and write σ over it, executing nothing, with its test red first; gates; bench.
+**Files touched**: 73476ef3f `frontend/src/components/editor-v2/sim/simSnapshot.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts` (new); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: σ goes on the first holder of the first Slot (slots are objects, as in slotsOf); enum slots point to the literal. Outside-model targets and LiteralNull holders are listed in `unwritten`, for lane 5 to show. Bench 31/31, one survivor first. Typecheck, build 0; vitest 15500 passed, 3 known import reds. Temporary node_modules link (P14), removed. Red first at the import.
+**Prompt document name**: 2026-11-08 21:24

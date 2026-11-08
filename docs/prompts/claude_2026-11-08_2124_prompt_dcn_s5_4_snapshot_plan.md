@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2124
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 73476ef3f
 Lane: full (one pure module and its test; no writes to the model, no UI)
 Depends: R-DCN-27, R-DCN-30; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §B and §D lane 4
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
