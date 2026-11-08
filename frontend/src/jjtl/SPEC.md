@@ -962,11 +962,20 @@ store on each access), maps each object to `{ id, name, className, __type, ...fe
 wraps reference values as `{ __ref: pointerId }` and enum values as the literal's **name**,
 and computes `_containerId` for contained objects. See §4.2.
 
-That conversion reads one model today. The executor also accepts a list of models of one
-metamodel (§4.2), each converted the same way; selecting several in the run dialog is
-R-JTG-27, not implemented. Jjodel ids are global, so models of one project do not clash; a
-root of one model keeps no `_containerId`, and a reference into another model is an ordinary
-`{ __ref: id }`.
+A run has one primary model and, optionally, further models of the same metamodel, chosen in
+the «Also include» list of the run dialog (R-JTG-27, P-2026-11-08-1026). Each is converted the
+same way. With none included the executor receives the primary's array, as ever; otherwise the
+list of §4.2, primary first (`components/sourceSelection.ts`, `buildSourceArgument`). The output
+model's name comes from the dialog either way. Jjodel ids are global, so models of one project
+do not clash; a root of one model keeps no `_containerId`, and a reference into another model is
+an ordinary `{ __ref: id }`. A shared id is an error of the run, shown like any other (§4.2).
+
+The record of a run is `_state.generatedBy` on the output model: `transformationId`,
+`sourceModelId`, `timestamp` and, only when models were included, `includedModelIds`. Opening
+the dialog again for the same transformation reads the most recent record: when that has
+included models still compatible, and its primary is too, the dialog starts from that selection;
+otherwise, older records included, it starts as usual, on the first compatible model with nothing
+checked. The megamodel reads `sourceModelId` only.
 
 The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
 P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
