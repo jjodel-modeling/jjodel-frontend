@@ -415,3 +415,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (crop 1-reset read by the chat 2026-11-08 17:10: no defects line, Charging/Safe, Tick on, takeOff greyed)
 **Notes**: Fixture 26/26 (O-6 new), dcn and instantiation problems zero, conformant. Defaults: power 0, unit, status OK, presence false. Slots: vmax 15, temp 20, wind 3, humidity 45, rain 0. Run probe 9/9, seed 4242: L47-1 no defects line (control: panel text, not a defective run), L47-2 Charging and Safe, Ready on Tick 20. Status committed per the prompt, ahead of the chat's check (P13). Object screenshot copied from DCN_CROPS. Crops in ~/.jjodel-lanes/P-2026-11-08-1652/crops/.
 **Prompt document name**: 2026-11-08 16:52
+
+## 2026-11-08 — feat: DCN run card state, pure per instance (P-2026-11-08-1829)
+**Prompt**: `claude_2026-11-08_1829_prompt_dcn_s5_1_canvas_state.md`, lane full, slice 5 lane 1: `dcnCanvasState.ts`, plain data for one instance (viewpoints with active classes, dormant slots, tick monitors, static slots changed since Reset; null for a non-instance), test red first, gates, bench of at least 6 mutants. No UI.
+**Files touched**: d614f6dde `frontend/src/model/simulation/dcn/dcnCanvasState.ts` (new), `frontend/src/model/simulation/dcn/__tests__/dcnCanvasState.test.ts` (new); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: New module with test: dcnNodeStateOf adds nameOf (DcnEntry holds only the monitor id). classify covers all instances: WeakMap per state. Bench 19/20; survivor is the unreachable guard on an absent slot (R-DCN-3). Typecheck 0; vitest 15456 passed, 3 known import reds, irSelectionRing load red (hook timeout), alone 5/5; build 0. Gates through a temporary node_modules symlink to ~/jjodel (P14), removed after. A viewpoint with no class keeps its empty row.
+**Prompt document name**: 2026-11-08 18:29
