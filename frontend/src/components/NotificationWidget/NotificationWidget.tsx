@@ -70,10 +70,10 @@ function measureBanner(): { left: number; top: number; width: number } {
     right = Math.min(Math.max(...panes.map(r => r.right)), panel?.left ?? viewportWidth, viewportWidth - dockWidth());
     top = toolbar?.bottom ?? Math.min(...panes.map(r => r.top));
   } else {
-    const content = (visibleElement('.dash-content') ?? visibleElement('.navbar') ?? document.body).getBoundingClientRect();
-    left = Math.max(content.left, 0);
-    right = Math.min(content.right, viewportWidth - dockWidth());
-    top = visibleElement('.dash-content') ? content.top : content.bottom;
+    const column = visibleElement('.dash-content')?.getBoundingClientRect();
+    left = Math.max(column?.left ?? 0, 0);
+    right = Math.min(column?.right ?? viewportWidth, viewportWidth - dockWidth());
+    top = column?.top ?? visibleElement('nav.appbar')?.getBoundingClientRect().bottom ?? 0;
   }
   return { left: left + BANNER_INSET_PX, top: top + BANNER_INSET_PX, width: Math.max(right - left - 2 * BANNER_INSET_PX, 0) };
 }

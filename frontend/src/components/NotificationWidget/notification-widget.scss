@@ -235,7 +235,17 @@
   font-family: 'Inter Variable', -apple-system, sans-serif;
   font-size: 13px;
   color: var(--color-text-primary);
-  z-index: var(--z-dropdown);
+  // Under the navbar (z-index 950), whose menus open over the top of the work area.
+  z-index: 940;
+}
+
+// Dashboard: the banner lies over the content column, so the column makes room for it
+// (the banner's 8px top inset, its 40px and an 8px gap below).
+body:has(.notice-banner) .dash-content::before {
+  content: '';
+  display: block;
+  flex: none;
+  height: 56px;
 }
 
 .notice-banner--info {
