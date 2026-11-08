@@ -47,6 +47,7 @@ const panel = (page: Page) => page.locator('.sim-panel--open').filter({ visible:
 type PanelState = {
     hint: string | null; sections: string[]; chips: string[]; chipsTitle: string | null; pill: string | null;
     line: string | null; inputs: Array<{ text: string; on: boolean }>; hasReset: boolean;
+    warningLines: Array<string | null>; text: string;
 };
 const readPanel = (page: Page): Promise<PanelState> => page.evaluate(() => {
     const p = [...document.querySelectorAll('.sim-panel--open')].find((e) => (e as HTMLElement).offsetParent !== null);
@@ -61,6 +62,9 @@ const readPanel = (page: Page): Promise<PanelState> => page.evaluate(() => {
         inputs: [...(p?.querySelectorAll('.sim-panel__events .sim-panel__event') ?? [])]
             .map((e) => ({ text: (e.textContent ?? '').trim(), on: !(e as HTMLButtonElement).disabled })),
         hasReset: !!p?.querySelector('.sim-panel__btn[title="Reset"]'),
+        // The compile-defects line of the panel (`defects` in SimulationPanel), and the whole panel's text as its control.
+        warningLines: [...(p?.querySelectorAll('.sim-panel__hint--warning.sim-panel__hint--line') ?? [])].map((e) => txt(e)),
+        text: (p?.textContent ?? '').trim(),
     };
 });
 const traceLength = (page: Page, mid: string) => ev<number | null>(page,
@@ -142,6 +146,10 @@ try {
     meas('tick button label', s1.inputs.filter((i) => /tick/i.test(i.text)).map((i) => i.text));
     check('L45d-2 the heading is the DCN one', s1.sections.includes(DCN_PANEL_HEADING), { sections: s1.sections, expected: DCN_PANEL_HEADING });
     const takeOffInput = (st: PanelState) => st.inputs.find((i) => /^dji\.takeOff\(/.test(i.text));
+    // L4.7: the slots filled, so no compile defect; the panel's own text is the control that the read ran.
+    check('L47-1 the panel shows no defects line', s1.warningLines.length === 0 && !/\bdefects?\b/i.test(s1.text) && s1.text.includes(DCN_PANEL_HEADING),
+        { warningLines: s1.warningLines, textLength: s1.text.length });
+    check('L47-2 the initial state is dji.Mode = Charging and wau1.Alert = Safe', s1.chips.includes('dji.Mode = Charging') && s1.chips.includes('wau1.Alert = Safe'), { chips: s1.chips });
     check('L46-1 takeOff is disabled after Reset (Charging)', takeOffInput(s1)?.on === false, { takeOff: takeOffInput(s1), chips: s1.chips });
 
     // Tick until dji is Ready.
