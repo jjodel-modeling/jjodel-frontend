@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0125
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · report 5ce412df7 · discovery only, 7 questions for Alfonso
 Lane: full (discovery only, no product code; unattended)
 Depends: P-2026-11-07-1125
 Worktree: ~/jjodel-w-kgaps, branch jjtl-kernel-gaps
