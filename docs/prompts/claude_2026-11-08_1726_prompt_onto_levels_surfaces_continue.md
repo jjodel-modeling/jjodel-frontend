@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1726
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (continuation of P-2026-11-08-1658 after its context ceiling; probe and docs; product code only for a defect the probe proves)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b8fbddd72
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 12:25 findings 1-3; 16:03 «decidi tu»)
 Depends: P-2026-11-08-1658
 Corregge: —

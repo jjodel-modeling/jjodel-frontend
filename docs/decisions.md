@@ -6675,6 +6675,21 @@ P-2026-10-20-1835.
   section shows only when a binding is declared, the empty state with «Declare binding…» in Advanced only; (Q4) the
   section is titled «Instances of», the linguistic block keeps «Instances»; (Q5) «Declare binding…» opens
   `OntoBindingModal`, the dialog of `Info.tsx`'s «Ontological binding…» row.
+- **R-OI-19** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A viewpoint declares its ontological level: `_state.ontoLevel`, one of `class`, `instance`, `both`, absent reads as
+  `both`.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). The key lives in the
+  viewpoint's `_state`; absent keeps the behaviour from before the key existed. `ontoLevelOf(get, viewpointId)` reads it
+  through the tab's viewpoint (R-MT), never `useIRInteractionPlan`, which follows the root. The control is a select in
+  `ViewpointProperties.tsx`, one undo entry per change; choosing the current value writes nothing and the control never
+  deletes the key. It shows in Advanced only, gated on Redux `state.advanced` and not on `useInterfaceMode`, which goes
+  stale after the `BottomBar.tsx` toggle (P-2026-11-08-1658).
+- **R-OI-20** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class` a viewpoint's canvas offers no instance surface; at `instance` and `both` nothing changes.** Decided by the
+  chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). Five gating points in `EditorV2.tsx`: the pane menu
+  «New instance of ▸», the class node menu «New instance», the «Instances of» section, its drop and its click, the last
+  two sharing one guard read at the drop. Amends R-OI-10 on the pane menu and the class node menu. Amends R-OI-18 on the
+  section. At `class` the pane menu shows nothing and the «Declare binding…» empty state is hidden, both until lane 2 gives
+  them a home (discovery 2026-11-08, Q2).
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

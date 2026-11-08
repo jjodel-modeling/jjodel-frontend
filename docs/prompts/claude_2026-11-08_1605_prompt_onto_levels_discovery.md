@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-1605
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: discovery (read-only; one report)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 4d736d663
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-08 12:25, four findings on `oi-rail`; 16:03 «decidi tu» on the chat's proposal: the ontological level is declared by the viewpoint)
 Depends: P-2026-11-08-0241
 Corregge: —

@@ -285,3 +285,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-11-08 02:41
 
 **Own choices** (lane A, from its handoff): `ontoRailSections` returns `{sections, signature}` over the `object` and `link` records only, `link` disabled; the drag payload is `{record: name, classifier}` (`ontoDragPayload`), and `ontoDropRequest` re-reads `objectRecord` from the store and re-checks the classifier against fresh `creationOptions`; drop and click share `runOntoPayload`, which calls `runInstantiate`, the drop reaching it through `runOntoPayloadRef` (TDZ); `onDeclareBinding` is passed only in Advanced, so the empty state shows there only; group subtitles «Objects» / «Links»; `OntoBindingModal` mounted in `EditorV2`, the metamodel id taken at the click.
+
+## 2026-11-08 — feat: the viewpoint's level gates the instance surfaces (P-2026-11-08-1726)
+**Prompt**: four lanes in one entry: the discovery of levels, class rail and links (P-2026-11-08-1605, cut, continued by -1635 with its probe addendum); lane 1, `_state.ontoLevel` with its control and five gating points (-1658, cut at its context ceiling after the code); this continuation, the probe's level block, regressions, crops, docs (-1726).
+**Files touched**: `docs/discovery/discovery_2026-11-08_onto_levels_class_rail_links.md` (940959760, 4d736d663); `editor-v2/hooks/instantiate.ts` and its test, `EditorV2.tsx`, `editors/viewpoint/properties/ViewpointProperties.tsx` (a709a12b1); `scripts/probe/onto-s2-instantiate.ts` (b8fbddd72); `docs/decisions.md` R-OI-19, R-OI-20, this entry, the Status of the four prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (twelve files across four lanes, each declared in the prompts, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (five crops in `~/.jjodel-lanes/P-2026-11-08-1726/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1, Q2, Q3, Q4, Q6, Q7 adopted as recommended, unattended (RC-21); Q5 asked to Alfonso; Q8 declined. The select's Advanced gate is Redux `advanced`, not `useInterfaceMode` (deviation from discovery §3.4, `BottomBar.tsx:52-58`). Gates: typecheck 0 on a709a12b1, build exit 0. S2 on uml-s3b: 39/39 with no level, 28/28 with the object viewpoint at `instance`; S3a 8/8; binding editor 10/10. Own choices below.
+**Prompt document name**: 2026-11-08 17:26
+
+**Own choices** (lane 1, from its handoff): `ontoLevelOf` takes the id from the caller, `undefined` and `null` read `both`, no new `state.viewpoint` reader (R-MT-14), so `<EditorV2/>` with no `viewpointId` (route `App.tsx:152`) never sees a level; `writeOntoLevel` writes nothing on the current value, so `both` on an absent key stays absent; `onDeclareBinding` is `advancedMode && !ontoClassLevel`; drop and click share one guard in `runOntoPayload`, read at the drop through `viewpointIdRef`; labels «Classes and instances», «Classes», «Instances», field «Ontological level», class hook `.wp-onto-level-select`. The S2 suite leaves the side panel closed, the step that does it not identified, so the level block reopens it with the toolbar button.
