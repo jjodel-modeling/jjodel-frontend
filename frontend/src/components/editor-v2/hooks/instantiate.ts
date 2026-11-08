@@ -46,6 +46,8 @@
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
 import { featureClosure, instantiableClassifiers, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
+import { classRailGroups, containerFor, type ClassRailGroup } from '../../../model/ontological/classRail';
+import { sketchOfMetamodel } from '../sim/metamodelSketch';
 import { authoredDefaultSize } from '../nodes/nodeSizing';
 import type { VertexLayoutWrite } from '../viewpoint/layout/vertexLayout';
 
@@ -214,6 +216,93 @@ export function ontoDropRequest(get: DGet, modelId: string, payload: string): { 
     const record = objectRecord(get, modelId);
     if (!record || !creationOptions(get, record, modelId).some(o => o.id === classifierId)) return null;
     return { classifierId, record };
+}
+
+/**
+ * What the rail and the pane menu offer at the `class` level (R-OI-21), from the `object` record; `null` without one. The
+ * signature changes with any group or item: the rail's selector compares it.
+ */
+export function classRail(lookup: Record<string, any>, modelId: string): { groups: ClassRailGroup[]; signature: string } | null {
+    const get: DGet = id => lookup[id];
+    const bindings = memoBindings(get, modelId);
+    const record = bindings.find(b => b.name === OBJECT_RECORD);
+    const metamodel = get(modelId)?.instanceof;
+    if (!record || !isId(metamodel)) return null;
+    const link = bindings.find(b => b.name === LINK_RECORD) ?? null;
+    const groups = classRailGroups(sketchOfMetamodel(lookup, metamodel), record, link);
+    return { groups, signature: groups.map(g => `${g.kind}:${g.items.map(i => `${i.metaclass}=${i.name}`).join(',')}`).join(';') };
+}
+
+/** The payload of a class-level drag or click, under `ONTO_DRAG_MIME`: the metaclass by id, read again at the drop. */
+export function classDragPayload(metaclassId: string): string {
+    return JSON.stringify({ classElement: metaclassId });
+}
+
+/** The metaclass a class-level payload asks for: `null` when it does not parse or is no longer a classifier of the rail. */
+export function classDropRequest(lookup: Record<string, any>, modelId: string, payload: string): string | null {
+    let parsed: { classElement?: unknown } | null;
+    try { parsed = JSON.parse(payload); } catch { return null; }
+    const metaclass = parsed?.classElement;
+    if (!isId(metaclass)) return null;
+    const classifiers = classRail(lookup, modelId)?.groups.find(g => g.kind === 'classifier')?.items ?? [];
+    return classifiers.some(i => i.metaclass === metaclass) ? metaclass : null;
+}
+
+/** True when `selectedId` is an object of the model that can hold a property: it conforms to the owner of `featureContainer`. */
+export function selectionTakesProperty(lookup: Record<string, any>, modelId: string, selectedId: string | null | undefined): boolean {
+    if (!isId(selectedId)) return false;
+    const get: DGet = id => lookup[id];
+    const container = memoBindings(get, modelId).find(b => b.name === OBJECT_RECORD)?.featureContainer;
+    if (!isId(container) || get(selectedId)?.className !== 'DObject' || modelOf(get, selectedId) !== modelId) return false;
+    const view = ontoReadView(get);
+    const metaclass = view.metaclassOf(selectedId);
+    const owner = view.ownerOf(container);
+    return metaclass !== undefined && owner !== undefined && view.conformsTo(metaclass, owner);
+}
+
+/** One element `createClassElement` makes. */
+export interface ClassElementPlan {
+    modelId: string;
+    /** The metaclass by name, as `createInstance` takes it. */
+    metaclass: string;
+    ownerId: string | null;
+    childKey: string | null;
+    seed: Record<string, string>;
+}
+
+/** The metaclass name, its capital kept, then the first integer from 1 no object of the model has. */
+function classifierName(get: DGet, modelId: string, metaclassName: string): string {
+    const taken = new Set(modelObjectIds(get, modelId).map(id => get(id)?.name));
+    let n = 1;
+    while (taken.has(`${metaclassName}${n}`)) n++;
+    return `${metaclassName}${n}`;
+}
+
+/** A classifier of the rail, in the container of `containerFor` (R-OI-22), or why it cannot be made. Pure. */
+export function classElementPlan(lookup: Record<string, any>, modelId: string, metaclassId: string): ClassElementPlan | { error: string } {
+    const get: DGet = id => lookup[id];
+    const metamodel = get(modelId)?.instanceof;
+    const metaclass = get(metaclassId)?.name;
+    if (!isId(metamodel) || !isId(metaclass)) return { error: 'the metaclass does not resolve' };
+    const objects = modelObjectIds(get, modelId).flatMap(id => {
+        const m = get(id)?.instanceof;
+        return isId(m) ? [{ id, metaclass: m }] : [];
+    });
+    const slot = containerFor(sketchOfMetamodel(lookup, metamodel), metaclassId, objects);
+    const seed: Record<string, string> = hasFeatureNamed(get, metaclassId, 'name') ? { name: classifierName(get, modelId, metaclass) } : {};
+    return { modelId, metaclass, ownerId: slot?.owner ?? null, childKey: slot?.reference.name ?? null, seed };
+}
+
+/** A property of the selected class, in the record's `featureContainer`, or why it cannot be made. Pure. */
+export function propertyPlan(lookup: Record<string, any>, modelId: string, metaclassId: string, ownerId: string | null | undefined): ClassElementPlan | { error: string } {
+    if (!selectionTakesProperty(lookup, modelId, ownerId)) return { error: 'the selection takes no attribute' };
+    const get: DGet = id => lookup[id];
+    const container = memoBindings(get, modelId).find(b => b.name === OBJECT_RECORD)?.featureContainer;
+    const childKey = isId(container) ? get(container)?.name : undefined;
+    const metaclass = get(metaclassId)?.name;
+    if (!isId(childKey) || !isId(metaclass)) return { error: 'the feature container does not resolve' };
+    const seed: Record<string, string> = hasFeatureNamed(get, metaclassId, 'name') ? { name: instanceName(get, modelId, metaclass) } : {};
+    return { modelId, metaclass, ownerId: ownerId!, childKey, seed };
 }
 
 /** True when the M2 class `classId`, or one of its ancestors, has a feature named `name`. */
@@ -700,7 +789,7 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  * write never lands; nothing when no layout has a size or a position to take.
  */
 async function layoutInstanceNode(
-    m: WriteModules, get: DGet, instance: string, slots: number, until: number, placeAt?: InstancePlacement, growOnly = false,
+    m: WriteModules, get: DGet, instance: string, slots: number | null, until: number, placeAt?: InstancePlacement, growOnly = false,
     viewpoint?: string | null,
 ): Promise<string | null> {
     const state: any = m.joiner.store.getState();
@@ -719,7 +808,8 @@ async function layoutInstanceNode(
         const compiled = index ? m.ir.resolveIRView(instance, metaclass, index, readCtx, lookup) : null;
         const view = compiled?.kind === 'vertex' && (compiled.ir as SizedViewIR).visible !== false ? compiled.ir as SizedViewIR : null;
         if (!target.active && !view) continue;
-        const size = instanceBoxSize(view, slots);
+        // `null` for a class-level element: its box hugs its rows, which a fixed size would clip as they are added.
+        const size = slots === null ? null : instanceBoxSize(view, slots);
         const point = placeAt?.(target.layoutKey) ?? null;
         if (!size && !point) continue;
         patches.push({
@@ -874,6 +964,38 @@ async function instantiateNow(
         // `until` has passed: then the waits left test once each and the group closes all the same.
         history.endUndoGroup();
         if (result.instance) setFlight(result.instance, null);
+        inFlight--;
+    }
+    result.ok = result.problems.length === 0;
+    return result;
+}
+
+/**
+ * Make one class-level element and, with `placeAt`, put its node there (R-OI-21, R-OI-22): one undo entry, in the queue of
+ * `instantiate`. Only the position is written. `viewpoint` as in `instantiate`.
+ */
+export function createClassElement(plan: ClassElementPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
+    return queued(() => createClassElementNow(plan, placeAt, viewpoint));
+}
+
+async function createClassElementNow(plan: ClassElementPlan, placeAt?: InstancePlacement, viewpoint?: string | null): Promise<InstantiateResult> {
+    const { modules, createInstance, history, get } = await writeModules();
+    const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
+    inFlight++;
+    history.beginUndoGroup();
+    const until = Date.now() + INSTANTIATE_DEADLINE_MS;
+    try {
+        const made = createInstance(plan.modelId, plan.metaclass, plan.ownerId, plan.childKey, plan.seed);
+        if (!made.ok || !made.id) {
+            result.problems.push(`element: ${made.reason ?? 'not created'}`);
+            return result;
+        }
+        result.instance = made.id;
+        await waitSeeded(get, [[made.id, plan.seed]], result, until);
+        const laid = await layoutInstanceNode(modules, get, made.id, null, until, placeAt, false, viewpoint);
+        if (laid) result.problems.push(laid);
+    } finally {
+        history.endUndoGroup();
         inFlight--;
     }
     result.ok = result.problems.length === 0;

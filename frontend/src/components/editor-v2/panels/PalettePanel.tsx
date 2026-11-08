@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import type { MetaclassInfo, MetaclassReference } from '../hooks/useEditorMode';
 import { setDraggedMetaclassId } from '../utils/dragState';
-import { ONTO_DRAG_MIME, ontoDragPayload, type OntoRailSection } from '../hooks/instantiate';
+import { classDragPayload, ONTO_DRAG_MIME, ontoDragPayload, type OntoRailSection } from '../hooks/instantiate';
 import type { OntoBinding } from '../../../model/ontological/bindingCodec';
+import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../../model/ontological/classRail';
 import { LPointerTargetable } from '../../../joiner';
 
 // ---------------------------------------------------------------------------
@@ -90,9 +91,22 @@ interface PalettePanelProps {
     /** «Declare binding…» of the empty «Instances of» section; passed in Advanced only, so Basic shows no section
      *  without a binding (R-OI-18). */
     onDeclareBinding?: () => void;
+    /** The groups of the `class` level (R-OI-21, `classRail`), which replace the linguistic block; `null` at any other level. */
+    classGroups?: ClassRailGroup[] | null;
+    /** Click or Enter/Space on an enabled class-level entry. */
+    onClassActivate?: (kind: ClassRailKind, metaclassId: string) => void;
+    /** True when the selection can hold a property: the «Attributes» entries take a click only then. */
+    classPropertyEnabled?: boolean;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding }: PalettePanelProps) {
+const CLASS_GROUP_TITLES: Record<ClassRailKind, string> = {
+    classifier: 'Classifiers', association: 'Associations', property: 'Attributes', generalization: 'Generalizations',
+};
+const CLASS_GROUP_ICONS: Record<ClassRailKind, string> = {
+    classifier: 'bi-box', association: 'bi-arrow-left-right', property: 'bi-list-ul', generalization: 'bi-arrow-up-short',
+};
+
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding, classGroups = null, onClassActivate, classPropertyEnabled = false }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -117,6 +131,11 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
         event.dataTransfer.effectAllowed = 'move';
     }, []);
 
+    const onClassDragStart = useCallback((event: React.DragEvent, metaclassId: string) => {
+        event.dataTransfer.setData(ONTO_DRAG_MIME, classDragPayload(metaclassId));
+        event.dataTransfer.effectAllowed = 'move';
+    }, []);
+
     // Click and Enter/Space on an entry (WCAG: a focusable button). An HTML5 drag fires no click.
     const activateProps = (type: string, metaclassId?: string) => onItemActivate ? {
         role: 'button',
@@ -137,6 +156,17 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             onOntoActivate(record, classifierId);
+        },
+    } : {};
+
+    const classActivateProps = (kind: ClassRailKind, metaclassId: string) => onClassActivate ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: () => onClassActivate(kind, metaclassId),
+        onKeyDown: (event: React.KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onClassActivate(kind, metaclassId);
         },
     } : {};
 
@@ -169,7 +199,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
         return (
             <aside className={`editor-v2-palette editor-v2-palette--m1${collapsed ? ' editor-v2-palette--collapsed' : ''}`}>
                 {/* Instances — root instance creation (kept as drag-to-canvas) */}
-                <div className="palette-instances">
+                {!classGroups?.length && <div className="palette-instances">
                     <div className="palette-instances__title">Instances</div>
                     {irPaletteFallback && (
                         <div className="palette-notice">
@@ -216,18 +246,51 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                             </div>
                         </div>
                     )}
-                </div>
+                </div>}
 
-                {/* Instances of — the classifiers of the model by binding record (R-OI-18), beside the pane menu */}
-                {(ontoSections.length > 0 || onDeclareBinding) && (
+                {/* Instances of — the classifiers of the model by binding record (R-OI-18), beside the pane menu.
+                    Elements — at the `class` level, what the binding lets the class diagram create (R-OI-21). */}
+                {(ontoSections.length > 0 || !!classGroups?.length || onDeclareBinding) && (
                     <div className="palette-onto">
-                        <div className="palette-onto__title">Instances of</div>
-                        {ontoSections.length === 0 ? (
+                        <div className="palette-onto__title">{classGroups ? 'Elements' : 'Instances of'}</div>
+                        {(classGroups ?? ontoSections).length === 0 ? (
                             <div className="palette-onto__empty">
                                 <div className="palette-empty">No ontological binding declared</div>
                                 <button type="button" className="palette-onto__declare" onClick={onDeclareBinding}>Declare binding…</button>
                             </div>
-                        ) : ontoSections.map((section) => (
+                        ) : classGroups ? classGroups.map((group) => (
+                            <div key={group.kind} className="palette-onto__group">
+                                <div className="palette-onto__subtitle">{CLASS_GROUP_TITLES[group.kind]}</div>
+                                <div className="palette-onto__list">
+                                    {group.items.map((item) => {
+                                        const enabled = group.kind === 'classifier' || (group.kind === 'property' && classPropertyEnabled);
+                                        const icon = <i className={`bi ${CLASS_GROUP_ICONS[group.kind]}`} />;
+                                        return !enabled ? (
+                                            <div
+                                                key={item.metaclass}
+                                                className="palette-onto__item palette-onto__item--disabled"
+                                                aria-disabled="true"
+                                                title={CLASS_RAIL_HINTS[group.kind as keyof typeof CLASS_RAIL_HINTS]}
+                                            >
+                                                {icon}
+                                                <span>{item.name}</span>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                key={item.metaclass}
+                                                className="palette-onto__item"
+                                                draggable={group.kind === 'classifier'}
+                                                onDragStart={group.kind === 'classifier' ? (e) => onClassDragStart(e, item.metaclass) : undefined}
+                                                {...classActivateProps(group.kind, item.metaclass)}
+                                            >
+                                                {icon}
+                                                <span>{item.name}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )) : ontoSections.map((section) => (
                             <div key={section.record.name} className="palette-onto__group">
                                 <div className="palette-onto__subtitle">{section.disabled ? 'Links' : 'Objects'}</div>
                                 {section.options.length === 0 ? (

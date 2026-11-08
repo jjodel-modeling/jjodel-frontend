@@ -78,7 +78,8 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, instanceObjectRecord, instantiate, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption } from './hooks/instantiate';
+import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
 import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
@@ -370,6 +371,8 @@ interface ContextMenuState {
     selectedCount?: number;
     /** Pane menu of the ontological instantiation: the record and its classifiers. */
     pane?: { record: OntoBinding; options: CreationOption[] };
+    /** Pane menu at the `class` level (R-OI-23): the groups of the rail, and whether the selection takes a property. */
+    classPane?: { groups: ClassRailGroup[]; propertyEnabled: boolean };
 }
 
 // Clipboard state type
@@ -669,6 +672,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const ontoSections = useMemo(
         () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
         [ontoRailSig, isModelMode, modelid, ontoClassLevel]
+    );
+    // The groups of the `class` level (R-OI-21), `null` at any other: the same string-per-dispatch shape as «Instances of».
+    const classRailSig = useSelector((state: any) => isModelMode && !!modelid && ontoClassLevel ? classRail(state.idlookup ?? {}, modelid)?.signature ?? '' : '');
+    const classGroups = useMemo(
+        () => (isModelMode && modelid && ontoClassLevel ? classRail((store.getState() as any)?.idlookup ?? {}, modelid)?.groups ?? [] : null),
+        [classRailSig, isModelMode, modelid, ontoClassLevel]
     );
     const advancedMode = useSelector((state: any) => !!state.advanced);
     const [bindingMetamodel, setBindingMetamodel] = useState<string | null>(null);
@@ -1678,6 +1687,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const lastSelectedModelElement = useSelector((s: DState) =>
         (s as any)._lastSelected?.modelElement as string | undefined
     );
+    const classPropertyEnabled = useSelector((state: any) =>
+        isModelMode && !!modelid && ontoClassLevel && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -3249,7 +3260,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!isModelMode || !modelid) return;
             const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
             const record = objectRecord(get, modelid);
-            if (!record || ontoLevelOf(get, viewpointIdRef.current) === 'class') return;
+            if (!record) return;
+            if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+                const lookup = (store.getState() as any)?.idlookup ?? {};
+                const groups = classRail(lookup, modelid)?.groups ?? [];
+                if (groups.length === 0) return;
+                event.preventDefault();
+                const propertyEnabled = selectionTakesProperty(lookup, modelid, (store.getState() as any)?._lastSelected?.modelElement);
+                setContextMenu({ x: event.clientX, y: event.clientY, classPane: { groups, propertyEnabled } });
+                return;
+            }
             event.preventDefault();
             setContextMenu({
                 x: event.clientX,
@@ -3266,21 +3286,44 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
     // viewports and the pane are read at the click, not when the write lands. The layout in force is the tab's
     // (P-2026-11-07-1620): its viewpoint goes to instantiate, its key decides where the click lands.
-    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+    const placementAt = useCallback((click?: { x: number; y: number }) => {
         const activeKey = tabLayoutKey();
         const clickAt = click ? screenToFlowPosition(click) : null;
         const current = getViewport();
         const el = editorContainerRef.current;
         const pane = { width: el?.clientWidth ?? 0, height: el?.clientHeight ?? 0 };
-        const placeAt = (layoutKey: string) => {
+        return (layoutKey: string) => {
             if (layoutKey === activeKey && clickAt) return clickAt;
             if (pane.width <= 0 || pane.height <= 0) return null;
             return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
         };
-        void instantiate(classifierId, record, placeAt, viewpointIdRef.current).then(result => {
+    }, [screenToFlowPosition, getViewport, modelid]);
+
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+        void instantiate(classifierId, record, placementAt(click), viewpointIdRef.current).then(result => {
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
-    }, [screenToFlowPosition, getViewport, modelid]);
+    }, [placementAt]);
+
+    // A class-level element (R-OI-21): one undo entry, the queue of instantiate, the plan read at the gesture.
+    const runClassPlan = useCallback((plan: ClassElementPlan | { error: string }, click?: { x: number; y: number }) => {
+        if ('error' in plan) { console.warn('[EditorV2] class element:', plan.error); return; }
+        void createClassElement(plan, click ? placementAt(click) : undefined, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] class element:', result.problems);
+        });
+    }, [placementAt]);
+
+    const runClassifier = useCallback((metaclassId: string, click: { x: number; y: number }) => {
+        if (!modelid) return;
+        runClassPlan(classElementPlan((store.getState() as any)?.idlookup ?? {}, modelid, metaclassId), click);
+    }, [modelid, runClassPlan]);
+
+    // An attribute of the selected class: the row draws inside its node, so no position is written.
+    const runProperty = useCallback((metaclassId: string) => {
+        if (!modelid) return;
+        const state = store.getState() as any;
+        runClassPlan(propertyPlan(state?.idlookup ?? {}, modelid, metaclassId, state?._lastSelected?.modelElement));
+    }, [modelid, runClassPlan]);
 
     // A drop or a click on «Instances of» (R-OI-18): the record re-read from the store by name, then the pane menu's
     // path, so the queue, the deadline, the one undo entry and the tab's layout come with it. The click lands where a
@@ -3288,11 +3331,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const runOntoPayload = useCallback((payload: string, click: { x: number; y: number }) => {
         if (!isModelMode || !modelid) return;
         const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
-        // The level read at the drop (R-OI-20): the rail is hidden at `class`, but a drag can be held across a tab switch.
-        if (ontoLevelOf(get, viewpointIdRef.current) === 'class') return;
+        // The level read at the drop (R-OI-20, R-OI-21): a drag can be held across a tab switch, so a payload of the other
+        // level writes nothing.
+        if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+            const metaclass = classDropRequest((store.getState() as any)?.idlookup ?? {}, modelid, payload);
+            if (metaclass) runClassifier(metaclass, click);
+            return;
+        }
         const request = ontoDropRequest(get, modelid, payload);
         if (request) runInstantiate(request.classifierId, request.record, click);
-    }, [isModelMode, modelid, runInstantiate]);
+    }, [isModelMode, modelid, runInstantiate, runClassifier]);
     runOntoPayloadRef.current = runOntoPayload;
 
     const onOntoActivate = useCallback((record: OntoBinding, classifierId: string) => {
@@ -3300,6 +3348,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (!canvas) return;
         runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
     }, [runOntoPayload]);
+
+    const onClassActivate = useCallback((kind: ClassRailKind, metaclassId: string) => {
+        if (kind === 'property') { runProperty(metaclassId); return; }
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(classDragPayload(metaclassId), clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+    }, [runProperty, runOntoPayload]);
 
     const onDeclareBinding = useCallback(() => {
         const metamodel = modelid ? (store.getState() as any)?.idlookup?.[modelid]?.instanceof : undefined;
@@ -3990,6 +4045,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onClick: () => deleteEdge(contextMenu.edgeId!),
                 },
             ];
+        }
+
+        // Pane menu at the `class` level: «New ▸ <metaclass>», the items of the rail (R-OI-23).
+        if (contextMenu?.classPane) {
+            const { groups, propertyEnabled } = contextMenu.classPane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
+            return [{
+                label: 'New',
+                icon: 'bi-plus-square',
+                children: groups.flatMap(group => group.items.map((item): ContextMenuItem => {
+                    if (group.kind === 'classifier') return { label: item.name, icon: 'bi-box', onClick: () => runClassifier(item.metaclass, click) };
+                    if (group.kind === 'property' && propertyEnabled) return { label: item.name, icon: 'bi-list-ul', onClick: () => runProperty(item.metaclass) };
+                    return { label: item.name, disabled: true, tooltip: CLASS_RAIL_HINTS[group.kind] };
+                })),
+            }];
         }
 
         // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
@@ -5294,7 +5364,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     collapsed={!!scriptPreview?.owner}
                     ontoSections={ontoSections}
                     onOntoActivate={onOntoActivate}
-                    onDeclareBinding={advancedMode && !ontoClassLevel ? onDeclareBinding : undefined}
+                    onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
+                    classGroups={classGroups}
+                    onClassActivate={onClassActivate}
+                    classPropertyEnabled={classPropertyEnabled}
                 />
                 {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main">
