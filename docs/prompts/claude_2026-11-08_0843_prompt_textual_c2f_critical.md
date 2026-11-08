@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0843
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 9c44d338a · gates green (typecheck 0, build, check:docs, vitest 15227 passed with the 3 baseline import reds, smoke GREEN) · probe 13/13 on 3547, crops in ~/.jjodel-lanes/P-2026-11-08-0843/ · verifica visiva: GO di Alfonso 2026-11-08 11:59
 Lane: full (critical zone, go-ahead by Alfonso 2026-11-08 08:33 «Si»; Layer Impact Report first, tests first, crops)
 Depends: P-2026-11-08-0818 (its Outcome question names the site), C2e (namelessTargetLabel.ts)
 Worktree: ~/jjodel-w-textc2f, branch textual-c2f-labels

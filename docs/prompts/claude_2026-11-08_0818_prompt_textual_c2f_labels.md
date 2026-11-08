@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0818
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · superseded by P-2026-11-08-0843 · the session stopped at Outcome: question, no file changed: the site is in the IR form widgets, not in the Syntax form
 Lane: fast (Syntax form reference field labels; crops)
 Worktree: ~/jjodel-w-textc2f, branch textual-c2f-labels (from trunk f4dc218c3, own node_modules)
 Request: Alfonso 2026-11-08 07:36 «Procedi con tutto in lane auto»
