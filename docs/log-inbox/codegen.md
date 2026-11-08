@@ -3288,3 +3288,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: settle fix: store list ~/.jjodel-lanes/P-2026-11-08-1759/1-reorder.json, probe 0/80 natural and 0/20 forced holes
 **Notes**: Rollback tag `pre-jjscript-settle-inflight` on `ae12b41c5` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1912/result.json`.
 **Prompt document name**: 2026-11-08 19:12
+
+## 2026-11-08 — fix(editor-v2): C2h, index on unnamed homonyms of IR chips and default view (P-2026-11-08-1626)
+**Prompt**: `claude_2026-11-08_1626_prompt_textual_c2h_index.md`: two different unnamed targets of one class read `<Class> (unnamed)` and `<Class> (unnamed) 2` in one list, on the IR chips and the default view (R-TXT-59); the two stale comments. Scope on `IRFormField.tsx` widened by the chat to the import and the chip builder, under Alfonso's go-ahead of 16:23.
+**Files touched**: `fce48f889`, `4577595f1` docs/discovery/lir_2026-11-08_c2h_unnamed_index.md; `71bf799ef` editor-v2/utils/jjomTransformers.ts, editor-v2/utils/__tests__/namelessRefTarget.test.ts; `0f72e3ad3` editor-v2/utils/jjomTransformers.ts, viewpoint/ir/IRFormField.tsx (comments); `d54e1f51d` the same test; `09e60421f` viewpoint/ir/IRFormField.tsx; this entry and the Status of P-2026-11-08-1626 (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: docs/discovery/lir_2026-11-08_c2h_unnamed_index.md
+**Smoke visivo**: passato: probe 29/29 on 3549 from the DOM, `npm run smoke` GREEN (12 passed, 3 skipped), crops 1-chips, 2-default-view in ~/.jjodel-lanes/P-2026-11-08-1626/; Alfonso's GO pending (critical zone)
+**Notes**: Scope widened by the chat on the chips (:84, :277-298) after a question. d54e1f51d is red on its own: tests and code one commit each, as asked. Read-only rows (IRFormField.tsx:217) and the read-only single value still label one target at a time, so they do not number (outside the range). Header of unnamedTargetLabels still lists only the C2f widgets. Vitest: 15441 passed, the 3 baseline import reds; irCollapsedRender timed out once in the earlier run, green alone.
+**Prompt document name**: 2026-11-08 16:26

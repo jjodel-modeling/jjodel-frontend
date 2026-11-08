@@ -30,7 +30,7 @@ import type {
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
 import { rememberRefTargetName, lastSeenRefTargetName } from '../nodes/brokenRefMemory';
-import { namelessTargetLabel } from './namelessTargetLabel';
+import { unnamedTargetLabels } from './namelessTargetLabel';
 import { parseRowViewAnnotations } from '../nodes/rowViewAnnotations';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
@@ -366,20 +366,25 @@ function objectVertexToRFNode(vertex: any, layoutKey: string): Node<ObjectNodeDa
                 try {
                     const raw: unknown[] = (fv.__raw?.values ?? fv.values ?? []) as unknown[];
                     const resolved = new Map<string, string>();
-                    // A nameless target is labelled `: <Class>`, as its own header
-                    // reads (R-TXT-47 D5). The label is display only: `name` stays
-                    // '' and the memory of names never sees it.
+                    // A nameless target reads `<Class> (unnamed)` (R-TXT-59); `name` and the memory of names stay ''.
                     const labels = new Map<string, string>();
+                    const slotTargets: any[] = [];
                     try {
                         for (const rv of (fv.values ?? []) as any[]) {
                             // Presence, not a truthy name: a nameless target ('' , R-TXT-46 D4)
                             // resolves and is not broken.
                             if (rv && typeof rv !== 'string' && rv.id) {
                                 resolved.set(rv.id, rv.name ?? '');
-                                const label = namelessTargetLabel(rv);
-                                if (label) labels.set(rv.id, label);
+                                slotTargets.push(rv);
                             }
                         }
+                    } catch { /* proxy access can throw */ }
+                    // One slot is one list: unnamed homonyms are numbered (R-TXT-59). After the
+                    // loop, so a target that throws costs only the ones after it.
+                    try {
+                        unnamedTargetLabels(slotTargets).forEach((label, i) => {
+                            if (label) labels.set(slotTargets[i].id, label);
+                        });
                     } catch { /* proxy access can throw */ }
 
                     const names: string[] = [];
