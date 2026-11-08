@@ -206,7 +206,7 @@ interface DynSpec { key: string; inv: string; attrs?: DynAttr[]; ops?: Array<[st
 interface VpSpec { key: string; overlapping: boolean; complete: boolean; classes: DynSpec[] }
 interface StaticSpec {
     key: string; abstract?: boolean; singleton?: boolean; general?: string;
-    attrs: Array<[string, string, [number, number]?]>; ops?: Array<[string, string[]]>; viewpoints?: VpSpec[];
+    attrs: DynAttr[]; ops?: Array<[string, string[]]>; viewpoints?: VpSpec[];
 }
 
 /** The sensors in the order of `ownedSensors`: [class, singleton name of the chapter]. */
@@ -245,7 +245,7 @@ const sensorOps = (): Array<[string, string[]]> => [['injectFailure', ['self.sta
 function staticClasses(alertForm: SensorForm, c: Connectives): StaticSpec[] {
     const alert = Object.fromEntries(Object.entries(alertInvariants(alertForm)).map(([k, v]) => [k, spell(v, c)]));
     return [
-        { key: 'Drone', attrs: [['distance', 'Integer'], ['speed', 'Integer'], ['power', 'Integer'], ['battery', 'Integer', [0, 100]], ['vmax', 'Integer']],
+        { key: 'Drone', attrs: [['distance', 'Integer'], ['speed', 'Integer'], ['power', 'Integer', undefined, '0'], ['battery', 'Integer', [0, 100]], ['vmax', 'Integer']],
             viewpoints: [{ key: 'Mode', overlapping: true, complete: true, classes: [
                 // L2.5: an attribute of its own, so the drone has a real dormant slot (R-DCN-3).
                 { key: 'Charging', inv: spell('self.distance == 0 && self.speed == 0 && self.battery < 100', c), attrs: [['chargeRate', 'Integer', [0, 10], '1']],
@@ -261,10 +261,10 @@ function staticClasses(alertForm: SensorForm, c: Connectives): StaticSpec[] {
                 { key: 'Safe', inv: alert.Safe }, { key: 'Moderate', inv: alert.Moderate }, { key: 'Adverse', inv: alert.Adverse },
             ] }] },
         { key: 'Sensor', abstract: true, attrs: [] },
-        { key: 'TempSensor', singleton: true, general: 'Sensor', attrs: [['value', 'Integer'], ['unit', 'String'], ['status', 'SensorStatus']], ops: sensorOps() },
-        { key: 'WindSensor', singleton: true, general: 'Sensor', attrs: [['speed', 'Integer'], ['unit', 'String'], ['status', 'SensorStatus']], ops: sensorOps() },
-        { key: 'RainSensor', singleton: true, general: 'Sensor', attrs: [['intensity', 'Integer'], ['unit', 'String'], ['status', 'SensorStatus'], ['presence', 'Boolean']], ops: sensorOps() },
-        { key: 'HumiditySensor', singleton: true, general: 'Sensor', attrs: [['relative', 'Integer', [0, 100]], ['unit', 'String'], ['status', 'SensorStatus']], ops: sensorOps() },
+        { key: 'TempSensor', singleton: true, general: 'Sensor', attrs: [['value', 'Integer'], ['unit', 'String', undefined, '°C'], ['status', 'SensorStatus', undefined, 'OK']], ops: sensorOps() },
+        { key: 'WindSensor', singleton: true, general: 'Sensor', attrs: [['speed', 'Integer'], ['unit', 'String', undefined, 'm/s'], ['status', 'SensorStatus', undefined, 'OK']], ops: sensorOps() },
+        { key: 'RainSensor', singleton: true, general: 'Sensor', attrs: [['intensity', 'Integer'], ['unit', 'String', undefined, 'mm/h'], ['status', 'SensorStatus', undefined, 'OK'], ['presence', 'Boolean', undefined, 'false']], ops: sensorOps() },
+        { key: 'HumiditySensor', singleton: true, general: 'Sensor', attrs: [['relative', 'Integer', [0, 100]], ['unit', 'String', undefined, '%'], ['status', 'SensorStatus', undefined, 'OK']], ops: sensorOps() },
     ];
 }
 const PRIMITIVES = ['String', 'Integer', 'Boolean'];
@@ -317,8 +317,8 @@ function modelPlan(statics: StaticSpec[]): ModelPlan {
     for (const c of statics) {
         add(c.key, 'StaticClass', c.key); packaged.push(c.key);
         attrs.push([c.key, [['isAbstract', !!c.abstract], ['isSingleton', !!c.singleton]]]);
-        for (const [a, type, range] of c.attrs) {
-            prop(`p_${c.key}_${a}`, a, type, 'public', 1, 1, 'none', range);
+        for (const [a, type, range, dflt] of c.attrs) {
+            prop(`p_${c.key}_${a}`, a, type, 'public', 1, 1, 'none', range, dflt);
             containment.push([c.key, 'ownedAttributes', `p_${c.key}_${a}`]);
         }
         for (const [o, body] of c.ops ?? []) op(c.key, 'ownedOperations', `op_${c.key}_${o}`, o, body);
@@ -781,7 +781,10 @@ try {
     // The values and the links: one value object per slot S2 made, by the host's create primitive (S2's default write).
     const slotWrites: Array<[string, string, string, Record<string, unknown>]> = [
         ['dji', 'p_Drone_distance', 'LiteralInteger', { value: 0 }], ['dji', 'p_Drone_speed', 'LiteralInteger', { value: 0 }],
-        ['dji', 'p_Drone_battery', 'LiteralInteger', { value: 80 }],
+        ['dji', 'p_Drone_battery', 'LiteralInteger', { value: 80 }], ['dji', 'p_Drone_vmax', 'LiteralInteger', { value: 15 }],
+        // L4.7: the readings, inside the Safe invariant (wind <= 8, 0 <= temp <= 35, humidity <= 60, rain == 0).
+        ['temp', 'p_TempSensor_value', 'LiteralInteger', { value: 20 }], ['wind', 'p_WindSensor_speed', 'LiteralInteger', { value: 3 }],
+        ['rain', 'p_RainSensor_intensity', 'LiteralInteger', { value: 0 }], ['humidity', 'p_HumiditySensor_relative', 'LiteralInteger', { value: 45 }],
         ['dji', 'end_DroneWAU_WAU', 'InstanceValue', { instance: instOf('wau1') }],
         ...SENSORS.map(([, single]): [string, string, string, Record<string, unknown>] =>
             ['wau1', 'end_WAUSensors_ownedSensors', 'InstanceValue', { instance: instOf(single.toLowerCase()) }]),
@@ -830,6 +833,15 @@ try {
         && JSON.stringify(valueOf('battery')) === '[["LiteralInteger",80]]' && JSON.stringify(valueOf('WAU')) === '[["InstanceValue","wau1"]]'
         && JSON.stringify(slotsOf.wau1.find((x) => x.feature === 'ownedSensors')?.values) === JSON.stringify(SENSORS.map(([, s]) => ['InstanceValue', s.toLowerCase()])),
         { dji: slotsOf.dji, wau1: slotsOf.wau1 });
+
+    // L4.7: no slot left empty; the defaults came through S2, the readings and vmax through the writes above.
+    const held = Object.fromEntries(INSTANCES.map(([n]) => [n, Object.fromEntries(slotsOf[n].map((x) => [x.feature, x.values.map((v) => v[1])]))]));
+    const expectedHeld = { dji: { power: [0], vmax: [15] },
+        temp: { value: [20], unit: ['°C'], status: ['OK'] }, wind: { speed: [3], unit: ['m/s'], status: ['OK'] },
+        rain: { intensity: [0], unit: ['mm/h'], status: ['OK'], presence: [false] }, humidity: { relative: [45], unit: ['%'], status: ['OK'] } } as Record<string, Record<string, unknown[]>>;
+    check('O-6 no slot is empty, and power, vmax and every sensor slot hold the chosen value',
+        INSTANCES.every(([n]) => slotsOf[n].every((x) => x.values.length > 0))
+        && Object.entries(expectedHeld).every(([n, w]) => Object.entries(w).every(([f, v]) => JSON.stringify(held[n][f]) === JSON.stringify(v))), held);
 
     // Zero instantiation findings on every instance: computed (detectInstantiationProblems) and in the registry.
     const instProblems = await ev<{ findings: unknown[]; onInstances: Record<string, unknown[]>; registry: { owned: number; readable: boolean; active: unknown[] } }>(page, `
