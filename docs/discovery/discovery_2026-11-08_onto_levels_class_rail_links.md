@@ -295,3 +295,67 @@ view come from the 1605 handoff and were not re-read here.
 5. Which gesture Alfonso used for finding 4. Recommended: ask, offering the table of §6.4 once the addendum has measured the drag.
 6. Why `nature` is missing from the object canvas. Recommended: diagnose it inside lane 3's probe, not as a lane of its own.
 7. A drag whose pair matches one association only. Recommended: auto-select as `EditorV2.tsx:1996` does, the menu from two up.
+
+## 13. Addendum 2026-11-08: the second probe run
+
+Run: throwaway `/tmp/p1635/probe.ts` (the 1605 script with its three defects fixed), port 3078, same fixture, `frontend/`
+unchanged from `33455491b`, started at 1-minute load 18.2, stopped by me afterwards; :3005 not touched. Script exit 0,
+page errors `[]`, **two steps failed** (`linkInstantiate` at its last action, `classTab` at its first). A first launch died
+before reaching the app (`tsx` is not installed, exit 127) and is not counted. Assets in `/tmp/p1635/`, not committed.
+
+**Of the three measures asked, one was obtained.** The other two are still unmeasured, for a fourth script defect.
+
+### 13.1 Measured
+
+- **A filled link draws, live.** [M] After `instantiate(Borrowing, link, …, <object viewpoint>)` and two InstanceValues,
+  `borrower → alice`, `loans → history`, the object tab goes from 5 edges to 6, the new edge's id being the link instance's
+  (`1794152723498_USER_950`). It was there at the first read, about 1.5 s after the write, with no remount, and still there
+  3 s later. **H5 holds.** The rendering half of S4 already exists in the fixture's IR rule; lane 3 owes the gesture and
+  the two values, and `irEdgeViews.ts` only for a reference slot's edge.
+- The end state is measured, the write path is not: `createInstance(model, 'InstanceValue', slot, 'values', {instance: t})`
+  returned `{ok:true, id}`, but 700 ms later the `instance` feature was empty on both ends, so the probe wrote
+  `iv.$instance.values = [t]` (`fallback:true` twice). Whether the seed lands later (`addSlots` waits «for their seeds»,
+  `hooks/instantiate.ts`) or never was not separated. S4 should go through `addSlots`, not a bare `createInstance`.
+- `borrowing2` with the tab's viewpoint: as in §6.1, father DModel, slots `borrower`, `loans`, values empty.
+- **`nature`** [M]: an InstanceSpecification, classifier `Magazine` (a Class with 0 member ends), father `packagedElements`, one
+  DVertex on the same graph as `alice`'s. So neither the model nor the vertex is missing, and the vertex predicate of §6.1
+  holds for it, yet the DOM has 4 nodes. [decoded] The model holds 5 links (cityLib→dune, history, nature, alice; alice→dune),
+  so one of the 5 drawn edges has an end on a node the DOM query did not list. Cause not determined (a node outside
+  the rendered area is one hypothesis, unmeasured). Question 6 stands.
+- **Ghost rows** [M]: `syncSlotsPlan` gives `missing: []` for alice, cityLib, dune and history. [decoded, `/tmp/p1605/idl.json`]
+  The fixture has 5 Classes and 8 `ownedAttributes`, 7 primitive and 1 enumeration (`Book.genre`): **no attribute is typed
+  by a Class**.
+
+### 13.2 Correction to §6.4
+
+The ghost row of a class-typed feature cannot occur on `uml-s3b` as exported, so the sentence closing §6.4 («the only gesture
+found so far that fits») does not hold for this fixture. It holds only for a model with a class-typed attribute, and which
+model Alfonso used is not known. On this fixture every relation is a link, and no UI surface creates a link today
+(R-OI-18 Q1 lists them disabled). The docked inspector is still unread. Question 5 stands, and the drag is its first candidate
+until measured.
+
+### 13.3 Not measured, and why
+
+| Measure | Result | Status |
+|---------|--------|--------|
+| What a drag between two object nodes writes (G1) | `g1:noStart`, `connecting:false`, `ghost:false` on all four sides | **no drag started; says nothing about the app** |
+| Control drag Book→Member (G2) | step `classTab` failed before reaching it | **not run** |
+| The class node's menu | same step | **not run** |
+| The object node's menu | `menusBeforeClick:["New instance of"]`, hit test `DIV`, entries `["New instance of"]` | **invalid: the pane menu's text** |
+| Remount after the filled link | `linkInstantiate` failed on the viewpoint trigger | **not run** |
+
+- Cause: the script's own pane menu stayed open and covered the canvas. [R] `ContextMenu.tsx:114`:
+  `<div className="context-menu-backdrop" onClick={onClose} />`. The file has no `Escape` handling (`command grep -c Escape` 0,
+  control `onClose` 7), so `keyboard.press('Escape')` closes nothing, and `closeMenus` looks for a free pane point the backdrop
+  has covered, finds none, and does not click. The mouse never reached the nodes, so no ghost handle appeared.
+- That the backdrop is also what blocked the two `locator.click` timeouts (30 s, `.toolbar-viewpoint-trigger`) is an inference:
+  the step's log stops at «attempting click action».
+- By reading, the 1605 script ran the same sequence (pane menu, `Escape`, then G1), so this defect also applies to 1605's invalid
+  G1, G2 and `classTab:classNodeMenu`, alongside the 90-character cut that §10 records.
+
+**H3** (node menu) and **H4** stay as §2 has them: read only. `/tmp/p1635/probe.ts` now closes menus by clicking the backdrop
+(4 `Escape` replaced, syntax checked, **not run**): this prompt allowed one more run, and it is spent.
+
+### 13.4 Question added
+
+8. Whether to allow one more probe run for G1, G2 and the node menus. Recommended: yes, one run of the patched `/tmp/p1635/probe.ts`, load under 20, results appended here.
