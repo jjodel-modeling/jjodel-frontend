@@ -270,3 +270,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-11-08-0113
 **Detail**: docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md
+
+## 2026-11-08 — feat: «Instances of» rail section, probe, regression, bench (P-2026-11-08-0241)
+**Prompt**: two lanes in one entry: lane A of the rail discovery, the «Instances of» section of the M1 rail with drop and click through `runInstantiate` (P-2026-11-08-0212, cut at its context ceiling after the code and the probe run), and this continuation: probe commit, regression, the third mutant, crops, docs.
+**Files touched**: `editor-v2/hooks/instantiate.ts` and its test, `panels/PalettePanel.tsx`, `EditorV2.tsx`, `EditorV2.scss` (910558ef4); `scripts/probe/onto-s2-instantiate.ts` (ba69124a9); `docs/decisions.md` R-OI-18, this inbox, the `Status:` of the two prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (ten files across two lanes, each declared in discovery §5 lane A or in the prompts, listed above)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (crops r0, r1, r2 in `~/.jjodel-lanes/P-2026-11-08-0241/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1, Q2, Q4, Q5 adopted as recommended, unattended (RC-21). Gates on 910558ef4: typecheck 0, vitest 78/78, build 0. S2 28/28 on uml-s3b; S2-R1/R2 tolerance 8 px × zoom + 1 (16 px grid snap; a 4 px box failed on deltas of 6.5 and 6.8 px); S2-R4 drags on the Petri export, uml-s3b's linguistic block being empty. Regression s3a 8/8, s3b 6/6, binding editor 10/10. Mutants 3/3 red. new-model-instantiate.ts still stale (ticket above). Bench, handoff: ~/.jjodel-lanes/P-2026-11-08-0212/.
+**Prompt document name**: 2026-11-08 02:41
+
+**Own choices** (lane A, from its handoff): `ontoRailSections` returns `{sections, signature}` over the `object` and `link` records only, `link` disabled; the drag payload is `{record: name, classifier}` (`ontoDragPayload`), and `ontoDropRequest` re-reads `objectRecord` from the store and re-checks the classifier against fresh `creationOptions`; drop and click share `runOntoPayload`, which calls `runInstantiate`, the drop reaching it through `runOntoPayloadRef` (TDZ); `onDeclareBinding` is passed only in Advanced, so the empty state shows there only; group subtitles «Objects» / «Links»; `OntoBindingModal` mounted in `EditorV2`, the metamodel id taken at the click.

@@ -6664,6 +6664,17 @@ P-2026-10-20-1835.
   the left and middle buttons; wheel and pinch are not read through `panOnDrag`'s buttons. Measured (P-2026-11-07-1235):
   probe S2-1m, a right click moving 3 px, red with `[0, 1, 2]` and green with `[0, 1]`. Rejected: a movement threshold
   around xyflow's handler (more code, fragile against xyflow updates).
+- **R-OI-18** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **The M1 rail holds an «Instances of» section, a creation surface beside R-OI-10's pane menu.** Decided by the chat
+  `C-2026-10-25-2159` on Alfonso's «rail e dichiarazione» (2026-11-08 00:35). It lists the classes
+  the `object` record offers (`ontoRailSections`, the set of `creationOptions`) below the linguistic «Instances» block;
+  a drag carries its own key, `ONTO_DRAG_MIME`, with the record by name, and a drop or a click re-reads the record from
+  the store and runs `runInstantiate` (queue, deadline, one undo step, the tab's layout). Clauses, the discovery's
+  questions adopted as recommended (P-2026-11-08-0212): (Q1) the `link` record's associations are listed, disabled,
+  tooltip «A link is drawn between two instances (S4)»; no drop of an unconnected link (R-OI-5); (Q2) in Basic the
+  section shows only when a binding is declared, the empty state with «Declare binding…» in Advanced only; (Q4) the
+  section is titled «Instances of», the linguistic block keeps «Instances»; (Q5) «Declare binding…» opens
+  `OntoBindingModal`, the dialog of `Info.tsx`'s «Ontological binding…» row.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
