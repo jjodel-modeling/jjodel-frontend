@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0916
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane discovery · report 2eb74325d (docs/discovery/discovery_2026-11-08_canvas_create_undo_682.md) · Outcome hard-stop, decisions by Alfonso 11:59, implemented by P-2026-11-08-1202 and P-2026-11-08-1313
 Lane: discovery (read-only, no code change, report and hard stop)
 Depends: ticket #682 (jjodel-lanes), found by P-2026-11-07-0654
 Worktree: ~/jjodel-w-disc682, branch disc-682-canvas-undo (from trunk 18ce96017, own node_modules)
