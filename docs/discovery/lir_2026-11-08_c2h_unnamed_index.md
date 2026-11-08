@@ -14,7 +14,7 @@ Layers touched:
   [ ] Canvas classic
   [ ] Sync layer (useJjomSync hooks)
   [ ] Persistence (VersionFixer / jsxString)
-  [ ] Not in the template: the IR form. See "The chips" below: not changed by this lane so far.
+  [x] Not in the template: the IR form (chips only), display only
 ```
 
 ## What one list means at each site
@@ -43,17 +43,28 @@ shape is the same: `labels` maps id to label, and `:385-407` reads it unchanged.
 | the same unnamed target twice | one label | unchanged, the helper keys on the id |
 | named targets, broken pointers | as today | unchanged |
 
-## The chips: outside the range this lane may edit
+## The chips
 
-The prompt allows `IRFormField.tsx` around `:150-160` only, the body of `displayValue`. That function
-receives one value and has no access to the field's other values, and the chips call it one at a
-time at `:283`, inside the `useMemo` of `:277-298`. Numbering the chips needs the sibling values at
-that call, so item (1) cannot be done inside `:150-160`. The lane stops that item and asks. The
-comment at `:153-154` (item 3) is in range and is updated.
+The prompt allowed `IRFormField.tsx` around `:150-160` only, the body of `displayValue`. That function
+receives one value and the chips call it one at a time at `:283`, so the lane stopped and asked. The
+scope was widened by the chat on 2026-11-08, under Alfonso's go-ahead of 16:23: the import at `:84` and
+the chip builder at `:277-298`.
 
-The change it needs, if authorized: `unnamedReferenceLabels(field.values)` (`ReferenceWidget.tsx:75`,
-the C2f helper over `unnamedTargetLabels`) computed in that `useMemo`, and `:283` reading
-`unnamed[i] ?? displayValue(v)`. `:286` stays right: a label never equals a pointer.
+`unnamedReferenceLabels(field.values)` (`ReferenceWidget.tsx:75`, the C2f helper over
+`unnamedTargetLabels`) runs once per field inside that `useMemo`, and `:283` reads
+`unnamed[i] ?? displayValue(v)`. The labels are positional over the raw values, so a hole in
+`field.values` does not disturb them. `:286` stays right: a label never equals a pointer, and a
+dangling pointer has no label, so it still falls through to `displayValue` and reads broken.
+
+| Chips of one field | Today | After |
+|--------------------|-------|-------|
+| two different unnamed Ports | `Port (unnamed)`, `Port (unnamed)` | `Port (unnamed)`, `Port (unnamed) 2` |
+| one unnamed Port | `Port (unnamed)` | unchanged |
+| named targets, broken pointers | as today | unchanged, not counted |
+
+Not changed, outside the widened range: the rows of a read-only multi-valued field (`:217`) and the
+read-only single value (`:360`) still call `displayValue` one value at a time, so the rows of a
+read-only field can read alike.
 
 ## What does NOT change
 
@@ -72,6 +83,7 @@ Searches ran with `command grep` (BSD), exit status noted.
 | `RowValue.tsx:324,333,337` | pill text and `Go to …` title | no |
 | `ObjectNode.tsx` slot `value` / `values` → `detectValueRenderer` | `isReference` decides `refPill` first | no |
 | `EditorV2.tsx:3775` | `f.value` handed to the Explain panel as a property | no, free text |
+| `ChipInputWidget.tsx:122,127` | chip text, title and `Remove …` aria-label | no; removal goes by chip position and `chipIndex` |
 
 - **Code that parses `(unnamed)`**: `(endsWith|indexOf|includes|split|match|replace)\(.{0,3}\(unnamed`
   over `frontend/src`, exit 1, no hit. Control with `Pointer` in place of `\(unnamed` under the same
@@ -90,14 +102,14 @@ Searches ran with `command grep` (BSD), exit status noted.
 2. **Order.** The labels are computed over `fv.values` and painted in the order of `__raw.values`.
    They agree only if the proxy keeps the raw order; the app check measures it from the DOM.
 3. **Width.** ` 2` adds two characters to a pill that already truncates.
-4. **Surfaces can differ until the chips are done**: a default-view row numbers, the chips of the
-   same field do not.
+4. **Read-only rows do not number** (`IRFormField.tsx:217`): a frozen field reads alike where the
+   editable one numbers. Outside the widened range.
 5. **Stale comment left**: the header of `unnamedTargetLabels` lists only the three C2f widgets.
    `namelessTargetLabel.ts` is in scope only if a helper is missing, so it stays and is reported.
 
 ## Smoke-test scenarios potentially affected
 
-- Default view, a reference with two unnamed Ports: `Port (unnamed)`, `Port (unnamed) 2`.
+- Default view and IR chips, a reference with two unnamed Ports: `Port (unnamed)`, `Port (unnamed) 2`.
 - Controls: one unnamed target, named targets, a dangling pointer, the C2f list.
 - Import Families.ecore, open an existing project, save and reopen: no code path of theirs is touched.
 
