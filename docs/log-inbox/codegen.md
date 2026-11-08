@@ -2939,3 +2939,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: D3c crops 1-before-run, 2-after-run, 3-after-typing, 4-apply in ~/.jjodel-lanes/P-2026-11-07-1838/ checked by the chat
 **Notes**: Rollback tag `pre-textual-d3c-rules` on `efd40eb55` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0004/result.json`.
 **Prompt document name**: 2026-11-08 00:04
+
+## 2026-11-08 — feat(codegen): F2, a generated line to the model line in the Text tab (P-2026-11-08-0027)
+**Prompt**: `claude_2026-11-08_0027_prompt_textual_f2_reveal.md`, row F2 of the step F report §8.1, R-TXT-55 F6, F7, F12: `JjodelEvents.TEXTUAL_REVEAL`, dispatched by a model span click in the generator tab, listened to by the model's Text tab, which reveals and highlights the origin's feature line without moving the caret; risk R5 decided on the crops.
+**Files touched**: `frontend/src/codegen/textual/selectionSync.ts`, `frontend/src/codegen/textual/__tests__/selectionSync.test.ts` (`b4ebab7ab`); `frontend/src/events/registry.ts` (`1e84a9440`); `frontend/src/codegen/ui/GeneratorPane.tsx` (`3235f9e73`); `frontend/src/codegen/textual/ui/TextualTab.tsx` (`9d2050879`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck exit 0; vitest 567 files, 3 import reds (baseline) and 5 load reds (irCollapsedRender, irSelectionRing, completion, languageService, tolerant), each green alone; build exit 0; check:codegen-lazy ALL GREEN; check:docs below.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — unattended, probe `~/.jjodel-lanes/P-2026-11-08-0027/probe.mjs` (run3.log, 13/13; run-red.log without the listener: step 2 red, tp's whole span 8-13); crops 0-start, 1-click-object, 2-click-feature, 3-caret, 4-closed in the same folder
+**Notes**: Ids (step 0, `ids.log`): every generated span's `elementId` (coin, push, tp) is among the tab's span ids. R5: dedup by id, the reveal replaces the whole-span highlight of the canvas echo of the same element; another canvas selection ends it. Mutation bench in `b4ebab7ab`. GeneratorPane and TextualTab do not load in the bench (joiner, monaco): their red is the app probe.
+**Prompt document name**: 2026-11-08 00:27

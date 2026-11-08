@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0027
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · b4ebab7ab (pure, red first), 1e84a9440, 3235f9e73, 9d2050879 · gates green (vitest: 3 import reds baseline, 5 load reds green alone) · app check 13/13 ALL PASS, red without the listener, crops in ~/.jjodel-lanes/P-2026-11-08-0027/ · log entry in docs/log-inbox/codegen.md
 Lane: full (one registry event, dispatch in the generator tab, listener and reveal in the Text tab; tests; app check with crops)
 Depends: E2a, E2b (merged), F1a..F1e (merged), R-TXT-55 (F6, F7, F12)
 Worktree: ~/jjodel-w-textf2, branch textual-f2-reveal (from trunk 819c700b5, own node_modules)
