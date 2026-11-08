@@ -3004,3 +3004,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — probe 13/13 ALL PASS, crops in `~/.jjodel-lanes/P-2026-11-08-0206/`
 **Notes**: Tests red first (module missing; importStep 4 of 17). Bench 2 mutants, 2 killed. Ids reach matchObjects through the plan input that diffText hands it whole; textDiff.ts untouched. App: 10 @id comments for 10 objects, measured from the downloaded file; rename by id, one row; one undo step, one Cmd+Z restores. Gates: typecheck 0; vitest 3 baseline import reds, 15139 passed; build 0; codegen-lazy ALL GREEN.
 **Prompt document name**: 2026-11-08 02:06
+
+## 2026-11-08 — merge: textual-t8b-file into alfonso-frontend-jjtl (P-2026-11-08-0246)
+**Prompt**: `claude_2026-11-08_0246_prompt_merge_textual-t8b-file.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t8b-file` at `cb6e436c3` into `alfonso-frontend-jjtl`, merge base `c8153d84a`, 4 commits on the branch side.
+**Files touched**: merge `0322b765f`: 5 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_0206_prompt_textual_t8b_file.md`, `frontend/src/codegen/textual/__tests__/textFile.test.ts`, `frontend/src/codegen/textual/textFile.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0322b765f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15141 tests in 570 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: T8b crops 1-export-button, 3-import-confirm, 4-applied in ~/.jjodel-lanes/P-2026-11-08-0206/ checked by the chat
+**Notes**: Rollback tag `pre-textual-t8b-file` on `089b39fc9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0246/result.json`.
+**Prompt document name**: 2026-11-08 02:46
