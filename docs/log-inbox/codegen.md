@@ -2939,3 +2939,16 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: D3c crops 1-before-run, 2-after-run, 3-after-typing, 4-apply in ~/.jjodel-lanes/P-2026-11-07-1838/ checked by the chat
 **Notes**: Rollback tag `pre-textual-d3c-rules` on `efd40eb55` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0004/result.json`.
 **Prompt document name**: 2026-11-08 00:04
+
+## 2026-11-08 — feat(codegen): T8a, ids in the text and evidence 0 of the match (P-2026-11-08-0121)
+**Prompt**: `claude_2026-11-08_0121_prompt_textual_t8a_ids.md` (R-TXT-55 F8, F9; R-TXT-18): style option `printIds`, the `@id` head-line comment, the reader over `commentsOf`, the id as evidence 0 of `matchObjects` with the repeated-id warning.
+**Files touched**: `frontend/src/codegen/textual/style.ts`, `printer.ts`, `__tests__/textMatch.test.ts` (new) in d9ac37c51; `textMatch.ts`, the test in 388a2d2b9 and c62312a02; uncommitted: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tests red first (13 of 17). Option off pinned by a sha256 over 37 fixture prints measured at bed4908a1. Bench 13 mutants, 13 killed (one dead mutant rewritten). No DOM check: only tests set `printIds`, a record cannot carry it (annotations.ts:264). Gates: typecheck 0; build 0; codegen-lazy ALL GREEN; vitest 3 baseline import reds, 15099 passed.
+**Prompt document name**: 2026-11-08 01:21

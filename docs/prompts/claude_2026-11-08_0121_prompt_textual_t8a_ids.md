@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0121
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · d9ac37c51, 388a2d2b9, c62312a02 (red first, bench 13/13) · gates green (vitest: 3 import reds baseline) · no visual change, no crops · log entry in docs/log-inbox/codegen.md, uncommitted (RC-17)
 Lane: full (style option, printer, reader, match cascade; tests and mutation bench; no visual change)
 Depends: D5 (comments by owner, merged), R-TXT-55 (F8, F9), R-TXT-18 and R-TXT-20 (styles, comments)
 Worktree: ~/jjodel-w-textt8a, branch textual-t8a-ids (from the trunk tip at launch, own node_modules)
