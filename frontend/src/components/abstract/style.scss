@@ -1076,6 +1076,19 @@ body[data-layout-mode="sidebar"] {
   }
 }
 
+/* Two canvases side by side (R-MT-24, P-2026-11-08-1608). The rail gets a column of its own between them: a margin counts
+   in the row's flex sum but not in the offsetWidth rc-dock reads back on a drag, so the panels share what the rail leaves
+   by their dock sizes and the divider does not jump. The first panel's content runs under the rail as in a single tab,
+   which is what --jj-canvas-right-inset says about that canvas. */
+.not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2) > .dock-panel:first-child {
+  margin-right: var(--jj-rail-width, 0px);
+  overflow: visible;
+
+  > .dock {
+    width: calc(100% + var(--jj-rail-width, 0px));
+  }
+}
+
 /* Default responsive last-child sizing (F2-fix 2026-07-29): REMOVED. These four
    media blocks capped the width of `.dock-hbox > .dock-panel:last-child` — the old
    Properties column — for the no-`data-layout-mode` default layout. Post-F2 the

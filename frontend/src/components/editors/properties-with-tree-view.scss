@@ -1365,6 +1365,13 @@ body[data-active-tab="manager"] .properties-tree-overlay {
     // sits left of this column anyway, so it is unaffected.
 }
 
+// Two canvases side by side (R-MT-24, P-2026-11-08-1608): the first panel leaves a column of the rail's width at its right
+// (abstract/style.scss) and the inline `right` of useCanvasPanelGap measures that panel's edge, so the rail moves back over
+// the column. `:has` cannot nest, hence the two conditions on <body>.
+body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) .properties-tree-overlay {
+    margin-right: calc(-1 * var(--jj-rail-width, 0px));
+}
+
 // Off-screen position, and the only declaration that separates the two directions:
 // entering is this rule removed. `pointer-events` because a column on its way out must
 // not take the click that the canvas underneath it is about to receive.
