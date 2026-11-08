@@ -1,6 +1,6 @@
 # Textual syntax, lane T8c: the re-import dialog in the confirm panel
 
-Prompt-ID: P-2026-11-08-0737
+Prompt-ID: P-2026-11-08-0739
 Chat: C-2026-11-03-1037
 Front: codegen
 Status: da eseguire
@@ -9,7 +9,7 @@ Depends: T8a, T8b (merged), R-TXT-55 (F10)
 Worktree: ~/jjodel-w-textt8c, branch textual-t8c-dialog (from trunk ce18b0c02, own node_modules)
 Request: Alfonso 2026-11-08 07:36 «Procedi con tutto in lane auto»
 
-Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No CLAUDE.md 3.1 critical-zone file, no core outside frontend/src/codegen/textual/, no new dependency, no store write outside `applyTextEdit`. Every reply opens with [P-2026-11-08-0737 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; one probe run per tool call; never cat a whole probe or gate log. Each item: test red first, its own commit (RC-51, code first). If you near the context ceiling, write ~/.jjodel-lanes/P-2026-11-08-0737/handoff.md (what is committed, what is left, the next command) before anything else.
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit and the tree is clean, otherwise stop with Outcome: blocked. No CLAUDE.md 3.1 critical-zone file, no core outside frontend/src/codegen/textual/, no new dependency, no store write outside `applyTextEdit`. Every reply opens with [P-2026-11-08-0739 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. Summary lines only through node scripts/run-quiet.mjs LABEL -- CMD; one probe run per tool call; never cat a whole probe or gate log. Each item: test red first, its own commit (RC-51, code first). If you near the context ceiling, write ~/.jjodel-lanes/P-2026-11-08-0739/handoff.md (what is committed, what is left, the next command) before anything else.
 
 ## COSA
 
@@ -21,7 +21,7 @@ Row T8c of docs/discovery/discovery_2026-11-07_textual_f_jjel_tracing.md §8.1, 
 
 (3) **Gates**, one tool call each, from frontend/: npm run typecheck; full npx vitest run (the 3 import reds are the baseline; load reds rerun alone and named); npm run build; npm run check:docs; npm run check:codegen-lazy.
 
-(4) **App check** with crops in ~/.jjodel-lanes/P-2026-11-08-0737/, reusing the probe of ~/.jjodel-lanes/P-2026-11-08-0206/ (copy it and what it imports) on its own port: 1-counts (an import with a change, a create and a delete shows the counts), 2-uncertain (an uncertain row with its score and checkbox), 3-untick (unticking and applying creates and deletes instead of pairing: measured from the model), 4-cancel (Cancel closes the panel, the model is unchanged, the undo stack length is unchanged). Measure from the DOM, the model and the undo stack, not from the screenshot.
+(4) **App check** with crops in ~/.jjodel-lanes/P-2026-11-08-0739/, reusing the probe of ~/.jjodel-lanes/P-2026-11-08-0206/ (copy it and what it imports) on its own port: 1-counts (an import with a change, a create and a delete shows the counts), 2-uncertain (an uncertain row with its score and checkbox), 3-untick (unticking and applying creates and deletes instead of pairing: measured from the model), 4-cancel (Cancel closes the panel, the model is unchanged, the undo stack length is unchanged). Measure from the DOM, the model and the undo stack, not from the screenshot.
 
 (5) **Docs**: log entry in docs/log-inbox/codegen.md via the log-entry skill (Notes under 500 characters, Corregge and Causa the dash, Layer Impact Report not-required), Status flip; both left uncommitted (RC-17). Edit only your new entry's lines. No push, no merge. Final message: what was verified and how, Decisions taken (unattended), then the Outcome.
 
