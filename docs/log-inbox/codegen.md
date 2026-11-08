@@ -3249,3 +3249,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — `npm run smoke` on this tree's Vite, port 3800: RED once 10/1/0 (`page.goto` timeout on the first state after a Vite restart), then GREEN 12/0/3 warm; crops 1-m1-undo and 2-two-tabs viewed by the lane on a model with no elements, so they show the tabs and not a populated canvas; Alfonso's GO pending
 **Notes**: Guard off the group route and off a group's tail, as the prompt asked: a tab opened with a group's entry on top still composes into it (test pins it). Transformation measured with the real calls from the page, not through the UI. Without a group the same creation merges into the entry below, unchanged. Smoke cold RED on page.goto, then GREEN warm. Limits and measures: LIR. Tickets #789 to #792.
 **Prompt document name**: 2026-11-08 18:00
+
+## 2026-11-08 — merge: undo-tab-graphs-b into alfonso-frontend-jjtl (P-2026-11-08-1858)
+**Prompt**: `claude_2026-11-08_1858_prompt_merge_undo-tab-graphs-b.md`, a direct merge by `lane-run merge --direct`, no session: `undo-tab-graphs-b` at `f0d8d31a3` into `alfonso-frontend-jjtl`, merge base `2df3c9a32`, 6 commits on the branch side.
+**Files touched**: merge `93f7485a8`: 7 files from the branch side (`docs/discovery/discovery_2026-11-08_undo_tab_open_graphs.md`, `docs/discovery/lir_2026-11-08_undo_tab_open_graphs.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_1719_prompt_discovery_undo_tab_open_graphs.md`, `docs/prompts/claude_2026-11-08_1800_prompt_undo_tab_graphs_option_b.md`, `frontend/src/redux/reducer/__tests__/undoGroup.test.ts`, `frontend/src/redux/reducer/reducer.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `93f7485a8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15485 tests in 585 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: option B crops 1-m1-undo, 2-two-tabs in ~/.jjodel-lanes/P-2026-11-08-1800/ checked by the chat; app check DGraph 4,0 all cases; smoke green warm after one cold page.goto timeout
+**Notes**: Rollback tag `pre-undo-tab-graphs-b` on `9440e9fdd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-1858/result.json`.
+**Prompt document name**: 2026-11-08 18:58
