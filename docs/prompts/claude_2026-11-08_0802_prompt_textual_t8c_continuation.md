@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0802
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · no code (probe line fixed, no defect) · probe t8c-probe2 ALL PASS, crops 1-4 in ~/.jjodel-lanes/P-2026-11-08-0739/ · gates green (vitest: 3 import reds baseline, 2 load reds green alone) · log entry in docs/log-inbox/codegen.md, uncommitted (RC-17)
 Lane: full (continuation of P-2026-11-08-0739; no new code unless the probe proves a defect)
 Worktree: ~/jjodel-w-textt8c, branch textual-t8c-dialog
 Request: Alfonso 2026-11-08 07:36 «Procedi con tutto in lane auto»
