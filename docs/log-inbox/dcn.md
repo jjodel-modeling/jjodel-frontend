@@ -412,6 +412,6 @@ active log is not touched by this lane.
 **Regressions**: no
 **Out-of-scope changes**: no (seven repo files, all in the DOVE of the prompt: the fixture, the run probe, three assets, this inbox, the prompt)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crop 1-reset read by the lane, no defects line; the chat to read it)
+**Smoke visivo**: passato (crop 1-reset read by the chat 2026-11-08 17:10: no defects line, Charging/Safe, Tick on, takeOff greyed)
 **Notes**: Fixture 26/26 (O-6 new), dcn and instantiation problems zero, conformant. Defaults: power 0, unit, status OK, presence false. Slots: vmax 15, temp 20, wind 3, humidity 45, rain 0. Run probe 9/9, seed 4242: L47-1 no defects line (control: panel text, not a defective run), L47-2 Charging and Safe, Ready on Tick 20. Status committed per the prompt, ahead of the chat's check (P13). Object screenshot copied from DCN_CROPS. Crops in ~/.jjodel-lanes/P-2026-11-08-1652/crops/.
 **Prompt document name**: 2026-11-08 16:52

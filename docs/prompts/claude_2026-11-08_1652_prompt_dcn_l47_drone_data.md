@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1652
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: eseguito 2026-11-08 · lane full · 11f6f1c0b · crop letto dalla lane, verifica visiva della chat da fare
+Status: eseguito 2026-11-08 · lane full · 11f6f1c0b · verifica visiva passata 2026-11-08
 Lane: full (probe fixture and exports only; no frontend/src)
 Depends: P-2026-11-08-1606 (branch dcn-l46, tip 956990177, not yet on the trunk)
 Worktree: ~/jjodel-w-dcn-l47, branch dcn-l47, created from dcn-l46, at the commit that adds this prompt
