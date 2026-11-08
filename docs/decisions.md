@@ -7532,6 +7532,11 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-29** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
   the dynamic visibility of a caller's JjEL variables inside a helper body (report §3.2) is to be closed, after a lane
   measures what relies on it. Not implemented.
+- **R-JTG-30** (2026-11-08, ratified by Alfonso 2026-11-08 08:33, registered by P-2026-11-08-0835, evidence: measured, verified: none, reversible: trunk):
+  R-JTG-25 extends to a comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`) with a demand as an operand and to a method call,
+  plain or null-safe, whose receiver is a demand: the run stops, same wording. A property read on a demand
+  (`envLookup(n).name`) does not stop the run and reads `null`, as R-FA-12 leaves a read on a missing feature (measured:
+  no warning is logged). Extends R-JTG-25, which stays unchanged. Evidence: `demand-as-value.test.ts`.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
