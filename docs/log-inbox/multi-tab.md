@@ -288,3 +288,22 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; Alfonso's Ok 2026-11-08 07:37 on the 0150 crops, and the 0150 and 0245 measurements on the same code)
 **Notes**: Probes 17/17 once. Files on both sides: none; governance files on the branch: none. The 19 new tests counted on the merge from the two added files, byte-equal to d2b184780: vitest cannot start in the branch tree (no node_modules), not written there; a first static count said 18. Trunk-tip vitest at load 32: the 3 import reds plus an irCollapsedRender close timeout, 13/13 alone. check:docs 5/5, not the prompt's 4/4. Lane board unchanged, not restarted; 3001 up, not restarted.
 **Prompt document name**: 2026-11-08 07:37
+
+## 2026-11-08 — feat: a second tab on one model, Open in new tab and Open beside (multi-tab L6)
+**Prompt**: `claude_2026-11-08_0808_prompt_multi_tab_l6_second_tab.md`, lane full: tab-id helper `<modelId>~tab<N>`, decoding at the sites that read a tab id as a model id, `closeTabsForEntity` on every tab of the entity, `openBeside` by tab id, the two menu items on the model row. List widened by Alfonso's GO (RC-21) with `EditorSwitch.tsx`, `ModelTab.tsx`, `MyRcDock.tsx`. Closed by the continuation lanes P-2026-11-08-0852 (app check) and P-2026-11-08-1003 (paint fix of the beside panel).
+**Files touched**: `46cde4fdc` and the follow-up: the discovery note; `64b18a050` five test files, red; `89fa42c59` `modelTabId.ts` (new), `TabDataMaker.tsx`, `ModelTab.tsx`, `EditorSwitch.tsx`, `Dock.tsx`, `DockManager.tsx`, `MyRcDock.tsx`, `Navbar.tsx`, `TreeViewContent.tsx`; `7f8e8c0fb` `ScriptTab.scss` (the beside panel is painted); the discovery note, this entry and the three Status flips.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (app probes; the maximized fallback stays red, known limit; Alfonso's visual check due)
+**Notes**: Partial: known limits. On 7f8e8c0fb: typecheck exit 0, build passed, the 5 L6 test files 38 passed, check:docs exit 0; no full vitest (no TS changed). App: Open beside painted 3/3, 27 nodes, left 18; Refactoring split 8 nodes; demo 15/15. Red: maximized fallback, tab in a hidden placeholder. Console not observed. Cause c: discovery 2026-11-06 §2.2 missed three readers. Tables: `discovery_2026-11-08_l6_second_tab.md`.
+**Prompt document name**: 2026-11-08 08:08
+
+## 2026-11-08 — ticket: the Console reads the dock tab id as a model id
+**Ticket**: `components/editors/Console.tsx:846-848,1058-1059` resolve the active tab id with `fromPointer`. On a second tab of a model (`<modelId>~tab<N>`, L6) the lookup misses: no crash, but the Console sees no active model and `:1059` clears its node. Read from the code, not observed at runtime (`.console-tab-v2` is not mounted in the demo layout). JjScript is not affected: measured, it finds the model through the `EDITOR_TYPE_CHANGE` cache. The fix is `modelOfTabId` (`components/abstract/tabs/modelTabId.ts`) at those lines.
+**Priority**: medium
+**Found in**: P-2026-11-08-0808
+**Detail**: docs/discovery/discovery_2026-11-08_l6_second_tab.md

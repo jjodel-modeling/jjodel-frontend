@@ -123,10 +123,96 @@ the M1 `ModelNode` row of `TreeViewContent.tsx` only. Code: `89fa42c59`.
   `isActiveDockTab` reads `children[0]` only). It keeps the viewpoint it was opened on and does not write the root.
 - **Two more readers take the tab id for a model id, found after §2 and left unchanged (outside the list).**
   `jjscript/executor/utils.ts:103-107,146-148` and `components/editors/Console.tsx:846-848,1058-1059`. On a
-  second tab the lookup misses: no crash (`fromPointer` inside `try`, null handled), but the script context
-  and the Console see no active model, and `:1059` clears the Console's node as «from a different metamodel».
+  second tab the lookup misses: no crash (`fromPointer` inside `try`, null handled). The Console sees no active
+  model and `:1059` clears its node as «from a different metamodel» (read, not observed). Corrected by the app check:
+  JjScript does find the model, through the `EDITOR_TYPE_CHANGE` cache (see App check, below).
 - **A third, fixed in `Navbar.tsx`.** The tab-strip loop (`:1830`) skipped a tab whose id resolves to nothing as a
   ghost, which would have dropped every second tab from the strip; it decodes now.
 - **Not executed by the bench** (node environment, no DOM): the mount write and the props passed through
   `ModelTab`, the `Navbar.tsx` decoding, the `TreeViewContent.tsx` menu. They go to the app check of the
   continuation lane.
+
+## App check (P-2026-11-08-0852, P-2026-11-08-1003, added 2026-11-08)
+
+Demo project `jjodel-multitab-demo.jjodel` on a dev server of this tree, light theme, viewport 1600 x 1000. Probes,
+JSON and crops: `~/.jjodel-lanes/P-2026-11-08-0852/`, `~/.jjodel-lanes/P-2026-11-08-1003/`. Second tabs are `~tab2`,
+`~tab3` (`modelTabId.test.ts:30`).
+
+### P-2026-11-08-0852, before the paint fix (HEAD `d65442ea9`)
+
+The gesture, three runs, 14/16 checks each, the same two red, pageerrors 0:
+
+| Check | r1 | r2 | r3 |
+|---|---|---|---|
+| Open in new tab: ids `M` and `M~tab2` | pass | pass | pass |
+| Focus A, B, A: node set = single tab, +4 and +10 s (A Floor plan 18, B Control wiring 17) | pass | pass | pass |
+| Focus A, B, A: root viewpoint, `body[data-editor-type]` = model, status bar, active tab | pass | pass | pass |
+| Open beside: layout has a right panel, DOM holds 27 nodes (Office Floor plan = 27) | pass | pass | pass |
+| **Open beside: the right panel is painted** | **FAIL** | **FAIL** | **FAIL** |
+| Maximized: fallback creates `O~tab2` on the same viewpoint, not a right panel | pass | pass | pass |
+| **Maximized: the new tab is painted** | **FAIL** | **FAIL** | **FAIL** |
+
+Beside: `dockbox` sizes [800, 800], the right `.dock-panel` 0 x 0, the left 1599 px. Cause: `ScriptTab.scss:279-284`,
+only a split holding `.script-tab--beside` got `display: block`.
+
+Guards, one run (failures 1: the same painted check):
+
+| Step | Result |
+|---|---|
+| Two tabs, addObject from outside the canvas (Sensor, `LModel.addObject(.., true)`) | +1 object, 1 vertex, +4 and +10 s, drawn in both panes |
+| Close B (app bar x), drag on A | Floor plan record moved (126,338 to 208,384), Control wiring unchanged (560,42) |
+| Second tab again, close A first, addObject | +1 object, 1 vertex, drawn in B |
+| Delete Apartment (the two lines of `handleDeleteModel`) | both tabs closed |
+| Delete Office (`delete()` alone, `ModelTab.tsx:30`) | both tabs closed |
+
+Single tab, no regression:
+
+| Probe | Result |
+|---|---|
+| 0628 layout, three runs | 3/3 at every step, +4 and +10 s, FAILURES 0 |
+| Container, one run | FAILURES 0 |
+| 0457 scenes, one run | checks 2/2, pageerrors 0, node matches 10/10, 6/6, 10/10 |
+| 1730 demo, one run | 15/15, Apartment Floor plan 18, Office Control wiring 25 |
+
+### P-2026-11-08-1003, with the paint fix (`7f8e8c0fb`)
+
+The exception of `ScriptTab.scss` also covers `.dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models`.
+
+«Open beside ▸ Floor plan» on Office from the Tree View row, three runs, 16/17 checks each, pageerrors 0:
+
+| Check | r1 | r2 | r3 |
+|---|---|---|---|
+| Right panel: canvas x 1091, w 508, on top at its centre | pass | pass | pass |
+| Right panel: 27 nodes, minimap 27, node set = single tab on Floor plan | pass | pass | pass |
+| Left canvas: Floor plan, 18 before = 18 after = single tab, on top outside the side panels | pass | pass | pass |
+| Open in new tab and focus A, B, A (the table above) | pass | pass | pass |
+| Maximized: the fallback tab is painted | **FAIL** | **FAIL** | **FAIL** |
+
+| Regression scene | Result |
+|---|---|
+| Refactoring split (M2 target, `createProjectRefactoring`), one run | `.script-tab--beside` mounted, editor w 542, canvas w 613, 8 nodes, on top, failures 0 |
+| 1730 two-model demo, one run | 15/15, pageerrors 0 |
+
+The first left-canvas check hit-tested the centre of the flow and failed on the side panels, not on the canvas: the
+probe was corrected and the three runs repeated (`gesture-1-centre-hit.json`). An M1 Refactoring on the demo project
+placed nothing, because `projectTargetCandidates` listed only the metamodel, so the split was measured on an M2 one
+(`dry/refactor-m1-no-candidate.json`); why the M1 models are not listed was not traced.
+
+### Findings and known limits
+
+- **JjScript on a second tab finds the model**: `getActiveModel()` returns it through the `EDITOR_TYPE_CHANGE` cache,
+  with the decoded id. `fromPointer(tabId)` returns null without throwing.
+- **The Console was not observed at runtime**: `.console-tab-v2` is not mounted in this layout. Its reading of the tab
+  id stands from the code only.
+- **The maximized fallback creates the tab in a hidden placeholder panel**, `-maximized-placeholder-`, width 0, while
+  status and active id move to the model. The Tree View row is at x = -391 while a panel is maximized, so the gesture
+  is not reachable with the mouse (the probe uses dispatched events). Known limit.
+- **The status bar at opening** stays on the left model when the left tab is `M`, and follows the right panel when the
+  left tab is a `~tab` id. Not traced.
+- **A click in the right panel** leaves root, editor type, status and active tab unchanged (R-MT-24; measured by
+  P-2026-11-08-0852 with the rule injected in the browser).
+- **In the split the side panels sit over the left panel**: the left flow is x 201, w 687, the Tree View starts at
+  x 490, so 289 px of it are uncovered. The right panel measures 710 px for sizes [800, 800]; the `max-width: 710px` of
+  `style.scss:1055` exempts only the Refactoring split. Not changed.
+- **The selector matches any split of two model-group panels**, not only one made by Open beside. A split made by
+  dragging a tab was not exercised.

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1003
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane multi-tab-l6 · 7f8e8c0fb · verifica visiva da fare (crops in ~/.jjodel-lanes/P-2026-11-08-1003/: crop_1_beside_panel.png, crop_2_refactoring_split.png)
 Lane: full (one SCSS rule, then measurement and closure; no critical zone)
 Depends: P-2026-11-08-0808 (code 89fa42c59), P-2026-11-08-0852 (app check, uncommitted, handoff `~/.jjodel-lanes/P-2026-11-08-0852/handoff.md`); R-MT-24, R-MT-25
 Worktree: ~/jjodel-w-mtl6, branch multi-tab-l6, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)

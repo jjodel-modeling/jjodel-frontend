@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0852
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane multi-tab-l6 · nessun commit di codice, chiusa da P-2026-11-08-1003 · verifica visiva da fare (crops in ~/.jjodel-lanes/P-2026-11-08-1003/)
 Lane: full (measurement and closure; no source change)
 Depends: P-2026-11-08-0808 (note 46cde4fdc and c6ccbab4c, tests 64b18a050, code 89fa42c59); R-MT-4, R-MT-9, R-MT-17, R-MT-24, R-MT-25; the demo project `~/Downloads/jjodel-multitab-demo.jjodel`
 Worktree: ~/jjodel-w-mtl6, branch multi-tab-l6, at this prompt's commit (node_modules by the P14 symlink, re-created by you, removed at the end)
