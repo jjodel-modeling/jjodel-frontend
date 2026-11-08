@@ -13,7 +13,7 @@ For S1..S7 of the prompt: where today's split is created and torn down, where ta
 
 The split must move **inside the dock tab**. Today it is two rc-dock panels, a structure of the whole dock, and S4 (the split belongs to the tab) cannot be expressed on it. A new `SplitStage` is the content of every model and metamodel tab, always, with one or two panes; each pane is today's `ModelTab` or `MetamodelTab`, or `TextualTab`. The textual half is much cheaper than it looks: parse gating, reprint and the element-to-text map already exist. The expensive part is that several readers equate "the dock's active tab" with "the active canvas".
 
-No file of the `CLAUDE.md` §3.1 table has to be edited, except through the separate L4c lane if S3 is to wait for it (Q5). Four lanes, 18 commits at most.
+No file of the `CLAUDE.md` §3.1 table has to be edited, except through the separate L4c lane if S3 is to wait for it (Q5). Four lanes, 19 commits at most.
 
 ## Files read
 
@@ -106,7 +106,7 @@ Each breaks silently if the in-tab split is built without it:
 Also single-pane readers, to follow the active pane:
 - `Navbar.tsx:1875-1876`, the tab's label from the first `.toolbar-viewpoint-trigger__label` in the tab pane.
 - `CanvasExportService.ts:93`, «`?? shown[0]`», and `:95`, the model id from `.dock-tabpane`'s id: File > Export exports the left canvas, under the tab's model.
-- `canvasSelection.ts:34-36`, `modelPane(modelId)` finds the tab by the model id, so it misses a pane showing another model and merges both panes' selection on one model. Its reader is `TextualTab.tsx:1810-1815`.
+- `canvasSelection.ts:34-36`, `modelPane(modelId)` finds the tab by the model id, so it misses a pane showing another model and merges both panes' selection on one model. Its readers: `TextualTab.tsx:1730, 1809`.
 
 ## Design, the whole
 
@@ -129,7 +129,7 @@ The icon goes in the toolbar **before** the fieldset of `Toolbar.tsx:852`, «`<f
 
 Pure `nextPaneContent(left, viewpoints, hasText)` in `canvasSplit.ts`, on the list `Toolbar.tsx:313-314` builds, «`.filter(ptr => !Defaults.isSystemViewpoint(ptr) && !isDataManagerViewpointId(ptr))`», moved to a helper both call. Order: another named viewpoint, abstract syntax, textual, same.
 
-A metamodel has no choice: `Toolbar.tsx:1108`, `disabled={isMetamodel}`, and no textual entry (`:449`, «`if (!isMetamodel) {`»), so it always opens the same abstract syntax, the last clause of S2. `openBeside` refuses a further tab on a metamodel (`DockManager.tsx:247`), but that guards the dock tab, by R-MT-25 for want of a use case, and an in-tab pane does not pass there. Two canvases on one metamodel have never run: to be measured first in Phase 2.
+A metamodel has no choice: `Toolbar.tsx:1108`, `disabled={isMetamodel}`, and no textual entry (`:445`, «`if (!isMetamodel) {`»), so it always opens the same abstract syntax, the last clause of S2. `openBeside` refuses a further tab on a metamodel (`DockManager.tsx:247`), but that guards the dock tab, by R-MT-25 for want of a use case, and an in-tab pane does not pass there. Two canvases on one metamodel have never run: to be measured first in Phase 2.
 
 «A textual syntax exists»: today's picker asks only `codegenEnabled`, `Toolbar.tsx:351`, not the model; see Q4.
 
@@ -137,7 +137,7 @@ A metamodel has no choice: `Toolbar.tsx:1108`, `disabled={isMetamodel}`, and no 
 
 A thin **pane header** row, shown only in a split, holds the model selector, the viewpoint selector, the parse warning and the cross. It is one component for canvas and text panes, since a text pane has no `Toolbar`. In a split the toolbar's own picker is hidden by a new optional prop.
 
-- Viewpoint selector: the list of S2, a separator, the textual entry. Today the textual entry opens a dock tab (`Toolbar.tsx:392-396`); in a pane it sets the pane's content. The Data Manager entry is left out, as S3 lists it not.
+- Viewpoint selector: the list of S2, a separator, the textual entry. Today the textual entry opens a dock tab (`Toolbar.tsx:392-396`); in a pane it sets the pane's content. The Data Manager entry is left out: S3 does not list it.
 - Model selector: `layoutTabIds(dock.getLayout())` through `modelOfTabId`, deduplicated, kept to `DModel` (`modelTabId.ts:12, 27`).
 - Drop: the app bar has no drag source. `command grep -c "draggable\|onDragStart\|onDrop\|application/" Navbar.tsx` gives 0, exit 1; the same command on `EditorV2.tsx` gives 7 (control). So `draggable` on `Navbar.tsx:2096` with a MIME of its own, and capture handlers on the pane wrapper. Firefox has a history of not dragging `<button>`; not checked here.
 - A pane on a deleted model: `ModelTab.tsx:30` closes the model's tabs; in a pane it must close the pane.
@@ -170,15 +170,15 @@ A third beside path exists and S6 does not name it: the Text tab docking beside 
 
 - (a) Rail filter: H10, H11.1. Inside S1's lane, 0 further files.
 - (b) Minimap. `<MiniMap>` at `EditorV2.tsx:5211`, default size, 16 px from the corner; `paddingForInset`, `viewportInset.ts`, «`return { top: base, bottom: base, left: base, right: \`${inset + 20}px\` };`», knows the rail only. Smallest: `fitPadding` gets the minimap's footprint when it is shown, an optional argument, read at `paneFitPadding` (`EditorV2.tsx:604`).
-- (c) Left fit at about 10%. From L6c's note, not measured here. `minZoom` is 0.05 in a split (`:5168`) and the fit obeys the layout's extent in a 397 px canvas: so a floor costs nodes out of view, and nothing else about it is known. Needs a number: Q8.
+- (c) Left fit at about 10%. From L6c's note, not measured here. `minZoom` is 0.05 in a split (`:5168`) and the fit obeys the layout's extent in a 397 px canvas (L6c's table). A zoom floor would push nodes out of view. Needs a number: Q8.
 - (d) The keys of H9. `EditorV2.tsx` only. It writes the layout next to the D-layer, as E4 did, so a Layer Impact Report comes first (§3.2).
 
 ## Proposed Phase 2 lanes
 
 | Lane | Delivers visibly | Commits |
 |---|---|---|
-| **L6f** split in the tab | S1, S4, S7(a). The icon, two canvases on one model, divider, cross, one app bar entry with a mark, tab switch restores all, rail filter follows the active pane. S2's rule at its simplest. Includes the first run of two canvases on a metamodel | 5 |
-| **L6g** pane selectors | S2 complete, S3. Pane header, viewpoint and model selectors, drop from the app bar. After L4c if Q5 says so | 4 |
+| **L6f** split in the tab | S1, S4 without the app bar, S7(a). The icon, two canvases on one model, divider, cross, tab switch restores all, rail filter follows the active pane. S2's rule at its simplest. Includes the first run of two canvases on a metamodel | 5 |
+| **L6g** pane selectors, app bar | S2 complete, S3, the app bar half of S4. Pane header, viewpoint and model selectors, drop from the app bar, one app bar entry with a mark. After L4c if Q5 says so | 5 |
 | **L6h** textual pane | S5, the textual entry of S3 | 4 |
 | **L6i** shortcuts, leftovers | S6, S7(b), (c), (d) with its report | 5 |
 
