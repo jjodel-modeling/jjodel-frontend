@@ -247,3 +247,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 
 **Probe results** (chat, 2026-11-07 18:04, on `4b665664a`, owed by P-2026-11-07-1620 which stopped at the context ceiling): onto-s2-instantiate 22/22 (S2-1m included), onto-s3a-slot-problems 8/8 (default export), onto-s3b-ghost-rows 6/6 (uml-s3b); 1-minute load 20.2 to 15.0; logs in `~/.jjodel-lanes/P-2026-11-07-1620/`.
+
+## 2026-11-07 — merge: oi-s3b into alfonso-frontend-jjtl (P-2026-11-07-1834)
+**Prompt**: `claude_2026-11-07_1834_prompt_merge_oi-s3b.md`, a direct merge by `lane-run merge --direct`, no session: `oi-s3b` at `065a1c501` into `alfonso-frontend-jjtl`, merge base `4834b0edb` (tag 3.2.0); `oi-s2u` and `oi-s3a` are contained in `oi-s3b`.
+**Files touched**: merge `e5add4d95` (53 files on the branch side, no conflicts); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. The worker's gates were red on two items outside this branch: vitest 1 red, `codegen/textual/__tests__/tolerant.test.ts:270` (a timing bound, 1484 ms against 1000 at load 144; rerun alone on `efd40eb55` at 00:06: 103/103 with `jjelIslands.test.ts`), and check:docs B on the 3.1.2 entry of `multi-tab.md` (fixed by its owner in `d9187549d`). Incoming tests 79/79; typecheck, build, check:addonly, check:agents, check:scripts green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, GO of 2026-11-07 15:10 on oi-s3b at localhost:3005
+**Notes**: Prompt-ID collision: `P-2026-11-07-1834` was also taken in the same second by the merge of `textual-f1e-names` (closed by hand in `e91177c3b`); the two workers shared one lane folder, so its result.json mixes both runs. Rollback tag `pre-oi-s3b` on `f5fc80aaf`. Pushed with the trunk.
+**Prompt document name**: 2026-11-07 18:34
