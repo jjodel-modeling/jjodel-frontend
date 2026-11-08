@@ -78,6 +78,8 @@ export interface SnapshotCreate {
     readonly name?: string;
     /** The key of the container, `null` for a root of the new model. */
     readonly ownerKey: string | null;
+    /** The object this create copies, absent for an object the plan adds. */
+    readonly sourceId?: string;
 }
 
 /** `.values = [keys mapped to ids]` on the slot of `feature` (`model/CLAUDE.md` §9.3). */
@@ -223,6 +225,7 @@ export function planSnapshot(input: SnapshotInput): SnapshotPlan {
         classId: o.classId,
         ...(o.name !== undefined ? { name: o.name } : {}),
         ownerKey: o.owner !== null && keys.has(o.owner) ? keyOf(o.owner) : null,
+        ...(byId.has(o.id) ? { sourceId: o.id } : {}),
     }));
 
     const references: SnapshotReferenceWrite[] = [];

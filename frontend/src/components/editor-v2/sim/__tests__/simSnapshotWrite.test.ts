@@ -344,7 +344,7 @@ describe('the layout of the snapshot', () => {
     const box = (x: number): SnapshotVertexLayout => ({ x, y: 20, w: 200, h: 120, isResized: false });
     const source = (id: string, classId: string, name: string | undefined, owner: string | null): SnapshotSourceObject => (
         { id, classId, name, owner, attributes: [], references: [] });
-    const created = (key: string, classId: string, name: string, ownerKey: string | null): SnapshotOperation => ({ op: 'create', key, classId, name, ownerKey });
+    const created = (key: string, classId: string, name: string, ownerKey: string | null, sourceId?: string): SnapshotOperation => ({ op: 'create', key, classId, name, ownerKey, ...(sourceId !== undefined ? { sourceId } : {}) });
     const roles: SnapshotRoles = { slotClass: 'S', slotContainer: 'sc', definingFeature: 'df', valueHolder: 'vh', featureType: 'ft', valueKinds: [] };
     const planned = (objects: SnapshotSourceObject[]) => planSnapshot({ modelName: 'm', step: 1, objects, roles, sigma: new Map(), slots: new Map() });
     const copyAt = (copies: ReturnType<typeof vertexCopiesOf>, key: string) => copies.find(c => c.key === key)?.layout.x;
@@ -403,6 +403,26 @@ describe('the layout of the snapshot', () => {
         const operations = [created('kn2', 'C', 'b', null), created('kn1', 'C', 'a', null), created('kc2', 'E', 'z', null), created('kc1', 'D', 'z', null)];
         const copies = vertexCopiesOf(plan(operations), objects, new Map([['n1', box(1)], ['n2', box(2)], ['c1', box(3)], ['c2', box(4)]]));
         expect(['kn1', 'kn2', 'kc1', 'kc2'].map(k => copyAt(copies, k))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('keeps two siblings with the same class and name on their own vertices when the plan reorders them (matching by identity swaps them)', () => {
+        const objects = [source('x', 'Slot', 's', 't2'), source('t1', 'C', 'twin', 'model'), source('t2', 'C', 'twin', 'model')];
+        const plan = planned(objects);
+        const twins = plan.operations.filter(op => op.op === 'create' && op.name === 'twin').map(op => op.key);
+        const copies = vertexCopiesOf(plan, objects, new Map([['x', box(3)], ['t1', box(1)], ['t2', box(2)]]));
+        expect(twins.map(k => copyAt(copies, k))).toEqual([2, 1]);
+    });
+
+    it('gives a create with no sourceId nothing a sourceId took (dropping the exclusion copies one vertex twice)', () => {
+        const objects = [source('a', 'C', 'a', 'model')];
+        const copies = vertexCopiesOf(plan([created('add', 'C', 'a', null), created('ka', 'C', 'a', null, 'a')]), objects, new Map([['a', box(1)]]));
+        expect(copies.map(c => c.key)).toEqual(['ka']);
+    });
+
+    it('finds a create with no sourceId under an owner matched by sourceId (recording the owner only in the fallback loses it)', () => {
+        const objects = [source('a', 'C', 'a', 'model'), source('s', 'Slot', 'x', 'a')];
+        const copies = vertexCopiesOf(plan([created('ka', 'C', 'a', null, 'a'), created('ks', 'Slot', 'x', 'ka')]), objects, new Map([['a', box(1)], ['s', box(2)]]));
+        expect(copyAt(copies, 'ks')).toBe(2);
     });
 
     it('makes the vertices inside the undo group, out of the batch, and closes after they land (moving the loop in the batch or past the wait fails)', async () => {

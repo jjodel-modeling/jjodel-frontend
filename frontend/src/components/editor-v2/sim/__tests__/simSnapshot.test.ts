@@ -151,8 +151,8 @@ describe('planSnapshot: the references', () => {
         expect(refWrites(plan, keyOf(plan, 'senses'), F.ends)).toEqual([[keyOf(plan, 'end_sensor')]]);
     });
 
-    it('leave no source id anywhere in the plan (killed by any id not remapped)', () => {
-        expect(JSON.stringify(plan)).not.toContain('id-');
+    it('leave no source id anywhere in the plan but in sourceId (killed by any id not remapped)', () => {
+        expect(JSON.stringify(plan, (field, value) => (field === 'sourceId' ? undefined : value))).not.toContain('id-');
     });
 
     it('write nothing for an empty slot: a new object is unset, and values = [] does not clear (killed by writing the empty list)', () => {
@@ -265,6 +265,11 @@ describe('planSnapshot: a slot in σ with no Slot object', () => {
 
     it('gives the added objects no name of their own (killed by the internal id as a name)', () => {
         expect(extra.map(c => c.name)).toEqual([undefined, undefined]);
+    });
+
+    it('names the source of every copy and of no added object (killed by no sourceId or by one on every create)', () => {
+        for (const o of OBJECTS) expect(creates(plan).find(c => c.name === o.name)?.sourceId).toBe(o.id);
+        expect(extra.map(c => c.sourceId)).toEqual([undefined, undefined]);
     });
 
     it('appends the new Slot to the slots of the instance, after those of the model (killed by replacing them)', () => {

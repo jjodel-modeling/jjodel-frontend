@@ -265,17 +265,20 @@ export function sourceVertexLayouts(lookup: Lookup, modelId: string): Map<string
 }
 
 /**
- * The vertices `plan` copies, by plan key. A create names no source id: it takes the
- * source object with its owner, class and name, in the plan's order, owners first.
+ * The vertices `plan` copies, by plan key. A create with a `sourceId` takes the vertex
+ * of that object. One without takes, among the objects no create names, the source
+ * object with its owner, class and name, in the plan's order, owners first.
  * An object the plan added matches nothing and is left to Step 2bis.
  */
 export function vertexCopiesOf(
     plan: SnapshotPlan, objects: readonly SnapshotSourceObject[], layouts: ReadonlyMap<string, SnapshotVertexLayout>,
 ): SnapshotVertexCopy[] {
     const known = new Set(objects.map(o => o.id));
+    const named = new Set(plan.operations.flatMap(op => (op.op === 'create' && op.sourceId !== undefined ? [op.sourceId] : [])));
     const identity = (owner: string | null, classId: string, name: unknown) => JSON.stringify([owner, classId, name ?? null]);
     const sources = new Map<string, string[]>();
     for (const o of objects) {
+        if (named.has(o.id)) continue;
         const id = identity(o.owner !== null && known.has(o.owner) ? o.owner : null, o.classId, o.name);
         sources.set(id, [...(sources.get(id) ?? []), o.id]);
     }
@@ -283,10 +286,13 @@ export function vertexCopiesOf(
     const copies: SnapshotVertexCopy[] = [];
     for (const op of plan.operations) {
         if (op.op !== 'create') continue;
-        if (op.ownerKey !== null && !sourceOf.has(op.ownerKey)) continue;
-        const owner = op.ownerKey === null ? null : sourceOf.get(op.ownerKey) as string;
-        const source = sources.get(identity(owner, op.classId, op.name))?.shift();
-        if (source === undefined) continue;
+        let source = op.sourceId;
+        if (source === undefined) {
+            if (op.ownerKey !== null && !sourceOf.has(op.ownerKey)) continue;
+            const owner = op.ownerKey === null ? null : sourceOf.get(op.ownerKey) as string;
+            source = sources.get(identity(owner, op.classId, op.name))?.shift();
+            if (source === undefined) continue;
+        }
         sourceOf.set(op.key, source);
         const layout = layouts.get(source);
         if (layout) copies.push({ key: op.key, layout });
