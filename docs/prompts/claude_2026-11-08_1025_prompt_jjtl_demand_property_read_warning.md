@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1025
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane fast · 6555ebdd0 (executor and tests), 1ee641a82 (SPEC), 0264b6d75 (R-JTG-32)
 Lane: fast (one executor change and its tests; unattended)
 Depends: P-2026-11-08-0835
 Worktree: ~/jjodel-w-demandread, branch jjtl-demand-read

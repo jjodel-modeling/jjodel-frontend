@@ -1504,3 +1504,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: S3: several source models of one metamodel, kernel baseline unchanged
 **Notes**: Rollback tag `pre-jjtl-multi-source` on `49cd0871d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0939/result.json`.
 **Prompt document name**: 2026-11-08 09:39
+
+## 2026-11-08 — fix(jjtl): a property read on a demand warns (P-2026-11-08-1025)
+**Prompt**: `claude_2026-11-08_1025_prompt_jjtl_demand_property_read_warning.md`, lane fast, unattended: a property read on a demand warns naming rule, source element and property and still reads null; tests first on both parser paths; one row after R-JTG-30.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/demand-as-value.test.ts` (6555ebdd0); `frontend/src/jjtl/SPEC.md` (1ee641a82); `docs/decisions.md` R-JTG-32 (0264b6d75); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 08:35 `claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`
+**Causa**: (c)
+**Regressions**: no — full vitest 15308 passed, 0 failed tests, the 3 known import failures; typecheck exit 0; check:docs exit 0; kernel baseline SHA prefixes unchanged, 0 warnings
+**Out-of-scope changes**: no — six files, above the five of RC-11, all named by the prompt's DOVE: executor.ts, demand-as-value.test.ts, SPEC.md, decisions.md, this inbox, the prompt's Status
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The row asked «after R-JTG-30» is R-JTG-32, after R-JTG-31, which landed meanwhile. One warning per property, expression and source element: a rule run on N elements warns N times, since the warning must name the element. The test that pinned no warning is replaced. Bench in 6555ebdd0: four mutations, all killed. A read in the JjEL argument of resolve has no position, that argument is evaluated outside evaluateExpression.
+**Prompt document name**: 2026-11-08 10:25
