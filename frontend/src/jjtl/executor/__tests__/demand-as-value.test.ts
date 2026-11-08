@@ -142,6 +142,119 @@ Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
         expect(error).toContain(`${RULE_MK_CONST}: its result, a demand, is the operand of '-'; ${ADVICE}`);
     });
 
+    it.each(['==', '!=', '<', '<=', '>', '>='])("envLookup compared with '%s' stops the run", async op => {
+        const result = await run(`
+rule mk(c, env: Env) -> Const {
+    value := envLookup("w") ${op} c.value
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        const error = failed(result);
+        expect(error).toMatch(/^Failed to map \(creation\) -> value: Builtin 'envLookup' failed in expression at line 6, column \d+/);
+        expect(error).toContain(`${RULE_MK_CONST}: its result, a demand, is an operand of '${op}'; ${ADVICE}`);
+    });
+
+    it("a called rule's demand on the right of a comparison stops the run, naming the rule", async () => {
+        const result = await run(`
+rule one(c) -> Const {
+    value := 1
+}
+
+rule mk(c, env: Env) -> Const {
+    value := c.value == one(c)
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        const error = failed(result);
+        expect(error).toMatch(/^Failed to map \(creation\) -> value: Builtin 'one' failed in expression at line 10, column \d+/);
+        expect(error).toContain(`${RULE_MK_CONST}: its result, a demand, is an operand of '=='; ${ADVICE}`);
+    });
+
+    it('a demand compared in the condition of an if-then-else stops the run', async () => {
+        const result = await run(`
+rule mk(c, env: Env) -> Const {
+    value := if envLookup("w") == 3 then 1 else 2
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(failed(result)).toContain(`${RULE_MK_CONST}: its result, a demand, is an operand of '=='; ${ADVICE}`);
+    });
+
+    it('a method called on envLookup stops the run', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := envLookup(v.name).toUpper()
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        const error = failed(result);
+        expect(error).toMatch(/^Failed to map \(creation\) -> name: Builtin 'envLookup' failed in expression at line 6, column \d+/);
+        expect(error).toContain(`${RULE_MK_VAR}: its result, a demand, is the receiver of method 'toUpper'; ${ADVICE}`);
+    });
+
+    it('a null-safe method called on envLookup stops the run', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := envLookup(v.name)?.toUpper()
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        expect(failed(result)).toContain(`${RULE_MK_VAR}: its result, a demand, is the receiver of method 'toUpper'; ${ADVICE}`);
+    });
+
+    it("a method called on a called rule's result stops the run, naming the rule", async () => {
+        const result = await run(`
+rule one(c) -> Const {
+    value := 1
+}
+
+rule mk(c, env: Env) -> Const {
+    value := one(c).toString()
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        const error = failed(result);
+        expect(error).toMatch(/^Failed to map \(creation\) -> value: Builtin 'one' failed in expression at line 10, column \d+/);
+        expect(error).toContain(`${RULE_MK_CONST}: its result, a demand, is the receiver of method 'toString'; ${ADVICE}`);
+    });
+
+    it('a property read on a demand does not stop the run: it reads null (R-FA-12)', async () => {
+        const result = await run(`
+rule mk(v, env: Env) -> Ref {
+    name := envLookup(v.name).name
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        expect(result.warnings).toEqual([]);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Ref(null)']);
+    });
+
+    it('a value bound by let compares and takes methods: the same expressions succeed', async () => {
+        const compared = await run(`
+rule mk(c, env: Env) -> Const {
+    let $w = envLookup("w") in {
+        value := $w == 3
+    }
+}
+
+Main m = mk(m.expr, ${ENV})`, CONST_SOURCE);
+        expect(compared.errors).toEqual([]);
+        expect(compared.targetModel!.roots.map(term)).toEqual(['Const(true)']);
+
+        const called = await run(`
+rule mk(v, env: Env) -> Ref {
+    let $x = envLookup(v.name) in {
+        name := $x.toUpper()
+    }
+}
+
+Main m = mk(m.expr, ${ENV})`, VAR_SOURCE);
+        expect(called.errors).toEqual([]);
+        expect(called.targetModel!.roots.map(term)).toEqual(['Ref(ADD)']);
+    });
+
     it('a demand that a binding places stays legal, bare or through if-then-else', async () => {
         const result = await run(`
 rule mkRef(v) -> Ref {
