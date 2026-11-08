@@ -64,3 +64,29 @@ front.
 - A collision check in a slow osascript call can time out while the shell goes on: check only the lane folder and the
   trunk's `docs/prompts`, and commit and start in the same call.
 - A lane launched before the Request line carries the chat URL is refused (RC-43): the URL goes first.
+
+## Update 2026-11-08 23:20: levels, class rail, S4 links (all on `oi-rail`, waiting for Alfonso's visual GO)
+
+Alfonso's findings of 12:25 (class diagrams one level above object diagrams; the class rail from the metamodel and the
+binding; no «New instance of» on a class diagram; a relation between two instances not drawn) and his 16:03 «decidi tu»
+(the level is declared by the viewpoint), 20:11 «1 yes» (lane 3 and its critical zone) and «drawing it from the source to
+the target object».
+
+- Discovery P-2026-11-08-1605/1635: `940959760`, `4d736d663`. Answers Q1..Q4, Q6, Q7 adopted as recommended.
+- Levels lane 1 (1658/1726): `a709a12b1`, `b8fbddd72`, `0b12cf59a`; R-OI-19 (`_state.ontoLevel` class | instance | both,
+  absent = both), R-OI-20 (gating of the instance surfaces).
+- Levels lane 2 (1753/1822): `b8b9bfe30`, `3f399f545`, `7da4590f6`; R-OI-21..23 (class rail groups, container rule, class
+  pane menu «New ▸»).
+- Lane 3, S4 (2012/2041, critical zone go-ahead): `d9b1912f9`, `21cf3a99e`, `2bed6cb5c`, `459ac12e4`; R-OI-24. Drag
+  between two objects → associations whose ends accept both classifiers (closure), one auto-selected, link with both end
+  values in one undo entry, in `Package.packagedElements`; `useIRContainment.ts` and `irEdgeViews.ts` unchanged.
+- Fix lane (2146/2214): `a5f657409`, `a102c23a5`, `4ee0983ac`, `355ee1537`. New attribute `+ property1 : String` [1..1];
+  owner box grows; generalization in `<specific>.generalizations`; one Cmd+Z removes it (undo group around the deferred
+  writes at level `class`). Drop reach: connects up to 30 px from a handle, not at 45 (`connectionRadius` 40).
+- Probes at the end: S2 57/57, S4 14/14, binding editor 10/10, s3a 8/8, s3b 6/6.
+- Tickets: «Link Reference» popup title on links; duplicate links allowed; a drop farther than about 40 px from a handle
+  does nothing silently; at level `both` one undo after a class-to-class drag still leaves the object (other notations
+  share the path, unmeasured, medium); the placement of a link guarded only by the probe; five-row cascade fit
+  unmeasured; value kinds not addable by hand; raw `Pointer…` ids in binding defects.
+- Next: Alfonso's visual GO on `oi-rail`, then its merge into the trunk (he pushes); then the notation slice on
+  `oi-notation` (`cfd39d6c5`), S5 conformance.
