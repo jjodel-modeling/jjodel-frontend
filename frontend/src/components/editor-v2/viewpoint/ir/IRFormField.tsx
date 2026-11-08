@@ -150,8 +150,7 @@ function displayValue(raw: unknown): string {
     if (typeof raw === 'string') {
         try {
             const l: any = LPointerTargetable.fromPointer(raw);
-            // Presence, not a truthy name: a nameless target is not a broken chip (R-TXT-46
-            // D4), and it reads `: <Class>` as on the default view (R-TXT-47 D6).
+            // Presence, not a truthy name: a nameless target is not broken, it reads `<Class> (unnamed)`.
             if (l && typeof l.name === 'string') return namelessTargetLabel(l) ?? l.name;
         } catch {
             // Not a pointer, or a pointer to something that no longer exists: fall through

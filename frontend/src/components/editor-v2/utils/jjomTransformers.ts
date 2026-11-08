@@ -366,9 +366,7 @@ function objectVertexToRFNode(vertex: any, layoutKey: string): Node<ObjectNodeDa
                 try {
                     const raw: unknown[] = (fv.__raw?.values ?? fv.values ?? []) as unknown[];
                     const resolved = new Map<string, string>();
-                    // A nameless target is labelled `: <Class>`, as its own header
-                    // reads (R-TXT-47 D5). The label is display only: `name` stays
-                    // '' and the memory of names never sees it.
+                    // A nameless target reads `<Class> (unnamed)` (R-TXT-59); `name` and the memory of names stay ''.
                     const labels = new Map<string, string>();
                     const slotTargets: any[] = [];
                     try {
