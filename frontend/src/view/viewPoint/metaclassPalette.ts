@@ -364,14 +364,17 @@ function modelColors(idlookup: Record<string, any>, modelId: string, setting: Me
 
 /**
  * What an M1 object node of class `classId` paints, or null to paint as it always has. Only
- * the ACTIVE viewpoint (`state.viewpoint`, the one root every canvas reads) is consulted, and
- * only when its toggle is on: another viewpoint's setting, or none, changes nothing.
+ * one viewpoint is consulted, and only when its toggle is on: another viewpoint's setting, or
+ * none, changes nothing. That viewpoint is the tab's (`viewpointId`, multi-tab L5): a string
+ * names it, `null` is a tab on abstract syntax and paints nothing, and `undefined` (no tab owns
+ * the canvas) reads the active one, `state.viewpoint`, as before.
  */
 export function resolveMetaclassColoring(
     state: { viewpoint?: string | null; idlookup?: Record<string, any> } | null | undefined,
     classId: string | null | undefined,
+    viewpointId?: string | null,
 ): MetaclassColorOverride | null {
-    const vpId = state?.viewpoint;
+    const vpId = viewpointId === undefined ? state?.viewpoint : viewpointId;
     if (!vpId || !classId) return null;
     const idlookup = state?.idlookup ?? {};
     const setting = readMetaclassColoring(idlookup[vpId]);

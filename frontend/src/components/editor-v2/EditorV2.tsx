@@ -39,6 +39,7 @@ import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
+import { irViewpointArg } from './viewpoint/ir/irResolve';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
@@ -233,12 +234,13 @@ function irVertexIdForObject(graphId: string | null, objectId: string): string |
  * (waypoints AND side pins) session-only. Default true (no IR index / no
  * resolved view / resolution error → persist).
  */
-function isIREdgeLayoutPersistable(objectId: string, state?: DState): boolean {
+function isIREdgeLayoutPersistable(objectId: string, state?: DState, viewpointId?: string): boolean {
     try {
         const s: any = state ?? store.getState();
-        const sig = computeIRSignature(s);
+        // `viewpointId` is the IR core's argument for the tab's viewpoint (L5, irViewpointArg); absent, the root.
+        const sig = computeIRSignature(s, viewpointId);
         if (!sig) return true;
-        const index = getIRIndex(s, sig);
+        const index = getIRIndex(s, sig, viewpointId);
         if (!index) return true;
         const metaclassId = s.idlookup?.[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') return true;
@@ -601,6 +603,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const tabLayoutKey = (): string => viewpointIdRef.current === undefined
         ? getActiveLayoutKey()
         : getLayoutKeyFor(store.getState(), viewpointIdRef.current);
+    // The IR index of the tab's viewpoint (L5), read through the same ref: a tab on abstract syntax
+    // has none, and with no tab it is the root's, as before.
+    const tabIRViewpoint = (): string | undefined => irViewpointArg(viewpointIdRef.current);
+    const tabIRIndex = (state: any) => getIRIndex(state, computeIRSignature(state, tabIRViewpoint()), tabIRViewpoint());
     const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
     if (restoredViewportRef.current === undefined) {
         restoredViewportRef.current = readStoredViewport(modelid, tabLayoutKey());
@@ -1301,7 +1307,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             const state: any = store.getState();
             const lookup = state.idlookup;
-            const index = getIRIndex(state, computeIRSignature(state));
+            const index = tabIRIndex(state);
             if (!index || !lookup) return;
             const readCtx = makeReadCtx(lookup);
 
@@ -1729,7 +1735,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR containment decoration (Fase 2b): hidden subtrees + lifted edges when
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
-    const irContainment = useIRContainment(stableNodes, stableEdges);
+    const irContainment = useIRContainment(stableNodes, stableEdges, viewpointId);
     // The containment model of the last decoration, read by the graphVertex gestures (S3, R-GV-8) in the drag-end,
     // resize, drop and connect paths below.
     const irContainmentRef = useRef(irContainment);
@@ -1743,7 +1749,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const model = irContainment.model;
         if (model.objByVertex.size === 0) return true;
         const state: any = store.getState();
-        const index = getIRIndex(state, computeIRSignature(state));
+        const index = tabIRIndex(state);
         return canRenderOnlyVisible(index, state.idlookup ?? {}, model.objByVertex.values(), model.containers.size);
     }, [irContainment.model]);
 
@@ -1851,7 +1857,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const merged = getIREdgeAnchorOverride(objectId);
         if (!merged) return;
         const layout = irEdgeLayoutFromOverride(merged);
-        if (!layout || !isIREdgeLayoutPersistable(objectId)) return;
+        if (!layout || !isIREdgeLayoutPersistable(objectId, undefined, tabIRViewpoint())) return;
         const vertexId = irVertexIdForObject(graphId, objectId);
         if (!vertexId) return;
         syncIREdgeLayoutToJjom(vertexId, layout);
@@ -1866,7 +1872,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     useEffect(() => {
         if (!graphId || irLayoutHydratedGraphs.has(graphId)) return;
         const state: any = store.getState();
-        if (!computeIRSignature(state)) return;
+        if (!computeIRSignature(state, tabIRViewpoint())) return;
         irLayoutHydratedGraphs.add(graphId);
         const lookup = state.idlookup ?? {};
         const subs: string[] = lookup[graphId]?.subElements ?? [];
@@ -1875,7 +1881,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const vid of subs) {
             const v = lookup[vid];
             if (!v || v.className !== 'DVertex' || typeof v.model !== 'string') continue;
-            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state)) {
+            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state, tabIRViewpoint())) {
                 layoutEntries.push([v.model, {
                     sourceSide: v.irEdgeLayout.sourceSide,
                     targetSide: v.irEdgeLayout.targetSide,
@@ -1891,7 +1897,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
-    const irInteractionPlan = useIRInteractionPlan();
+    const irInteractionPlan = useIRInteractionPlan(viewpointId);
     irPlanRef.current = irInteractionPlan;
 
     // Palette intersection with the rootable classes, with normative fallback
@@ -3824,7 +3830,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (node?.type === 'objectNode') {
                 const st: any = store.getState();
                 const lookup = st?.idlookup;
-                const index = lookup ? getIRIndex(st, computeIRSignature(st)) : null;
+                const index = lookup ? tabIRIndex(st) : null;
                 const objectId = lookup?.[node.id]?.model;
                 const classId = (node.data as any)?.instanceOfClassId;
                 if (index && typeof objectId === 'string' && classId) {
@@ -4544,7 +4550,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         const state: any = store.getState();
         const idlookup = state.idlookup ?? {};
-        const index = getIRIndex(state, computeIRSignature(state));
+        const index = tabIRIndex(state);
         if (!index) return null;
         const readCtx = makeReadCtx(idlookup);
         const rendered = getNodes();

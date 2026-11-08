@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-07-1516
 Chat: C-2026-11-07-0425
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-07 · lane full · a87146a64 (LIR), 7b3cf6d2a (tests red), f2ddead3d · scope Option A approved (EditorV2.tsx, ObjectNode.tsx, two test mocks) · cut at AM-8, closed by P-2026-11-07-1730 (gates, app check, LIR §7) · hard-stop: visual check due · non fuso
 Lane: full (`viewpoint/` subtree LIR trigger; not critical zone)
 Depends: L2 and L3 on the trunk (P-2026-11-07-1210, P-2026-11-07-1438), docs/discovery/discovery_2026-11-06_multi_tab_viewpoints.md §7 row L5 and the readers table (R1..R8)
 Worktree: ~/jjodel-w-mtl5, branch multi-tab-l5, at this prompt's commit on alfonso-frontend-jjtl (node_modules by the P14 symlink, removed at the end)

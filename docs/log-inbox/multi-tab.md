@@ -211,3 +211,35 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso 2026-11-07 17:38 «i crop vanno bene»: `crop_2_B.png`, `crop_3_A.png`, `crop_5_A_reload.png` in `~/.jjodel-lanes/P-2026-11-07-1536/crops-1536/`)
 **Notes**: `release/3.1.2-patch` lacks the 3.1.1 welcome-key seed in `states.ts`; the probes set it themselves, only the branch's smoke seeds are affected. The `staging` CHANGELOG entry `[3.1.2]` was reworded to describe this patch (`4f567dd45`). The merge started the branch's Docker and Azure test-jjodel workflows; the tag starts none. R-MT-23 still names `origin/staging` and a PR to `main`: the release followed Alfonso's 15:32 choice (PR #209 closed, fix-only 3.1.2 from 3.1.1).
 **Prompt document name**: 2026-11-07 15:36
+
+## 2026-11-07 — feat: IR resolution follows the tab's viewpoint (multi-tab L5)
+**Prompt**: `claude_2026-11-07_1516_prompt_multi_tab_l5_ir_resolution.md`, lane full (critical zone): IR hooks, `IRForm`, the metaclass palette and the Symbol Editor opener take the tab's viewpoint id; cut at the AM-8 ceiling and closed by P-2026-11-07-1730 (remaining gates, app check, crops).
+**Files touched**: `a87146a64` the LIR; `7b3cf6d2a` `irTabViewpoint.test.ts`, `metaclassPalette.test.ts`, red; `f2ddead3d` Option A, seven source files: `irResolve.ts`, `useIRContainment.ts`, `IRForm.tsx`, `metaclassPalette.ts`, `SymbolEditorModal.tsx`, `EditorV2.tsx`, `ObjectNode.tsx`, and the React stubs of `irPresentation.test.ts` and `irSimActive.test.ts` (`useContext: () => null`, no assertion changed); 1730: LIR §7, this entry, two Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: app check P-2026-11-07-1730, single-tab layout probe 3/3 every step x3, container probe 0 failures, 0457 V1/V2/V3/R-MT-18 and ONE summary lines identical to 1352 r1
+**Out-of-scope changes**: yes: `EditorV2.tsx`, `ObjectNode.tsx` and the two test mocks beyond the five files of the prompt, Option A ratified by Alfonso (RC-21) before the change
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (demo two tabs 18/18 and 25/25 nodes, own colours, x3; L3 pair 6/6, was 6/10; three light-theme crops, LIR §7; Alfonso's visual check due)
+**Notes**: Gates. 1516 on f2ddead3d: typecheck exit 0, 0 error TS; vitest 558 files, 14873 passed, 2 skipped; red: 3 known window files, tolerant (1274 ms > 1000), irCollapsedRender and irSelectionRing (Chromium hook timeouts), all green alone. 1730: build exit 0 (chunk warning only), check:docs 5/5. Benches: guard removed, only cross-deps red; null mapped to root, 7 of 14 red. No node-side Symbol Editor opener exists: contract checked by dispatch (LIR §7).
+**Prompt document name**: 2026-11-07 15:16
+
+## 2026-11-07 — ticket: publishedChannelSlots is one module-level list for every IR canvas
+**Ticket**: `publishedChannelSlots` (`useIRContainment.ts:61`) is a single module-level list shared by every IR canvas: two IR canvases (two tabs, or already two models before multi-tab) overwrite each other's list. Out of L5; L5 made only the cross-deps epoch and bar-orientation resets per instance.
+**Priority**: medium
+**Found in**: P-2026-11-07-1516
+**Detail**: docs/discovery/lir_2026-11-07_l5_ir_resolution_tab_viewpoint.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l5 (P-2026-11-08-0012)
+**Prompt**: `claude_2026-11-08_0012_prompt_multi-tab-l5_take_trunk.md`, lane full (trunk into branch, RC-14): the trunk `alfonso-frontend-jjtl` at `5c15e491e` into `multi-tab-l5`, one `--no-ff` merge commit of the explicit sha, merge base `4834b0edb`, 161 trunk commits, 1 conflict measured.
+**Files touched**: merge `f2b5d1934`: the 126 files of the trunk side; union resolution of `docs/log-inbox/multi-tab.md` (the trunk's 3.1.2 entry, then the branch's L5 entry and ticket, verbatim); `EditorV2.tsx` auto-merged; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f2b5d1934`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:scripts and check:addonly PASS, hooks 967/967; vitest 568 files, 15088 passed and 2 skipped as expected (trunk tip 15070 + 18), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the gates and the clean reading of the auto-merged EditorV2.tsx; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 18:58, stands)
+**Notes**: Probes 48/48 once, R-MT-25 absent; union removes 0 lines vs either parent. EditorV2.tsx read whole (5423 lines) by an explorer subagent: disjoint regions, no duplicate. No node_modules here: temporary symlink to ~/jjodel/frontend/node_modules for the gates, removed after (P14). Trunk moved during the gates to docs-only `819c700b5`; the merge stays on `5c15e491e`.
+**Prompt document name**: 2026-11-08 00:12
