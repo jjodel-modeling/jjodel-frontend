@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0740
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · a35b54454 (S1), 93cf9f04b (S2), 0fbc6a015 (SPEC), 1f163a4d8 (R-JTG-23..29) · Brief hashes unchanged
 Lane: full (unattended; tests first, then the smallest change)
 Depends: P-2026-11-08-0125
 Worktree: ~/jjodel-w-envvalue, branch jjtl-envvalue
