@@ -290,3 +290,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Deroga to the four-file HARD STOP, granted by Alfonso in the lane: dcnToProblems.ts fifth file, the one line in dcnInputOf passing `Association.ownedEnds` (the checker has no other way to reach it). Bench 10 mutants, 9 killed; the dropped producer line survives (no dcnToProblems test in scope). Gates: typecheck 0, targeted 1935/1935, build 0. Full run: the 3 known import reds plus the 1000 ms wall-clock guard of tolerant.test.ts under load (1134 ms), 64/64 alone.
 **Prompt document name**: 2026-11-08 00:10
+
+## 2026-11-08 — merge: dcn-conf into alfonso-frontend-jjtl (P-2026-11-08-0040)
+**Prompt**: `claude_2026-11-08_0040_prompt_merge_dcn-conf.md`, lane full (merge): bring `dcn-conf` at 577368897 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 631076c5a; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 23b47e83c (merge) — `docs/log-inbox/dcn.md`, `docs/prompts/claude_2026-11-08_0010_prompt_dcn_conformance_body_mode.md`, `frontend/src/components/editor-v2/problems/dcnToProblems.ts`, `frontend/src/model/conformance/ConformanceValidator.ts`, `conformance/__tests__/ConformanceValidator.test.ts`, `frontend/src/model/dcn/dcnWellFormedness.ts`, `dcn/__tests__/dcnWellFormedness.test.ts`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Zero conflicts, index tree equal to merge-tree 13fc4ed9f; three probes once each. The branch tree has no node_modules: its 12 new tests were counted on the two test files (6 + 6), and the merged run matched, 15084, 0 failed, 3 import reds. Trunk-tip baseline: two hook tests timed out under load, 967/967 alone and on the merge. check:docs 5/5. Tip moved after the merge (multi-tab-l5, 46554f772, 28e16543b), these files untouched.
+**Prompt document name**: 2026-11-08 00:40
