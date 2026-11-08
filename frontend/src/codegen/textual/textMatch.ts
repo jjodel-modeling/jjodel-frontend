@@ -159,6 +159,10 @@ export interface MatchInput {
     readonly unplaced?: ReadonlySet<string>;
     /** T8a: the id each parsed object's head comment carries (`textIdsOf`); absent or empty when the text has none. */
     readonly ids?: ReadonlyMap<string, string>;
+    /** T8e: the least similarity of a rename (step 4), `RENAME_THRESHOLD` when absent; only the calibration bench sets it. */
+    readonly renameThreshold?: number;
+    /** T8e: how far ahead of the second a rename's similarity must be (step 4), `RENAME_MARGIN` when absent; only the calibration bench sets it. */
+    readonly renameMargin?: number;
 }
 
 /**
@@ -298,6 +302,8 @@ export function matchObjects(input: MatchInput): TextMatch {
     const freeText = parsed.objects.filter(t => !toModel.has(t.id));
     const freeModel = model.filter(m => !taken.has(m.id));
     const scored: { text: string; model: string; score: number; order: number }[] = [];
+    const renameThreshold = input.renameThreshold ?? RENAME_THRESHOLD;
+    const renameMargin = input.renameMargin ?? RENAME_MARGIN;
     freeText.forEach((t, order) => {
         const rule = g.objects[t.cls];
         if (!rule) return;
@@ -306,7 +312,7 @@ export function matchObjects(input: MatchInput): TextMatch {
         const scores = freeModel.filter(m => m.cls === t.cls).map(m => ({ m, score: similarity(fs, t, m, toModel) }))
             .sort((a, b) => b.score - a.score);
         const [best, second] = scores;
-        if (best && best.score >= RENAME_THRESHOLD && best.score - (second?.score ?? 0) >= RENAME_MARGIN) {
+        if (best && best.score >= renameThreshold && best.score - (second?.score ?? 0) >= renameMargin) {
             scored.push({ text: t.id, model: best.m.id, score: best.score, order });
         }
     });
