@@ -6,17 +6,24 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RowValue from '../../nodes/RowValue';
 import { detectValueRenderer } from '../../nodes/valueRenderer';
-import { namelessTargetLabel } from '../namelessTargetLabel';
+import { namelessTargetLabel, unnamedTargetLabels } from '../namelessTargetLabel';
 import { IRFormField } from '../../viewpoint/ir/IRFormField';
+import ReferenceWidget, { referenceName } from '../../viewpoint/ir/widgets/ReferenceWidget';
+import ListWidget from '../../viewpoint/ir/widgets/ListWidget';
+import ReferencePicker from '../../viewpoint/ir/widgets/ReferencePicker';
 
 // The render bench of D6: the `joiner` barrel pulls monaco, so it is replaced by the one
 // export IRFormField reads; the writes are never exercised here.
 const RENDER_LOOKUP = vi.hoisted(() => ({
     p_named: { name: 'Port_1', instanceof: { name: 'Port' } },
     p_nameless: { name: '', instanceof: { name: 'Port' } },
+    p_nameless2: { id: 'p_nameless2', name: '', instanceof: { name: 'Port' } },
+    g_nameless: { id: 'g_nameless', name: '', instanceof: { name: 'Gate' } },
 } as { [id: string]: any }));
 vi.mock('../../../../joiner', () => ({ LPointerTargetable: { fromPointer: (p: any) => RENDER_LOOKUP[p] } }));
 vi.mock('../../viewpoint/ir/formWrite', () => ({ appendValue: () => ({}), clearValue: () => ({}), setValue: () => ({}) }));
+// The server renderer has no portals: ReferencePicker's popover is rendered in place.
+vi.mock('react-dom', async (importOriginal) => ({ ...(await importOriginal<typeof import('react-dom')>()), createPortal: (node: any) => node }));
 
 /**
  * R-TXT-46 D4 — a reference to a nameless object is not broken on the v2-flow canvas.
@@ -255,5 +262,122 @@ describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => 
         const html = paint(fieldOf({ isReadOnly: true }));
         const rows = [...html.matchAll(/<div class="ir-field__row">([^<]*)<\/div>/g)].map(m => m[1]);
         expect(rows).toEqual(['Port_1', ': Port', 'p_gone']);
+    });
+});
+
+/**
+ * C2f (P-2026-11-08-0843) — the IR reference widgets read an unnamed target as
+ * `<Class> (unnamed)`, the form the Text tab's confirm panel uses, with an index only where two
+ * different targets of one class would read the same in one list.
+ * Layer Impact Report: `docs/discovery/lir_2026-11-08_nameless_reference_labels.md`.
+ */
+describe('C2f — unnamedTargetLabels, the labels of one list', () => {
+    const unnamed = (id: string, cls = 'Port') => ({ id, name: '', instanceof: { name: cls } });
+    const named = { id: 'a', name: 'Port_1', instanceof: { name: 'Port' } };
+
+    it('a named target and a missing one have no label, and keep their position', () => {
+        expect(unnamedTargetLabels([named, undefined, null])).toEqual([undefined, undefined, undefined]);
+    });
+
+    it('one unnamed target reads `<Class> (unnamed)`, with no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('unnamed targets of one class: the first bare, the later ones numbered', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n2'), unnamed('n3')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Port (unnamed) 3']);
+    });
+
+    it('unnamed targets of two classes do not collide, so neither takes an index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('g1', 'Gate')]))
+            .toEqual(['Port (unnamed)', 'Gate (unnamed)']);
+    });
+
+    it('a named target between two unnamed ones is not counted', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), named, unnamed('n2')]))
+            .toEqual(['Port (unnamed)', undefined, 'Port (unnamed) 2']);
+    });
+
+    it('the same target twice in a list is one target: same label, no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n1'), unnamed('n2')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('a target without a readable metaclass reads `Object (unnamed)`', () => {
+        expect(unnamedTargetLabels([{ id: 'x', name: '' }])).toEqual(['Object (unnamed)']);
+    });
+});
+
+describe('C2f — the IR reference widgets read an unnamed target by its label', () => {
+    const noop = () => { /* never called by a static render */ };
+    const widget = (value: string) => renderToStaticMarkup(createElement(ReferenceWidget as any, {
+        value, options: [], typeName: 'Port', allowNone: true, onPick: noop, onClear: noop,
+    }));
+    const list = (values: unknown[]) => renderToStaticMarkup(createElement(ListWidget as any, {
+        values, options: [], typeName: 'Port', onRemove: noop,
+    }));
+    const rowNames = (html: string) =>
+        [...html.matchAll(/<span class="ir-list__name" title="[^"]*">([^<]*)<\/span>/g)].map(m => m[1]);
+    const picked = (options: any[]) => {
+        // computeListStyle reads the viewport and the portal's target is the body.
+        vi.stubGlobal('window', { innerHeight: 900, innerWidth: 1600 });
+        vi.stubGlobal('document', { body: {} });
+        try {
+            const html = renderToStaticMarkup(createElement(ReferencePicker as any, {
+                anchor: { top: 10, bottom: 30, left: 10, right: 200 }, options, value: '',
+                allowNone: false, typeName: 'Port', onPick: noop, onClear: noop, onClose: noop,
+            }));
+            return [...html.matchAll(/<span class="ir-picker__name">([^<]*)<\/span>/g)].map(m => m[1]);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    };
+
+    it('referenceName: a name, the label of an unnamed target, nothing for a dangling pointer', () => {
+        expect(referenceName('p_named')).toBe('Port_1');
+        expect(referenceName('p_nameless')).toBe('Port (unnamed)');
+        expect(referenceName('p_gone')).toBe('');
+        expect(referenceName('')).toBe('');
+    });
+
+    it('ReferenceWidget: a slot holding an unnamed target is not painted as empty', () => {
+        const html = widget('p_nameless');
+        expect(html).toContain('<span class="ir-ref__name">Port (unnamed)</span>');
+        expect(html).not.toContain('ir-ref--empty');
+        expect(html).not.toContain('Select a');
+    });
+
+    it('ReferenceWidget: an empty slot and a dangling pointer keep the placeholder (control)', () => {
+        for (const v of ['', 'p_gone']) {
+            expect(widget(v)).toContain('ir-ref--empty');
+            expect(widget(v)).toContain('Select a Port');
+        }
+    });
+
+    it('ListWidget: labels with the index of this list, no raw id', () => {
+        const html = list(['p_named', 'p_nameless', 'p_nameless2', 'g_nameless', 'p_gone']);
+        expect(rowNames(html)).toEqual(['Port_1', 'Port (unnamed)', 'Port (unnamed) 2', 'Gate (unnamed)', '']);
+        expect(html).not.toContain('p_gone');
+    });
+
+    it('ListWidget: a hole in the raw values does not disturb the index', () => {
+        expect(rowNames(list(['p_nameless', undefined, 'p_nameless2']))).toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('ListWidget: the remove button of a dangling row keeps an accessible name', () => {
+        expect(list(['p_gone'])).toContain('aria-label="Remove Port"');
+        expect(list(['p_nameless'])).toContain('aria-label="Remove Port (unnamed)"');
+    });
+
+    it('ReferencePicker: an unnamed candidate reads its label across the groups, not its id', () => {
+        expect(picked([
+            { label: 'Free Objects', options: [{ value: 'p_nameless', label: 'p_nameless' }] },
+            { label: 'Bound Objects', options: [{ value: 'p_nameless2', label: 'p_nameless2' }, { value: 'g_nameless', label: 'g_nameless' }] },
+        ])).toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Gate (unnamed)']);
+    });
+
+    it('ReferencePicker: a named candidate keeps the label it was offered, an unresolved one too (control)', () => {
+        expect(picked([{ label: '', options: [{ value: 'p_named', label: 'pkg.Port_1' }, { value: 'p_gone', label: 'offered' }] }]))
+            .toEqual(['pkg.Port_1', 'offered']);
     });
 });

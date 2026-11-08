@@ -25,6 +25,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { LPointerTargetable } from '../../../../../joiner';
 import { optionSlot, optionSlotClass } from '../../../../../jjform';
+import { unnamedTargetLabels } from '../../../utils/namelessTargetLabel';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 import ReferencePicker from './ReferencePicker';
 
@@ -47,17 +48,32 @@ export interface ReferenceWidgetProps {
     ariaLabel?: string;
 }
 
-/** Display name of a pointed element, through the L proxy. See the module comment. */
-export function referenceName(id: string): string {
-    if (!id) return '';
+/** What the widgets read of a pointed element, inside the guard; undefined when it is not there. */
+function resolveTarget(id: string): { id: unknown; name: unknown; instanceof: { name: unknown } } | undefined {
+    if (!id) return undefined;
     try {
         const l: any = LPointerTargetable.fromPointer(id);
-        if (l?.name) return String(l.name);
+        if (l) return { id: l.id, name: l.name, instanceof: { name: l.instanceof?.name } };
     } catch {
         // Dangling pointer: show nothing rather than the raw id, and let the conformance
         // diagnostic be the thing that explains it.
     }
-    return '';
+    return undefined;
+}
+
+/** Display name of a pointed element, through the L proxy. See the module comment. An element
+ *  with no name reads by its label (C2f), so a slot that holds it is not painted as empty. */
+export function referenceName(id: string): string {
+    const target = resolveTarget(id);
+    if (target?.name) return String(target.name);
+    return unnamedTargetLabels([target])[0] ?? '';
+}
+
+/** The labels of the unnamed elements among the pointers of ONE list, in its order, indexed
+ *  where two of one class would read the same; undefined where an element has a name or does
+ *  not resolve. */
+export function unnamedReferenceLabels(ids: string[]): Array<string | undefined> {
+    return unnamedTargetLabels(ids.map(resolveTarget));
 }
 
 /**

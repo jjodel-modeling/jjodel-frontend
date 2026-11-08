@@ -3125,3 +3125,17 @@ To measure first: whether the suggest widget is open inside a comment (completio
 **Smoke visivo**: passato — chat, unattended: TABFIX crops 1-reprint, 2-open-selected, 3-homonyms in ~/.jjodel-lanes/P-2026-11-08-0859/ checked by the chat; probe 19/19
 **Notes**: Rollback tag `pre-textual-tab-fixes` on `18ce96017` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0932/result.json`.
 **Prompt document name**: 2026-11-08 09:32
+
+## 2026-11-08 — fix(editor-v2): C2f, IR reference widgets name unnamed targets (P-2026-11-08-0843)
+
+**Prompt**: `claude_2026-11-08_0843_prompt_textual_c2f_critical.md`: an unnamed reference target reads `Class (unnamed)` in the IR reference field, list and picker, with an index only where two unnamed targets of one class would read the same in one list. Critical zone (viewpoint/ir/), go-ahead by Alfonso 2026-11-08 08:33.
+**Files touched**: `78a5bc7e6` docs/discovery/lir_2026-11-08_nameless_reference_labels.md; `8df0eb631` editor-v2/utils/namelessTargetLabel.ts, editor-v2/utils/__tests__/namelessRefTarget.test.ts; `9c44d338a` viewpoint/ir/widgets/ReferenceWidget.tsx, ListWidget.tsx, ReferencePicker.tsx, the same test; this entry and the Status of P-2026-11-08-0818 and P-2026-11-08-0843
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: docs/discovery/lir_2026-11-08_nameless_reference_labels.md
+**Smoke visivo**: passato: probe 13/13 on 3547 from the DOM, crops 1-before, 2-field, 3-list in ~/.jjodel-lanes/P-2026-11-08-0843/; GO visivo di Alfonso 2026-11-08 11:59
+**Notes**: Written by the chat: the session stopped at the context ceiling before its log entry (handoff.md). namelessTargetLabel keeps `: Class` for its two other callers (R-TXT-47 D5, D6); the new export is unnamedTargetLabels, so IR chips and these widgets still differ. A dangling list row reads blank. Gates: typecheck 0, vitest 15227 passed with the 3 import reds, build 0, check:docs 5/5, smoke GREEN.
+**Prompt document name**: 2026-11-08 08:43
