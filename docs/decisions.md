@@ -7802,6 +7802,21 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   it; the handles of L4.3 stay as they are. The drone fixture moves `ownedSensors` and `WAU` to their classes. Reverse
   navigation through association-owned ends is not added: it would need backward references the binding cannot
   express (`featureSources` follows forward references only). Found by P-2026-11-07-1825 (F3).
+- **R-DCN-25** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run the object diagram shows one compartment per viewpoint under the slots of each instance, with the
+  dynamic classes as pills and the active ones highlighted. It is a run-time rendering only: the run never writes the
+  model (R-SIM).
+- **R-DCN-26** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run a slot of an inactive dynamic class is shown greyed with its kept value (R-DCN-3), and an active
+  class whose monitors run at the tick carries a monitor icon.
+- **R-DCN-27** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  «Save snapshot as object diagram» creates a new M1 model beside the original, named after it with the step
+  («drone (snapshot step 21)»), copying instances, links and the slot values of σ, in one undo group. The original
+  object diagram is not changed.
+- **R-DCN-28** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  Slice 5 implements coherence constraints as watches: φ as a state invariant, BoundedPersistence and BoundedResponse
+  as a counter automaton per instance, reported as watch hits (R-SIM-137). The batch of N Random runs estimating γ
+  (SoSyM, Definition 8) is a later slice.
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 
