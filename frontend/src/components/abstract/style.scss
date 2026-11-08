@@ -1047,9 +1047,10 @@ body[data-layout-mode="split"] {
 
   // F2-fix (2026-07-29): :not(:first-child) so a single-child dockbox (canvas only,
   // post-F2) is never matched — this used to size the removed Properties column.
-  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there);
+  // P-2026-11-08-1608: nor on two canvases side by side (R-MT-24).
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-box:not(:first-child):last-child {
     min-width: 400px;
     transition: opacity 200ms ease;
     max-width: 710px
@@ -1064,9 +1065,10 @@ body[data-layout-mode="sidebar"] {
   }
 
   // F2-fix (2026-07-29): :not(:first-child) — see split block above.
-  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there);
+  // P-2026-11-08-1608: nor on two canvases side by side (R-MT-24).
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2)) > .dock-box:not(:first-child):last-child {
     min-width: 350px;
     max-width: 550px;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
