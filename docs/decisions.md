@@ -7887,6 +7887,7 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
   one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
   The tag and any deploy stay with Alfonso.
+  Amended 2026-11-08 (Alfonso's choice of 2026-11-07 15:32, PR #209 closed): 3.1.2 was cut from 3.1.1 (`dotnet-backend-integration` e080ab534) on `release/3.1.2-patch` with the fix's four commits, checked by P-2026-11-07-1536, merged as PR #210 into `dotnet-backend-integration` (ec4f2543e) and tagged there by Alfonso.
 - **R-MT-24** (2026-11-07, ratified by Alfonso 2026-11-07 15:22 «mettilo nelle decisioni», evidence: read, verified: none, reversible: trunk).
   **The model context menu of R-MT-9 also offers «Open beside ▸ <viewpoint>»**, which opens the second tab on that model,
   with the chosen viewpoint, in a panel to the right of the current editor. It reuses `DockManager.openBeside`
@@ -7897,6 +7898,8 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
 - **R-MT-25** (2026-11-08, ratified by Alfonso 2026-11-08 08:34 «Ok su tutto», evidence: read, verified: none, reversible: trunk).
   **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
+- **R-MT-26** (2026-11-08, decided by the chat on Alfonso's delegation 2026-11-08 16:06 «decidi tu al meglio per tutto», evidence: read, verified: none, reversible: trunk).
+  **Order of the remaining multi-tab work.** (1) L6b, the beside layout only (side panels over the left canvas, the 710 px cap of `style.scss:1055`, overlapping toolbar labels, the app bar missing the right tab); the maximized fallback stays a known limit. (2) L7, the selection highlight in every tab (R-MT-2). (3) L8, two small readers of the tab: the console's tab-id lookup and `publishedChannelSlots` (`useIRContainment.ts:61`) per canvas. (4) L4c, the sync registries keyed by model so that the last tab of one model no longer clears another model's entries (critical zone, go-ahead given by this delegation, Layer Impact Report first). Not now: a second tab on a metamodel (no use case yet, the menu is shared with class and package rows). Filed to their owners, no lane here: Refactoring finding no M1 target on the demo (`projectTargetCandidates`, refactoring front) and the merge template's reset sha (harness). One lane at a time, each with its app check and Alfonso's look at the crops before the merge.
 
 ## Superate
 
