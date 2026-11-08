@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1612
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 295c5429b, 7c172384a · closed by P-2026-11-08-1720 after the context ceiling · crop viewed and accepted by the chat
 Lane: full (unattended, Alfonso delegated the choice to the chat on 2026-11-08 16:04)
 Depends: P-2026-11-08-1230 (merged on trunk as c06d9f6d)
 Worktree: ~/jjodel-w-megainc, branch jjtl-megamodel-included (fresh from alfonso-frontend-jjtl)

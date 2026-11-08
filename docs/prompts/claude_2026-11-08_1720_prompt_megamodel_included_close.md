@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-1720
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane full · 295c5429b, 7c172384a (code), 17abe0030 (SPEC), f28299521 (R-JTG-35), f9ca9cd8c (report) · gates green (typecheck 0, build, check:docs, vitest 15450 passed with the 3 baseline import reds) · ticket #781 · not merged
 Lane: full (continues P-2026-11-08-1612 after its context ceiling; unattended)
 Depends: P-2026-11-08-1612
 Worktree: ~/jjodel-w-megainc, branch jjtl-megamodel-included (the same tree, with its uncommitted code)
