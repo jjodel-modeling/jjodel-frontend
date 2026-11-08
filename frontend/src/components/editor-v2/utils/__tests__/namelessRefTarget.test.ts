@@ -6,7 +6,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RowValue from '../../nodes/RowValue';
 import { detectValueRenderer } from '../../nodes/valueRenderer';
-import { namelessTargetLabel } from '../namelessTargetLabel';
+import { namelessTargetLabel, unnamedTargetLabels } from '../namelessTargetLabel';
 import { IRFormField } from '../../viewpoint/ir/IRFormField';
 
 // The render bench of D6: the `joiner` barrel pulls monaco, so it is replaced by the one
@@ -255,5 +255,48 @@ describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => 
         const html = paint(fieldOf({ isReadOnly: true }));
         const rows = [...html.matchAll(/<div class="ir-field__row">([^<]*)<\/div>/g)].map(m => m[1]);
         expect(rows).toEqual(['Port_1', ': Port', 'p_gone']);
+    });
+});
+
+/**
+ * C2f (P-2026-11-08-0843) — the IR reference widgets read an unnamed target as
+ * `<Class> (unnamed)`, the form the Text tab's confirm panel uses, with an index only where two
+ * different targets of one class would read the same in one list.
+ * Layer Impact Report: `docs/discovery/lir_2026-11-08_nameless_reference_labels.md`.
+ */
+describe('C2f — unnamedTargetLabels, the labels of one list', () => {
+    const unnamed = (id: string, cls = 'Port') => ({ id, name: '', instanceof: { name: cls } });
+    const named = { id: 'a', name: 'Port_1', instanceof: { name: 'Port' } };
+
+    it('a named target and a missing one have no label, and keep their position', () => {
+        expect(unnamedTargetLabels([named, undefined, null])).toEqual([undefined, undefined, undefined]);
+    });
+
+    it('one unnamed target reads `<Class> (unnamed)`, with no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('unnamed targets of one class: the first bare, the later ones numbered', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n2'), unnamed('n3')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Port (unnamed) 3']);
+    });
+
+    it('unnamed targets of two classes do not collide, so neither takes an index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('g1', 'Gate')]))
+            .toEqual(['Port (unnamed)', 'Gate (unnamed)']);
+    });
+
+    it('a named target between two unnamed ones is not counted', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), named, unnamed('n2')]))
+            .toEqual(['Port (unnamed)', undefined, 'Port (unnamed) 2']);
+    });
+
+    it('the same target twice in a list is one target: same label, no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n1'), unnamed('n2')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('a target without a readable metaclass reads `Object (unnamed)`', () => {
+        expect(unnamedTargetLabels([{ id: 'x', name: '' }])).toEqual(['Object (unnamed)']);
     });
 });
