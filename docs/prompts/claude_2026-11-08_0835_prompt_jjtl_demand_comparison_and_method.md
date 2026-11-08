@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-0835
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane fast · d2fabcef7 (executor and tests), 5e10ad449 (SPEC), 0da9a8a2e (R-JTG-30)
 Lane: fast (one executor change and its tests; unattended)
 Depends: P-2026-11-08-0740
 Worktree: ~/jjodel-w-demandcmp, branch jjtl-demand-cmp
