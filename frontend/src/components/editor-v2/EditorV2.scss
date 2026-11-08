@@ -33,15 +33,6 @@
     display: contents;
 }
 
-// The active pane of a split wears the cyan accent on its toolbar. The border is on both panes so a switch moves nothing.
-.editor-v2--split-pane .editor-v2-toolbar {
-    border-top: 2px solid transparent;
-}
-
-.editor-v2--active-pane .editor-v2-toolbar {
-    border-top-color: #0ea5e9;
-}
-
 .editor-v2__main {
     flex: 1;
     display: flex;
