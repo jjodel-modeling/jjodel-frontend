@@ -1452,3 +1452,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: S1 and S2: full suite green, kernel baselines unchanged
 **Notes**: Rollback tag `pre-jjtl-envvalue` on `f64bd6592` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-08-0814/result.json`.
 **Prompt document name**: 2026-11-08 08:14
+
+## 2026-11-08 — fix(jjtl): a demand compared or called stops the run (P-2026-11-08-0835)
+**Prompt**: `claude_2026-11-08_0835_prompt_jjtl_demand_comparison_and_method.md`, lane fast, unattended: extend R-JTG-25 to comparisons and to a method call on a demand, a property read stays as it is; tests first on both parser paths, one row after R-JTG-29.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `__tests__/demand-as-value.test.ts` (d2fabcef7, comment 6d753475c); `frontend/src/jjtl/SPEC.md` (5e10ad449); `docs/decisions.md` R-JTG-30 (0da9a8a2e); the prompt's `Status:` line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — full vitest 15246 passed, 0 failed tests, 26 new; no existing expectation changed; typecheck exit 0
+**Out-of-scope changes**: no — six files, all named by the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Comparisons needed no code: the Binary branch of P-2026-11-08-0740 already marks every binary operator, so those 16 tests were green before the change. Only the method-call receiver is new. The prompt says a property read stays a warning: measured, it reads null with no warning at all, kept unchanged and pinned. Suite: the 3 known import failures, plus Chromium afterAll timeouts in irSelectionRing/irCollapsedRender, green rerun alone (g).
+**Prompt document name**: 2026-11-08 08:35
