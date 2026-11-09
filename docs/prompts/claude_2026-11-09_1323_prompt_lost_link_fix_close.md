@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-1323
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane lost-link-fix · 3b7e06289
 Lane: full, critical (continuation of P-2026-11-09-1227, stopped at the context ceiling; launched with `--critical-zone-goahead P-2026-11-09-1323`)
 Go-ahead: Alfonso 2026-11-09 12:24 «go-ahead per la zona critica, «A»» (same fix)
 Depends: P-2026-11-09-1227 commits 6b66f67ad (LIR), f9b8f2e2a (helper), 3d567c77a (sites), c3eabab15 (probe), 0971567bb (bench tests); handoff ~/.jjodel-lanes/P-2026-11-09-1227/handoff.md

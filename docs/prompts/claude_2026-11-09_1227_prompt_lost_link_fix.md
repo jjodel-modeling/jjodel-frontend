@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-1227
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane lost-link-fix · 0971567bb
 Lane: full, critical (sync layer: `canvasToJjom.ts`, `EditorV2.tsx` append paths; launched with `--critical-zone-goahead P-2026-11-09-1227`)
 Go-ahead: Alfonso 2026-11-09 12:24 «go-ahead per la zona critica, «A»»
 Depends: discovery P-2026-11-09-1020 (docs/discovery/discovery_2026-11-09_lost_containment_write.md, b7b4817b1; probe frontend/scripts/probe/lost-containment-write.ts, 780b0b99e)
