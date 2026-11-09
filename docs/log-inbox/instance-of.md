@@ -395,3 +395,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): in a split, a click on the rail is centred without regard to the pane. `onOntoActivate` and `onClassActivate` (`EditorV2.tsx:3439`, `:3446`) use `getCanvasRightInset()`, where the trunk's `onPaletteActivate` uses `paneRightInset()`: a pane not under the rail centres the click off by the rail's inset. Read on `a1cb914c0`, not measured in the app.
 
 **Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): a rail drag can drop on the inactive pane of a split. The `ONTO_DRAG_MIME` path of `onDrop` (`EditorV2.tsx:2838-2841`) returns before the `paneAcceptsDropRef` guard (`:2844`), and the `onDragOver` guard (`:2865`) matches `application/reactflow` only, which a rail drag does not carry (`PalettePanel.tsx:132`, `:137`). Read on `a1cb914c0`, not measured in the app.
+
+## 2026-11-09 — fix: the rail in a split pane, click centre and drop guard (P-2026-11-09-1115)
+**Prompt**: `claude_2026-11-09_1115_prompt_onto_rail_split_fix.md`: close the two tickets of P-2026-11-09-0943 (a rail click centred without regard to the pane; a rail drag dropping on the inactive pane), then the probe pass on the merged tree and a new split-pane case, before the merge.
+**Files touched**: `e52cfa569` `frontend/src/components/editor-v2/EditorV2.tsx`; `2d874313a` `frontend/scripts/probe/onto-split-rail.ts` (new); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — by this session, on the numbers of SP-0..SP-6 and the crops in the lane folder; no human GO in this lane.
+**Notes**: Typecheck 0, build 0, the 4 named test files 144 passed; full vitest not run. Probes: S2 57/57, S4 14/14, binding 10/10, S3a 8/8, S3b 6/6, split 28/28. Split on a031db094: 12 fail, a click 165.7 px off, 12 idlookup keys written on the inactive pane. The rail now follows the trunk's rule: inactive pane refuses, nothing written. Linguistic palette compared on dragover only (no rootable class). Crops: ~/.jjodel-lanes/P-2026-11-09-1115/probe/split/.
+**Prompt document name**: 2026-11-09 11:15

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-1115
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (outside the critical zone; two gaps found by P-2026-11-09-0943 in the merged tree)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane oi-rail · e52cfa569
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-09 09:42 «go» to merge oi-rail into the trunk; the chat fixes the two split-pane gaps the take-trunk merge exposed before merging)
 Depends: P-2026-11-09-0943
 Corregge: —
