@@ -2836,7 +2836,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // A drag from «Instances of» (R-OI-18): its own key, the pane menu's path (runInstantiate, defined below).
             const ontoPayload = event.dataTransfer.getData(ONTO_DRAG_MIME);
             if (ontoPayload) {
-                runOntoPayloadRef.current(ontoPayload, { x: event.clientX, y: event.clientY });
+                if (paneAcceptsDropRef.current) runOntoPayloadRef.current(ontoPayload, { x: event.clientX, y: event.clientY });
                 return;
             }
 
@@ -2862,7 +2862,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Allow drop — with M1 cursor feedback for non-rootable classes
     const onDragOver = useCallback((event: React.DragEvent) => {
         // In a split only the active pane takes a palette drop (L6c): no preventDefault, no drop, no-drop cursor.
-        if (!paneAcceptsDropRef.current && event.dataTransfer.types.includes('application/reactflow')) {
+        if (!paneAcceptsDropRef.current && (event.dataTransfer.types.includes('application/reactflow') || event.dataTransfer.types.includes(ONTO_DRAG_MIME))) {
             event.dataTransfer.dropEffect = 'none';
             return;
         }
@@ -3436,14 +3436,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const onOntoActivate = useCallback((record: OntoBinding, classifierId: string) => {
         const canvas = editorContainerRef.current;
         if (!canvas) return;
-        runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+        runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
     }, [runOntoPayload]);
 
     const onClassActivate = useCallback((kind: ClassRailKind, metaclassId: string) => {
         if (kind === 'property') { runProperty(metaclassId); return; }
         const canvas = editorContainerRef.current;
         if (!canvas) return;
-        runOntoPayload(classDragPayload(metaclassId), clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+        runOntoPayload(classDragPayload(metaclassId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
     }, [runProperty, runOntoPayload]);
 
     const onDeclareBinding = useCallback(() => {
