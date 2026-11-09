@@ -124,6 +124,43 @@ function generalsOf(view: OntoReadView, binding: OntoBinding, classifierId: stri
     return view.referenceTargets(classifierId, via).flatMap(link => view.referenceTargets(link, general));
 }
 
+/** Whether `classifierId` is `typeId` or specializes it at any depth, through the binding's generalization. */
+export function classifierConforms(view: OntoReadView, binding: OntoBinding, classifierId: string, typeId: string): boolean {
+    const visited = new Set<string>();
+    const queue = [classifierId];
+    while (queue.length > 0) {
+        const id = queue.shift()!;
+        if (id === typeId) return true;
+        if (visited.has(id)) continue;
+        visited.add(id);
+        queue.push(...generalsOf(view, binding, id));
+    }
+    return false;
+}
+
+/**
+ * The two instances in the order of the member ends of `associationId` when its ends accept their classifiers (R-OI-5),
+ * `null` when they do not or the association has not exactly two ends. The drag's direction wins when both orders fit.
+ * `link` gives the ends; `object` the classifier of an instance and the generalization of its classes; an end's type is
+ * read through `link`'s feature type or, a record without one, `object`'s (R-OI-8: the same relation).
+ */
+export function linkEnds(
+    view: OntoReadView, link: OntoBinding, object: OntoBinding, associationId: string, sourceId: string, targetId: string,
+): [string, string] | null {
+    const featureType = link.featureType ?? object.featureType;
+    if (link.featureContainer === undefined || featureType === undefined) return null;
+    const ends = view.referenceTargets(associationId, link.featureContainer);
+    if (ends.length !== 2) return null;
+    const [first, second] = ends.map(end => view.referenceTargets(end, featureType)[0]);
+    const source = view.referenceTargets(sourceId, object.typeReference)[0];
+    const target = view.referenceTargets(targetId, object.typeReference)[0];
+    if (first === undefined || second === undefined || source === undefined || target === undefined) return null;
+    const accepts = (classifier: string, type: string) => classifierConforms(view, object, classifier, type);
+    if (accepts(source, first) && accepts(target, second)) return [sourceId, targetId];
+    if (accepts(target, first) && accepts(source, second)) return [targetId, sourceId];
+    return null;
+}
+
 /** The feature closure of `classifierId`: see the module comment. */
 export function featureClosure(view: OntoReadView, binding: OntoBinding, classifierId: string): FeatureClosure {
     const features: string[] = [];

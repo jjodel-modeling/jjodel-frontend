@@ -260,3 +260,151 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — Alfonso, GO of 2026-11-07 15:10 on oi-s3b at localhost:3005
 **Notes**: Prompt-ID collision: `P-2026-11-07-1834` was also taken in the same second by the merge of `textual-f1e-names` (closed by hand in `e91177c3b`); the two workers shared one lane folder, so its result.json mixes both runs. Rollback tag `pre-oi-s3b` on `f5fc80aaf`. Pushed with the trunk.
 **Prompt document name**: 2026-11-07 18:34
+
+## 2026-11-08 — feat: onto binding editor with Detect, probe and bench (P-2026-11-08-0151)
+**Prompt**: three lanes of the «Instances of» front in one entry: the discovery of the rail section and the binding declaration (P-2026-11-08-0049), lane B, the binding editor with Detect and one row in Info (P-2026-11-08-0113, cut at its context ceiling), and this continuation: probe, regression, mutants, docs.
+**Files touched**: `docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md` (e138a09ca); `model/ontological/bindingDetect.ts` and its test, `editor-v2/onto/OntoBindingModal.tsx` and `.scss`, `editors/Info.tsx` (c55874212); `scripts/probe/onto-binding-editor.ts` (d680fce0d); this inbox and the `Status:` of the three prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (eleven files across three lanes, each declared in its prompt or its rule-19 reply, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe crops b1, b2, b3, b8 in `~/.jjodel-lanes/P-2026-11-08-0151/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1..Q8 of discovery §6 adopted as recommended, unattended (RC-21). Own choices: Confirm allowed with checkBindings defects (R-VAL-4), blocked only when the bag does not decode; value kinds editable, not addable (ticket). Undo: Cmd+Z after Confirm drops the key (gone, no empty bag); Cmd+Z after Remove restores it byte-equal. Probe 10/10, s2 22/22 (started at load 21.2, gate 20: breach), s3a 8/8, mutants 3/3 red. Bench, crops: ~/.jjodel-lanes/P-2026-11-08-0151/.
+**Prompt document name**: 2026-11-08 01:51
+
+**Ticket** (proposed, low): a row corrected by hand shows the `checkBindings` message with raw ids, «The defining feature is owned by Pointer…_USER_40, the slot metaclass is Pointer…_USER_44», not the class names (crop `b3-row-corrected-by-hand.png`). The message is built in `bindingCheck.ts`, outside lane B's files.
+
+**Ticket** (proposed, low): the `link` record lists the object-only roles (Generalization, General, Abstract flag, Feature type, Default value) as empty rows with no verdict; Detect does not search them (question 3), and the probe's B-2 admits them as such. Hiding them on `link` is a UI choice for Alfonso.
+
+## 2026-11-08 — ticket: value kinds can be edited in the binding editor but not added
+**Ticket**: `OntoBindingModal` shows one row pair per `valueKinds` entry that Detect proposed, and offers no way to add one. On a metamodel that is not UML, where Detect proposes nothing, a hand declaration cannot carry `valueKinds`, so the slots it binds cannot create values. Lane B's own choice, declared in its handoff as a limit.
+**Priority**: medium
+**Found in**: P-2026-11-08-0113
+**Detail**: docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md
+
+## 2026-11-08 — feat: «Instances of» rail section, probe, regression, bench (P-2026-11-08-0241)
+**Prompt**: two lanes in one entry: lane A of the rail discovery, the «Instances of» section of the M1 rail with drop and click through `runInstantiate` (P-2026-11-08-0212, cut at its context ceiling after the code and the probe run), and this continuation: probe commit, regression, the third mutant, crops, docs.
+**Files touched**: `editor-v2/hooks/instantiate.ts` and its test, `panels/PalettePanel.tsx`, `EditorV2.tsx`, `EditorV2.scss` (910558ef4); `scripts/probe/onto-s2-instantiate.ts` (ba69124a9); `docs/decisions.md` R-OI-18, this inbox, the `Status:` of the two prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (ten files across two lanes, each declared in discovery §5 lane A or in the prompts, listed above)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (crops r0, r1, r2 in `~/.jjodel-lanes/P-2026-11-08-0241/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1, Q2, Q4, Q5 adopted as recommended, unattended (RC-21). Gates on 910558ef4: typecheck 0, vitest 78/78, build 0. S2 28/28 on uml-s3b; S2-R1/R2 tolerance 8 px × zoom + 1 (16 px grid snap; a 4 px box failed on deltas of 6.5 and 6.8 px); S2-R4 drags on the Petri export, uml-s3b's linguistic block being empty. Regression s3a 8/8, s3b 6/6, binding editor 10/10. Mutants 3/3 red. new-model-instantiate.ts still stale (ticket above). Bench, handoff: ~/.jjodel-lanes/P-2026-11-08-0212/.
+**Prompt document name**: 2026-11-08 02:41
+
+**Own choices** (lane A, from its handoff): `ontoRailSections` returns `{sections, signature}` over the `object` and `link` records only, `link` disabled; the drag payload is `{record: name, classifier}` (`ontoDragPayload`), and `ontoDropRequest` re-reads `objectRecord` from the store and re-checks the classifier against fresh `creationOptions`; drop and click share `runOntoPayload`, which calls `runInstantiate`, the drop reaching it through `runOntoPayloadRef` (TDZ); `onDeclareBinding` is passed only in Advanced, so the empty state shows there only; group subtitles «Objects» / «Links»; `OntoBindingModal` mounted in `EditorV2`, the metamodel id taken at the click.
+
+## 2026-11-08 — feat: the viewpoint's level gates the instance surfaces (P-2026-11-08-1726)
+**Prompt**: four lanes in one entry: the discovery of levels, class rail and links (P-2026-11-08-1605, cut, continued by -1635 with its probe addendum); lane 1, `_state.ontoLevel` with its control and five gating points (-1658, cut at its context ceiling after the code); this continuation, the probe's level block, regressions, crops, docs (-1726).
+**Files touched**: `docs/discovery/discovery_2026-11-08_onto_levels_class_rail_links.md` (940959760, 4d736d663); `editor-v2/hooks/instantiate.ts` and its test, `EditorV2.tsx`, `editors/viewpoint/properties/ViewpointProperties.tsx` (a709a12b1); `scripts/probe/onto-s2-instantiate.ts` (b8fbddd72); `docs/decisions.md` R-OI-19, R-OI-20, this entry, the Status of the four prompts (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (twelve files across four lanes, each declared in the prompts, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (five crops in `~/.jjodel-lanes/P-2026-11-08-1726/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: Q1, Q2, Q3, Q4, Q6, Q7 adopted as recommended, unattended (RC-21); Q5 asked to Alfonso; Q8 declined. The select's Advanced gate is Redux `advanced`, not `useInterfaceMode` (deviation from discovery §3.4, `BottomBar.tsx:52-58`). Gates: typecheck 0 on a709a12b1, build exit 0. S2 on uml-s3b: 39/39 with no level, 28/28 with the object viewpoint at `instance`; S3a 8/8; binding editor 10/10. Own choices below.
+**Prompt document name**: 2026-11-08 17:26
+
+**Own choices** (lane 1, from its handoff): `ontoLevelOf` takes the id from the caller, `undefined` and `null` read `both`, no new `state.viewpoint` reader (R-MT-14), so `<EditorV2/>` with no `viewpointId` (route `App.tsx:152`) never sees a level; `writeOntoLevel` writes nothing on the current value, so `both` on an absent key stays absent; `onDeclareBinding` is `advancedMode && !ontoClassLevel`; drop and click share one guard in `runOntoPayload`, read at the drop through `viewpointIdRef`; labels «Classes and instances», «Classes», «Instances», field «Ontological level», class hook `.wp-onto-level-select`. The S2 suite leaves the side panel closed, the step that does it not identified, so the level block reopens it with the toolbar button.
+
+## 2026-11-08 — feat: the class rail and pane menu from the binding, probe, bench (P-2026-11-08-1822)
+**Prompt**: two lanes in one entry: lane 2 of the levels front, the rail's four class-level groups, the container rule and the pane menu «New ▸» (P-2026-11-08-1753, cut at its context ceiling after the code); this continuation, the probe with the three points the handoff left unverified, two regressions, three mutants, the docs.
+**Files touched**: `model/ontological/classRail.ts` and its test, `editor-v2/hooks/instantiate.ts`, `editor-v2/hooks/__tests__/classElement.test.ts`, `editor-v2/panels/PalettePanel.tsx`, `editor-v2/EditorV2.tsx` (b8b9bfe30); `scripts/probe/onto-s2-instantiate.ts` (3f399f545); `docs/decisions.md` R-OI-21, R-OI-22, R-OI-23, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (`hooks/__tests__/classElement.test.ts` is not named by the 1753 prompt, placed under «its tests» so that `instantiate.test.ts` stays untouched, accepted by the 1822 prompt; ten files across two lanes, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (four crops in `~/.jjodel-lanes/P-2026-11-08-1822/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S2-L5 and S2-L6 amended: they asserted lane 1's empty class tab, Q2 puts the rail and «New ▸» there. Titles read with textContent, CSS uppercases innerText. On uml-s3b S2 52/52, s3a 8/8, binding editor 10/10. Mutants red and reverted, `~/.jjodel-lanes/P-2026-11-08-1822/bench.txt`: M1, M2 in vitest, M3 on S2-L9; port 3005 served them while they ran. «No rootable classes found» left as a design choice (discovery §4). No product change in 1822.
+**Prompt document name**: 2026-11-08 18:22
+
+**Ticket** (the three points of the 1753 handoff, measured by P-2026-11-08-1822). (1) Stray node or composition edge: none drawn, a new Class adds one node and no edge (S2-L12), a new attribute no node and no edge (S2-L18); the D-layer gains one vertex and one edge record for each, drawn by no view. (2) The attribute draws as a row of its class, `property1 : [ 0 .. 0 ]` with no visibility and no type, unlike the fixture's rows; in `class-new-attribute.png` the 83 px node clips Book's header with the third row in, not diagnosed. (3) The class view's edge drag Book → Publication creates a Generalization with no picker: specific Book, general Publication, one undo entry, one edge drawn. It is a root object of the model, not in `Book.generalizations`, so it differs from the fixture's composition (`Classifier.generalizations`). The rail item stays disabled (S2-L22).
+
+**Own choices** (lane 2, from its handoff, also in R-OI-21..23): the group titles; an association told apart by the `link` record; the Attributes item needs a selected class and the node menu keeps its own; two qualifying pairs do not guess, the element is a root; a classifier keeps the capital and a property goes through `instanceName`; only the position is written (`slots: null`); the class payload shares `ONTO_DRAG_MIME` with shape `{ classElement: id }`.
+
+## 2026-11-08 — feat: a link drawn between two instances, probe, bench (P-2026-11-08-2041)
+**Prompt**: two lanes in one entry: lane 3 of the levels front, S4, the drag between two instances that makes a link (P-2026-11-08-2012, cut at its context ceiling after the code); this continuation, the placement by R-OI-22, the probe, four regressions, the mutants, the docs.
+**Files touched**: `editor-v2/EditorV2.tsx`, `editor-v2/hooks/instantiate.ts`, `model/ontological/bindingReader.ts`, `editor-v2/hooks/__tests__/linkInstance.test.ts` (d9b1912f9); `editor-v2/hooks/instantiate.ts` (21cf3a99e); `scripts/probe/onto-s4-links.ts` (2bed6cb5c); `docs/decisions.md` R-OI-24, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (nine files across two lanes, over the five of RC-11, listed above; the 2012 lane gave its list in chat before the diff)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (three crops in `~/.jjodel-lanes/P-2026-11-08-2041/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S4 14/14 on uml-s3b; S2 52/52, s3a 8/8, s3b 6/6, binding editor 10/10. Mutants red and reverted, `~/.jjodel-lanes/P-2026-11-08-2041/bench.txt`: closure, ends swapped, outside the queue in vitest; placement dropped red on S4-3b only, vitest does not see it. Probe faults fixed: `history` also names an EnumerationLiteral; edge ids carry the link id; the drop waits for a target handle. R-OI-25 and R-OI-26 not needed.
+**Prompt document name**: 2026-11-08 20:41
+
+**Layer Impact Report, summary** (P-2026-11-08-2012, in chat before the diff). D-layer and JjOM gain a link InstanceSpecification, two Slots and two InstanceValues through `createInstance` in the queue and undo group of `instantiate`, with no new D class or field, no TRANSACTION, no vertex or edge creator. Canvas v2-flow gains one branch in `onConnectEnd`. Sync layer and persistence untouched. `useIRContainment.ts` and `irEdgeViews.ts` unchanged.
+
+**Q6** (measured by the probe). At the first viewport of the object tab no node is mounted: the five instances lie past the canvas, `nature`'s box projects to x 2205 on a canvas 1238 wide. Framed, `nature` mounts. Nothing to fix. It fits rendering only what is visible; that cause was not isolated.
+
+**Ticket** (P-2026-11-08-2041): the popup header reads «Link Reference» for a link too; `M1ReferencePopup.tsx`, out of scope.
+
+**Ticket** (P-2026-11-08-2041): a second link between the same pair is not prevented; UML allows it unless the association is unique, and uniqueness is not read.
+
+**Ticket** (P-2026-11-08-2041): a drag dropped away from a target handle writes nothing and says nothing. Aimed at the nearest handle of any kind, the reversed drag opened no menu. With no wait for the handles under the pointer, the class-tab drag made nothing in two of three runs, one of them aimed at a target handle. Aimed at a target handle after a 400 ms wait, both worked in every run. A source handle under the drop, and handles not yet drawn, are the likely causes, inferred and not isolated.
+
+## 2026-11-08 — fix: class diagram defects, one undo for the generalization, handle reach (P-2026-11-08-2214)
+**Prompt**: two lanes in one entry: P-2026-11-08-2146, the three defects of levels lane 2 (empty new attribute, class header clipping, Generalization at the model root) and the handle-reach measure, cut at its context ceiling; this continuation, S2-L28, the probes, the docs.
+**Files touched**: `editor-v2/hooks/instantiate.ts`, `editor-v2/EditorV2.tsx`, `editor-v2/hooks/__tests__/classElement.test.ts` (a5f657409); `editor-v2/EditorV2.tsx` (a102c23a5); `scripts/probe/onto-s2-instantiate.ts`, `scripts/probe/onto-s4-links.ts` (4ee0983ac); `docs/decisions.md` R-OI-22 amendment, this entry, the `Status:` of both prompts (this docs commit).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 17:53
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (nine files across two lanes, over the five of RC-11, listed above; `EditorV2.tsx` in this lane within the prompt's limit, 16 lines)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (three crops in `~/.jjodel-lanes/P-2026-11-08-2214/crops/`, read by the lane; Alfonso's look owed)
+**Notes**: S2 57/57, S4 14/14, binding editor 10/10; vitest 96/96 (classElement, instantiate, undoGroup), typecheck 0, build 0. No unit test for the group: `EditorV2.tsx` does not import in the bench, S2-L28 is its test. The inverse lost in the merge is read at `reducer.ts:1336` and confirmed by the fix, the delta itself was not dumped. Level `both` measured on this tree, not on the base before a5f657409. Logs and crops in `~/.jjodel-lanes/P-2026-11-08-2214/`.
+**Prompt document name**: 2026-11-08 22:14
+
+**Root causes and fixes, 2146** (a5f657409). A new attribute was created without defaults: it now gets `String` and multiplicity [1] where the metaclass has those features, and renders `+ property1 : String`. The class header clipped because the node did not grow with a new row: the height now grows, grow-only, in the same undo group (Book 220x82 to 220x100, undo gives 220x82 back). The Generalization took the container chain to the model root: at `class` with a declared `generalization.via` it goes in that feature of its source (`generalizationSlot`).
+
+**S2-L28** (measured, three runs on port 3097). Before the fix one Cmd+Z left the Generalization: 112 objects, 111 expected. Control (a), no click on the edge first: the same failure; the edge click itself writes no undo entry (22 to 22), so the click was not the cause. Control (b), the same drag at level `both`: the same failure (113, 112 expected), so the 2146 owner branch was not the cause. Trace: the undo stack goes 21 to 20 at 250 ms with the object's id still in idlookup, back to 21 at 500 ms with a new entry (three DEdge and the DGraph). The popped entry carried `mergeCounter`, the reducer's legacy merge (`U.objectMergeInPlace`, newer wins). Fix (a102c23a5): at `class` with a declared `generalization.via`, `handleObjectEdgeSelected` opens the reducer's undo group and closes it once the owner's write has landed, 8 s at most. After it: 21 to 20, the id gone, no new entry, S2-L28 PASS; an undo right after the edge click removes it too.
+
+**Handle reach** (S4-11, zoom 1, both tabs). A drop 0, 15 or 30 screen px from the target handle connects (class tab: one Generalization; object tab: the link menu); at 45, 60 or 90 px it does not. Consistent with `connectionRadius={40}` in `EditorV2.tsx`.
+
+## 2026-11-08 — ticket: one undo does not remove an object-as-edge outside level class
+**Ticket**: `handleObjectEdgeSelected` (`EditorV2.tsx`) opens an undo group only at level `class` with a declared `generalization.via`. At level `both` on uml-s3b one Cmd+Z after the same drag leaves the object (113 objects, 112 expected), through the reducer's legacy merge of the deferred writes. Other notations share the path and were not measured.
+**Priority**: medium
+**Found in**: P-2026-11-08-2214
+**Detail**: `~/.jjodel-lanes/P-2026-11-08-2214/probe-onto-s2-instantiate.log`
+
+## 2026-11-09 — merge: oi-rail takes alfonso-frontend-jjtl (P-2026-11-09-0943)
+**Prompt**: `claude_2026-11-09_0943_prompt_oi-rail_take_trunk.md`: bring the trunk at the explicit sha `733a67020` into `oi-rail` with one merge commit (RC-14), merge base `819c700b5`. The session stopped at step 2 on two code conflicts; chat `C-2026-10-25-2159` then authorized resolving exactly those two files by hand in the merge commit (RC-21) and gave the GO after the visual check.
+**Files touched**: merge `a1cb914c0` (322 files from the trunk side); by hand in it: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/panels/PalettePanel.tsx`; by union: `docs/log-inbox/instance-of.md`. This commit: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no. The merge brings 322 files, listed by `git show --stat a1cb914c0`; by hand only the two code files the chat authorized.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — GO of chat `C-2026-10-25-2159` on this tree, 2026-11-09, step 8, with a split-pane case asked for; this session ran no probe and the GO carries no numbers.
+**Notes**: Vitest: 15923 passed, 0 failed tests, the expected count, but exit 1: beyond the 3 import reds, irCollapsedRender and irSelectionRing time out on browser.close() at load above 50. Both pass alone; load is not proven the only cause. Step 5: decisions.md and this inbox compared by script with both parents, not read by eye. Merged 733a67020 as pinned; the trunk moved to 53e89405f with code. Details in the body of a1cb914c0.
+**Prompt document name**: 2026-11-09 09:43
+
+**Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): in a split, a click on the rail is centred without regard to the pane. `onOntoActivate` and `onClassActivate` (`EditorV2.tsx:3439`, `:3446`) use `getCanvasRightInset()`, where the trunk's `onPaletteActivate` uses `paneRightInset()`: a pane not under the rail centres the click off by the rail's inset. Read on `a1cb914c0`, not measured in the app.
+
+**Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): a rail drag can drop on the inactive pane of a split. The `ONTO_DRAG_MIME` path of `onDrop` (`EditorV2.tsx:2838-2841`) returns before the `paneAcceptsDropRef` guard (`:2844`), and the `onDragOver` guard (`:2865`) matches `application/reactflow` only, which a rail drag does not carry (`PalettePanel.tsx:132`, `:137`). Read on `a1cb914c0`, not measured in the app.
+
+## 2026-11-09 — fix: the rail in a split pane, click centre and drop guard (P-2026-11-09-1115)
+**Prompt**: `claude_2026-11-09_1115_prompt_onto_rail_split_fix.md`: close the two tickets of P-2026-11-09-0943 (a rail click centred without regard to the pane; a rail drag dropping on the inactive pane), then the probe pass on the merged tree and a new split-pane case, before the merge.
+**Files touched**: `e52cfa569` `frontend/src/components/editor-v2/EditorV2.tsx`; `2d874313a` `frontend/scripts/probe/onto-split-rail.ts` (new); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — by this session, on the numbers of SP-0..SP-6 and the crops in the lane folder; no human GO in this lane.
+**Notes**: Typecheck 0, build 0, the 4 named test files 144 passed; full vitest not run. Probes: S2 57/57, S4 14/14, binding 10/10, S3a 8/8, S3b 6/6, split 28/28. Split on a031db094: 12 fail, a click 165.7 px off, 12 idlookup keys written on the inactive pane. The rail now follows the trunk's rule: inactive pane refuses, nothing written. Linguistic palette compared on dragover only (no rootable class). Crops: ~/.jjodel-lanes/P-2026-11-09-1115/probe/split/.
+**Prompt document name**: 2026-11-09 11:15

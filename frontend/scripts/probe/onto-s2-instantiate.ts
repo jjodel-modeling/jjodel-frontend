@@ -29,11 +29,22 @@
  *         the late sync entries of `pointedBy` alone, a measure, P-2026-10-21-1121), S2-4u
  *         Member 1 entry, S2-2p the cascade node box contains the click (4 px), S2-3m bare createInstance +2 and
  *         instantiate +1 (decision 5).
+ *   S2-R  the «Instances of» rail (R-OI-18, P-2026-11-08-0212): S2-R0 with no bag, «Declare binding…» in Advanced, which
+ *         opens the binding dialog, and no section in Basic; S2-Rl the object record's classes, the link record's
+ *         associations disabled, a click on one creating nothing; S2-R1 a rail drag drops one instance at the drop point
+ *         under the tab's layout, 1 undo entry, 1 Cmd+Z; S2-R2 a click places it at the visible centre; S2-R3 a Class
+ *         added to the model appears in the rail with the tab open; S2-R4 the linguistic «Instances» drag still creates
+ *         its object (regression; the UML client has no rootable class, so it drags on LING_FILE's model).
+ *         Crops into ONTO_OUT, `r*-*.png`.
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-oi-s2 frontend/scripts/probe/onto-s2-instantiate.ts \
  *         --port 3087 --id P-2026-10-21-0100
+ *         S2-L*: the level of the tab's viewpoint (R-OI-19, R-OI-20), set through the control of the viewpoint properties.
  * Env:  ONTO_OUT   output directory (default docs/discovery/assets/onto-s2)
+ *       ONTO_CROPS the crops of S2-L* (default ONTO_OUT)
+ *       ONTO_OBJECT_LEVEL  written on the object viewpoint before the suite, which then runs under it; S2-L* is skipped
  *       UML_FILE   the exported project (default ~/jjodel-demo-exports/uml/uml-class-object.jjodel)
+ *       LING_FILE  the export of S2-R4's linguistic drag (default ~/jjodel-demo-exports/scene_2_DemoPetri.jjodel)
  */
 import { chromium, type Page } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -52,8 +63,13 @@ const { ev, meas, openPage, pickViewpoint, readNodes } = await import('./bpmn-la
 type Snap = Parameters<typeof runRules>[0];
 
 const FILE = process.env.UML_FILE || `${homedir()}/jjodel-demo-exports/uml/uml-class-object.jjodel`;
+/** The export S2-R4 drags a linguistic entry on, when the UML client's rail offers none. */
+const LING_FILE = process.env.LING_FILE || `${homedir()}/jjodel-demo-exports/scene_2_DemoPetri.jjodel`;
 const VP_CLASS = 'UML class diagram';
 const VP_OBJECT = 'UML object diagram';
+const OBJECT_LEVEL = process.env.ONTO_OBJECT_LEVEL;
+const CROPS = (process.env.ONTO_CROPS || OUT).replace(/\/$/, '');
+mkdirSync(CROPS, { recursive: true });
 const BOOK_CLOSURE = ['isbn', 'genre', 'title', 'year'];
 
 let pass = 0; let fail = 0;
@@ -115,6 +131,8 @@ async function emptyPanePoint(page: Page, prefer: 'left' | 'right' = 'left') {
 
 /** The editor-v2 menu's panels: the app has other `.context-menu` elements; this one follows its backdrop. */
 const MENU = '.context-menu-backdrop ~ .context-menu';
+/** The M1 rail of the active tab (PalettePanel). */
+const RAIL = '.dock-tabpane-active .editor-v2-palette--m1';
 /** The undo history as the reducer sees it: the interaction flag, both stacks, the last entry's age. */
 const history = (page: Page) => ev<Record<string, unknown>>(page, `
     const h = w.statehistory || {}; const u = h[w.DUser.current]; const last = u && u.undoable[u.undoable.length - 1];
@@ -167,6 +185,32 @@ async function openCascade(page: Page, at: { x: number; y: number }) {
     return { panels, parentLabel, labels, child };
 }
 
+/** A rail item dragged onto the pane at `at`: dragstart on the item writes its payload into one DataTransfer, dragover
+ *  and drop on the topmost element there read it, dragend closes the drag; the keys the item wrote. */
+const dragTo = (page: Page, item: string, text: string, at: { x: number; y: number }) => page.evaluate(({ item, text, at }) => {
+    const src = [...document.querySelectorAll(item)].find((e) => (e.textContent || '').trim() === text) as HTMLElement | undefined;
+    const el = document.elementFromPoint(at.x, at.y);
+    if (!src || !el) return null;
+    const dt = new DataTransfer();
+    src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    const types = [...dt.types];
+    el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+    el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+    src.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    return types;
+}, { item, text, at });
+
+/** The screen box of the node of vertex `id` in the active tab, `null` when it is not drawn. */
+const nodeScreenBox = (page: Page, id: string) => page.evaluate((vid) => {
+    const el = document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${vid}"]`) as HTMLElement | null;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { l: r.left, t: r.top, r: r.right, b: r.bottom, zoom: el.offsetWidth ? r.width / el.offsetWidth : 1 };
+}, id);
+/** The node's top-left is the point, within half a step of the canvas's 16 px grid (the snap S2-2p measures) and 1 px. */
+const topLeftAt = (b: { l: number; t: number; zoom: number } | null, p: { x: number; y: number }) =>
+    !!b && Math.abs(b.l - p.x) <= 8 * b.zoom + 1 && Math.abs(b.t - p.y) <= 8 * b.zoom + 1;
+
 /** Wait until the model holds a new instance of `classifier` with `slots` slots (or the limit passes). */
 async function waitInstance(page: Page, modelId: string, before: Set<string>, classifierId: string, slots: number) {
     for (let i = 0; i < 40; i++) {
@@ -217,6 +261,16 @@ try {
         for (const id of q) { const o = idl[id]; if (o && ['Class', 'Enumeration', 'PrimitiveType', 'Association'].includes(idl[o.instanceof] && idl[o.instanceof].name)) classes[o.name] = id; }
         return { model: m.id, mm: idl[m.id].instanceof, classes };`, undefined, 0);
     out.ids = ids;
+    const vpIds = await ev<Record<string, string>>(page, `const out = {};
+        for (const r of Object.values(w.store.getState().idlookup)) if (r && r.className === 'DViewPoint' && a.includes(r.name)) out[r.name] = r.id;
+        return out;`, [VP_CLASS, VP_OBJECT], 0);
+    out.vpIds = vpIds;
+    if (OBJECT_LEVEL) {
+        const written = await ev<unknown>(page, `w.LPointerTargetable.fromPointer(a.vp).state = { ontoLevel: a.level };
+            await new Promise((r) => setTimeout(r, 600)); return w.store.getState().idlookup[a.vp]._state.ontoLevel;`, { vp: vpIds[VP_OBJECT], level: OBJECT_LEVEL }, 0);
+        out.objectLevel = written;
+        if (written !== OBJECT_LEVEL) throw new Error(`the object viewpoint's level did not land: ${String(written)}`);
+    }
 
     // ── S2-0: no binding, no menu ──────────────────────────────────────────────────────────────────────────────────
     const bag0 = await ev<unknown>(page, `const s = w.store.getState().idlookup[a]._state; return s ? s.ontoBindings ?? null : null;`, ids.mm, 0);
@@ -228,6 +282,30 @@ try {
     const menus0 = await menuCount(page);
     check('S2-0 a metamodel without ontoBindings: a right click on the pane opens no menu', bag0 === null && menus0 === 0, { bag0, menus0, at: p0 });
     if (menus0) await closeMenu(page);
+
+    // ── S2-R0: the rail with no bag: «Declare binding…» in Advanced only (R-OI-18, question 2) ─────────────────────
+    {
+        const setAdvanced = (on: boolean) => ev(page, `const j = await import('/src/joiner/index.ts'); j.SetRootFieldAction.new('advanced', a); w.advanced = a;
+            localStorage.setItem('jjodel.interfaceMode', a ? 'advanced' : 'basic'); return 1;`, on, 1200);
+        const advanced0 = await ev<boolean>(page, `return !!w.store.getState().advanced;`, undefined, 0);
+        await setAdvanced(true);
+        const advanced = { section: await page.locator(`${RAIL} .palette-onto`).count(), declare: await page.locator(`${RAIL} .palette-onto__declare`).count(), dialog: 0 };
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r0-rail-empty-advanced.png` });
+        if (advanced.declare) {
+            await page.locator(`${RAIL} .palette-onto__declare`).first().click();
+            await wait(page, 800);
+            advanced.dialog = await page.locator('.onto-binding-modal').count();
+            await page.keyboard.press('Escape');
+            await wait(page, 400);
+        }
+        await setAdvanced(false);
+        const basic = { section: await page.locator(`${RAIL} .palette-onto`).count(), instances: await page.locator(`${RAIL} .palette-instances`).count() };
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r0-rail-basic-no-binding.png` });
+        await setAdvanced(advanced0);
+        out.railEmpty = { advanced0, advanced, basic, dialogLeft: await page.locator('.onto-binding-modal').count() };
+        check('S2-R0 no bag: Advanced shows «Instances of» with «Declare binding…», which opens the binding dialog; Basic shows no section',
+            advanced.section === 1 && advanced.declare === 1 && advanced.dialog === 1 && basic.section === 0 && basic.instances === 1, out.railEmpty);
+    }
 
     // ── The binding, through mm.state ──────────────────────────────────────────────────────────────────────────────
     const written = await ev<{ ok: boolean; missing: string[]; raw: string | null }>(page, `
@@ -605,6 +683,473 @@ try {
             !!box && JSON.stringify(box.labels.map((l) => l.text)) === JSON.stringify([b4.inst?.name, 'Book'])
             && box.labels.every((l) => l.inside && !l.clipped) && box.rows.length === 4
             && box.rows.every((r) => r.inside && r.top >= headerBottom - 0.5), out.classNodeBox);
+    }
+
+    // ── S2-R: the «Instances of» rail (R-OI-18, P-2026-11-08-0212) ─────────────────────────────────────────────────
+    // Last but S2-7, so the instance names and the undo measures above stay as they were. The object diagram, fit.
+    {
+        const objectItems = `${RAIL} .palette-onto__item:not(.palette-onto__item--disabled)`;
+        const linkItems = `${RAIL} .palette-onto__item--disabled`;
+        const texts = async (sel: string) => (await page.locator(sel).allInnerTexts()).map((t) => t.trim());
+        const objects = await texts(objectItems);
+        const links = await page.locator(linkItems).evaluateAll((els) => els.map((e) => ({
+            text: (e.textContent || '').trim(), disabled: e.getAttribute('aria-disabled'), draggable: e.getAttribute('draggable'), title: e.getAttribute('title') })));
+        const gap = await page.evaluate((rail) => {
+            const a = document.querySelector(`${rail} .palette-instances`)?.getBoundingClientRect();
+            const b = document.querySelector(`${rail} .palette-onto`)?.getBoundingClientRect();
+            return a && b ? { instancesBottom: a.bottom, ontoTop: b.top, gap: b.top - a.bottom } : null;
+        }, RAIL);
+        await page.locator(RAIL).first().screenshot({ path: `${OUT}/r1-rail-binding.png` });
+        const preL = await census(page, ids.model);
+        if (links.length) { await page.locator(linkItems).first().click({ force: true }); await wait(page, 1500); }
+        const postL = await census(page, ids.model);
+        out.rail = { objects, links, gap, linkClick: { objects: [preL.objects.length, postL.objects.length], undo: [preL.undo, postL.undo] } };
+        check('S2-Rl the rail lists Book, Library, Magazine, Member under the object record and the associations disabled; a link click creates nothing',
+            JSON.stringify(objects) === JSON.stringify(['Book', 'Library', 'Magazine', 'Member']) && links.length > 0
+            && links.every((l) => l.disabled === 'true' && l.draggable === null && l.title === 'A link is drawn between two instances (S4)')
+            && !!gap && gap.gap >= 0 && postL.objects.length === preL.objects.length && postL.undo === preL.undo, out.rail);
+
+        // S2-R1: a drag from the rail, dropped on an empty point of the pane.
+        const pR = await emptyPanePoint(page, 'right');
+        if (!pR) throw new Error('no empty pane point for the rail drop');
+        await page.mouse.click(pR.x, pR.y); await wait(page, 300);
+        await settle(page);
+        const pre1 = await census(page, ids.model);
+        const pre1Ids = new Set(pre1.objects.map((o) => o.id));
+        const types1 = await dragTo(page, objectItems, 'Magazine', pR);
+        const r1 = await waitInstance(page, ids.model, pre1Ids, ids.classes.Magazine, 3);
+        await settle(page);
+        const post1 = await census(page, ids.model);
+        const v1 = r1.inst ? (await verticesOf(page, r1.inst.id))[0]?.id : undefined;
+        const box1 = v1 ? await nodeScreenBox(page, v1) : null;
+        await page.evaluate((p) => { const d = document.createElement('div'); d.id = 'probe-cursor';
+            d.style.cssText = `position:fixed;left:${p.x - 4}px;top:${p.y - 4}px;width:8px;height:8px;border-radius:50%;background:#e11d48;z-index:99999;pointer-events:none`;
+            document.body.appendChild(d); }, pR);
+        await page.locator('.dock-tabpane-active .react-flow').first().screenshot({ path: `${OUT}/r2-canvas-after-drop.png` });
+        await page.evaluate(() => document.getElementById('probe-cursor')?.remove());
+        await page.keyboard.press('Meta+z');
+        await wait(page, 1200); await settle(page);
+        const undone1 = await census(page, ids.model);
+        out.railDrop = { at: pR, types: types1, name: r1.inst?.name, slots: (r1.inst?.f.slots ?? []).length, vertex: v1, box: box1,
+            undo: [pre1.undo, post1.undo, undone1.undo], objects: [pre1.objects.length, post1.objects.length, undone1.objects.length] };
+        check('S2-R1 a rail drag drops one Magazine instance, its top-left at the drop point (half a grid step) under the tab\'s layout, 1 undo entry, 1 Cmd+Z',
+            JSON.stringify(types1) === JSON.stringify(['application/jjodel-onto']) && !!r1.inst && topLeftAt(box1, pR)
+            && (post1.undo ?? 0) - (pre1.undo ?? 0) === 1
+            && undone1.objects.length === pre1.objects.length && undone1.objects.every((o) => pre1Ids.has(o.id)), out.railDrop);
+
+        // S2-R2: a click on a rail entry, at the centre of the canvas the overlay leaves visible.
+        await settle(page);
+        const pre2 = await census(page, ids.model);
+        const pre2Ids = new Set(pre2.objects.map((o) => o.id));
+        const centre = await ev<{ x: number; y: number } | null>(page, `
+            const c = await import('/src/components/editor-v2/utils/canvasCentre.ts'); const v = await import('/src/components/editor-v2/viewportInset.ts');
+            const el = document.querySelector('.dock-tabpane-active .editor-v2__canvas'); return el ? c.clientCentre(el.getBoundingClientRect(), v.getCanvasRightInset()) : null;`, undefined, 0);
+        await page.locator(objectItems, { hasText: /^Library$/ }).first().click();
+        const r2 = await waitInstance(page, ids.model, pre2Ids, ids.classes.Library, 1);
+        await settle(page);
+        const post2 = await census(page, ids.model);
+        const v2 = r2.inst ? (await verticesOf(page, r2.inst.id))[0]?.id : undefined;
+        const box2 = v2 ? await nodeScreenBox(page, v2) : null;
+        out.railClick = { centre, name: r2.inst?.name, vertex: v2, box: box2, undo: [pre2.undo, post2.undo] };
+        check('S2-R2 a rail click places one Library instance, its top-left at the visible centre of the canvas (half a grid step), 1 undo entry',
+            !!r2.inst && !!centre && topLeftAt(box2, centre) && (post2.undo ?? 0) - (pre2.undo ?? 0) === 1, out.railClick);
+
+        // S2-R3: a Class added to the model reaches the rail with the tab open.
+        await ev(page, `const ca = await import('/src/components/editor-v2/hooks/createAdapter.ts');
+            return ca.createInstance(a, 'Class', null, null, { name: 'Novel' });`, ids.model, 1500);
+        let objects3: string[] = [];
+        for (let i = 0; i < 20 && !objects3.includes('Novel'); i++) { await wait(page, 250); objects3 = await texts(objectItems); }
+        out.railNewClass = { objects: objects3 };
+        check('S2-R3 a Class added to the model appears in the rail without reopening the tab', objects3.includes('Novel'), out.railNewClass);
+
+        // S2-L: the level of the tab's viewpoint (R-OI-19, R-OI-20), set through its control. Before S2-R4, which leaves
+        // this project; not under ONTO_OBJECT_LEVEL, whose run is the suite itself.
+        if (!OBJECT_LEVEL) {
+            const LEVEL = '.wp-onto-level-select';
+            const count = (sel: string) => page.locator(sel).count();
+            const classVp = vpIds[VP_CLASS]; const objectVp = vpIds[VP_OBJECT];
+            const stateOf = (vp: string) => ev<Record<string, unknown> | null>(page, `return w.store.getState().idlookup[a]._state ?? null;`, vp, 0);
+            const levelOf = async (vp: string) => (await stateOf(vp))?.ontoLevel ?? null;
+            const setAdvancedL = (on: boolean) => ev(page, `const j = await import('/src/joiner/index.ts'); j.SetRootFieldAction.new('advanced', a); w.advanced = a;
+                localStorage.setItem('jjodel.interfaceMode', a ? 'advanced' : 'basic'); return 1;`, on, 1200);
+            // The suite leaves the side panel closed; the viewpoint's properties live in it, so it is reopened as a user would.
+            const reopenRail = async () => {
+                if (await count('.properties-with-tree-view')) return;
+                await page.locator('button[aria-label="Show the side panel"]').first().click();
+                await wait(page, 600);
+            };
+            const openVp = async (vp: string) => {
+                await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx');
+                dm.default.openViewpoint(w.LPointerTargetable.fromPointer(a)); return 1;`, vp, 1500);
+                await reopenRail();
+            };
+            const choose = async (vp: string, label: string) => {
+                await openVp(vp);
+                await page.locator(`${LEVEL} .jj-select__control`).first().click();
+                await wait(page, 300);
+                await page.locator('.jj-select__option', { hasText: new RegExp(`^${label}$`) }).first().click();
+                await wait(page, 300);
+                return (await settle(page)).user as number;
+            };
+            const ontoDrop = (payload: string, at: { x: number; y: number }) => page.evaluate(({ payload, at }) => {
+                const el = document.elementFromPoint(at.x, at.y);
+                if (!el) return false;
+                const dt = new DataTransfer();
+                dt.setData('application/jjodel-onto', payload);
+                el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+                el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, dataTransfer: dt }));
+                return true;
+            }, { payload, at });
+            const bookPayload = JSON.stringify({ record: 'object', classifier: ids.classes.Book });
+            const advancedL = await ev<boolean>(page, `return !!w.store.getState().advanced;`, undefined, 0);
+
+            const panelDump = () => page.evaluate(() => {
+                const b = document.querySelector('.properties-panel-body') as HTMLElement | null; const s = (window as any).store.getState();
+                return { editor: document.body.getAttribute('data-editor-type'), last: s._lastSelected, advanced: s.advanced,
+                    shell: document.querySelectorAll('.properties-with-tree-view').length, wp: document.querySelectorAll('.workbench-properties').length,
+                    text: b ? b.innerText.replace(/\s+/g, ' ').slice(0, 120) : null };
+            });
+            await setAdvancedL(false);
+            await openVp(classVp);
+            const panel = await panelDump();
+            const basic = { panel: await count('.workbench-properties'), control: await count(LEVEL) };
+            await setAdvancedL(true);
+            await wait(page, 500);
+            const inAdvanced = await count(LEVEL);
+            out.levelControl = { basic, inAdvanced, panel, errors: errors.slice(0, 3) };
+            check('S2-L0 the level control shows in Advanced only, in the viewpoint properties', basic.panel > 0 && basic.control === 0 && inAdvanced === 1, out.levelControl);
+
+            const state0 = await stateOf(classVp);
+            const u0 = (await settle(page)).user as number;
+            const u1 = await choose(classVp, 'Classes');
+            const l1 = await levelOf(classVp);
+            await page.locator('.workbench-properties').first().screenshot({ path: `${CROPS}/control.png` });
+            check('S2-L1 the control writes _state.ontoLevel = class, one undo entry', l1 === 'class' && u1 - u0 === 1, { l1, u0, u1, state0 });
+            const u2 = await choose(classVp, 'Classes');
+            check('S2-L2 choosing the current level writes nothing', u2 === u1 && (await levelOf(classVp)) === 'class', { u1, u2 });
+
+            const pu = (await emptyPanePoint(page, 'left'))!;
+            await page.mouse.click(pu.x, pu.y);
+            await wait(page, 300);
+            const u3 = (await settle(page)).user as number;
+            await page.keyboard.press('Meta+z');
+            await wait(page, 700);
+            const u4 = (await settle(page)).user as number;
+            const state1 = await stateOf(classVp);
+            out.levelUndo = { u3, u4, state0, state1 };
+            check('S2-L3 Cmd+Z undoes the control: one entry fewer, the viewpoint\'s _state as before it',
+                u4 === u3 - 1 && JSON.stringify(state1 ?? {}) === JSON.stringify(state0 ?? {}), out.levelUndo);
+
+            await choose(classVp, 'Classes');
+            const uo0 = (await settle(page)).user as number;
+            const uo1 = await choose(objectVp, 'Instances');
+            const levels = { class: await levelOf(classVp), object: await levelOf(objectVp) };
+            out.levels = { ...levels, uo0, uo1 };
+            check('S2-L4 the object viewpoint is set to instance, one undo entry, the class viewpoint keeps its level',
+                levels.class === 'class' && levels.object === 'instance' && uo1 - uo0 === 1, out.levels);
+
+            // The class tab: no instance surface; the class rail and its pane menu instead (R-OI-21, R-OI-23).
+            await pickViewpoint(page, VP_CLASS);
+            await wait(page, SETTLE_MS);
+            await reopenRail();
+            const ELEMENT = `${RAIL} .palette-onto__item`;
+            const railItems = () => page.locator(ELEMENT).evaluateAll((els) => els.map((e) => ({
+                text: (e.textContent || '').trim(), disabled: e.getAttribute('aria-disabled') === 'true', draggable: e.getAttribute('draggable'), title: e.getAttribute('title') })));
+            // textContent, not innerText: the titles are uppercased by CSS, and a comparison with innerText could never match.
+            const sourceTexts = async (sel: string) => (await page.locator(sel).allTextContents()).map((t) => t.trim());
+            const classItems0 = await railItems();
+            const classRail = { rail: await count(RAIL), section: await count(`${RAIL} .palette-onto`), declare: await count(`${RAIL} .palette-onto__declare`), instances: await count(`${RAIL} .palette-instances`),
+                title: await sourceTexts(`${RAIL} .palette-onto__title`), groups: await sourceTexts(`${RAIL} .palette-onto__subtitle`), items: classItems0.map((i) => i.text) };
+            await page.locator(RAIL).first().screenshot({ path: `${CROPS}/class-rail.png` });
+            check('S2-L5 class tab: the rail lists «Elements» with the four groups, no «Instances», no «Declare binding…»',
+                classRail.rail > 0 && classRail.section === 1 && classRail.declare === 0 && classRail.instances === 0 && classRail.title.join() === 'Elements'
+                && [...classRail.groups].sort().join() === 'Associations,Attributes,Classifiers,Generalizations'
+                && ['Class', 'DataType', 'Enumeration', 'PrimitiveType', 'Association', 'Property', 'Generalization'].every((x) => classRail.items.includes(x)), classRail);
+            const pc = (await emptyPanePoint(page, 'left'))!;
+            const classCascade = await openCascade(page, pc);
+            await page.locator('.dock-tabpane-active .editor-v2').first().screenshot({ path: `${CROPS}/class-pane-menu.png` });
+            check('S2-L6 class tab: a right click on the empty pane opens «New ▸» with the rail\'s items',
+                classCascade.parentLabel === 'New' && [...classCascade.labels].sort().join() === [...classRail.items].sort().join(), { parent: classCascade.parentLabel, labels: classCascade.labels, at: pc });
+            await closeMenu(page);
+            const bookClass = (await readNodes(page)).find((n) => n.name === 'Book');
+            const classItems = bookClass ? await rightClickNode(bookClass.id) : [];
+            await closeMenu(page);
+            check('S2-L7 class tab: the Book node\'s menu opens, without «New instance»', classItems.length > 0 && !classItems.includes('New instance'), { book: bookClass?.id, classItems });
+            const pre = await census(page, ids.model);
+            const dropped = await ontoDrop(bookPayload, pc);
+            await wait(page, 1500);
+            const post = await settle(page);
+            const after = await census(page, ids.model);
+            out.levelDrop = { dropped, objects: [pre.objects.length, after.objects.length], idl: [pre.idl, after.idl], undo: [pre.undo, post.user] };
+            check('S2-L8 class tab: a synthetic «Instances of» drop writes nothing', dropped && after.objects.length === pre.objects.length && after.idl === pre.idl && post.user === pre.undo, out.levelDrop);
+
+            // What the canvas draws (a node or edge with a box, by id) and what the D-layer holds, around each class-level write.
+            const flow = async () => {
+                const drawn = await page.evaluate(() => {
+                    const root = document.querySelector('.dock-tabpane-active')!;
+                    const shown = (e: Element) => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+                    return { nodes: [...root.querySelectorAll('.react-flow__node')].filter(shown).map((e) => (e as HTMLElement).dataset.id!),
+                        edges: [...root.querySelectorAll('.react-flow__edge')].filter(shown).map((e) => e.getAttribute('data-id') || e.id) };
+                });
+                const records = await ev<{ dVertices: number; dEdges: number }>(page, `const rs = Object.values(w.store.getState().idlookup);
+                    return { dVertices: rs.filter((r) => r && /Vertex/.test(r.className || '')).length, dEdges: rs.filter((r) => r && /Edge$/.test(r.className || '')).length };`, undefined, 0);
+                return { ...drawn, ...records };
+            };
+            const added = (a: string[], b: string[]) => b.filter((x) => !a.includes(x));
+            const fatherOf = (id: string) => ev<{ cls: string; feature: string | null; owner: string } | null>(page, `const idl = w.store.getState().idlookup; const f = idl[idl[a].father];
+                return f ? { cls: f.className, feature: idl[f.instanceof] ? idl[f.instanceof].name : null, owner: f.father } : null;`, id, 0);
+            const packageOf = (c: { objects: Obj[] }) => c.objects.find((o) => o.cls === 'Package')!;
+            /** A class-level write: the objects it added, its undo entries, what it added to the canvas and to the D-layer. */
+            const written = async (before: { objects: Obj[]; undo: number | null }, was: Awaited<ReturnType<typeof flow>>) => {
+                await wait(page, 1500);
+                const h = await settle(page);
+                const c = await census(page, ids.model);
+                const now = await flow();
+                return { c, made: c.objects.filter((o) => !before.objects.some((p) => p.id === o.id)), undo: (h.user as number) - (before.undo as number), nodes: added(was.nodes, now.nodes), edges: added(was.edges, now.edges),
+                    records: { vertices: now.dVertices - was.dVertices, edges: now.dEdges - was.dEdges } };
+            };
+            const undoOnce = async (before: { objects: Obj[] }) => {
+                await page.keyboard.press('Meta+z');
+                await wait(page, 1200);
+                await settle(page);
+                const c = await census(page, ids.model);
+                return { objects: c.objects.length, expected: before.objects.length, same: c.objects.every((o) => before.objects.some((p) => p.id === o.id)) };
+            };
+
+            // S2-L11: the drag of Class from the rail.
+            const c11 = await census(page, ids.model); const f11 = await flow();
+            const p11 = (await emptyPanePoint(page, 'left'))!;
+            const types11 = await dragTo(page, ELEMENT, 'Class', p11);
+            const w11 = await written(c11, f11);
+            const class11 = w11.made.filter((o) => o.cls === 'Class');
+            const v11 = class11[0] ? (await verticesOf(page, class11[0].id)).map((v) => v.id) : [];
+            const box11 = v11[0] ? await nodeScreenBox(page, v11[0]) : null;
+            const father11 = class11[0] ? await fatherOf(class11[0].id) : null;
+            await page.locator('.dock-tabpane-active .editor-v2').first().screenshot({ path: `${CROPS}/class-after-drop.png` });
+            check('S2-L11 class tab: the drag of Class makes one Class in the Package\'s packagedElements, at the drop, one undo entry',
+                w11.made.length === 1 && class11.length === 1 && packageOf(w11.c).f.packagedElements?.includes(class11[0].id) && father11?.cls === 'DValue' && father11?.feature === 'packagedElements' && topLeftAt(box11, p11) && w11.undo === 1,
+                { types11, made: w11.made.map((o) => [o.cls, o.name]), father11, box11, p11, undo: w11.undo });
+            check('S2-L12 point 1: the new Class draws one node and no edge', w11.nodes.length === 1 && w11.nodes[0] === v11[0] && w11.edges.length === 0, { nodes: w11.nodes, edges: w11.edges, vertex: v11, records: w11.records });
+            const u11 = await undoOnce(c11);
+            check('S2-L13 class tab: one Cmd+Z removes the dropped Class', u11.objects === u11.expected && u11.same, u11);
+
+            // S2-L14: «New ▸ Class» from the pane, at the click.
+            const c14 = await census(page, ids.model); const f14 = await flow();
+            const p14 = (await emptyPanePoint(page, 'left'))!;
+            const menu14 = await openCascade(page, p14);
+            await menu14.child.locator('.context-menu__item', { hasText: /^Class$/ }).first().click();
+            const w14 = await written(c14, f14);
+            const class14 = w14.made.filter((o) => o.cls === 'Class');
+            const v14 = class14[0] ? (await verticesOf(page, class14[0].id)).map((v) => v.id) : [];
+            const box14 = v14[0] ? await nodeScreenBox(page, v14[0]) : null;
+            check('S2-L14 class tab: «New ▸ Class» makes one Class at the click, one undo entry',
+                w14.made.length === 1 && class14.length === 1 && packageOf(w14.c).f.packagedElements?.includes(class14[0].id) && topLeftAt(box14, p14) && w14.undo === 1,
+                { labels: menu14.labels, made: w14.made.map((o) => [o.cls, o.name]), box14, p14, undo: w14.undo, nodes: w14.nodes, edges: w14.edges });
+            const u14 = await undoOnce(c14);
+            check('S2-L15 class tab: one Cmd+Z removes it', u14.objects === u14.expected && u14.same, u14);
+
+            // S2-L16: an attribute on the selected class. The header is clicked: a row would select the row's element.
+            const book16 = (await readNodes(page)).find((n) => n.name === 'Book')!;
+            const b16 = (await nodeScreenBox(page, book16.id))!;
+            const disabledBefore = (await railItems()).find((i) => i.text === 'Property');
+            await page.mouse.click((b16.l + b16.r) / 2, b16.t + 12 * b16.zoom);
+            await wait(page, 700);
+            const selected16 = await ev<string | null>(page, `const s = w.store.getState()._lastSelected; return s ? s.modelElement : null;`, undefined, 0);
+            const enabled16 = (await railItems()).find((i) => i.text === 'Property');
+            check('S2-L16 point 3: a click on the class node selects the Class object and enables the Property item',
+                selected16 === ids.classes.Book && !!disabledBefore?.disabled && !enabled16?.disabled, { selected16, book: ids.classes.Book, disabledBefore, enabled16 });
+            const nodeText = async () => (await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${book16.id}"]`).first().innerText()).replace(/\s+/g, ' ').trim();
+            const text16 = await nodeText();
+            const box16 = await nodeBox(book16.id);
+            const c16 = await census(page, ids.model); const f16 = await flow();
+            const owned16 = c16.objects.find((o) => o.id === ids.classes.Book)!.f.ownedAttributes ?? [];
+            await page.locator(ELEMENT, { hasText: /^Property$/ }).first().click();
+            const w16 = await written(c16, f16);
+            const made16 = w16.made.filter((o) => o.cls === 'Property');
+            const owned16b = w16.c.objects.find((o) => o.id === ids.classes.Book)!.f.ownedAttributes ?? [];
+            const text16b = await nodeText();
+            const box16b = await nodeBox(book16.id);
+            await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${book16.id}"]`).first().screenshot({ path: `${CROPS}/class-new-attribute.png` });
+            check('S2-L17 class tab: the Property item adds one owned attribute to the selected class, one undo entry',
+                w16.made.length === 1 && made16.length === 1 && owned16b.length === owned16.length + 1 && owned16b.includes(made16[0].id) && w16.undo === 1, { made: w16.made.map((o) => [o.cls, o.name]), owned: [owned16.length, owned16b.length], undo: w16.undo });
+            check('S2-L18 point 1: the new attribute draws no node and no edge', w16.nodes.length === 0 && w16.edges.length === 0, { nodes: w16.nodes, edges: w16.edges, records: w16.records });
+            check('S2-L19 point 2: the new attribute draws as a row of its class', !!made16[0] && text16b.includes(made16[0].name) && !text16.includes(made16[0].name), { name: made16[0]?.name, before: text16.slice(0, 200), after: text16b.slice(0, 240) });
+            // P-2026-11-08-2146: the defaults of the attribute and the box of its class. The row reads `+ name : String`, the
+            // form the class view draws for a public 1..1 attribute (uml-class-object-fixture, propertyRows).
+            const row16 = box16b?.rows.find((r) => !!made16[0] && r.text.includes(made16[0].name));
+            const bounds16 = { lower: made16[0]?.f.lower, upper: made16[0]?.f.upper, visibility: made16[0]?.f.visibility, type: made16[0]?.f.type };
+            check('S2-L24 the new attribute is public, 1..1 and typed String, drawn as one row',
+                !!row16 && /^\+ property\d+ : String$/.test(row16.text) && String(bounds16.lower?.[0]) === '1' && String(bounds16.upper?.[0]) === '1' && box16b?.rows.length === (box16?.rows.length ?? 0) + 1, { row: row16?.text, rows: [box16?.rows.length, box16b?.rows.length], ...bounds16 });
+            check('S2-L25 the header of the class is not clipped: labels and rows inside the box, grown in height only',
+                !!box16 && !!box16b && box16b.labels.every((l) => l.inside && !l.clipped) && box16b.rows.every((r) => r.inside) && box16b.node.h > box16.node.h && box16b.node.w === box16.node.w, { before: box16?.node, after: box16b?.node, labels: box16b?.labels });
+            const u16 = await undoOnce(c16);
+            check('S2-L20 class tab: one Cmd+Z removes the attribute', u16.objects === u16.expected && u16.same, u16);
+            const box16c = await nodeBox(book16.id);
+            check('S2-L26 the same Cmd+Z gives the class its box back', !!box16 && box16c?.node.h === box16.node.h && box16c?.node.w === box16.node.w, { before: box16?.node, undone: box16c?.node });
+
+            // S2-L21: Association and Generalization are listed disabled with their hints, and a click writes nothing.
+            const items21 = await railItems();
+            const assoc = items21.find((i) => i.text === 'Association'); const gen = items21.find((i) => i.text === 'Generalization');
+            const c21 = await census(page, ids.model);
+            for (const name of ['Association', 'Generalization']) await page.locator(ELEMENT, { hasText: new RegExp(`^${name}$`) }).first().click({ force: true });
+            await wait(page, 800);
+            const h21 = await settle(page);
+            const a21 = await census(page, ids.model);
+            check('S2-L21 class tab: Association and Generalization are disabled with a tooltip, a click creates nothing',
+                !!assoc?.disabled && !!assoc?.title && !!gen?.disabled && !!gen?.title && a21.objects.length === c21.objects.length && h21.user === c21.undo, { assoc, gen, objects: [c21.objects.length, a21.objects.length], undo: [c21.undo, h21.user] });
+
+            // S2-L22, point 3: the class view's edge drag, from a ghost handle (bpmn-lanes S3-9). `connecting` is the positive
+            // control: the connection line drew, so the gesture started. Whatever it writes, the rail item stays disabled.
+            const classNames22 = (await census(page, ids.model)).objects.filter((o) => o.cls === 'Class').map((o) => o.name);
+            const classNodes = (await readNodes(page)).filter((n) => classNames22.includes(n.name));
+            const src22 = classNodes.find((n) => n.name === 'Book')!; const tgt22 = classNodes.find((n) => n.name !== 'Book')!;
+            const sb = (await nodeScreenBox(page, src22.id))!; const tb = (await nodeScreenBox(page, tgt22.id))!;
+            const ghost = `.dock-tabpane-active .react-flow__node[data-id="${src22.id}"] .react-flow__handle.source.mm-anchor--ghost-visible`;
+            let connecting = false; let validEnd = false; let picker: string[] = []; let picked: string | null = null; let handleClass: string | null = null;
+            // The gesture as a closure: S2-L28's control (b) runs it again at level `both`.
+            const drag22 = async () => {
+            connecting = false; validEnd = false; picker = []; picked = null; handleClass = null;
+            let sh: { x: number; y: number; width: number; height: number } | null = null;
+            for (const s of [{ x: (sb.l + sb.r) / 2, y: sb.t + 3 }, { x: sb.r - 3, y: (sb.t + sb.b) / 2 }, { x: (sb.l + sb.r) / 2, y: sb.b - 3 }, { x: sb.l + 3, y: (sb.t + sb.b) / 2 }]) {
+                await page.mouse.move(s.x, s.y); await wait(page, 400);
+                if (await page.locator(ghost).count()) { sh = await page.locator(ghost).first().boundingBox(); if (sh) break; }
+            }
+            const handles22 = await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${tgt22.id}"] .react-flow__handle`).evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+            if (sh) {
+                const press = { x: sh.x + sh.width / 2, y: sh.y + sh.height / 2 };
+                const near = [...handles22].sort((a, b) => Math.hypot(a.x - press.x, a.y - press.y) - Math.hypot(b.x - press.x, b.y - press.y))[0] ?? { x: (tb.l + tb.r) / 2, y: tb.t };
+                handleClass = await page.locator(ghost).first().getAttribute('class');
+                await page.mouse.move(press.x, press.y); await wait(page, 200);
+                await page.locator(ghost).first().dispatchEvent('mousedown', { clientX: press.x, clientY: press.y, button: 0, buttons: 1 });
+                for (let i = 1; i <= 12; i++) {
+                    await page.mouse.move(press.x + (near.x - press.x) * i / 12, press.y + (near.y - press.y) * i / 12); await wait(page, 40);
+                    if (i === 6) connecting = (await count('.dock-tabpane-active .react-flow__connection')) > 0;
+                }
+                // A node's handles draw under the pointer: wait for them and aim at the nearest target, as S4's `dragEdge` does.
+                await wait(page, 400);
+                const targets22 = await page.locator(`.dock-tabpane-active .react-flow__node[data-id="${tgt22.id}"] .react-flow__handle.target`).evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+                if (targets22.length) { const aim = [...targets22].sort((a, b) => Math.hypot(a.x - near.x, a.y - near.y) - Math.hypot(b.x - near.x, b.y - near.y))[0]; await page.mouse.move(aim.x, aim.y, { steps: 3 }); await wait(page, 200); }
+                validEnd = (await count('.dock-tabpane-active .react-flow__handle.valid, .dock-tabpane-active .react-flow__connection.valid')) > 0;
+                await page.mouse.up(); await wait(page, 900);
+                picker = await texts('.edge-type-popup__option');
+                if (picker.length) {
+                    const option = picker.findIndex((t) => /generali[sz]ation|general/i.test(t));
+                    if (option >= 0) { picked = picker[option]; await page.locator('.edge-type-popup__option').nth(option).click(); }
+                    else await page.keyboard.press('Escape');
+                }
+            }
+            };
+            const c22 = await census(page, ids.model); const f22 = await flow();
+            await drag22();
+            const w22 = await written(c22, f22);
+            const gens22 = w22.made.filter((o) => o.cls === 'Generalization');
+            const item22 = (await railItems()).find((i) => i.text === 'Generalization');
+            const named22 = (id: unknown) => w22.c.objects.find((o) => o.id === id)?.name ?? id;
+            const shape22 = gens22[0] ? { general: (gens22[0].f.general ?? []).map(named22), specific: (gens22[0].f.specific ?? []).map(named22), fatherFeature: (await fatherOf(gens22[0].id))?.feature ?? null,
+                inSource: (w22.c.objects.find((o) => o.name === src22.name && o.cls === 'Class')?.f.generalizations ?? []).includes(gens22[0].id) } : null;
+            out.classEdgeDrag = { src: src22.name, tgt: tgt22.name, handleClass, connecting, validEnd, picker, picked, made: w22.made.map((o) => [o.cls, o.name]), shape22, undo: w22.undo, nodes: w22.nodes, edges: w22.edges, records: w22.records };
+            check('S2-L22 point 3 (measure): the edge drag started; the Generalization item stays disabled whatever it wrote', connecting && !!item22?.disabled, { ...(out.classEdgeDrag as object), generalizations: gens22.length, item22 });
+            check('S2-L27 class tab: the drag puts the Generalization in Book.generalizations, general = Publication, one undo entry, one edge',
+                gens22.length === 1 && !!shape22?.inSource && shape22.fatherFeature === 'generalizations' && shape22.general[0] === 'Publication' && w22.undo === 1 && w22.edges.length === 1, out.classEdgeDrag);
+            if (w22.edges[0]) {
+                const pad = 30; const x = Math.max(0, Math.min(sb.l, tb.l) - pad); const y = Math.max(0, Math.min(sb.t, tb.t) - pad);
+                await page.screenshot({ path: `${CROPS}/class-generalization-edge.png`, clip: { x, y, width: Math.max(sb.r, tb.r) + pad - x, height: Math.max(sb.b, tb.b) + pad - y } });
+                // S2-L28, control (a): the undo with no click on the edge before it; then redo, for the click below.
+                const h28 = await settle(page);
+                const gen28 = gens22[0]?.id as string;
+                const top28 = await entriesFrom(page, (h28.user as number) - 1);
+                await page.keyboard.press('Meta+z');
+                const samples28: unknown[] = [];
+                for (let i = 0; i < 6; i++) { await wait(page, 250); samples28.push(await ev<unknown>(page, `const s = w.store.getState(); const h = w.statehistory[w.DUser.current]; return { user: h.undoable.length, redo: h.redoable ? h.redoable.length : null, has: !!s.idlookup[a] };`, gen28, 0)); }
+                const h28u = await settle(page);
+                const c28 = await census(page, ids.model);
+                const u22 = { objects: c28.objects.length, expected: c22.objects.length, same: c28.objects.every((o) => c22.objects.some((p) => p.id === o.id)) };
+                console.log(`MEAS S2-L28a trace ${JSON.stringify({ gen: gen28, top: top28, samples: samples28, fresh: c28.objects.filter((o) => !c22.objects.some((p) => p.id === o.id)).map((o) => [o.id, o.cls, o.name]), after: await entriesFrom(page, c22.undo as number) })}`);
+                console.log(`MEAS S2-L28a undo, no click first ${JSON.stringify({ ...u22, entries: [h28.user, h28u.user] })}`);
+                check('S2-L28 class tab: one Cmd+Z, with no click on the edge before it, removes the Generalization', u22.objects === u22.expected && u22.same, u22);
+                await page.keyboard.press('Meta+Shift+z'); await wait(page, 1500);
+                const h28r = await settle(page);
+                console.log(`MEAS S2-L28a redo ${JSON.stringify({ objects: (await census(page, ids.model)).objects.length, entries: h28r.user, edges: added(f22.edges, (await flow()).edges) })}`);
+                const mid22 = await page.evaluate((id) => { const g = [...document.querySelectorAll(`.dock-tabpane-active .react-flow__edge[data-id="${id}"] path`)].sort((p, q) => (q as SVGPathElement).getTotalLength() - (p as SVGPathElement).getTotalLength())[0] as SVGPathElement | undefined; if (!g) return null; const p = g.getPointAtLength(g.getTotalLength() / 2); const b = g.getBBox(); const r = g.getBoundingClientRect(); return { x: r.left + (p.x - b.x) * (b.width ? r.width / b.width : 1), y: r.top + (p.y - b.y) * (b.height ? r.height / b.height : 1) }; }, w22.edges[0]);
+                if (mid22) { await page.mouse.click(mid22.x, mid22.y); await wait(page, 900); }
+                const h28c = await settle(page);
+                console.log(`MEAS S2-L28 edge click ${JSON.stringify({ clicked: !!mid22, entries: [h28r.user, h28c.user] })}`);
+                await page.screenshot({ path: `${CROPS}/generalization-properties.png` });
+                out.generalizationSelected = await ev<unknown>(page, `const s = w.store.getState()._lastSelected; return s ? s.modelElement : null;`, undefined, 0);
+                // The sequence that failed in P-2026-11-08-2146: the undo right after the click; a second one if the first did not remove it.
+                const u22c = await undoOnce(c22);
+                const u22c2 = u22c.objects === u22c.expected ? null : await undoOnce(c22);
+                console.log(`MEAS S2-L28 undo after the click ${JSON.stringify({ first: u22c, second: u22c2, entries: (await settle(page)).user })}`);
+                // S2-L28, control (b): the same drag at level `both`, where the owner is the trunk's container chain.
+                await choose(classVp, 'Classes and instances');
+                const cb = await census(page, ids.model); const fb = await flow();
+                await drag22();
+                const wb = await written(cb, fb);
+                const ub = wb.made.length ? await undoOnce(cb) : null;
+                console.log(`MEAS S2-L28b level both ${JSON.stringify({ connecting, picked, made: wb.made.map((o) => [o.cls, o.name]), undo: wb.undo, edges: wb.edges.length, undone: ub })}`);
+                await choose(classVp, 'Classes');
+            }
+
+            // The object tab, at instance: the surfaces stay, and the same drop is the control of S2-L8.
+            await pickViewpoint(page, VP_OBJECT);
+            await wait(page, SETTLE_MS);
+            const objectSection = await count(`${RAIL} .palette-onto`);
+            await page.locator(RAIL).first().screenshot({ path: `${CROPS}/object-rail.png` });
+            const po = (await emptyPanePoint(page, 'left'))!;
+            const cascade = await openCascade(page, po);
+            await page.locator('.dock-tabpane-active .editor-v2').first().screenshot({ path: `${CROPS}/object-pane-rightclick.png` });
+            check('S2-L9 object tab: «Instances of» and the cascade «New instance of ▸» with Book', objectSection === 1 && cascade.parentLabel === 'New instance of' && cascade.labels.includes('Book'),
+                { objectSection, parent: cascade.parentLabel, labels: cascade.labels });
+            const objectGroups = { title: await sourceTexts(`${RAIL} .palette-onto__title`), groups: await sourceTexts(`${RAIL} .palette-onto__subtitle`) };
+            check('S2-L23 object tab: no «Elements» and no class group', !objectGroups.title.includes('Elements') && !objectGroups.groups.some((g) => ['Classifiers', 'Associations', 'Attributes', 'Generalizations'].includes(g)), objectGroups);
+            await closeMenu(page);
+            const preIds = new Set((await census(page, ids.model)).objects.map((o) => o.id));
+            await ontoDrop(bookPayload, po);
+            const madeL = await waitInstance(page, ids.model, preIds, ids.classes.Book, 4);
+            check('S2-L10 object tab: the same drop creates one Book instance (the control of S2-L8)', !!madeL.inst, { inst: madeL.inst?.id ?? null });
+            await setAdvancedL(advancedL);
+        }
+
+        // S2-R4: the linguistic «Instances» drag still creates its object. The UML client offers no rootable class
+        // («No rootable classes found», measured on uml-s3b), so the drag runs on LING_FILE's model when this rail has none.
+        const lingItems = `${RAIL} .palette-instances__item`;
+        let ling = await texts(lingItems);
+        let lingModel = ids.model;
+        const lingUml = ling.length;
+        if (ling.length === 0 && existsSync(LING_FILE)) {
+            const imported2 = await ev<{ id: string | null }>(page, `
+                const api = await import('/src/api/persistance/projects.ts');
+                const list = () => JSON.parse(localStorage.getItem('projects') || '[]');
+                const before = list().length;
+                await api.ProjectsApi.importFromText(a);
+                for (let i = 0; i < 75 && list().length <= before; i++) await new Promise((r) => setTimeout(r, 200));
+                const l = list(); return { id: l.length > before ? l[l.length - 1].id : null };`, readFileSync(LING_FILE, 'utf8'), 0);
+            if (imported2.id) {
+                await page.goto(`${URL}/#/project?id=${imported2.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+                await wait(page, 9000);
+                await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+                if (!(await page.locator(RAIL).count())) {
+                    await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx'); const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
+                        await dm.default.open2(w.LPointerTargetable.fromPointer(m.id)); return 1;`, undefined, 8000);
+                }
+                lingModel = await ev<string>(page, `return w.LProject.getProject().models.find((x) => !x.isMetamodel).id;`, undefined, 0);
+                ling = await texts(lingItems);
+            }
+        }
+        const lingName = ling[0];
+        const p4 = await emptyPanePoint(page, 'left');
+        if (p4) { await page.mouse.click(p4.x, p4.y); await wait(page, 300); }
+        const pre4 = await census(page, lingModel);
+        const pre4Ids = new Set(pre4.objects.map((o) => o.id));
+        const types4 = p4 && lingName ? await dragTo(page, lingItems, lingName, p4) : null;
+        let made4: Obj[] = [];
+        for (let i = 0; i < 20 && made4.length === 0; i++) {
+            await wait(page, 250);
+            made4 = (await census(page, lingModel)).objects.filter((o) => !pre4Ids.has(o.id) && o.cls === lingName);
+        }
+        out.lingDrop = { umlItems: lingUml, file: lingModel === ids.model ? FILE : LING_FILE, items: ling, name: lingName, at: p4, types: types4, made: made4.map((o) => o.name) };
+        check('S2-R4 the linguistic «Instances» drag still creates one object of its metaclass (regression)',
+            !!types4 && types4.includes('application/reactflow') && !types4.includes('application/jjodel-onto') && made4.length === 1, out.lingDrop);
     }
 
     // ── S2-7 ──────────────────────────────────────────────────────────────────────────────────────────────────────

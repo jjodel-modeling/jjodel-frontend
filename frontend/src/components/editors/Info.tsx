@@ -36,6 +36,8 @@ import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../comm
 import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 import DisplayAnnotations from '../editor-v2/nodes/DisplayAnnotations';
 import { simEnabledPatch, simulationEnabled } from '../editor-v2/sim/simRoleStatus';
+import OntoBindingModal from '../editor-v2/onto/OntoBindingModal';
+import { ONTO_BINDINGS_KEY, decodeOntoBindings } from '../../model/ontological/bindingCodec';
 import { InfoReferenceSlots } from './InfoReferenceSlots';
 
 // Collapsible section for properties panel grouping
@@ -352,6 +354,30 @@ function SimulationToggle(props: { modelId: Pointer }) {
     );
 }
 
+// «Ontological binding…» row of a metamodel's Semantic Type Class section (P-2026-11-08-0113): the row opens the
+// binding dialog, which writes the `ontoBindings` bag key on Confirm, one undo step. The row reads the bag from the
+// store, so an undo shows at once: the names of the records, «none», or «unreadable».
+function OntoBindingRow(props: { modelId: Pointer }) {
+    const { modelId } = props;
+    const [open, setOpen] = useState(false);
+    const raw = useSelector((s: DState) => (s as any).idlookup?.[modelId]?._state?.[ONTO_BINDINGS_KEY]);
+    const decoded = decodeOntoBindings(raw);
+    const summary = !decoded.ok ? 'unreadable' : decoded.value.bindings.length === 0 ? 'none' : decoded.value.bindings.map(b => b.name).join(', ');
+
+    return (
+        <>
+            <div className="jj-toggle-row" role="button" tabIndex={0} onClick={() => setOpen(true)} onKeyDown={e => { if (e.key === 'Enter') setOpen(true); }}>
+                <span className="jj-toggle-row__label">
+                    Ontological binding…
+                    <InfoTooltip text="Which metaclasses hold the instances, slots and values of an object diagram (UML InstanceSpecification and Slot)" />
+                </span>
+                <span className="jj-toggle-row__label">{summary}</span>
+            </div>
+            {open && <OntoBindingModal modelId={modelId} onClose={() => setOpen(false)} />}
+        </>
+    );
+}
+
 // Contents list for Metamodel — classes, enums, packages
 function MetamodelContents(props: { data: LModel; onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void }) {
     const { data } = props;
@@ -520,6 +546,7 @@ class builder {
 
             {l.isMetamodel && advanced && <CollapsibleSection title="Semantic type class">
                 <SimulationToggle modelId={l.id} />
+                <OntoBindingRow modelId={l.id} />
             </CollapsibleSection>}
 
             <CollapsibleSection title="Dependencies">

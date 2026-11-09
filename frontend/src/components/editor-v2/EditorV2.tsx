@@ -44,7 +44,7 @@ import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
     compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
-    resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
+    resolveDropTarget, slotAccepts, slotRefOf, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
 } from './viewpoint/ir/irMembership';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -79,7 +79,9 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instanceObjectRecord, instantiate, objectRecord, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
+import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, generalizationSlot, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption, type PropertyPlan } from './hooks/instantiate';
+import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
+import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
@@ -125,6 +127,7 @@ import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/nota
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
+import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { paneAcceptsPaletteDrop, paneEventVerdict, paneIsInactive, type PaneActivation } from './utils/canvasSplit';
@@ -373,6 +376,8 @@ interface ContextMenuState {
     selectedCount?: number;
     /** Pane menu of the ontological instantiation: the record and its classifiers. */
     pane?: { record: OntoBinding; options: CreationOption[] };
+    /** Pane menu at the `class` level (R-OI-23): the groups of the rail, and whether the selection takes a property. */
+    classPane?: { groups: ClassRailGroup[]; propertyEnabled: boolean };
 }
 
 // Clipboard state type
@@ -683,6 +688,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
     const codegenEnabled = useCodegenEnabled();
     const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
+    // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
+    const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid).signature : '');
+    // The level of the tab's viewpoint (R-OI-19): at `class` no instance surface, the empty state included (R-OI-20).
+    const ontoClassLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], viewpointId) === 'class');
+    const ontoSections = useMemo(
+        () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
+        [ontoRailSig, isModelMode, modelid, ontoClassLevel]
+    );
+    // The groups of the `class` level (R-OI-21), `null` at any other: the same string-per-dispatch shape as «Instances of».
+    const classRailSig = useSelector((state: any) => isModelMode && !!modelid && ontoClassLevel ? classRail(state.idlookup ?? {}, modelid)?.signature ?? '' : '');
+    const classGroups = useMemo(
+        () => (isModelMode && modelid && ontoClassLevel ? classRail((store.getState() as any)?.idlookup ?? {}, modelid)?.groups ?? [] : null),
+        [classRailSig, isModelMode, modelid, ontoClassLevel]
+    );
+    const advancedMode = useSelector((state: any) => !!state.advanced);
+    const [bindingMetamodel, setBindingMetamodel] = useState<string | null>(null);
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -1131,7 +1153,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         compatibleRefs: CompatibleReference[];
         /** IR connect rules applicable to this pair (object-as-edge creation entries). */
         objectEdgeMatches?: IRConnectRuleMatch[];
+        /** Associations a link can be made of between the pair (S4, R-OI-24). */
+        linkMatches?: LinkOption[];
     } | null>(null);
+    const runLinkRef = useRef<(option: LinkOption) => void>(() => {});
     const handleM1ReferenceSelectedRef = useRef<(ref: MetaclassReference, conn?: Connection) => void>(() => {});
     const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
@@ -1703,6 +1728,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const lastSelectedModelElement = useSelector((s: DState) =>
         (s as any)._lastSelected?.modelElement as string | undefined
     );
+    const classPropertyEnabled = useSelector((state: any) =>
+        isModelMode && !!modelid && ontoClassLevel && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -2016,17 +2043,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             mi.allClasses,
                         );
 
+                        // S4 (R-OI-24): at `instance` and `both` a drag between two instances also offers a link
+                        // of every association whose ends accept them. At `class` the drag stays as it was.
+                        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                        const linkMatches = ontoLevelOf(get, viewpointIdRef.current) === 'class'
+                            ? []
+                            : linkOptions(get, get(connection.source)?.model, get(connection.target)?.model);
+
                         if (compatibleRefs.length === 0 && connectMatches.length === 0) {
-                            return; // no compatible refs — ignore
+                            // No match opens nothing; one is auto-selected (Q7); two up go to the popup below.
+                            if (linkMatches.length === 0) return; // no compatible refs — ignore
+                            if (linkMatches.length === 1) {
+                                runLinkRef.current(linkMatches[0]);
+                                return;
+                            }
                         }
 
-                        if (compatibleRefs.length === 1 && connectMatches.length === 0) {
+                        if (compatibleRefs.length === 1 && connectMatches.length === 0 && linkMatches.length === 0) {
                             // Auto-select: skip popup, create edge directly
                             handleM1ReferenceSelectedRef.current(compatibleRefs[0].ref, connection);
                             return;
                         }
 
-                        if (compatibleRefs.length === 0 && connectMatches.length === 1) {
+                        if (compatibleRefs.length === 0 && connectMatches.length === 1 && linkMatches.length === 0) {
                             // Auto-create: single applicable IR rule, no direct reference
                             handleObjectEdgeSelectedRef.current(connectMatches[0], connection);
                             return;
@@ -2038,6 +2077,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
                             objectEdgeMatches: connectMatches,
+                            linkMatches,
                         });
                     }
                     return;
@@ -2331,6 +2371,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             takeSnapshot();
 
+            // At `class` the drag is one undo entry with an exact inverse (R-OI-22): outside a group the reducer's legacy
+            // merge of the deferred writes leaves the new object in the store after the undo (S2-L28).
+            const grouped = !!generalizationSlot((store.getState() as any).idlookup ?? {}, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+            if (grouped) beginUndoGroup();
+            const closeGroup = (landed: () => boolean, attempt = 0) => {
+                if (!grouped) return;
+                if (landed() || attempt >= 80) endUndoGroup();
+                else setTimeout(() => closeGroup(landed, attempt + 1), 100);
+            };
+
             // Hidden vertex position: midpoint between the two endpoint nodes
             const currentNodes = getNodes();
             const sn = currentNodes.find(n => n.id === conn.source);
@@ -2341,6 +2391,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const vertexId = syncCreateObject(graphId, match.edgeClass.id, midX, midY);
             if (!vertexId) {
                 console.warn('[EditorV2] Failed to create object-as-edge instance');
+                closeGroup(() => true);
                 return;
             }
             markDropCreated(vertexId);
@@ -2359,6 +2410,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const meaningful = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
                 slot.values = [...meaningful, objId];
             };
+            let landed = () => true;
             const writeSlotsAndMount = (attempt: number) => {
                 const lObject = (LPointerTargetable.fromPointer(vertexId) as any)?.model;
                 const ready = lObject
@@ -2374,12 +2426,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // The edge object belongs where its source's container chain says (R-GV-8, spec addendum §6.1;
                     // S3): a SequenceFlow in its Process's flowElements, not at the root. SetField-only, no creator.
                     const idl = (store.getState() as any).idlookup ?? {};
-                    const owner = ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
+                    // At `class` with a declared binding a Generalization is owned by its specific classifier
+                    // (R-OI-22); every other notation and level keeps the container chain.
+                    const classSlot = generalizationSlot(idl, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+                    const owner = classSlot
+                        ? slotRefOf(idl, classSlot.ownerId, classSlot.feature)
+                        : ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
                     const edgeObjectId: string | undefined = lObject?.id;
                     if (owner && edgeObjectId && slotAccepts(idl, owner, match.edgeClass.id)) {
                         TRANSACTION('graphVertex edge object owner', () => {
                             applyMembershipOps([{ op: 'append', slot: owner, value: edgeObjectId }]);
                         });
+                        // The owner's write is the last one queued: once it is in the store, the slots' are.
+                        if (classSlot) landed = () => !!(LPointerTargetable.fromPointer(classSlot.ownerId) as any)?.['$' + classSlot.feature]?.__raw?.values?.includes(edgeObjectId);
                     }
                 }
                 const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
@@ -2395,6 +2454,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     } as ObjectNodeData,
                 };
                 setNodes(nds => nds.some(n => n.id === vertexId) ? nds : [...nds, newNode]);
+                closeGroup(landed);
             };
             setTimeout(() => writeSlotsAndMount(0), 0);
         },
@@ -2766,10 +2826,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
     );
 
+    const runOntoPayloadRef = useRef<(payload: string, click: { x: number; y: number }) => void>(() => {});
+
     // Handle drop from palette
     const onDrop = useCallback(
         (event: React.DragEvent) => {
             event.preventDefault();
+
+            // A drag from «Instances of» (R-OI-18): its own key, the pane menu's path (runInstantiate, defined below).
+            const ontoPayload = event.dataTransfer.getData(ONTO_DRAG_MIME);
+            if (ontoPayload) {
+                if (paneAcceptsDropRef.current) runOntoPayloadRef.current(ontoPayload, { x: event.clientX, y: event.clientY });
+                return;
+            }
 
             const rawType = event.dataTransfer.getData('application/reactflow');
             if (!rawType || !paneAcceptsDropRef.current) return;
@@ -2793,7 +2862,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Allow drop — with M1 cursor feedback for non-rootable classes
     const onDragOver = useCallback((event: React.DragEvent) => {
         // In a split only the active pane takes a palette drop (L6c): no preventDefault, no drop, no-drop cursor.
-        if (!paneAcceptsDropRef.current && event.dataTransfer.types.includes('application/reactflow')) {
+        if (!paneAcceptsDropRef.current && (event.dataTransfer.types.includes('application/reactflow') || event.dataTransfer.types.includes(ONTO_DRAG_MIME))) {
             event.dataTransfer.dropEffect = 'none';
             return;
         }
@@ -3263,14 +3332,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     // Pane menu of the ontological instantiation (R-OI-10, hooks/instantiate.ts). It opens
-    // only when the metamodel's bag declares an `object` record; without one the pane right
-    // click is left alone, as before.
+    // only when the metamodel's bag declares an `object` record and the tab's viewpoint is not at
+    // `class` (R-OI-20); otherwise the pane right click is left alone, as before.
     const onPaneContextMenu = useCallback(
         (event: MouseEvent | React.MouseEvent) => {
             if (!isModelMode || !modelid) return;
             const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
             const record = objectRecord(get, modelid);
             if (!record) return;
+            if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+                const lookup = (store.getState() as any)?.idlookup ?? {};
+                const groups = classRail(lookup, modelid)?.groups ?? [];
+                if (groups.length === 0) return;
+                event.preventDefault();
+                const propertyEnabled = selectionTakesProperty(lookup, modelid, (store.getState() as any)?._lastSelected?.modelElement);
+                setContextMenu({ x: event.clientX, y: event.clientY, classPane: { groups, propertyEnabled } });
+                return;
+            }
             event.preventDefault();
             setContextMenu({
                 x: event.clientX,
@@ -3287,21 +3365,91 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
     // viewports and the pane are read at the click, not when the write lands. The layout in force is the tab's
     // (P-2026-11-07-1620): its viewpoint goes to instantiate, its key decides where the click lands.
-    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+    const placementAt = useCallback((click?: { x: number; y: number }) => {
         const activeKey = tabLayoutKey();
         const clickAt = click ? screenToFlowPosition(click) : null;
         const current = getViewport();
         const el = editorContainerRef.current;
         const pane = { width: el?.clientWidth ?? 0, height: el?.clientHeight ?? 0 };
-        const placeAt = (layoutKey: string) => {
+        return (layoutKey: string) => {
             if (layoutKey === activeKey && clickAt) return clickAt;
             if (pane.width <= 0 || pane.height <= 0) return null;
             return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
         };
-        void instantiate(classifierId, record, placeAt, viewpointIdRef.current).then(result => {
+    }, [screenToFlowPosition, getViewport, modelid]);
+
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+        void instantiate(classifierId, record, placementAt(click), viewpointIdRef.current).then(result => {
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
-    }, [screenToFlowPosition, getViewport, modelid]);
+    }, [placementAt]);
+
+    // A link between two instances (R-OI-24): the record re-read from the store, the queue of instantiate, one undo entry.
+    const runLink = useCallback((option: LinkOption) => {
+        if (!modelid) return;
+        const record = linkRecord((id: string) => (store.getState() as any)?.idlookup?.[id], modelid);
+        if (!record) return;
+        void instantiateLink(option.id, record, option.ends, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] link:', result.problems);
+        });
+    }, [modelid]);
+    runLinkRef.current = runLink;
+
+    // A class-level element (R-OI-21): one undo entry, the queue of instantiate, the plan read at the gesture.
+    const runClassPlan = useCallback((plan: ClassElementPlan | PropertyPlan | { error: string }, click?: { x: number; y: number }) => {
+        if ('error' in plan) { console.warn('[EditorV2] class element:', plan.error); return; }
+        void createClassElement(plan, click ? placementAt(click) : undefined, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] class element:', result.problems);
+        });
+    }, [placementAt]);
+
+    const runClassifier = useCallback((metaclassId: string, click: { x: number; y: number }) => {
+        if (!modelid) return;
+        runClassPlan(classElementPlan((store.getState() as any)?.idlookup ?? {}, modelid, metaclassId), click);
+    }, [modelid, runClassPlan]);
+
+    // An attribute of the selected class: the row draws inside its node, so no position is written.
+    const runProperty = useCallback((metaclassId: string) => {
+        if (!modelid) return;
+        const state = store.getState() as any;
+        runClassPlan(propertyPlan(state?.idlookup ?? {}, modelid, metaclassId, state?._lastSelected?.modelElement));
+    }, [modelid, runClassPlan]);
+
+    // A drop or a click on «Instances of» (R-OI-18): the record re-read from the store by name, then the pane menu's
+    // path, so the queue, the deadline, the one undo entry and the tab's layout come with it. The click lands where a
+    // linguistic palette click does, the centre of the canvas the overlay leaves visible.
+    const runOntoPayload = useCallback((payload: string, click: { x: number; y: number }) => {
+        if (!isModelMode || !modelid) return;
+        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+        // The level read at the drop (R-OI-20, R-OI-21): a drag can be held across a tab switch, so a payload of the other
+        // level writes nothing.
+        if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+            const metaclass = classDropRequest((store.getState() as any)?.idlookup ?? {}, modelid, payload);
+            if (metaclass) runClassifier(metaclass, click);
+            return;
+        }
+        const request = ontoDropRequest(get, modelid, payload);
+        if (request) runInstantiate(request.classifierId, request.record, click);
+    }, [isModelMode, modelid, runInstantiate, runClassifier]);
+    runOntoPayloadRef.current = runOntoPayload;
+
+    const onOntoActivate = useCallback((record: OntoBinding, classifierId: string) => {
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
+    }, [runOntoPayload]);
+
+    const onClassActivate = useCallback((kind: ClassRailKind, metaclassId: string) => {
+        if (kind === 'property') { runProperty(metaclassId); return; }
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(classDragPayload(metaclassId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
+    }, [runProperty, runOntoPayload]);
+
+    const onDeclareBinding = useCallback(() => {
+        const metamodel = modelid ? (store.getState() as any)?.idlookup?.[modelid]?.instanceof : undefined;
+        if (typeof metamodel === 'string' && metamodel !== '') setBindingMetamodel(metamodel);
+    }, [modelid]);
 
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
@@ -3590,12 +3738,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 && ((node as any).width != null || (node as any).height != null);
 
             // «New instance» on a node whose object is a classifier the metamodel's `object`
-            // record lets be instantiated (R-OI-10).
+            // record lets be instantiated (R-OI-10), except under a viewpoint at `class` (R-OI-20).
             if (isModelMode && modelid && node) {
                 const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
                 const record = objectRecord(get, modelid);
                 const objectId: unknown = get(node.id)?.model;
-                if (record && typeof objectId === 'string'
+                if (record && typeof objectId === 'string' && ontoLevelOf(get, viewpointIdRef.current) !== 'class'
                     && creationOptions(get, record, modelid).some(o => o.id === objectId)) {
                     items.push(
                         { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
@@ -3987,6 +4135,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onClick: () => deleteEdge(contextMenu.edgeId!),
                 },
             ];
+        }
+
+        // Pane menu at the `class` level: «New ▸ <metaclass>», the items of the rail (R-OI-23).
+        if (contextMenu?.classPane) {
+            const { groups, propertyEnabled } = contextMenu.classPane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
+            return [{
+                label: 'New',
+                icon: 'bi-plus-square',
+                children: groups.flatMap(group => group.items.map((item): ContextMenuItem => {
+                    if (group.kind === 'classifier') return { label: item.name, icon: 'bi-box', onClick: () => runClassifier(item.metaclass, click) };
+                    if (group.kind === 'property' && propertyEnabled) return { label: item.name, icon: 'bi-list-ul', onClick: () => runProperty(item.metaclass) };
+                    return { label: item.name, disabled: true, tooltip: CLASS_RAIL_HINTS[group.kind] };
+                })),
+            }];
         }
 
         // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
@@ -5245,11 +5408,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     options={pendingM1Connection.compatibleRefs}
                     onSelect={(ref) => handleM1ReferenceSelected(ref)}
                     onCancel={() => setPendingM1Connection(null)}
-                    objectEdgeOptions={(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
-                        key: `${m.edgeClass.id}_${i}`,
-                        label: `New ${m.edgeClass.name}`,
-                    }))}
+                    objectEdgeOptions={[
+                        ...(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
+                            key: `${m.edgeClass.id}_${i}`,
+                            label: `New ${m.edgeClass.name}`,
+                        })),
+                        ...(pendingM1Connection.linkMatches ?? []).map(o => ({ key: `link:${o.id}`, label: `New ${o.name}` })),
+                    ]}
                     onSelectObjectEdge={(key) => {
+                        const link = (pendingM1Connection.linkMatches ?? []).find(o => `link:${o.id}` === key);
+                        if (link) {
+                            setPendingM1Connection(null);
+                            runLink(link);
+                            return;
+                        }
                         const matches = pendingM1Connection.objectEdgeMatches ?? [];
                         const idx = matches.findIndex((m, i) => `${m.edgeClass.id}_${i}` === key);
                         if (idx >= 0) handleObjectEdgeSelected(matches[idx]);
@@ -5284,6 +5456,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             selectedDObjectId={lastSelectedModelElement ?? null}
             onItemActivate={onPaletteActivate}
             collapsed={!!scriptPreview?.owner}
+            ontoSections={ontoSections}
+            onOntoActivate={onOntoActivate}
+            onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
+            classGroups={classGroups}
+            onClassActivate={onClassActivate}
+            classPropertyEnabled={classPropertyEnabled}
             viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
         />
     );
@@ -5329,6 +5507,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 <ValidationFreshnessSync modelid={modelid} />
                 <div className="editor-v2-palette-slot" />
                 {inCanvasSplit ? (paletteSlot && createPortal(palette, paletteSlot)) : palette}
+                {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
                         commandsDisabled={paneEl !== null && paneIsInactive(canvasSplit, paneEl)}
