@@ -62,7 +62,7 @@ READ, checked against H1's prediction that a lost write has an immediate same-sl
 
 ## 4. Measures
 
-Probe: `frontend/scripts/probe/lost-containment-write.ts`, on its own Vite server (port 3096, `lane-run probe`). Metamodel `Named`, `Root` (containment `a`, `b`), `Leaf`. Each run is a new model in one project: 50 writes through `syncCreateCompositionLink`, one per `page.evaluate`, 300 ms pause as `buildLinks`, no settle: 15 on `R0.a`, 15 on `R1.a`, 20 alternating `R2.a` and `R3.a`. Each write records in its own evaluate what the slot held; the slots are read right after the last write, after 3 s and after 9 s more in total.
+Probe: `frontend/scripts/probe/lost-containment-write.ts`, on its own Vite server (port 3096, `lane-run probe`). Metamodel `Named`, `Root` (containment `a`, `b`), `Leaf`. Each run is a new model in one project: 50 writes through `syncCreateCompositionLink`, one per `page.evaluate`, 300 ms pause as `buildLinks`, no settle: 15 on `R0.a`, 15 on `R1.a`, 20 alternating `R2.a` and `R3.a`. Each write records in its own evaluate what the slot held; the slots are read right after the last write, then 3 s and 9 s after it.
 
 Ten runs, in three batches (load at most 20 at each start, as the prompt asks; other lanes moved it during the batches, up to 84 at the end of batch B, so load is not controlled). Batch A lacks the kept-link edge count, added for B and C. Run 11 is an eleventh run with the edge-removal trace. A preliminary run 0 is not counted: it found the `syncCommitBetween` effect below.
 
