@@ -85,3 +85,31 @@ Measured, not assumed: the probe arm through `performContainmentDrop` reads the 
 - Import Families.ecore, expect 8 edges Family/Member: M2 references, written by the importer and `useJjomSync` Step 3. None of the five sites is on that path. Not reached by these probes.
 - Open an existing project: the queue is empty, no plan runs. Not reached by these probes.
 - Save and reopen: the queue is not persisted; the state saved is the D-layer. Not reached by these probes.
+
+## Measures
+
+Addendum of P-2026-11-09-1323: the undo measures promised under Undo. Two drops into one container through `performContainmentDrop`, from the MEAS lines of `frontend/scripts/probe/lost-containment-write.ts`, read in `~/.jjodel-lanes/P-2026-11-09-1227/` (`log.jsonl` for the first table, `probe-lost-containment-write.log` for the second). The trail is what is left after each undo.
+
+Before, sites unrouted (code of `f9b8f2e2a`), `LOST_RUNS=0`, `DONE 7 passed, 4 failed`:
+
+| variant | gap | created | kept in slot | edges per item | undo stack | undos | trail |
+|---|---|---|---|---|---|---|---|
+| `dropsSameTick` | same tick | 2 | 1 | 0,1 | 3 to 4 | 1 | all gone |
+| `dropsGap60` | 60 ms | 2 | 1 | 0,1 | 3 to 4 | 1 | all gone |
+| `dropsApart700` | 700 ms | 2 | 2 | 1,1 | 3 to 5 | 2 | 1 left, then none |
+
+After, sites routed (`3d567c77a`, probe of `c3eabab15`), `LOST_FIRST=6 LOST_RUNS=5`, `DONE 14 passed, 0 failed`:
+
+| variant | gap | created | kept in slot | edges per item | undo stack | undos | trail |
+|---|---|---|---|---|---|---|---|
+| `dropsSameTick` | same tick | 2 | 2 | 1,1 | 4 to 5 | 1 | all gone |
+| `dropsGap60` | 60 ms | 2 | 2 | 1,1 | 4 to 5 | 1 | all gone |
+| `dropsApart700` | 700 ms | 2 | 2 | 1,1 | 4 to 6 | 2 | 1 left, then none |
+
+At the same tick and at 60 ms the slot now keeps both drops and each item has its edge; at 700 ms nothing changes.
+
+The undo grouping is unchanged: the stack grows by 1, 1 and 2 entries, before and after, and the undos are 1, 1 and 2. Inside the reducer's time window one undo removes both drops, as before the fix: `mergeTolerance` is `U.UpdatingTimer*1.5`, 450 ms (`reducer.ts:1237`, `U.tsx:178`). At 700 ms, outside the window, there is one undo per drop.
+
+So "one undo per drop as before", under Smoke scenarios, holds only outside the window. The line stays as written; this section corrects it.
+
+The stack starts at 3 in the first run and at 4 in the second. The two runs differ in `LOST_FIRST` and `LOST_RUNS`; what moves the start was not measured, and the comparison is on the increments.
