@@ -539,7 +539,7 @@ active log is not touched by this lane.
 **Regressions**: yes (minor, accepted by the chat: a dcn user copy stored before these roles now reads as modified, see the ticket below)
 **Out-of-scope changes**: yes (granted by the chat, nine files in all: `profileCodec.ts` for the off-and-omit fill of the nine roles, three lines of `simRolesDraft.test.ts`; `simProfiles.ts` needed no change, its dcn role list derives from the group)
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
+**Smoke visivo**: non applicabile (no UI path; GO given by the chat 2026-11-09)
 **Notes**: Two stops, both granted by the chat: DOVE cited a wrong directory; the new roles made stored dcn profiles undecodable. Reader: dcnCoherenceFromRoles(stc, view), a bad k is a DeclarationDefect `bounds` and drops the pattern only. Typecheck, build 0; vitest 15586 passed, 3 known import reds; check:docs 0. Bench 22/22. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after.
 **Prompt document name**: 2026-11-09 01:24
 

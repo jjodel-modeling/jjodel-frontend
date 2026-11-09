@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0124
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: eseguito 2026-11-09 · lane full · d6e051d6c
+Status: eseguito 2026-11-09 · lane full · d6e051d6c · verifica visiva non applicabile 2026-11-09 (no UI path)
 Lane: full (role catalog, DCN roles, profile; no UI, no evaluation)
 Depends: R-DCN-28, R-DCN-31; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §C (H4: no CoherenceConstraint role yet) and §D lane 7; spec docs/spec/claude_spec_2026-11-06_dcn_metamodel_simulation.md §3 (CoherenceConstraint, BoundedPersistence, BoundedResponse)
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
