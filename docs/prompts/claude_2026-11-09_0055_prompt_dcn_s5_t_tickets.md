@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0055
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · 93619a11a
 Lane: full (two small fixes, one commit each; probe check)
 Depends: tickets of P-2026-11-08-1606 (bare argument `rate` halts in an action) and P-2026-11-08-2042 (Classification chips stay on the live step at step back, R-SIM-106), both in docs/log-inbox/dcn.md
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
