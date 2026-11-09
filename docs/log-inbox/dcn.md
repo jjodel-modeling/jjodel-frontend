@@ -514,3 +514,18 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (GO given; 1-button and 2-saved read by the chat 2026-11-09 00:47: camera button last in the transport row, Saved as drone (snapshot step 24))
 **Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
 **Prompt document name**: 2026-11-09 00:17
+
+## 2026-11-09 — fix: DCN bare invocation arguments, chips at step back (P-2026-11-09-0055)
+**Prompt**: `claude_2026-11-09_0055_prompt_dcn_s5_t_tickets.md`, lane full: an argument read by its bare name in a DCN body and precondition; the panel's Classification chips follow the shown step (R-SIM-106); one probe run with the step-back check and a crop; gates, mutants.
+**Files touched**: 57a7fc6da `frontend/src/model/simulation/dcn/dcnStep.ts` and its test, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 10b207546 `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/SimulationPanel.tsx`, the same test; 93619a11a `frontend/scripts/probe/dcn-drone-run.ts`; docs commits: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 16:06 and 2026-11-08 20:42 (their tickets)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (eight files, all in the DOVE of the prompt: dcnStep.ts and test, simBridge.ts and test, SimulationPanel.tsx, the probe, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crop 1-stepback-chips read by the lane: slider at step 0, chips dji.Mode = Charging, wau1.Alert = Safe; chat to read it)
+**Notes**: Probe 18/18, port 3155. Typecheck, scripts, build 0; vitest 15562 passed, 3 known import reds. Bench 12/13, survivor equivalent. Causa per ticket: 1606 (c), bare names outside the context; 2042 (c), the panel's view off the version. Slot keeps σ as self.[name]; roots win over an argument, an argument over an instance. Petri chips stay live: the panel's Petri line is live too. dji.charge(rate) not probed: in the drone charge is a monitor, no parameter.
+**Prompt document name**: 2026-11-09 00:55
+
+**Ticket** (low): `SimInspector.tsx:415` calls `markingChips(state, lookup)` without the net, so on a DCN run it lists places, of which a DCN net has none (read, not run). The panel's status line stays on the live step while a past step is shown (crop: `step 24` at step 0).
