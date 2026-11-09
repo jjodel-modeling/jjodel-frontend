@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-0010
 Chat: C-2026-11-01-1434
 Front: plugins
 Lane: full (first half of S1, pure model code under `frontend/src/model/expression/`, outside the critical zone)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · 985c27b54 · verifica visiva dovuta · log entry in docs/log-inbox/plugins.md
 Request: https://claude.ai/code/session_01DQt9R32KVprpjZZCfe6Sbp
 Depends: P-2026-11-08-2345
 

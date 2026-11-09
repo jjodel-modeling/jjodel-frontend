@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-0806
 Chat: C-2026-11-01-1434
 Front: plugins
 Lane: full (critical zone CLAUDE.md §3.1, `viewpoint/ir/`; go-ahead of Alfonso 2026-11-08 23:39, this lane chosen 2026-11-09 08:04)
-Status: da eseguire
+Status: eseguito ⚠️ hard-stop (measure only; fixes in P-2026-11-09-0900 and P-2026-11-09-0952)
 Request: https://claude.ai/code/session_01DQt9R32KVprpjZZCfe6Sbp
 Depends: P-2026-11-09-0108
 
