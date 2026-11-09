@@ -16,7 +16,7 @@ import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
-    pressRandom, pressStep, runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
+    pressRandom, pressStep, runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
 import { encodeWatches } from '../../../../model/simulation/watchCodec';
@@ -3504,6 +3504,39 @@ describe('DCN slice 5: getSimDcnNode, the run card of the shown step (P-2026-11-
         expect(getSimDcnNode('dji')?.changedStatic).toEqual([]);
         simSetView('M', null);
         expect(active('dji')).toEqual(['Flying']);
+    });
+
+    it('the Classification chips follow the step shown, and return with Back to live (P-2026-11-09-0055; mutants: the live σ read, the view ignored after Back to live)', () => {
+        const { lookup, takeOff } = reset();
+        takeOff();
+        const run = getSimRun('M')!;
+        const chips = () => markingChips(shownChipsState('M', run), lookup, run.net).map(c => c.text);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+        simSetView('M', 0);
+        expect(chips()).toEqual(['dji.Mode = Charging']);
+        simSetView('M', null);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+    });
+
+    it('a step between Reset and live gives its own σ (mutants: σ0 for any viewed step, the live σ)', () => {
+        const { takeOff } = reset();
+        takeOff();
+        takeOff();
+        const run = getSimRun('M')!;
+        simSetView('M', 1);
+        expect(shownChipsState('M', run).attrs.get('dji')?.get('speed')).toBe(1);
+    });
+
+    it('the chips of a Petri run stay on the live σ, as its face does (R-SIM-104; mutant: the view read for every run)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        const live = getSimRun('M')!;
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        const run = getSimRun('M')!;
+        expect(run).not.toBe(live);
+        simSetView('M', 0);
+        expect(getSimView('M')).toBe(0);
+        expect(shownChipsState('M', run)).toBe(run.config.state);
     });
 
     it('two calls on one record return the same object, on the live and on a viewed record; a commit gives a new one (mutants: no cache, a cache not per record)', () => {

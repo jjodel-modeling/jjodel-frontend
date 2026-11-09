@@ -117,7 +117,7 @@ import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, Domain, GuardOracle, HaltReason,
     InputRead, NetConfiguration, NetModelView, NetRunStatus, NetStc, NetTransition, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
-import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, getSimView, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { nucleusOf, petriNucleus } from './simNucleus';
 import { dcnRunOf, registerDcnRun } from './simDcnRuns';
@@ -1222,6 +1222,16 @@ export function markingChips(state: SimState, lookup: Lookup, net?: Pick<Compile
         .map(([place, n]) => ({ place, name: elementName(lookup, place), tokens: n }))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(c => ({ ...c, text: c.tokens === 1 ? c.name : `${c.name} ×${c.tokens}` }));
+}
+
+/**
+ * σ of the step a DCN run shows (R-SIM-106), for its Classification chips: the
+ * viewed step's, as the run card and the canvas read it, the live one otherwise.
+ * A Petri run's face stays on the live σ (R-SIM-104).
+ */
+export function shownChipsState(modelId: string, run: SimRun): SimState {
+    const viewed = dcnRunOf(run.net) ? getSimView(modelId) : null;
+    return viewed === null ? run.config.state : configAt(run, viewed)?.state ?? run.config.state;
 }
 
 /**
