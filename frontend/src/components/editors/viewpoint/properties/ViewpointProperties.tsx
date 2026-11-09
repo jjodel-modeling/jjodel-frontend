@@ -13,6 +13,7 @@ import {
     type MetaclassColorRow,
     type MetaclassColoring,
 } from '../../../../view/viewPoint/metaclassPalette';
+import { ONTO_LEVEL_KEY, ontoLevelOf, type OntoLevel } from '../../../editor-v2/hooks/instantiate';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -29,6 +30,12 @@ const typeOptions: { value: ViewpointType; label: string; enabled: boolean; reas
     { value: 'validation', label: 'Validation', enabled: false, reason: 'Validation viewpoints are created in the validation authoring environment.' },
     { value: 'semantics', label: 'Semantics', enabled: false, reason: 'Not available yet.' },
     { value: 'editor_behavior', label: 'Editor', enabled: false, reason: 'Not available yet.' },
+];
+
+const ontoLevelOptions: { value: OntoLevel; label: string }[] = [
+    { value: 'both', label: 'Classes and instances' },
+    { value: 'class', label: 'Classes' },
+    { value: 'instance', label: 'Instances' },
 ];
 
 /**
@@ -112,6 +119,15 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).metaclassColoring = clearMetaclassOverrides(readMetaclassColoring(viewpoint.__raw as any));
     }, [viewpoint, readOnly]);
 
+    // The ontological level (R-OI-19), Advanced only: absent reads as `both`. One write through the `state` setter,
+    // which merges, one undo entry; `both` is written, never the key removed: undo does not restore a removed key.
+    const advanced = useSelector((state: any) => !!state.advanced);
+    const ontoLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], vpId));
+    const writeOntoLevel = useCallback((level: OntoLevel) => {
+        if (readOnly || level === ontoLevel) return;
+        (viewpoint as any).state = { [ONTO_LEVEL_KEY]: level };
+    }, [viewpoint, readOnly, ontoLevel]);
+
     return (
         <div className="workbench-properties">
             <h4 className="workbench-properties__section-header">Viewpoint</h4>
@@ -144,6 +160,21 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                 </div>
                 <p className="wp-field__hint">Only Syntax can be chosen here.</p>
             </div>
+
+            {advanced && (
+                <div className="wp-field">
+                    <label className="wp-field__label" id={`${colorId}-onto-level`}>Ontological level</label>
+                    <JjSelect<{ value: OntoLevel; label: string }>
+                        className="jj-select wp-onto-level-select"
+                        aria-labelledby={`${colorId}-onto-level`}
+                        options={ontoLevelOptions as any}
+                        value={ontoLevelOptions.find((o) => o.value === ontoLevel) ?? null}
+                        onChange={(o: any) => { if (o) writeOntoLevel(o.value); }}
+                        isDisabled={readOnly}
+                    />
+                    <p className="wp-field__hint">What this viewpoint's canvas creates: at Classes, no instance surface.</p>
+                </div>
+            )}
 
             <div className="wp-toggle">
                 <span className="wp-toggle__label" id={`${colorId}-toggle`}>Color by metaclass</span>
