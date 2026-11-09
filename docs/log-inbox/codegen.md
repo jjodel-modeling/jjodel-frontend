@@ -3370,3 +3370,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — lane probe, 12 of 12, real keys and mouse, page errors 0: the chord pins at the caret, the first stroke alone pins nothing, the second is consumed, Option+H pins nothing, the hover shows `⌘K ⌘P`; crop `1-hover-chord.png` in `~/.jjodel-lanes/P-2026-11-09-0950/`; the physical chord on the Italian layout is for the chat
 **Notes**: Why Alt failed: on macOS, Option with a letter produces a dead or composed character on most layouts (here «∆» on Italian), so no Option+letter shortcut is safe in a text editor. Discovery §2 missed the Cmd+K listener at `Catalog.tsx:190`: only dashboard pages mount it, and the chord passed in the project. Not run: the real Italian layout (Playwright sends no composed character), Ctrl+K Ctrl+P off the Mac. No test asserts the label, so no red step.
 **Prompt document name**: 2026-11-09 09:50
+
+## 2026-11-09 — merge: textual-d6-pinned-hover into alfonso-frontend-jjtl (P-2026-11-09-1001)
+**Prompt**: `claude_2026-11-09_1001_prompt_merge_textual-d6-pinned-hover.md`, a direct merge by `lane-run merge --direct`, no session: `textual-d6-pinned-hover` at `dc070e33d` into `alfonso-frontend-jjtl`, merge base `788bb6e71`, 11 commits on the branch side.
+**Files touched**: merge `7255e5c36`: 11 files from the branch side (`docs/discovery/discovery_2026-11-08_textual_d6_pinned_hover.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-08_2330_prompt_textual_d6_pinned_hover.md`, `docs/prompts/claude_2026-11-09_0020_prompt_textual_d6_placement_closure.md`, `docs/prompts/claude_2026-11-09_0950_prompt_textual_d6b_chord.md`, `frontend/src/codegen/textual/__tests__/hoverCard.test.ts`, `frontend/src/codegen/textual/hoverCard.ts`, `frontend/src/codegen/textual/ui/PinnedHoverCard.tsx`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7255e5c36` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15865 tests in 599 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: D6 crops of P-2026-11-09-0020 GO by Alfonso 09:45; D6b chord checked by the chat on DOM checks 12/12, crop 1-hover-chord.png in ~/.jjodel-lanes/P-2026-11-09-0950/
+**Notes**: Rollback tag `pre-textual-d6-pinned-hover` on `733a67020` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-09-1001/result.json`.
+**Prompt document name**: 2026-11-09 10:01

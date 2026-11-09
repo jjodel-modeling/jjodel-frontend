@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-1001
 Chat: C-2026-11-08-1908
 Request: https://claude.ai/code/session_01DQt9R3u8CMMnSgpf1kjf8V (merge of textual-d6-pinned-hover launched by chat C-2026-11-08-1908)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane merge · 7255e5c36 · verifica visiva passata 2026-11-09 (D6 crops of P-2026-11-09-0020 GO by Alfonso 09:45; D6b chord checked by the chat on DOM checks 12/12, crop 1-hover-chord.png in ~/.jjodel-lanes/P-2026-11-09-0950/)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-09-1001 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
