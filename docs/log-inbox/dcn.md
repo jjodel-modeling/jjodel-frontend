@@ -499,3 +499,44 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-2042, crops read by the chat 20:58)
 **Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 57); all probes as expected. Full vitest: 1 load flake (`irCollapsedRender` afterAll timeout, load about 65), green alone twice, untouched by the branch, red on the trunk tip too, accepted in the GO. Branch vitest not run (no node_modules; writing forbidden): 24 new tests counted, total matched. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change).
 **Prompt document name**: 2026-11-08 21:22
+
+## 2026-11-08 — feat: DCN snapshot copy, the pure plan (P-2026-11-08-2124)
+**Prompt**: `claude_2026-11-08_2124_prompt_dcn_s5_4_snapshot_plan.md`, lane full, slice 5 lane 4 (R-DCN-27, R-DCN-30): `planSnapshot`, the ordered list of operations that copy an M1 model and write σ over it, executing nothing, with its test red first; gates; bench.
+**Files touched**: 73476ef3f `frontend/src/components/editor-v2/sim/simSnapshot.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts` (new); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: σ goes on the first holder of the first Slot (slots are objects, as in slotsOf); enum slots point to the literal. Outside-model targets and LiteralNull holders are listed in `unwritten`, for lane 5 to show. Bench 31/31, one survivor first. Typecheck, build 0; vitest 15500 passed, 3 known import reds. Temporary node_modules link (P14), removed. Red first at the import.
+**Prompt document name**: 2026-11-08 21:24
+
+## 2026-11-08 — feat: DCN snapshot written as a new model, layout, exact match (P-2026-11-08-2355)
+**Prompt**: `claude_2026-11-08_2157_prompt_dcn_s5_5_snapshot_write.md`, `claude_2026-11-08_2216_prompt_dcn_s5_5b_snapshot_write_cont.md`, `claude_2026-11-08_2320_prompt_dcn_s5_5c_snapshot_layout.md`, `claude_2026-11-08_2355_prompt_dcn_s5_5d_snapshot_close.md`, lanes full and critical, slice 5 lane 5 (R-DCN-30): write a run snapshot as a new model in one undo, keep the source layout, match source vertices by id, probe with edges on open; gates; closure
+**Files touched**: 3cc93959d, f26b6faa6, 31db26323, 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshotWrite.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotWrite.test.ts` (new); 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshot.ts`, `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts`; aa2c628f8, 50fe1ccbc `frontend/scripts/probe/dcn-snapshot.ts` (new); 795940ae1, 765f6068d `docs/discovery/lir_2026-11-08_dcn_snapshot_write.md` (new); docs commits: this entry, Status of the four prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 23:50 (P-2026-11-08-2320 stopped at the context ceiling, closure owed)
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (11 files, all in the prompts' DOVE: the writer, the plan and their two tests, the probe, the LIR, this inbox, the four prompts)
+**Layer Impact Report**: produced: docs/discovery/lir_2026-11-08_dcn_snapshot_write.md, with its addendum
+**Smoke visivo**: passato (crop of P-2026-11-08-2320 read by the chat 23:53, dji's seven rows visible)
+**Notes**: Objects the plan adds still get the Step 2bis grid, which supersedes the 2216 ticket for the rest. SN-24: source and snapshot draw 0 edges of 188 stored, same endpoints; the control on the 0 is the node count. Second cause (d): the overlap of 2320 seen only at the visual check. Bench 5/5 on sourceId, 19/19 on the layout. Vitest 15542 passed, 3 known import reds. Probe 24/24, ~/.jjodel-lanes/P-2026-11-08-2355.
+**Prompt document name**: 2026-11-08 23:55
+
+**Ticket** (low): the row template shows values[0] of a multi-valued slot.
+
+## 2026-11-09 — feat: DCN Save snapshot button in the Simulation panel (P-2026-11-09-0017)
+**Prompt**: `claude_2026-11-09_0017_prompt_dcn_s5_6_snapshot_button.md`, the button after Stop for a DCN run, its line, the probe by the button, crops.
+**Files touched**: 0e71ec074 `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/simSnapshotButton.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotButton.test.ts` (new); 55fe8cbb8 `frontend/scripts/probe/dcn-snapshot.ts`; this inbox; the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no (6 files, all in the DOVE of the prompt: panel, helper, its test, probe, this inbox, the prompt; the stylesheet needed no change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (GO given; 1-button and 2-saved read by the chat 2026-11-09 00:47: camera button last in the transport row, Saved as drone (snapshot step 24))
+**Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
+**Prompt document name**: 2026-11-09 00:17
