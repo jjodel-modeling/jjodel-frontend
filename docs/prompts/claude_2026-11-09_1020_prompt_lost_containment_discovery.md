@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-1020
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane discovery · b7b4817b1
 Lane: discovery (read-only; no code)
 Depends: ticket (high) in docs/log-inbox/dcn.md, entry of P-2026-11-08-1939
 Worktree: ~/jjodel-w-lostlink, branch lost-link-discovery, from the trunk, at the commit that adds this prompt
