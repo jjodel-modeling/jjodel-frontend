@@ -499,3 +499,173 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-2042, crops read by the chat 20:58)
 **Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 57); all probes as expected. Full vitest: 1 load flake (`irCollapsedRender` afterAll timeout, load about 65), green alone twice, untouched by the branch, red on the trunk tip too, accepted in the GO. Branch vitest not run (no node_modules; writing forbidden): 24 new tests counted, total matched. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change).
 **Prompt document name**: 2026-11-08 21:22
+
+## 2026-11-08 — feat: DCN snapshot copy, the pure plan (P-2026-11-08-2124)
+**Prompt**: `claude_2026-11-08_2124_prompt_dcn_s5_4_snapshot_plan.md`, lane full, slice 5 lane 4 (R-DCN-27, R-DCN-30): `planSnapshot`, the ordered list of operations that copy an M1 model and write σ over it, executing nothing, with its test red first; gates; bench.
+**Files touched**: 73476ef3f `frontend/src/components/editor-v2/sim/simSnapshot.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts` (new); docs commit: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: σ goes on the first holder of the first Slot (slots are objects, as in slotsOf); enum slots point to the literal. Outside-model targets and LiteralNull holders are listed in `unwritten`, for lane 5 to show. Bench 31/31, one survivor first. Typecheck, build 0; vitest 15500 passed, 3 known import reds. Temporary node_modules link (P14), removed. Red first at the import.
+**Prompt document name**: 2026-11-08 21:24
+
+## 2026-11-08 — feat: DCN snapshot written as a new model, layout, exact match (P-2026-11-08-2355)
+**Prompt**: `claude_2026-11-08_2157_prompt_dcn_s5_5_snapshot_write.md`, `claude_2026-11-08_2216_prompt_dcn_s5_5b_snapshot_write_cont.md`, `claude_2026-11-08_2320_prompt_dcn_s5_5c_snapshot_layout.md`, `claude_2026-11-08_2355_prompt_dcn_s5_5d_snapshot_close.md`, lanes full and critical, slice 5 lane 5 (R-DCN-30): write a run snapshot as a new model in one undo, keep the source layout, match source vertices by id, probe with edges on open; gates; closure
+**Files touched**: 3cc93959d, f26b6faa6, 31db26323, 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshotWrite.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotWrite.test.ts` (new); 220791eb5 `frontend/src/components/editor-v2/sim/simSnapshot.ts`, `frontend/src/components/editor-v2/sim/__tests__/simSnapshot.test.ts`; aa2c628f8, 50fe1ccbc `frontend/scripts/probe/dcn-snapshot.ts` (new); 795940ae1, 765f6068d `docs/discovery/lir_2026-11-08_dcn_snapshot_write.md` (new); docs commits: this entry, Status of the four prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 23:50 (P-2026-11-08-2320 stopped at the context ceiling, closure owed)
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (11 files, all in the prompts' DOVE: the writer, the plan and their two tests, the probe, the LIR, this inbox, the four prompts)
+**Layer Impact Report**: produced: docs/discovery/lir_2026-11-08_dcn_snapshot_write.md, with its addendum
+**Smoke visivo**: passato (crop of P-2026-11-08-2320 read by the chat 23:53, dji's seven rows visible)
+**Notes**: Objects the plan adds still get the Step 2bis grid, which supersedes the 2216 ticket for the rest. SN-24: source and snapshot draw 0 edges of 188 stored, same endpoints; the control on the 0 is the node count. Second cause (d): the overlap of 2320 seen only at the visual check. Bench 5/5 on sourceId, 19/19 on the layout. Vitest 15542 passed, 3 known import reds. Probe 24/24, ~/.jjodel-lanes/P-2026-11-08-2355.
+**Prompt document name**: 2026-11-08 23:55
+
+**Ticket** (low): the row template shows values[0] of a multi-valued slot.
+
+## 2026-11-09 — feat: DCN Save snapshot button in the Simulation panel (P-2026-11-09-0017)
+**Prompt**: `claude_2026-11-09_0017_prompt_dcn_s5_6_snapshot_button.md`, the button after Stop for a DCN run, its line, the probe by the button, crops.
+**Files touched**: 0e71ec074 `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/simSnapshotButton.ts` (new), `frontend/src/components/editor-v2/sim/__tests__/simSnapshotButton.test.ts` (new); 55fe8cbb8 `frontend/scripts/probe/dcn-snapshot.ts`; this inbox; the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no (6 files, all in the DOVE of the prompt: panel, helper, its test, probe, this inbox, the prompt; the stylesheet needed no change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (GO given; 1-button and 2-saved read by the chat 2026-11-09 00:47: camera button last in the transport row, Saved as drone (snapshot step 24))
+**Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
+**Prompt document name**: 2026-11-09 00:17
+
+## 2026-11-09 — merge: dcn-s5 into alfonso-frontend-jjtl (P-2026-11-09-0053)
+**Prompt**: `claude_2026-11-09_0053_prompt_merge_dcn-s5.md`, lane full (merge; 1 conflict measured): bring `dcn-s5` at 013f2f912 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base bf8fc1454; re-measure, probes, union of `docs/log-inbox/dcn.md`, gates, hard stop for the chat's GO.
+**Files touched**: dfac90f9e (merge), 16 files — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simSnapshot.ts`, `simSnapshotButton.ts`, `simSnapshotWrite.ts`, their three tests in `__tests__/`), `frontend/scripts/probe/dcn-snapshot.ts`, `docs/discovery/lir_2026-11-08_dcn_snapshot_write.md`, six prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 593 passed files, 15732 passed, 0 failed and 3 skipped (15735, expected 15649 + 86): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 16, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app checks by P-2026-11-09-0017 and P-2026-11-08-2320, crops read by the chat)
+**Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 40); probes as expected. Tip precondition waived by the chat: dcn-s5 moved to 57a7fc6da in session (P-2026-11-09-0055, not merged). 86 new tests run on the merge, total matched. First full vitest: irSelectionRing afterAll timeout, load about 30, green alone twice and in the rerun, accepted in the GO. check:docs 5/5, not 4/4. Lane board not restarted (no change).
+**Prompt document name**: 2026-11-09 00:53
+
+## 2026-11-09 — fix: DCN bare invocation arguments, chips at step back (P-2026-11-09-0055)
+**Prompt**: `claude_2026-11-09_0055_prompt_dcn_s5_t_tickets.md`, lane full: an argument read by its bare name in a DCN body and precondition; the panel's Classification chips follow the shown step (R-SIM-106); one probe run with the step-back check and a crop; gates, mutants.
+**Files touched**: 57a7fc6da `frontend/src/model/simulation/dcn/dcnStep.ts` and its test, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 10b207546 `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/SimulationPanel.tsx`, the same test; 93619a11a `frontend/scripts/probe/dcn-drone-run.ts`; docs commits: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 16:06 and 2026-11-08 20:42 (their tickets)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (eight files, all in the DOVE of the prompt: dcnStep.ts and test, simBridge.ts and test, SimulationPanel.tsx, the probe, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (GO given; 1-stepback-chips read by the chat 2026-11-09 01:13: slider at step 0, chips dji.Mode = Charging)
+**Notes**: Probe 18/18, port 3155. Typecheck, scripts, build 0; vitest 15562 passed, 3 known import reds. Bench 12/13, survivor equivalent. Causa per ticket: 1606 (c), bare names outside the context; 2042 (c), the panel's view off the version. Slot keeps σ as self.[name]; roots win over an argument, an argument over an instance. Petri chips stay live: the panel's Petri line is live too. dji.charge(rate) not probed: in the drone charge is a monitor, no parameter.
+**Prompt document name**: 2026-11-09 00:55
+
+**Ticket** (low): `SimInspector.tsx:415` calls `markingChips(state, lookup)` without the net, so on a DCN run it lists places, of which a DCN net has none (read, not run). The panel's status line stays on the live step while a past step is shown (crop: `step 24` at step 0).
+
+## 2026-11-09 — feat: DCN coherence roles and their reader (P-2026-11-09-0124)
+**Prompt**: `claude_2026-11-09_0124_prompt_dcn_s5_7_coherence_roles.md`, lane full: nine optional roles of the dcn group binding coherence constraints, and a reader returning the constraints as plain data, with a defect for a bad k.
+**Files touched**: d6e051d6c `frontend/src/model/simulation/roleCatalog.ts`, `frontend/src/model/simulation/dcn/dcnRoles.ts`, `frontend/src/model/simulation/profileCodec.ts`, `frontend/src/model/simulation/__tests__/roleCatalog.test.ts`, `frontend/src/model/simulation/__tests__/simProfiles.test.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnRoles.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRolesDraft.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (minor, accepted by the chat: a dcn user copy stored before these roles now reads as modified, see the ticket below)
+**Out-of-scope changes**: yes (granted by the chat, nine files in all: `profileCodec.ts` for the off-and-omit fill of the nine roles, three lines of `simRolesDraft.test.ts`; `simProfiles.ts` needed no change, its dcn role list derives from the group)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; GO given by the chat 2026-11-09)
+**Notes**: Two stops, both granted by the chat: DOVE cited a wrong directory; the new roles made stored dcn profiles undecodable. Reader: dcnCoherenceFromRoles(stc, view), a bad k is a DeclarationDefect `bounds` and drops the pattern only. Typecheck, build 0; vitest 15586 passed, 3 known import reds; check:docs 0. Bench 22/22. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 01:24
+
+**Ticket** (low): `isModified` (`simRolesDraft.ts:402`) compares a user copy with its system profile, where the nine coherence roles are in edit: a dcn copy stored before them holds them off, so it reads as modified. The copy stays readable and re-encodes to the same string. Left as is by the chat.
+
+## 2026-11-09 — test: DCN coherence constraints in the drone fixture (P-2026-11-09-0237)
+**Prompt**: `claude_2026-11-09_0237_prompt_dcn_s5_8_coherence_fixture.md`, lane full: three coherence constraints on Drone in the fixture, the nine coherence roles bound, checks through `dcnCoherenceFromRoles`, exports and measures regenerated.
+**Files touched**: b139d21b6 `frontend/scripts/probe/dcn-drone-fixture.ts`; 48f296d16 `docs/discovery/assets/dcn-drone/dcn-drone.json`, `docs/discovery/assets/dcn-drone/dcn-drone-class-level-light.png`; this inbox and the prompt's Status line. Outside the repo: both exports in `~/jjodel-demo-exports/dcn/`, previous ones in `~/.jjodel-lanes/P-2026-11-09-0237/prev/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (fixture and exports)
+**Notes**: Constraints are root objects of the M1 model: the metamodel gives them no container. Fixture probe 36/36, six new (CC-1..3, V-2, V-3, D-2); dcn-drone-run 18/18 on the new export. The export state is LZ-compressed, so a plain grep finds nothing; decompressed, both exports hold the nine roles and the constraints. Typecheck, build, check:scripts 0. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:37
+
+## 2026-11-09 — feat: DCN coherence constraints over a trajectory (P-2026-11-09-0259)
+**Prompt**: `claude_2026-11-09_0259_prompt_dcn_s5_9_coherence_eval.md`, lane full: a pure module compiling the coherence constraints and folding φ, BoundedPersistence and BoundedResponse over σ0..σn, per instance by context, with hits and pending responses; no wiring, no UI.
+**Files touched**: ae14c5fa9 `frontend/src/model/simulation/dcn/dcnCoherence.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnCoherence.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path)
+**Notes**: Semantics from SoSyM 2026 §3.1 (Examples 1, 2) and §4.2 (Def. 5). Test 42, bench 36/36. Unattended: φ and ψ at one step are one hit, φ first; an expression failing on a σ goes in `failures` and holds nothing; a blank pattern expression or no context is a `record` defect. Answers cached per configuration, the fold reruns. Typecheck, build 0; vitest 15628 passed, 3 known import reds. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:59
+
+## 2026-11-09 — feat: DCN coherence constraints in a run, as watch hits (P-2026-11-09-0320)
+**Prompt**: `claude_2026-11-09_0320_prompt_dcn_s5_10_coherence_wiring.md`, lane full: compile the coherence constraints at Reset, report their hits as invariants `<constraint>@<instance>` of `watchResults`, tests, the drone probe.
+**Files touched**: 31744a717 `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/simDcnRuns.ts`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 25532aae7 `frontend/scripts/probe/dcn-drone-run.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passed (crop 1-hit read by the chat 2026-11-09 03:50: hit line speedLimit@dji at step 39)
+**Notes**: Fold over σ(n−reach)..σn, replayed below the kept cut; a step's report kept per configuration. φ and ψ at one step stay one pointwise hit (lane 9). Hit at step 39, speed 16. Play has no ε on DCN: the stop is the press and clock path. The hit line stays live under the slider, inspector rows follow it. Test +11, bench 13/13, probe 22/22. Typecheck, build 0; vitest 15639, 3 known reds. Temporary node_modules link removed.
+**Prompt document name**: 2026-11-09 03:20
+
+**Ticket** (medium): Play never presses on a DCN run: every DCN transition has a trigger, so `playTick` finds no ε candidate and stops with `event` (test and probe, «Play waits for an event»). R-SIM-137's stop on a hit is reachable only by a pressed step or a clock (`SimulationPanel.tsx:803`).
+
+**Ticket** (low): the panel's hit line reads the live step, also while the timeline shows a past one (probe: step 38 shown, line at step 39); the inspector's rows follow the step shown. Same for Petri watches.
+
+## 2026-11-09 — merge: dcn-s5 into alfonso-frontend-jjtl (P-2026-11-09-0350)
+**Prompt**: `claude_2026-11-09_0350_prompt_merge_dcn-s5.md`, lane full (merge; 1 conflict measured): bring `dcn-s5` at faa7b952c into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 013f2f912; re-measure, probes, union of `docs/log-inbox/dcn.md`, gates, hard stop for the chat's GO.
+**Files touched**: 42a62568a (merge), 25 files — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simBridge.ts`, `simDcnRuns.ts`, tests `simBridge`, `simRolesDraft`), `frontend/src/model/simulation/` (`profileCodec.ts`, `roleCatalog.ts`, tests `roleCatalog`, `simProfiles`; `dcn/dcnCoherence.ts`, `dcn/dcnRoles.ts`, `dcn/dcnStep.ts`, tests `dcnCoherence`, `dcnRoles`, `dcnStep`), `frontend/scripts/probe/` (`dcn-drone-fixture.ts`, `dcn-drone-run.ts`), `docs/discovery/assets/dcn-drone/` (2 files), five prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 594 passed files, 15820 passed, 0 failed and 3 skipped (15823, expected 15735 + 88): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 25, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app checks by P-2026-11-09-0055 and P-2026-11-09-0320, crops read by the chat)
+**Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 72); probes as expected. Vitest could not run on faa7b952c: its worktree has no node_modules; the 88 new tests were counted on the staged merge (353 on the trunk tip, 441 merged), total matched. check:docs 5/5, not 4/4. Lane board not restarted (no change). Exit codes of typecheck, build and the checks read in a second run: the first run's tail cut them.
+**Prompt document name**: 2026-11-09 03:50
+
+## 2026-11-09 — fix: queued slot appends keep every write of a burst (P-2026-11-09-1227, P-2026-11-09-1323)
+**Prompt**: `claude_2026-11-09_1227_prompt_lost_link_fix.md`, lane full, critical, stopped at the context ceiling after the mutation bench, and `claude_2026-11-09_1323_prompt_lost_link_fix_close.md`, final gates, LIR addendum and docs: the queued appends overlay, option A of `discovery_2026-11-09_lost_containment_write.md`, on the five append sites.
+**Files touched**: 6b66f67ad `docs/discovery/lir_2026-11-09_queued_appends.md`; f9b8f2e2a `frontend/src/components/editor-v2/sync/slotAppendQueue.ts`, `frontend/src/components/editor-v2/sync/__tests__/slotAppendQueue.test.ts`; 3d567c77a `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/contextMenu/ContextMenu.tsx`; c3eabab15 `frontend/scripts/probe/lost-containment-write.ts`; 0971567bb `slotAppendQueue.test.ts`; 3b7e06289 the LIR's Measures; closure commit: this entry, Status of the two prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 19:39 ticket of P-2026-11-08-1939, a containment write from `syncCreateCompositionLink` lost about once per fixture build
+**Causa**: (c)
+**Regressions**: unknown. Gates on the final tree: typecheck exit 0, typecheck:scripts exit 0, build exit 0, check:docs exit 0. Vitest, first run: 3 failed | 597 passed files, 15881 passed, 3 skipped (15884), the known 3 red at import. Second run, exit 1, also `laneRun.test.ts` (timeout at 15000 ms) and `languageService.test.ts` (52.4 ms against a 50 ms budget), load reds with a build alongside: each passes alone, exit 0, 145/145 and 62/62. The probes reach two quick drops and scripted bursts; Families.ecore import, open an existing project and save and reopen are not reached.
+**Out-of-scope changes**: yes: `frontend/src/components/contextMenu/ContextMenu.tsx` in place of the `editor-v2` path of the DOVE, which has no append site, accepted by Alfonso. Above five files: ten, listed in Files touched; the others are in the DOVE of the two prompts. Two fixture assets overwritten by a run were restored, no net change.
+**Layer Impact Report**: docs/discovery/lir_2026-11-09_queued_appends.md (6b66f67ad before the sites; Measures 3b7e06289)
+**Smoke visivo**: probe MEAS, no crop (`lost-containment-write.ts`, DONE 14 passed, 0 failed; LIR, Measures)
+**Notes**: Cause: two appends plan one index from a store that does not hold the first yet, the second overwrites it (discovery §6). Probe: kept 1 to 2 at same tick and 60 ms, undo grouping unchanged (LIR, Measures). 10 burst runs, 0 lost. Fixture L-1 0 losses, 33 pass, 2 fail (EX-1, EX-2, below). Mutation 15/17, M10 and M17 equivalent (bench in 0971567bb). `applyMembershipOps` is at `:1794` since the fix, `:1793` in the prompts.
+**Prompt document name**: 2026-11-09 12:27
+
+**Ticket** (medium, for a lane of its own): two writes have the read-modify-write shape of the routed sites and do not go through `planSlotAppend`: `LModelElement.tsx:7425` (`this.set_values([...(c as Context).data.values, dobj.id], c as Context)`) and `applyMembershipOps` (`EditorV2.tsx:1794`; `nextValues(slot.__raw?.values ?? [], op)` at `:1799`, then `slot.values = next`). Whether a burst reaches them was not measured.
+
+**Ticket** (low): the drone fixture's EX-1 and EX-2 need `GV_SAVE`: `dcn-drone-fixture.ts:943` and `:1096` compute `process.env.GV_SAVE ? ... : null`, so without it both fail with `{"file":null}` whatever the code does. That is the run of P-2026-11-09-1227 (`DONE pass=33 fail=2`, these two); not rerun.
+
+## 2026-11-09 — merge: lost-link-fix into alfonso-frontend-jjtl (P-2026-11-09-1420)
+**Prompt**: `claude_2026-11-09_1420_prompt_merge_lost-link-fix.md`, lane full, merge rendered by `lane-run merge`: `lost-link-fix` at `1070a45a1` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `7571f8a53`, 18 commits on the branch side, on the trunk side only this prompt's `96e49ca1a`.
+**Files touched**: merge `cbd3d6115`, 14 files from the branch side: `docs/discovery/discovery_2026-11-09_lost_containment_write.md`, `docs/discovery/lir_2026-11-09_queued_appends.md`, `docs/log-inbox/dcn.md`, `docs/prompts/claude_2026-11-09_1020_prompt_lost_containment_discovery.md`, `docs/prompts/claude_2026-11-09_1227_prompt_lost_link_fix.md`, `docs/prompts/claude_2026-11-09_1323_prompt_lost_link_fix_close.md`, `docs/prompts/claude_2026-11-09_1347_prompt_lost-link-fix_take_trunk.md`, `docs/prompts/claude_2026-11-09_1358_prompt_lost_link_fix_merge_gates.md`, `frontend/scripts/probe/lost-containment-write.ts`, `frontend/src/components/contextMenu/ContextMenu.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/__tests__/slotAppendQueue.test.ts`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/sync/slotAppendQueue.ts`. This commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates on `cbd3d6115`: typecheck exit 0; typecheck:scripts exit 0; vitest 3 failed | 601 passed files (604), 15964 passed, 3 skipped (15967), equal to the expected total (trunk tip 600/603 and 15945, plus the branch's 1 file and 19 tests), the same 3 red at import; hooks 21 files, 967 tests, equal to the trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. The merged app was not opened in a browser by this session.
+**Out-of-scope changes**: no. Above five files (RC-11): the 14 of the merge, listed in Files touched, all from the branch side, none edited by hand.
+**Layer Impact Report**: not-required (no sync or D-L file edited by hand; the branch's `canvasToJjom.ts` change carries `docs/discovery/lir_2026-11-09_queued_appends.md`)
+**Smoke visivo**: non eseguito su 3001 — GO della chat, unattended, per probe sul branch fuso (P-2026-11-09-1358): forced arms true/true 5/5, burst lost [0,0,0,0,0], two drops same tick/60 ms/700 ms kept 2 of 2. Families.ecore import, open, save and reopen on 3001 left to Alfonso.
+**Notes**: No union resolution. Probe on the merge-tree `9569c8642`: the fix heading once in `dcn.md`. Prompt expected check:docs 4/4: the gate has 5 checks now (A to E), all pass. A first hook-test run failed with MODULE_NOT_FOUND from a working-directory race between parallel calls; the solo rerun was green. The Status line carries the template's wording, the acceptance actually given is the one in Smoke visivo. Lane board not restarted: no file under `frontend/scripts/lane-board/`.
+**Prompt document name**: 2026-11-09 14:20

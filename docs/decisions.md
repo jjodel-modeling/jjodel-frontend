@@ -6664,6 +6664,72 @@ P-2026-10-20-1835.
   the left and middle buttons; wheel and pinch are not read through `panOnDrag`'s buttons. Measured (P-2026-11-07-1235):
   probe S2-1m, a right click moving 3 px, red with `[0, 1, 2]` and green with `[0, 1]`. Rejected: a movement threshold
   around xyflow's handler (more code, fragile against xyflow updates).
+- **R-OI-18** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **The M1 rail holds an «Instances of» section, a creation surface beside R-OI-10's pane menu.** Decided by the chat
+  `C-2026-10-25-2159` on Alfonso's «rail e dichiarazione» (2026-11-08 00:35). It lists the classes
+  the `object` record offers (`ontoRailSections`, the set of `creationOptions`) below the linguistic «Instances» block;
+  a drag carries its own key, `ONTO_DRAG_MIME`, with the record by name, and a drop or a click re-reads the record from
+  the store and runs `runInstantiate` (queue, deadline, one undo step, the tab's layout). Clauses, the discovery's
+  questions adopted as recommended (P-2026-11-08-0212): (Q1) the `link` record's associations are listed, disabled,
+  tooltip «A link is drawn between two instances (S4)»; no drop of an unconnected link (R-OI-5); (Q2) in Basic the
+  section shows only when a binding is declared, the empty state with «Declare binding…» in Advanced only; (Q4) the
+  section is titled «Instances of», the linguistic block keeps «Instances»; (Q5) «Declare binding…» opens
+  `OntoBindingModal`, the dialog of `Info.tsx`'s «Ontological binding…» row.
+- **R-OI-19** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A viewpoint declares its ontological level: `_state.ontoLevel`, one of `class`, `instance`, `both`, absent reads as
+  `both`.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). The key lives in the
+  viewpoint's `_state`; absent keeps the behaviour from before the key existed. `ontoLevelOf(get, viewpointId)` reads it
+  through the tab's viewpoint (R-MT), never `useIRInteractionPlan`, which follows the root. The control is a select in
+  `ViewpointProperties.tsx`, one undo entry per change; choosing the current value writes nothing and the control never
+  deletes the key. It shows in Advanced only, gated on Redux `state.advanced` and not on `useInterfaceMode`, which goes
+  stale after the `BottomBar.tsx` toggle (P-2026-11-08-1658).
+- **R-OI-20** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class` a viewpoint's canvas offers no instance surface; at `instance` and `both` nothing changes.** Decided by the
+  chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). Five gating points in `EditorV2.tsx`: the pane menu
+  «New instance of ▸», the class node menu «New instance», the «Instances of» section, its drop and its click, the last
+  two sharing one guard read at the drop. Amends R-OI-10 on the pane menu and the class node menu. Amends R-OI-18 on the
+  section. At `class` the pane menu shows nothing and the «Declare binding…» empty state is hidden, both until lane 2 gives
+  them a home (discovery 2026-11-08, Q2).
+- **R-OI-21** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class`, with a binding, the rail's section is titled «Elements» and lists four groups read from the binding:
+  Classifiers, Associations, Attributes, Generalizations.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu»
+  (2026-11-08 16:03). Classifiers are the concrete conformers of the `object` record's type reference; an association is
+  told apart by the `link` record (a classifier conforming to the owner of `link.featureContainer`), and with no `link`
+  record it stays a classifier, enabled. Attributes need a selected class. Associations and Generalizations are listed
+  disabled with a tooltip. With a binding at `class` the linguistic «Instances» block is hidden; with none it shows as
+  before, and «No rootable classes found» stays (discovery 2026-11-08 §4, a design choice). Measured (P-2026-11-08-1822):
+  the class view's edge drag Book → Publication creates a Generalization (specific Book, general Publication, one undo
+  entry, a root object of the model and not in `Book.generalizations`); the rail item stays disabled regardless.
+- **R-OI-22** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A class-level element goes in the composition reference that accepts it when exactly one pair (composition reference,
+  sole owner in the model) qualifies; otherwise it is a root.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi
+  tu» (2026-11-08 16:03). Two qualifying pairs do not guess (`containerFor`, `model/ontological/classRail.ts`). On the UML
+  fixture a Class lands in `Package.packagedElements`. An attribute goes in the `object` record's feature container of the
+  selected class, `Class.ownedAttributes`. A classifier keeps the capital (`Class1`), a property goes through
+  `instanceName` (`property1`). One undo entry each; only the position of the new vertex is written, because a fixed height
+  would clip the rows added later.
+  Amended 2026-11-08 (P-2026-11-08-2146, P-2026-11-08-2214): a Generalization drawn at `class` with a declared
+  `generalization.via` goes in that feature of its source classifier (`Class.generalizations`), not through the container
+  chain (`generalizationSlot`, `instantiate.ts`); one undo entry, through the reducer's undo group.
+- **R-OI-23** (2026-11-08, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **At `class`, with a binding, a right click on the empty pane opens «New ▸» with the rail's items, and a classifier lands
+  at the click.** Decided by the chat `C-2026-10-25-2159` on Alfonso's «decidi tu» (2026-11-08 16:03). Disabled entries keep
+  the rail's hints; Property is enabled only with a class selected when the menu opens. Without a binding the pane menu
+  stays absent. Amends R-OI-20 on the pane menu and on the «Declare binding…» empty state, which it left without a home at
+  `class`.
+- **R-OI-24** (2026-11-08, provisional, evidence: measured, verified: probe, reversible: branch).
+  **At `instance` and `both`, an edge dragged from one instance to another makes a link of an association whose two ends
+  accept them; at `class` the drag stays as it was.** Go-ahead by Alfonso, 2026-11-08 20:11 («1 yes» to the lane and its
+  critical zone; «2 drawing it from the source to the target object»); the rest decided by the lane and the chat
+  `C-2026-10-25-2159`. The menu lists the associations of R-OI-5 as `New <association>`, with the pair's references and
+  connect rules when it has any; no match writes nothing, and a sole link auto-selects. An association takes exactly two
+  member ends; the slots keep `memberEnds` order whichever way the drag ran, and when both orders fit the source takes the
+  first end. The end type is read through `link.featureType ?? object.featureType` and the value kinds through
+  `link.valueKinds ?? object.valueKinds`; the closure and the classifier come from the `object` record, and both ends must
+  be under it, so a link or a class is no end. The link, its two slots and their instance values are one undo entry, in the
+  queue of `instantiate`, and no vertex is written: the link draws as one edge. It goes in the container of R-OI-22 for its
+  metaclass, on the UML fixture `Package.packagedElements`, and a root without one. A second link between the same pair is
+  allowed: UML allows it unless the association is unique.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
@@ -7943,6 +8009,14 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
 - **R-MT-26** (2026-11-08, decided by the chat on Alfonso's delegation 2026-11-08 16:06 «decidi tu al meglio per tutto», evidence: read, verified: none, reversible: trunk).
   **Order of the remaining multi-tab work.** (1) L6b, the beside layout only (side panels over the left canvas, the 710 px cap of `style.scss:1055`, overlapping toolbar labels, the app bar missing the right tab); the maximized fallback stays a known limit. (2) L7, the selection highlight in every tab (R-MT-2). (3) L8, two small readers of the tab: the console's tab-id lookup and `publishedChannelSlots` (`useIRContainment.ts:61`) per canvas. (4) L4c, the sync registries keyed by model so that the last tab of one model no longer clears another model's entries (critical zone, go-ahead given by this delegation, Layer Impact Report first). Not now: a second tab on a metamodel (no use case yet, the menu is shared with class and package rows). Filed to their owners, no lane here: Refactoring finding no M1 target on the demo (`projectTargetCandidates`, refactoring front) and the merge template's reset sha (harness). One lane at a time, each with its app check and Alfonso's look at the crops before the merge.
+
+## R-NT: notices and tips (decisions 2026-11-08)
+
+- **R-NT-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): a tip counts as seen when it is displayed, and stays seen forever. No expiry window. Existing entries of `jjodel-quick-tips-state.seen` (keyed by Notion page id) stay valid; no migration. Evidence: `docs/discovery/discovery_2026-11-08_notices_and_tips.md` F3.
+- **R-NT-2** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): at most one tip is shown automatically per browser session (`sessionStorage`); "Next tip" shows another unseen tip on demand. When every tip in the payload is seen, the card does not appear. A tip added later in Notion appears once.
+- **R-NT-3** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): "Show tips" is a per-browser preference in localStorage, toggled from the card ("Turn off tips") and from Settings, Notifications section. Cross-device storage is deferred (the persistence backend is outside this repo). `DUser` is not changed.
+- **R-NT-4** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): tips card at the bottom left of the work area, 16 px right of the Jjodie button and aligned with its bottom edge; announcements as a banner at the top of the work area, in the editor and on the dashboard, one at a time, with precedence over the tip as today.
+- **R-NT-5** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): the announcement link and date window need new Notion columns and a Worker change; deferred until the Worker source is in the repo (Alfonso exports it from Cloudflare). Severity reuses `priority`.
 
 ## R-EXP: the expression role catalog, textual projection of expression subtrees (decisions 2026-11-08)
 

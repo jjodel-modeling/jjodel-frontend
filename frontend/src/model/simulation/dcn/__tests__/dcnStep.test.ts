@@ -28,7 +28,7 @@ import { compileGuard } from '../../guardEvaluator';
 import { compileOutput } from '../../boardOutputs';
 import { step } from '../../netStep';
 import { petriNucleus } from '../../../../components/editor-v2/sim/simNucleus';
-import type { CompiledNet, GuardOracle, ActionOracle, SimState, SimValue, StepOutcome } from '../../netTypes';
+import type { CompiledNet, GuardOracle, ActionOracle, SimState, SimStateAccess, SimValue, StepOutcome } from '../../netTypes';
 import type { OntoBinding } from '../../../ontological/bindingCodec';
 
 // ── the metamodel: M2 classes and their supertypes ───────────────────────────
@@ -496,5 +496,78 @@ describe('dcnStep: the Petri nucleus is unchanged', () => {
         const out = petriNucleus(net).step(cfg, 't', guards, actions);
         expect(out).toEqual(step(net, cfg, 't', guards, actions));
         expect(out.kind === 'fired' && [...out.next.state.marking]).toEqual([['q', 1]]);
+    });
+});
+
+describe('the arguments of an invocation are names in its body and its precondition (P-2026-11-09-0055, ticket of P-2026-11-08-1606)', () => {
+    /** A static `charge(<param>)` of Drone with the body and the precondition given, and an Integer slot `chargeRate`. */
+    const withCharge = (body: string, pre?: string, param = 'rate') => (m: Model) => {
+        m.p_Drone_chargeRate = { meta: 'Property', name: 'chargeRate', refs: { 'TypedElement.type': ['Integer'] }, attrs: { 'Property.defaultValue': '0' } };
+        m.Drone.refs!['Class.ownedAttributes'].push('p_Drone_chargeRate');
+        m.par_charge = { meta: 'Parameter', name: param, refs: { 'TypedElement.type': ['Integer'] }, attrs: { 'Property.rangeMin': 0, 'Property.rangeMax': 10 } };
+        m.op_Drone_charge = { meta: 'Operation', name: 'charge', refs: { 'Operation.ownedParameters': ['par_charge'] }, attrs: { 'Operation.body': [body], ...(pre ? { 'Operation.pre': pre } : {}) } };
+        m.Drone.refs!['Class.ownedOperations'].push('op_Drone_charge');
+    };
+
+    /** One step with the oracles reading `args` on dji, as `withInputs` overlays the answers of a press. */
+    function pressArgs(n: DcnNucleus, state: SimState, event: string, args: Record<string, SimValue>): StepOutcome {
+        const over = (s: SimStateAccess): SimStateAccess => ({ ...s, read: (e, a) => (e === 'dji' && a in args ? args[a] : s.read(e, a)) });
+        const guards: GuardOracle = (site, e, s) => n.guards(site, e, over(s));
+        const actions: ActionOracle = (site, e, s) => n.actions(site, e, over(s));
+        const selector = n.candidates({ state, event }, guards).candidates[0]?.transition ?? null;
+        return n.step({ state, event }, selector, guards, actions);
+    }
+
+    const charge = (f: Fixture) => idOf(f.compiled, 'dji', 'op_Drone_charge');
+
+    it('charge(rate = 5) with body self.chargeRate := rate sets chargeRate to 5 (mutant: the actions context without the arguments)', () => {
+        const f = fixture(withCharge('self.chargeRate := rate'));
+        const n = nucleus(f);
+        expect(read(fired(pressArgs(n, n.initial, charge(f), { rate: 5 })), 'dji', 'chargeRate')).toBe(5);
+    });
+
+    it('the precondition reads the argument by name and is decided by it (mutant: the guard context without the arguments)', () => {
+        const f = fixture(withCharge('self.chargeRate := rate', 'rate > 2'));
+        const n = nucleus(f);
+        expect(pressArgs(n, n.initial, charge(f), { rate: 1 }).kind).toBe('discard');
+        expect(read(fired(pressArgs(n, n.initial, charge(f), { rate: 3 })), 'dji', 'chargeRate')).toBe(3);
+    });
+
+    it('a parameter named as a slot reads the slot, as self.[name] keeps σ (mutant: the name bound to something other than the read of σ)', () => {
+        const f = fixture(withCharge('self.chargeRate := power', undefined, 'power'));
+        const n = nucleus(f);
+        expect(read(fired(press(n, sigma(f, { dji: { power: 4 } }), charge(f))), 'dji', 'chargeRate')).toBe(4);
+    });
+
+    it('with no value for the argument the name stays absent and the run halts naming it (mutant: a missing answer read as 0)', () => {
+        // The snapshot of the model without the parameter: this fixture binds every named object as a global, a run only its instances.
+        const f = { ...fixture(withCharge('self.chargeRate := rate')), snapshot: snapshotOf(droneModel()) };
+        const n = nucleus(f);
+        const out = press(n, n.initial, charge(f));
+        expect(out.kind).toBe('halted');
+        expect(JSON.stringify(reasonOf(out))).toContain("'rate' does not exist");
+    });
+
+    it('a parameter named self leaves the root in place (mutant: the arguments above the three roots)', () => {
+        const f = fixture(withCharge('self.chargeRate := 2', undefined, 'self'));
+        const n = nucleus(f);
+        expect(read(fired(pressArgs(n, n.initial, charge(f), { self: 9 })), 'dji', 'chargeRate')).toBe(2);
+    });
+
+    it('a parameter named as an instance hides the instance in its body (mutant: the instances over the arguments)', () => {
+        const f = fixture(withCharge('self.chargeRate := wau1', undefined, 'wau1'));
+        const n = nucleus(f);
+        expect(read(fired(pressArgs(n, n.initial, charge(f), { wau1: 6 })), 'dji', 'chargeRate')).toBe(6);
+    });
+
+    it('a redefinition reads the arguments of the operation it redefines (mutant: only the inputs of the site itself)', () => {
+        const f = fixture(m => {
+            withCharge('self.chargeRate := 0')(m);
+            m.op_Drone_land.refs = { 'Operation.ownedParameters': ['par_charge'] };
+            m.op_Flying_land.attrs!['Operation.body'] = ['self.chargeRate := rate'];
+        });
+        const n = nucleus(f);
+        const out = pressArgs(n, sigma(f, { dji: { speed: 1, battery: 50 } }), idOf(f.compiled, 'dji', 'op_Drone_land'), { rate: 7 });
+        expect(read(fired(out), 'dji', 'chargeRate')).toBe(7);
     });
 });

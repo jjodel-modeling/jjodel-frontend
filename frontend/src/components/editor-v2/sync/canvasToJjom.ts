@@ -33,6 +33,7 @@ import { resolveVertexLayoutWrite, type VertexLayout, type VertexLayoutSource, t
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
+import { createSlotAppendQueue } from './slotAppendQueue';
 import { isClassKind } from '../../../model/classifierKindRules';
 
 // ---------------------------------------------------------------------------
@@ -1628,6 +1629,21 @@ export function syncUpdateFeatureValue(
     }
 }
 
+const { plan: planQueuedAppend, forget: forgetSlotAppends } = createSlotAppendQueue({
+    storedValues: (slotId) => (store.getState() as any).idlookup?.[slotId]?.values,
+    currentBuffer: () => (window as any).transactionStatus?.pendingActions,
+    dispatchesInFlight: () => (window as any).transactionStatus?.dispatchesInFlight ?? 0,
+    subscribe: (listener) => { store.subscribe(listener); },
+});
+
+/**
+ * The array to assign to `slot.values` to append `id`, over what the store holds and the appends to that
+ * slot still on their way (slotAppendQueue.ts). Records `id` as queued, so once per write.
+ */
+export function planSlotAppend(slot: { id: string; __raw?: { values?: any[] } }, id: string): any[] {
+    return planQueuedAppend(slot.id, slot.__raw?.values ?? [], id);
+}
+
 /**
  * Assign a REFERENCE slot on a DObject instance — the write path of the singleton select
  * (R-SGL-4): with the singleton nodes hidden there is no arrow to draw, so the value is
@@ -1684,8 +1700,9 @@ export function syncSetReferenceValue(
                 // Declared no-op: re-adding a value already in the slot would duplicate the
                 // entry and, pair-keyed as it is, produce no second edge anyway.
                 if (meaningful.includes(targetObjectId)) return;
-                slot.values = [...meaningful, targetObjectId];
+                slot.values = planSlotAppend(slot, targetObjectId as string);
             } else {
+                forgetSlotAppends(slot.id);
                 slot.values = targetObjectId ? [targetObjectId] : [];
             }
         });
@@ -1739,9 +1756,7 @@ export function syncCreateCompositionLink(
             // index 1+ instead of index 0 for [1..1] references.
             const refProxy = (parentObject as any)['$' + referenceName];
             if (refProxy) {
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, childObject.id];
+                refProxy.values = planSlotAppend(refProxy, childObject.id);
             }
 
             // Create visual edge — pass the metaclass DReference id so the
@@ -1807,9 +1822,7 @@ export function syncCreateReferenceLink(
             // Read from __raw.values — see comment in syncCreateCompositionLink.
             const refProxy = (sourceObject as any)['$' + referenceName];
             if (refProxy) {
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, targetObject.id];
+                refProxy.values = planSlotAppend(refProxy, targetObject.id);
             }
 
             // Create visual edge — pass the metaclass DReference id so the

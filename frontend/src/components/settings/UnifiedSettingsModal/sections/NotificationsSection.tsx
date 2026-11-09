@@ -4,7 +4,7 @@
  * Persists to localStorage 'jjodel-toast-preferences' and dispatches JjodelEvents.TOAST_PREFS_CHANGED.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     DEFAULT_TOAST_PREFS,
     loadToastPrefs,
@@ -15,6 +15,7 @@ import {
     type ToastPriority,
 } from '../../../Toast';
 import { JjodelEvents } from '../../../../events/registry';
+import { loadTipsPrefs, saveTipsPrefs } from '../../../NotificationWidget/noticesStore';
 
 const DURATION_OPTIONS: Array<{ value: number; label: string }> = [
     { value: 1000,  label: '1 second' },
@@ -46,6 +47,14 @@ function clonePrefs(p: ToastPreferences): ToastPreferences {
 export function NotificationsSection(): JSX.Element {
     const [prefs, setPrefs] = useState<ToastPreferences>(() => loadToastPrefs());
     const [isDirty, setIsDirty] = useState(false);
+    const [showTips, setShowTips] = useState(() => loadTipsPrefs().showTips);
+
+    // The card's "Turn off tips" writes the same preference (R-NT-3).
+    useEffect(() => {
+        const sync = () => setShowTips(loadTipsPrefs().showTips);
+        window.addEventListener(JjodelEvents.TIPS_PREFS_CHANGED, sync);
+        return () => window.removeEventListener(JjodelEvents.TIPS_PREFS_CHANGED, sync);
+    }, []);
 
     const persist = useCallback((next: ToastPreferences) => {
         setPrefs(next);
@@ -181,6 +190,26 @@ export function NotificationsSection(): JSX.Element {
                 </label>
                 <p className="settings-section-description">
                     Display a warning toast when an action would violate the active conformance rules.
+                </p>
+            </div>
+
+            <div className="settings-card">
+                <div className="settings-card-header">
+                    <h4 className="settings-card-title">Tips</h4>
+                </div>
+                <label className="settings-toggle">
+                    <span>Show tips</span>
+                    <input
+                        type="checkbox"
+                        checked={showTips}
+                        onChange={(e) => {
+                            saveTipsPrefs({ showTips: e.target.checked });
+                            setIsDirty(true);
+                        }}
+                    />
+                </label>
+                <p className="settings-section-description">
+                    Show a short tip now and then, at most one per session. Applies to this browser.
                 </p>
             </div>
 

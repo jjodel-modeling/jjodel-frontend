@@ -26,6 +26,7 @@ import type { ReactNode } from 'react';
 import { useSelector, useStore } from 'react-redux';
 import Editor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
+import { PinnedHoverCard } from './PinnedHoverCard';
 import { buildEvalContext } from '../../../jjscript';
 import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
@@ -2152,6 +2153,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                                             onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
                                 )}
                             </TextNavigator>
+                            {ui && nav && monacoRef.current && <PinnedHoverCard editor={nav.editor} monaco={monacoRef.current} ui={ui} notation={view.ebnf} />}
                             {conformance && <ConformanceReader use={conformance.use} modelId={modelId} onRead={onViolations} />}
                         </div>
                         {mode === 'ebnf' && ui && (

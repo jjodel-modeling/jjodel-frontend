@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-2230
 Chat: C-2026-11-08-2220
 Front: maintenance
 Lane: full (more than three files expected in Phase 2; external data source; persistence of seen state)
-Status: da eseguire
+Status: eseguito 2026-11-08 · lane notices · 4e200c093
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

@@ -15,7 +15,7 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     U,
-    Try, TRANSACTION, L
+    Try, TRANSACTION, L, R
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 import { Badge } from '../../components/common/Badge';
@@ -41,6 +41,11 @@ import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
+import { toast } from '../../components/Toast';
+import { useDashboardFileDrag } from './useDashboardFileDrag';
+import { DropImportPanel, useDropImport } from './DropImportPanel';
+import type { DropImportToast } from './DropImportPanel';
+import { recordingImports } from './recentImports';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
@@ -255,10 +260,19 @@ type ProjectDashboardProps = {
     project?: LProject;
 }
 
+export const raiseDropImportToast = ({ projectId, ...detail }: DropImportToast) => toast({
+    ...detail,
+    action: projectId === undefined ? undefined : {
+        label: 'Open project',
+        onClick: () => R.navigate(`/project?id=${projectId}`, true),
+    },
+});
+
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
-    const [isDragging, setIsDragging] = useState(false);
+    const fileDrag = useDashboardFileDrag(active);
+    const dropImport = useDropImport(recordingImports(ProjectsApi.importFromText), toasts => toasts.forEach(raiseDropImportToast));
 
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.
@@ -268,45 +282,28 @@ function GenericDashboard(props: DashProps): any {
         }));
     }, []);
 
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        fileDrag.trackDrag('dragenter', e);
+    };
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        const items = e.dataTransfer.items;
-        if (items.length > 0) {
-            const item = items[0];
-            if (item.kind === 'file') {
-                setIsDragging(true);
-            }
-        }
+        fileDrag.trackDrag('dragover', e);
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
-        // Only set to false if leaving the container (not entering a child)
-        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
-            setIsDragging(false);
-        }
+        fileDrag.trackLeave(e);
     };
 
-    const handleDrop = async (e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        setIsDragging(false);
+        fileDrag.trackDrop();
 
-        const file = e.dataTransfer.files[0];
-        if (file && file.name.endsWith('.jjodel')) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const content = String(event.target?.result);
-                try {
-                    await ProjectsApi.importFromText(content);
-                    U.alert('i', 'Project imported', `"${file.name}" has been imported successfully.`);
-                } catch (err) {
-                    U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
-                }
-            };
-            reader.readAsText(file);
-        } else if (file) {
-            U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
-        }
+        // preventDefault stays on every page, so a drop never leaves the app; only All Projects imports.
+        if (active !== 'All') return;
+        dropImport.importFiles(e.dataTransfer.files);
     };
 
     // Two-column layout on every dashboard page. The right context panel was removed on
@@ -319,14 +316,15 @@ function GenericDashboard(props: DashProps): any {
     return (<>
         <Navbar />
         <div
-            className={`dashboard-container ${layoutClass} ${isDragging ? 'is-dragging' : ''}`}
+            className={`dashboard-container ${layoutClass} ${fileDrag.active ? 'is-dragging' : ''}`}
             tabIndex={-1}
+            onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
+            <div ref={fileDrag.contentRef} className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
                 {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row.
                     Templates and Explore render a centered ComingSoonPlaceholder with its own title,
                     so we suppress the top-bar Title here to avoid duplication. */}
@@ -342,14 +340,14 @@ function GenericDashboard(props: DashProps): any {
             </div>
 
             {/* Drop Overlay */}
-            {isDragging && (
-                <div className="drop-overlay">
-                    <div className="drop-zone">
-                        <i className="bi bi-cloud-arrow-up" />
-                        <p>Drop .jjodel file to import</p>
-                    </div>
+            {fileDrag.active && fileDrag.overlayBox && (
+                <div className="dashboard-drop-overlay" style={fileDrag.overlayBox} aria-hidden="true">
+                    <div className="dashboard-drop-overlay__icon"><i className="bi bi-upload" /></div>
+                    <div className="dashboard-drop-overlay__title">Drop to import</div>
+                    <div className="dashboard-drop-overlay__text">Release to add the project to your library. Only .jjodel files are imported, anything else is skipped.</div>
                 </div>
             )}
+            {dropImport.view && <DropImportPanel view={dropImport.view} onClose={dropImport.close} />}
         </div>
         <StatusBar />
     </>);

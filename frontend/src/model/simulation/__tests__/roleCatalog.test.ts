@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { ROLE_CATALOG, ROLE_IDS, dependentsOf, encodeRoleValues, roleDescriptor, roleOfKey, roleValues } from '../roleCatalog';
 import type { RoleId } from '../roleCatalog';
+import { closureRoles } from '../simProfiles';
 
 /**
  * The keys R-SIM-50..53 introduce: provisional, nothing reads or writes them yet.
@@ -23,6 +24,9 @@ const NEW_KEYS: string[] = [
     // The dcn group (P-2026-11-07-0941): read by `dcnStcFromRoles` (dcn/dcnRoles.ts) through the catalog, by no run yet.
     'simStaticClass', 'simViewpoints', 'simDynamicClasses', 'simInvariant', 'simOperation', 'simPrecondition',
     'simBody', 'simRedefines', 'simMonitor', 'simOverlapping', 'simComplete',
+    // The coherence roles (P-2026-11-09-0124): read through the catalog as well, by no run yet.
+    'simCoherence', 'simCoherenceContext', 'simCoherencePointwise', 'simCoherencePattern',
+    'simPersistenceCondition', 'simPersistenceBound', 'simResponseTrigger', 'simResponseResponse', 'simResponseBound',
 ];
 
 /** The files of this lane: they name every key, so they are not evidence that the code does. */
@@ -54,7 +58,7 @@ describe('roleCatalog: shape of the catalog', () => {
     it('has one descriptor per RoleId, in the order of ROLE_IDS, with unique ids', () => {
         expect(ROLE_CATALOG.map(d => d.id)).toEqual([...ROLE_IDS]);
         expect(new Set(ROLE_IDS).size).toBe(ROLE_IDS.length);
-        expect(ROLE_IDS).toHaveLength(39);
+        expect(ROLE_IDS).toHaveLength(48);
     });
 
     it('has unique non-null keys, and simEvent is not one of them (R-SIM-38)', () => {
@@ -198,9 +202,11 @@ describe('the dcn group (P-2026-11-07-0941, R-DCN-8): the roles of the «Dynamic
     const DCN: RoleId[] = [
         'staticClass', 'viewpoints', 'dynamicClasses', 'invariant', 'operation', 'precondition', 'body',
         'redefines', 'monitor', 'overlapping', 'complete',
+        'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+        'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
     ];
 
-    it('are the last eleven ids of the catalog, in this order, and the only roles of the group', () => {
+    it('are the last twenty ids of the catalog, in this order, and the only roles of the group', () => {
         expect(ROLE_IDS.slice(28)).toEqual(DCN);
         expect(ROLE_CATALOG.filter(d => d.group === 'dcn').map(d => d.id)).toEqual(DCN);
     });
@@ -218,7 +224,20 @@ describe('the dcn group (P-2026-11-07-0941, R-DCN-8): the roles of the «Dynamic
             ['monitor', 'simMonitor', 'reference', ['dynamicClasses']],
             ['overlapping', 'simOverlapping', 'attribute', ['viewpoints']],
             ['complete', 'simComplete', 'attribute', ['viewpoints']],
+            ['coherence', 'simCoherence', 'class', ['staticClass']],
+            ['coherenceContext', 'simCoherenceContext', 'reference', ['coherence']],
+            ['coherencePointwise', 'simCoherencePointwise', 'expressionAttribute', ['coherence']],
+            ['coherencePattern', 'simCoherencePattern', 'reference', ['coherence']],
+            ['persistenceCondition', 'simPersistenceCondition', 'expressionAttribute', ['coherencePattern']],
+            ['persistenceBound', 'simPersistenceBound', 'intAttribute', ['coherencePattern']],
+            ['responseTrigger', 'simResponseTrigger', 'expressionAttribute', ['coherencePattern']],
+            ['responseResponse', 'simResponseResponse', 'expressionAttribute', ['coherencePattern']],
+            ['responseBound', 'simResponseBound', 'intAttribute', ['coherencePattern']],
         ]);
+    });
+
+    it('list the coherence roles as optional: none is in the closure of the dcn shape (mutant: a coherence role in the closure)', () => {
+        for (const r of DCN.slice(11)) expect(closureRoles('dcn'), r).not.toContain(r);
     });
 
     it('are single-valued but Operation and Body (R-SIM-90), and no role of the other groups depends on them', () => {

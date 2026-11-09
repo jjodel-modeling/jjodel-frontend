@@ -85,9 +85,11 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useSta
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, getSimView, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack, useSimVersion } from './simRunState';
 import type { SimChoices } from './simRunState';
 import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
+import { saveRunSnapshot } from './simSnapshotWrite';
+import { snapshotFailed, snapshotLine, snapshotOff, snapshotStep } from './simSnapshotButton';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profileBindings, profilePatch, profileSummary, profileSummaryText, runEngine, staleEventWarning, storedProfile,
@@ -95,7 +97,7 @@ import {
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
-    runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
+    runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -361,6 +363,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // The steps of the current Play press: written by its timer only, never read by a render.
     const playSteps = useRef(0);
     useEffect(() => { setPlaying(null); setPlayNote(null); setKDraft(null); }, [modelid]);
+    // «Save snapshot» (R-DCN-30): the model whose write is in flight, and the line of the last write.
+    const [savingSnapshot, setSavingSnapshot] = useState<string | null>(null);
+    const [savedSnapshot, setSavedSnapshot] = useState<{ modelId: string; text: string; error: boolean } | null>(null);
     // R-SIM-105: the run inspector, opened by the header's expand button.
     const [inspectorOpen, setInspectorOpen] = useState(false);
     useEffect(() => { setInspectorOpen(false); }, [modelid]);
@@ -478,6 +483,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // The run of this model, read on the panel's renders: the ones its own state
     // triggers (tick) and the ones connect triggers; never on the version.
     const run = isModelMode ? getSimRun(modelid) : undefined;
+    // The line of a snapshot lasts until the next step or a new run.
+    useEffect(() => { setSavedSnapshot(null); }, [run, run?.trace?.length]);
 
     // R-SIM-34: while a run exists its signature is read on every dispatch, and a
     // model edit that changes it withdraws the run with one line of declaration.
@@ -760,6 +767,20 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setTick(t => t + 1);
     }, [modelid]);
 
+    // R-DCN-30: the step is read at the press; a press of Step while the write is in flight does not move it.
+    const onSaveSnapshot = useCallback((): void => {
+        const live = getSimRun(modelid);
+        if (!live) return;
+        setSavedSnapshot(null);
+        setSavingSnapshot(modelid);
+        saveRunSnapshot(modelid, snapshotStep(getSimView(modelid), live.trace?.length ?? 0))
+            .then(snapshotLine, (e: unknown) => ({ text: snapshotFailed(e instanceof Error ? e.message : String(e)), error: true }))
+            .then((line) => {
+                setSavedSnapshot({ modelId: modelid, ...line });
+                setSavingSnapshot(null);
+            });
+    }, [modelid]);
+
     /**
      * The outcome of one press, a hand's or Play's (R-SIM-35, R-SIM-36): the
      * input dialog, the list, «Last step», as the bridge gives them back.
@@ -906,6 +927,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const reason: StopReason | null = view?.reason ?? null;
     const policy = getSimPolicy(modelid);
     const isPlaying = playing === modelid;
+    const snapshotOffTitle = snapshotOff(isPlaying, savingSnapshot === modelid);
+    const shownSnapshotLine = savedSnapshot?.modelId === modelid ? savedSnapshot : null;
     /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60); the board's devices say the same. */
     const inputTitle = (base: string, event: string | null): string => inputPressTitle(base, view?.noCandidate.get(event), view?.asks.get(event));
     /** An event button that is off says why in its title (R-SIM-104): the run's reason while it runs, its status otherwise. */
@@ -1249,11 +1272,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {run && view && (
                             <>
                                 <div className="sim-panel__section">{dcnEngine ? DCN_PANEL_HEADING : modelStateHeading}</div>
-                                <div className="sim-panel__chips" title={view.markingTitle === null ? undefined : headedStateLine(view.markingTitle, modelStateHeading)}>
-                                    {view.chips.length === 0
-                                        ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
-                                        : view.chips.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
-                                </div>
+                                <MarkingChips modelId={modelid} chips={view.chips} markingTitle={view.markingTitle} heading={modelStateHeading} />
                             </>
                         )}
                         {/* Events above the buttons (R-SIM-104): an event that is off says why in its title, and a press that
@@ -1362,6 +1381,19 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <button type="button" className="sim-panel__btn" title="Stop" onClick={onStop}>
                                 <i className="bi bi-stop-fill" />
                             </button>
+                            {/* R-DCN-30: σ of the step shown, as a new model; DCN runs only. */}
+                            {dcnEngine && run && (
+                                <button
+                                    type="button"
+                                    className="sim-panel__btn"
+                                    aria-label="Save snapshot"
+                                    title={snapshotOffTitle ?? 'Save snapshot'}
+                                    onClick={onSaveSnapshot}
+                                    disabled={snapshotOffTitle !== null}
+                                >
+                                    <i className="bi bi-camera" />
+                                </button>
+                            )}
                         </div>
                         {/* R-SIM-142: the timeline, from step 1; nothing at step 0, so the panel is as it was there. */}
                         {run && <SimTimeline modelId={modelid} onGrab={onGrab} onContinue={onContinue} />}
@@ -1406,6 +1438,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 ))}
                             </ul>
                         )}
+                        {shownSnapshotLine && (
+                            <div className={`sim-panel__hint${shownSnapshotLine.error ? ' sim-panel__hint--error' : ''}`} role="status">
+                                {shownSnapshotLine.text}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -1434,6 +1471,29 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         )}
         {canvasLayer}
         </>
+    );
+}
+
+/**
+ * The chips (R-SIM-104). A DCN run's follow the step shown (R-SIM-106), with their title: this row reads the version
+ * itself, since the panel's `view` is computed once per panel action and a move of the timeline is none.
+ */
+function MarkingChips({ modelId, chips, markingTitle, heading }: {
+    modelId: string; chips: readonly SimMarkingChip[]; markingTitle: string | null; heading: StateHeading;
+}): ReactElement {
+    useSimVersion();
+    const run = getSimRun(modelId);
+    const state = run ? shownChipsState(modelId, run) : undefined;
+    const lookup: any = (store.getState() as any).idlookup ?? {};
+    const viewed = run !== undefined && state !== undefined && state !== run.config.state;
+    const shown = viewed ? markingChips(state, lookup, run.net) : chips;
+    const title = viewed ? markingLine(state, run.net, lookup).title : markingTitle;
+    return (
+        <div className="sim-panel__chips" title={title === null ? undefined : headedStateLine(title, heading)}>
+            {shown.length === 0
+                ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
+                : shown.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
+        </div>
     );
 }
 

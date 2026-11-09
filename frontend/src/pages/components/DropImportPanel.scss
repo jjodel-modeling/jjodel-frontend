@@ -1,0 +1,112 @@
+.drop-import-panel {
+  position: fixed;
+  /* Beside the toast column, 320px wide in the same corner (toast.scss): the two
+     never meet, however tall the stack grows. Same status bar clearance as the toasts. */
+  right: calc(var(--space-4) + 320px + var(--space-2));
+  bottom: calc(32px + var(--space-4));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.drop-import-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-secondary);
+}
+
+.drop-import-panel__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--color-text-primary);
+}
+
+.drop-import-panel__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-placeholder);
+  cursor: pointer;
+
+  i { font-size: 14px; line-height: 1; }
+
+  &:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+}
+
+.drop-import-panel__rows {
+  max-height: 240px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.drop-import-panel__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+}
+
+/* On the <i>: a global i.bi rule paints the glyph (measured, P-2026-11-08-2115). */
+i.drop-import-panel__icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+
+  .drop-import-panel__row--importing & {
+    color: var(--color-info);
+    animation: dropImportSpin 1s linear infinite;
+  }
+  .drop-import-panel__row--imported & { color: var(--color-success); }
+  .drop-import-panel__row--failed &   { color: var(--color-error); }
+  .drop-import-panel__row--skipped &  { color: var(--color-warning); }
+}
+
+.drop-import-panel__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drop-import-panel__state {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+@keyframes dropImportSpin {
+  to { transform: rotate(360deg); }
+}

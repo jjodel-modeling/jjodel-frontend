@@ -41,7 +41,9 @@
  *   - R-DCN-29 (P-2026-11-08-1939): the object level is drawn in the `UML object diagram` viewpoint (the views copied
  *     from uml-class-object-fixture, the DCN metaclasses hidden too), active in the export: the six instances with
  *     their slots as rows and no other node, counted on the built project and on the export imported in a new page;
- *   - the containment writes the build lost and re-applied (one MEAS line each, L-1 counts them and never fails).
+ *   - the containment writes the build lost and re-applied (one MEAS line each, L-1 counts them and never fails);
+ *   - R-DCN-28 (P-2026-11-09-0237): three coherence constraints on Drone, their nine roles in the bag, read back through
+ *     dcnCoherenceFromRoles (kinds, texts, k, no defect), and the dcn and conformance checks clean with them in the model.
  * With GV_SAVE set the project is exported, before the seeded attributes, as dcn-drone.jjodel (class level) and,
  * after the object level, as dcn-drone-objects.jjodel.
  *
@@ -283,6 +285,18 @@ const ASSOCS: Array<[string, Array<[string, string, number, number, string, EndO
 ];
 const DYNAMIC = ['Charging', 'Ready', 'Flying', 'Empty', 'Safe', 'Moderate', 'Adverse'];
 
+/** A coherence constraint of the class level (R-DCN-28), context Drone: φ, or a pattern it contains. */
+interface CoherenceSpec {
+    key: string;
+    pointwise?: string;
+    pattern?: { cls: 'BoundedPersistence'; condition: string; k: number } | { cls: 'BoundedResponse'; trigger: string; response: string; k: number };
+}
+const coherenceConstraints = (c: Connectives): CoherenceSpec[] => [
+    { key: 'speedLimit', pointwise: spell('self.speed <= self.vmax', c) },
+    { key: 'lowBatteryPersistence', pattern: { cls: 'BoundedPersistence', condition: spell('self.battery < 20', c), k: 10 } },
+    { key: 'lowBatteryResponse', pattern: { cls: 'BoundedResponse', trigger: spell('self.battery < 20', c), response: spell('self.speed == 0', c), k: 15 } },
+];
+
 interface ModelPlan {
     objects: Array<[string, string, string, number, number, null]>;
     containment: Array<[string, string, string]>;
@@ -290,7 +304,7 @@ interface ModelPlan {
     attrs: Array<[string, Array<[string, AttrValue]>]>;
 }
 
-function modelPlan(statics: StaticSpec[]): ModelPlan {
+function modelPlan(statics: StaticSpec[], coherence: CoherenceSpec[]): ModelPlan {
     const objects: ModelPlan['objects'] = [];
     const containment: ModelPlan['containment'] = [];
     const references: ModelPlan['references'] = [];
@@ -365,6 +379,17 @@ function modelPlan(statics: StaticSpec[]): ModelPlan {
         }
     }
     for (const p of packaged) containment.push(['pkg', 'packagedElements', p]);
+    for (const cc of coherence) {
+        add(cc.key, 'CoherenceConstraint', cc.key);
+        references.push([cc.key, 'context', 'Drone']);
+        if (cc.pointwise !== undefined) attrs.push([cc.key, [['pointwise', cc.pointwise]]]);
+        if (cc.pattern) {
+            const { cls, ...vals } = cc.pattern;
+            add(`pat_${cc.key}`, cls, `pat_${cc.key}`);
+            containment.push([cc.key, 'pattern', `pat_${cc.key}`]);
+            attrs.push([`pat_${cc.key}`, Object.entries(vals) as Array<[string, AttrValue]>]);
+        }
+    }
     return { objects, containment, references, attrs };
 }
 const SINGLE_REFS = new Set(REFS.filter((r) => !r[4]).map((r) => r[1]));
@@ -706,7 +731,8 @@ try {
     const shell = await buildModelShell(page);
     if (!shell.graphId) throw new Error(`no v2-flow graph: ${JSON.stringify(shell)}`);
     await ev(page, `w.LProject.getProject().models[0].name = 'drone'; return 1;`);
-    const plan = modelPlan(statics);
+    const coherence = coherenceConstraints(connectives);
+    const plan = modelPlan(statics, coherence);
     const ids = await buildObjects(page, shell.graphId, plan.objects);
     check('every object of the plan was created with its vertex', Object.keys(ids).length === plan.objects.length,
         { planned: plan.objects.length, made: Object.keys(ids).length, missing: plan.objects.map((o) => o[0]).filter((k) => !ids[k]) });
@@ -758,6 +784,16 @@ try {
     check('M-3 the seven invariants parse as Expression', Object.keys(storedExprs).every((k) => parsedStored[`expr ${k}`]?.ok),
         Object.fromEntries(Object.entries(parsedStored).filter(([k, v]) => k.startsWith('expr ') && !v.ok)));
     out.parseStored = parsedStored;
+    const coherenceExprs: Record<string, string> = {};
+    for (const cc of coherence) {
+        if (cc.pointwise !== undefined) coherenceExprs[`${cc.key}.pointwise`] = cc.pointwise;
+        if (cc.pattern?.cls === 'BoundedPersistence') coherenceExprs[`${cc.key}.condition`] = cc.pattern.condition;
+        if (cc.pattern?.cls === 'BoundedResponse') { coherenceExprs[`${cc.key}.trigger`] = cc.pattern.trigger; coherenceExprs[`${cc.key}.response`] = cc.pattern.response; }
+    }
+    const parsedCoherence = await parseAll(page, coherenceExprs, {});
+    meas('coherence expressions stored', coherenceExprs);
+    out.coherenceExprs = coherenceExprs;
+    check('CC-1 the coherence expressions parse as Expression', Object.keys(coherenceExprs).every((k) => parsedCoherence[`expr ${k}`]?.ok), parsedCoherence);
 
     // (2) The binding: object (with featureSources) and link, M2 ids, through mm.state.
     const mmId = await ev<string>(page, `return w.store.getState().idlookup[a].instanceof;`, shell.modelId, 0);
@@ -797,6 +833,10 @@ try {
         simStaticClass: C('StaticClass'), simViewpoints: F('StaticClass.viewpoints'), simDynamicClasses: F('Viewpoint.classes'),
         simInvariant: F('DynamicClass.invariant'), simPrecondition: F('Operation.pre'), simRedefines: F('Operation.redefines'),
         simMonitor: F('DynamicClass.monitors'), simOverlapping: F('Viewpoint.isOverlapping'), simComplete: F('Viewpoint.isComplete'),
+        simCoherence: C('CoherenceConstraint'), simCoherenceContext: F('CoherenceConstraint.context'),
+        simCoherencePointwise: F('CoherenceConstraint.pointwise'), simCoherencePattern: F('CoherenceConstraint.pattern'),
+        simPersistenceCondition: F('BoundedPersistence.condition'), simPersistenceBound: F('BoundedPersistence.k'),
+        simResponseTrigger: F('BoundedResponse.trigger'), simResponseResponse: F('BoundedResponse.response'), simResponseBound: F('BoundedResponse.k'),
     };
     const roleLists = { simOperation: [F('Class.ownedOperations'), F('DynamicClass.operations')], simBody: [F('Operation.body'), F('Monitor.body')] };
     const roles = await ev<{ keys: string[]; stc: unknown; ontoKept: boolean; profile: unknown }>(page, `
@@ -812,6 +852,22 @@ try {
     meas('dcn roles in the bag', roles);
     out.roles = roles;
     check('R-1 the dcn roles resolve (dcnStcFromRoles) and the bindings stay in the bag', roles.stc !== null && roles.ontoKept, { stc: roles.stc, keys: roles.keys });
+
+    // The coherence constraints as the reader returns them (kinds, texts, k; ids dropped, the context by name), against the plan.
+    const coherenceRead = await ev<{ constraints: unknown[]; defects: unknown[] } | null>(page, `
+        const dr = await import('/src/model/simulation/dcn/dcnRoles.ts'); const dp = await import('/src/components/editor-v2/problems/dcnToProblems.ts');
+        const idl = w.store.getState().idlookup; const stc = dr.dcnStcFromRoles(idl[a.mm]._state || {}); if (!stc) return null;
+        const r = dr.dcnCoherenceFromRoles(stc, dp.dcnReadView(idl, a.model));
+        return { defects: r.defects, constraints: r.constraints.map((c) => { const { id: _c, ...p } = c.pattern || {};
+            return { name: c.name, context: c.context && idl[c.context] ? idl[c.context].name : c.context, pointwise: c.pointwise, pattern: c.pattern ? p : null }; }) };`,
+        { mm: mmId, model: shell.modelId }, 0);
+    const coherenceExpected = coherence.map((cc) => ({ name: cc.key, context: 'Drone', pointwise: cc.pointwise ?? null,
+        pattern: !cc.pattern ? null : cc.pattern.cls === 'BoundedPersistence' ? { kind: 'persistence', condition: cc.pattern.condition, k: cc.pattern.k }
+            : { kind: 'response', trigger: cc.pattern.trigger, response: cc.pattern.response, k: cc.pattern.k } }));
+    meas('dcnCoherenceFromRoles', coherenceRead);
+    out.coherence = coherenceRead;
+    check('CC-2 dcnCoherenceFromRoles returns the three constraints with their kinds, texts and k', JSON.stringify(coherenceRead?.constraints) === JSON.stringify(coherenceExpected), { read: coherenceRead?.constraints, expected: coherenceExpected });
+    check('CC-3 dcnCoherenceFromRoles reports no defect', coherenceRead !== null && coherenceRead.defects.length === 0, coherenceRead?.defects);
 
     // The link record of onto-s2-instantiate binds three of the four slot roles (no valueKinds): judged, not stored.
     const linkDefects = await ev<unknown[]>(page, `const bc = await import('/src/model/ontological/bindingCheck.ts');
@@ -876,6 +932,7 @@ try {
     const dcnMeta = new Set(['StaticClass', 'Viewpoint', 'DynamicClass', 'Monitor', 'Operation', 'Property']);
     meas('conformance problems on DCN elements', conformance.violations.filter((v) => v.meta && dcnMeta.has(v.meta)).length);
     check('V-1 the conformance validator ran on the class-level model', typeof conformance.status === 'string', { status: conformance.status });
+    check('V-2 conformance clean on the class level, the coherence constraints included', conformance.status === 'conformant' && conformance.n === 0, conformance.violations);
 
     await setTheme(page, 'light');
     await page.waitForTimeout(SETTLE_MS);
@@ -1007,6 +1064,9 @@ try {
     out.conformanceObjects = conformanceObjects;
     meas('conformance status, with the object level', { status: conformanceObjects.status, violations: conformanceObjects.n });
     for (const v of conformanceObjects.violations) meas('conformance problem left', v);
+    check('D-2 zero dcn problems with the object level (computed and in the registry)',
+        dcnObjects.input && (dcnObjects.diagnostics ?? []).length === 0 && dcnObjects.registry.active.length === 0, dcnObjects);
+    check('V-3 conformance clean with the object level', conformanceObjects.status === 'conformant' && conformanceObjects.n === 0, conformanceObjects.violations);
 
     // The object diagram, light theme; then the export with the object level, before the seeds.
     await setTheme(page, 'light');

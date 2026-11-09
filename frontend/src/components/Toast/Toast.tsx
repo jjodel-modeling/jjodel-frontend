@@ -101,8 +101,7 @@ export const Toast: React.FC<ToastProps> = ({
     return (
         <div
             className={`jj-toast jj-toast--${type}${isExiting ? ' jj-toast--exiting' : ''}`}
-            role="alert"
-            aria-live="polite"
+            role={type === 'error' || type === 'warning' ? 'alert' : undefined}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
