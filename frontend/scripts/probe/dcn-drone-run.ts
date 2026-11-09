@@ -12,6 +12,8 @@
  * the classification has `Mode = Flying` and the step is one trace entry (R-DCN-22).
  * P-2026-11-08-2042 (R-DCN-29): the run card of `dji` on the canvas, read from its DOM after Reset, in Flying and after
  * the timeline back to step 0; one crop each of the node with its card: 1-charging, 2-flying, 3-stepback.
+ * P-2026-11-09-0055 (R-SIM-106): the panel's chips at step 0, S5T-1, and a crop of the panel, 1-stepback-chips.
+ * P-2026-11-09-0320 (R-DCN-28): rampUp until speed exceeds vmax, the hit line of speedLimit@dji, Play and Step back, S5L10-1..4, and a crop of the panel, 1-hit.
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-dcn-l45 frontend/scripts/probe/dcn-drone-run.ts \
  *         --port 3087 --id P-2026-11-08-0329
@@ -275,8 +277,59 @@ try {
     const sBack = await readPanel(page);
     meas('card step back', { moved, ...c3, line: sBack.line, panelChips: sBack.chips });
     await shootCard(page, dji, '3-stepback');
+    await shoot(page, '1-stepback-chips');
+    check('S5T-1 with the timeline at step 0 the chips read dji.Mode = Charging', moved && sBack.chips.includes('dji.Mode = Charging') && !sBack.chips.includes('dji.Mode = Flying'), { moved, chips: sBack.chips, title: sBack.chipsTitle?.split('\n')[0] ?? null });
     check('S5L3-8 the timeline at step 0 returns the Charging card', moved && c3.shown && activeIn(c3, 'Mode').join() === 'Charging' && !dormantNames(c3).includes('chargeRate'), { moved, shown: c3.shown, viewpoints: c3.viewpoints, dormant: c3.dormant });
     meas('step 4-flying', { classification: s4.chipsTitle?.split('\n')[0] ?? null, status: s4.pill, line: s4.line, slots: s4.chipsTitle });
+
+    // P-2026-11-09-0320 (R-DCN-28): rampUp until speed exceeds vmax (15), the hit of speedLimit on dji.
+    const speedOf = () => ev<number | null>(page,
+        `const s = await import('/src/components/editor-v2/sim/simRunState.ts'); return s.getSimRun(a.mid)?.config.state.attrs.get(a.dji)?.get('speed') ?? null;`, { mid: model.id, dji }, 0);
+    const hitText = () => page.evaluate(() => {
+        const p = [...document.querySelectorAll('.sim-panel--open')].find((e) => (e as HTMLElement).offsetParent !== null);
+        return (p?.querySelector('.sim-panel__hint--error.sim-panel__hint--line')?.textContent ?? '').trim();
+    });
+    const rampUp = (st: PanelState) => st.inputs.find((i) => /^dji\.rampUp\(/.test(i.text));
+    const SPEED_LIMIT = /Invariant speedLimit@dji( and \d+ more)? false at step \d+|Invariant [^ ]+ and \d+ more false/;
+    let ramps = 0;
+    let hit = await hitText();
+    let sRamp = await readPanel(page);
+    const speeds: Array<number | null> = [await speedOf()];
+    while (!/speedLimit@dji/.test(hit) && ramps < 30 && rampUp(sRamp)?.on) {
+        await press(page, /^dji\.rampUp\(/);
+        ramps++;
+        speeds.push(await speedOf());
+        hit = await hitText();
+        sRamp = await readPanel(page);
+    }
+    const hitStep = await traceLength(page, model.id);
+    const hitSpeed = speeds[speeds.length - 1];
+    meas('coherence hit', { ramps, speeds, hitStep, hitSpeed, hit, rampUp: rampUp(sRamp) });
+    await shoot(page, '1-hit');
+    check('S5L10-1 the hit line names speedLimit@dji at the step speed first exceeds vmax 15',
+        SPEED_LIMIT.test(hit) && hit.includes('speedLimit@dji') && hitSpeed === 16 && hit.includes(`at step ${hitStep}`), { hit, hitSpeed, hitStep });
+    check('S5L10-2 before the last rampUp the speed was within vmax', speeds[speeds.length - 2] === 15, { speeds });
+
+    // Play on a DCN net: no ε candidate, so it presses nothing whether or not a hit is shown.
+    await panel(page).locator('.sim-panel__btn[title="Play"]').first().click();
+    await wait(page, 1200);
+    const afterPlay = await traceLength(page, model.id);
+    const pText = await readPanel(page);
+    meas('play on the hit', { afterPlay, hitStep, hit: await hitText(), playsAt: /Play[^.]*/.exec(pText.text)?.[0] ?? null, pill: pText.pill });
+    check('S5L10-3 Play leaves the run on the step of the hit', afterPlay === hitStep, { afterPlay, hitStep });
+
+    // The timeline back one step: a view, the run stays where it is.
+    const viewed = await timelineTo(page, (hitStep ?? 1) - 1);
+    meas('timeline one step before the hit', { viewed, hit: await hitText(), trace: await traceLength(page, model.id) });
+    await timelineTo(page, hitStep ?? 0);
+
+    await panel(page).locator('.sim-panel__btn[title="Step back"]').first().click();
+    await wait(page, 900);
+    const backHit = await hitText();
+    const backStep = await traceLength(page, model.id);
+    meas('after Step back', { backStep, backHit, speed: await speedOf() });
+    check('S5L10-4 after Step back below the hit, the hit is gone from the shown step', backStep === (hitStep ?? 0) - 1 && !backHit.includes('speedLimit@dji'), { backStep, backHit });
+
     check('L45d-6 page errors', errors.length === 0, errors.slice(0, 5));
 } catch (e) {
     console.log(`FAIL  probe aborted  ${String((e as Error).message ?? e).slice(0, 800)}`);

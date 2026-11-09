@@ -29,6 +29,8 @@ const DCN_CLOSURE: RequiredItem[] = ['staticClass', 'viewpoints', 'dynamicClasse
 const DCN_GROUP: RoleId[] = [
     'staticClass', 'viewpoints', 'dynamicClasses', 'invariant', 'operation', 'precondition', 'body',
     'redefines', 'monitor', 'overlapping', 'complete',
+    'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+    'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
 ];
 
 /** The prompt's table: roles active beyond the closure, added requirements, constraints. */
@@ -420,6 +422,49 @@ describe('the eight existing profiles are unchanged by the dcn group', () => {
         expect(decodeProfile(encodeProfile(cf))?.modes.monitor).toEqual(EDIT);
     });
 
+    describe('a dcn user profile stored before the coherence roles (P-2026-11-09-0124)', () => {
+        const COHERENCE = DCN_GROUP.slice(11);
+        const copy = (): SimProfile => {
+            const base = sys('dynamicClassification');
+            return {
+                id: 'user', name: 'Mine', system: false, basedOn: 'dynamicClassification', shape: base.shape,
+                modes: base.modes, params: base.params, constraints: base.constraints, addedRequired: base.addedRequired,
+            };
+        };
+        /** The string the base wrote: the modes of the 39 roles of its catalog, in order. */
+        const storedWithout = (...more: RoleId[]): string => JSON.stringify({
+            ...copy(),
+            modes: Object.fromEntries(ROLE_IDS.filter(r => !COHERENCE.includes(r) && !more.includes(r)).map(r => [r, copy().modes[r]])),
+        });
+
+        it('decodes with the nine off, and re-encodes to the stored string (mutants: no fill, the encoder writes them)', () => {
+            const stored = storedWithout();
+            const decoded = decodeProfile(stored) as SimProfile;
+            expect(decoded).not.toBeNull();
+            for (const r of COHERENCE) expect(decoded.modes[r].mode, r).toBe('off');
+            expect(encodeProfile(decoded)).toBe(stored);
+        });
+
+        it('fills the nine only: another role absent is still no profile (mutant: every dcn role filled)', () => {
+            expect(decodeProfile(storedWithout('complete'))).toBeNull();
+        });
+
+        it('keeps a coherence role the owner turned on, or off for another reason (mutants: the mode or the reason not compared)', () => {
+            const on = { ...copy(), modes: { ...copy().modes, coherence: EDIT } };
+            expect(decodeProfile(encodeProfile(on))?.modes.coherence).toEqual(EDIT);
+            const other = { mode: 'off', reason: 'Mine' } as const;
+            const off = { ...copy(), modes: { ...copy().modes, coherence: other } };
+            expect(JSON.parse(encodeProfile(off)).modes.coherence).toEqual(other);
+            expect(decodeProfile(encodeProfile(off))?.modes.coherence).toEqual(other);
+        });
+
+        it('a profile written today carries the nine, and they read back in edit (mutant: the encoder drops them all)', () => {
+            const written = encodeProfile(copy());
+            expect(Object.keys(JSON.parse(written).modes)).toHaveLength(ROLE_IDS.length);
+            for (const r of COHERENCE) expect(decodeProfile(written)?.modes[r], r).toEqual(EDIT);
+        });
+    });
+
     it('«Custom» ignores the dcn keys of a bag, as the keys of a hidden group (mutant: a set dcn key in edit)', () => {
         const { profile, ignoredKeys } = inferCustomProfile({ ...CF_BAG, simStaticClass: 'c_s', simInvariant: 'f_inv' });
         expect(profile.shape).toBe('controlFlow');
@@ -506,5 +551,16 @@ describe('Dynamic classification (R-DCN-8): the system profile', () => {
         expect(checkability(p(), {})).toEqual({ status: 'notCheckable', missing: DCN_CLOSURE });
         // control: a complete control-flow bag binds nothing of the dcn closure
         expect(checkability(p(), CF_BAG).missing).toEqual(DCN_CLOSURE);
+    });
+
+    it('binds the coherence roles in edit and stays complete without them (P-2026-11-09-0124, mutant: a coherence role required)', () => {
+        for (const r of DCN_GROUP.slice(11)) {
+            expect(p().modes[r], r).toEqual({ mode: 'edit' });
+            expect(requiredRoles(p()), r).not.toContain(r);
+        }
+        expect(DRONE_BAG).not.toHaveProperty('simCoherence');
+        expect(checkability(p(), DRONE_BAG)).toEqual({ status: 'checkable', missing: [] });
+        // control: bound, they change nothing either
+        expect(checkability(p(), { ...DRONE_BAG, simCoherence: 'CoherenceConstraint' })).toEqual({ status: 'checkable', missing: [] });
     });
 });

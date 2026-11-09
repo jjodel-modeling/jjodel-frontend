@@ -16,14 +16,14 @@ import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
-    pressRandom, pressStep, runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
+    pressRandom, pressStep, runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
 import { encodeWatches } from '../../../../model/simulation/watchCodec';
 import type { WatchRecord } from '../../../../model/simulation/watchCodec';
 import type { WatchResult } from '../../../../model/simulation/watchEvaluator';
 import {
-    __resetSimRunsForTests, configAt, getSimActiveIds, getSimDcnNode, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
+    __resetSimRunsForTests, configAt, getSimActiveIds, getSimDcnNode, getSimRun, getSimVersion, getSimView, setSimPolicy, SIM_KEEP_CONFIGS, simClear, simReset, simSetView, simStepBack,
 } from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
 import { nucleusOf } from '../simNucleus';
@@ -3401,6 +3401,17 @@ describe('DCN L4.6: the arguments of an invocation reach its body (P-2026-11-08-
         expect(p.lastStep).toBe('charge: dji.charge(rate = 5) fired');
     });
 
+    it('the bare name reads the answer in the body and in the precondition, through the one overlay (P-2026-11-09-0055; mutants: the name not bound, a defect read as off)', () => {
+        const lookup = argLookup('self.alt := rate', 'rate > 0');
+        const { run, id } = start(lookup);
+        expect(inputAsks(run, id).map(a => a.attr)).toEqual(['rate']);
+        expect(dcnInputOff(run, id, lookup)).toBeNull();
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 0 }]).outcome?.kind).toBe('discard');
+        expect(alt()).toBe(0);
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 5 }]).outcome?.kind).toBe('fired');
+        expect(alt()).toBe(5);
+    });
+
     it('a precondition reads the argument: waiting before the answer, then decided by it (mutants: a defect read as off, the guards not overlaid)', () => {
         const lookup = argLookup('self.alt := self.[rate]', 'self.[rate] > 0');
         const { run, id } = start(lookup);
@@ -3495,6 +3506,39 @@ describe('DCN slice 5: getSimDcnNode, the run card of the shown step (P-2026-11-
         expect(active('dji')).toEqual(['Flying']);
     });
 
+    it('the Classification chips follow the step shown, and return with Back to live (P-2026-11-09-0055; mutants: the live σ read, the view ignored after Back to live)', () => {
+        const { lookup, takeOff } = reset();
+        takeOff();
+        const run = getSimRun('M')!;
+        const chips = () => markingChips(shownChipsState('M', run), lookup, run.net).map(c => c.text);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+        simSetView('M', 0);
+        expect(chips()).toEqual(['dji.Mode = Charging']);
+        simSetView('M', null);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+    });
+
+    it('a step between Reset and live gives its own σ (mutants: σ0 for any viewed step, the live σ)', () => {
+        const { takeOff } = reset();
+        takeOff();
+        takeOff();
+        const run = getSimRun('M')!;
+        simSetView('M', 1);
+        expect(shownChipsState('M', run).attrs.get('dji')?.get('speed')).toBe(1);
+    });
+
+    it('the chips of a Petri run stay on the live σ, as its face does (R-SIM-104; mutant: the view read for every run)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        const live = getSimRun('M')!;
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        const run = getSimRun('M')!;
+        expect(run).not.toBe(live);
+        simSetView('M', 0);
+        expect(getSimView('M')).toBe(0);
+        expect(shownChipsState('M', run)).toBe(run.config.state);
+    });
+
     it('two calls on one record return the same object, on the live and on a viewed record; a commit gives a new one (mutants: no cache, a cache not per record)', () => {
         const { takeOff } = reset();
         const atReset = getSimDcnNode('dji');
@@ -3514,5 +3558,168 @@ describe('DCN slice 5: getSimDcnNode, the run card of the shown step (P-2026-11-
         simReset('X', started(buildLookup(ROLES, TURNSTILE)));
         reset();
         expect(active('dji')).toEqual(['Charging']);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// DCN slice 5, lane 10: coherence constraints in a run, as watch hits (R-DCN-28, R-DCN-31, P-2026-11-09-0320)
+// ---------------------------------------------------------------------------
+
+describe('DCN coherence constraints as watch hits (R-DCN-28)', () => {
+    const KEYS = {
+        simCoherence: 'D_Coherence', simCoherenceContext: 'D_ccContext', simCoherencePointwise: 'D_ccPointwise', simCoherencePattern: 'D_ccPattern',
+        simPersistenceCondition: 'D_pCondition', simPersistenceBound: 'D_pK',
+    };
+    type Named = Obj & { name?: string };
+
+    /** The DCN lookup with the coherence metaclasses and `objects` (the constraints). dji starts Flying: every takeOff is its redefinition, alt + 5. */
+    function coherenceLookup(objects: Record<string, Named>): Lookup {
+        const lookup = dcnLookup({ ...DCN_BAG, ...KEYS }, 1, objects);
+        for (const [id, name] of [['D_Coherence', 'CoherenceConstraint'], ['D_Persistence', 'BoundedPersistence']]) {
+            lookup[id] = { className: 'DClass', id, name, father: 'PKG', extends: [] };
+        }
+        const features: Array<[string, 'DAttribute' | 'DReference', string, string]> = [
+            ['D_ccContext', 'DReference', 'context', 'D_Coherence'], ['D_ccPointwise', 'DAttribute', 'pointwise', 'D_Coherence'], ['D_ccPattern', 'DReference', 'pattern', 'D_Coherence'],
+            ['D_pCondition', 'DAttribute', 'condition', 'D_Persistence'], ['D_pK', 'DAttribute', 'k', 'D_Persistence'],
+        ];
+        for (const [id, className, name, father] of features) lookup[id] = { className, id, name, father };
+        return lookup;
+    }
+
+    const pointwise = (text: string): Record<string, Named> => ({
+        cc_limit: { cls: 'D_Coherence', name: 'altLimit', slots: { D_ccContext: ['Drone'], D_ccPointwise: [text] } },
+    });
+    const persistence = (name: string, condition: string, k: number): Record<string, Named> => ({
+        [`cc_${name}`]: { cls: 'D_Coherence', name, slots: { D_ccContext: ['Drone'], D_ccPattern: [`p_${name}`] } },
+        [`p_${name}`]: { cls: 'D_Persistence', name: `p_${name}`, slots: { D_pCondition: [condition], D_pK: [k] } },
+    });
+
+    function reset(lookup: Lookup) {
+        const r = dcnStarted(lookup);
+        simReset('M', r.run);
+        return { r, takeOff: () => pressInput('M', r.run.alphabet[0], undefined, lookup, 'takeOff') };
+    }
+    const results = (lookup: Lookup) => watchResults(getSimRun('M')!, lookup);
+    const hitNames = (lookup: Lookup) => results(lookup).filter(x => x.hit).map(x => x.watch.name);
+
+    it('φ false after a press is a hit of kind invariant named constraint@instance at that step, none before (mutants: no results appended, the id in the name, every step a hit)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        expect(results(lookup).map(x => [x.watch.name, x.watch.kind, x.hit])).toEqual([['altLimit@dji', 'invariant', false]]);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+        takeOff();
+        const hits = results(lookup).filter(x => x.hit);
+        expect(hits.map(x => x.watch.name)).toEqual(['altLimit@dji']);
+        expect(hits[0].reading).toEqual({ kind: 'value', value: false });
+        expect(watchHitLine(hits, 2, '')!.line).toBe('Invariant altLimit@dji false at step 2');
+        expect(watchHitLine(hits, 2, '')!.title).toContain('self.alt <= 5');
+    });
+
+    it('the instance goes by its name, not its id (mutant: the id in the name)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        lookup.dji.name = 'phantom';
+        reset(lookup);
+        expect(results(lookup).map(x => x.watch.name)).toEqual(['altLimit@phantom']);
+    });
+
+    it('a persistence with k = 1 hits at the second consecutive step, and again at the next (mutants: k read off by one, the counter not reset)', () => {
+        const lookup = coherenceLookup(persistence('climbing', 'self.alt > 0', 1));
+        const { takeOff } = reset(lookup);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+    });
+
+    it('a bad expression is a defect of the Reset line, never a hit nor a run error (mutants: the coherence defects dropped, the DCN line reading only the net)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <='));
+        const { r, takeOff } = reset(lookup);
+        expect(r.compileDefects).toHaveLength(1);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toMatch(/^1 defect: altLimit \(/);
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toContain('altLimit');
+        takeOff();
+        takeOff();
+        expect(results(lookup)).toEqual([]);
+    });
+
+    it('a run with a watch keeps it, the coherence rows after it (mutant: the coherence rows replacing the watches)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        lookup.M._state = { runWatches: encodeWatches([{ name: 'w', kind: 'breakpoint', text: 'true' }]) };
+        reset(lookup);
+        expect(results(lookup).map(x => x.watch.name)).toEqual(['w', 'altLimit@dji']);
+    });
+
+    it('a step shown and step back read the fold at that step; the marks list the steps that hit (mutants: the live step always, the marks without coherence)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        takeOff();
+        takeOff();
+        const run = getSimRun('M')!;
+        expect([...watchHitSteps(run, lookup)]).toEqual([2]);
+        simSetView('M', 1);
+        expect(watchResults(run, lookup, configAt(run, 1)!.state).filter(x => x.hit)).toEqual([]);
+        // The panel's live read is not the view's.
+        expect(watchResults(run, lookup).filter(x => x.hit).map(x => x.watch.name)).toEqual(['altLimit@dji']);
+        simSetView('M', null);
+        expect(hitNames(lookup)).toEqual(['altLimit@dji']);
+        expect(simStepBack('M')).toBe(true);
+        expect(hitNames(lookup)).toEqual([]);
+        expect([...watchHitSteps(getSimRun('M')!, lookup)]).toEqual([]);
+    });
+
+    it('a persistence longer than the kept configurations counts the steps before the cut (mutants: the kept ones only, the replay one step short, the bound window one short)', () => {
+        const k = SIM_KEEP_CONFIGS + 5;
+        const lookup = coherenceLookup({ ...persistence('climbing', 'self.alt > 0', k), ...persistence('short', 'self.alt > 0', 1) });
+        const { takeOff } = reset(lookup);
+        for (let i = 0; i < k; i++) takeOff();
+        const atBound = getSimRun('M')!;
+        expect(atBound.keptConfigs).toHaveLength(SIM_KEEP_CONFIGS);
+        expect(atBound.trace).toHaveLength(k);
+        // σ0 has alt 0: σ1..σk are k states, one short of k + 1.
+        expect(hitNames(lookup)).toEqual(['short@dji']);
+        takeOff();
+        expect(hitNames(lookup).sort()).toEqual(['climbing@dji', 'short@dji']);
+    }, 60000);
+
+    it('a replay over the cut gives each step the inputs it was pressed with (mutant: the replay without inputs)', () => {
+        const k = SIM_KEEP_CONFIGS + 1;
+        const lookup = coherenceLookup({
+            Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_charge'], D_viewpoints: ['vp_Mode'] } },
+            op_charge: { cls: 'D_Operation', name: 'charge', slots: { D_body: ['self.alt := self.alt + rate'], D_ownedParameters: ['par_rate'] } },
+            par_rate: { cls: 'D_Property', name: 'rate', slots: { D_type: ['Integer'], D_rangeMin: [0], D_rangeMax: [10] } },
+            ...persistence('climbing', 'self.alt > 0', k),
+        });
+        const { r } = reset(lookup);
+        const id = r.run.alphabet[0];
+        for (let i = 0; i <= k; i++) expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 1 }]).outcome?.kind).toBe('fired');
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+    }, 60000);
+
+    it('a verdict is the last step of its window: a φ broken earlier in the window of a longer pattern is not a hit now (mutant: every position of the window read as the step asked)', () => {
+        const lookup = coherenceLookup({ ...pointwise('self.alt != 5'), ...persistence('far', 'self.alt > 100', 3) });
+        const { takeOff } = reset(lookup);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['altLimit@dji']);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+    });
+
+    it('a DCN net has no ε candidate, so Play presses nothing and waits; a pressed step that hits is what the panel stops Play and the clocks on (measured; mutant: an ε press offered to DCN runs)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        expect(playPress('M', lookup, 0).stop).toBe('event');
+        takeOff();
+        takeOff();
+        expect(results(lookup).some(x => x.hit)).toBe(true);
+    });
+
+    it('a Petri run has no coherence results (mutant: the coherence rows read off every run)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(watchResults(getSimRun('M')!, lookup)).toEqual([]);
     });
 });

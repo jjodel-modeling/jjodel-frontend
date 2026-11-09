@@ -85,7 +85,7 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useSta
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { configAt, getSimPolicy, getSimRun, getSimView, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, getSimView, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack, useSimVersion } from './simRunState';
 import type { SimChoices } from './simRunState';
 import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
 import { saveRunSnapshot } from './simSnapshotWrite';
@@ -97,7 +97,7 @@ import {
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
-    runBag, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
+    runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -1272,11 +1272,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {run && view && (
                             <>
                                 <div className="sim-panel__section">{dcnEngine ? DCN_PANEL_HEADING : modelStateHeading}</div>
-                                <div className="sim-panel__chips" title={view.markingTitle === null ? undefined : headedStateLine(view.markingTitle, modelStateHeading)}>
-                                    {view.chips.length === 0
-                                        ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
-                                        : view.chips.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
-                                </div>
+                                <MarkingChips modelId={modelid} chips={view.chips} markingTitle={view.markingTitle} heading={modelStateHeading} />
                             </>
                         )}
                         {/* Events above the buttons (R-SIM-104): an event that is off says why in its title, and a press that
@@ -1475,6 +1471,29 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         )}
         {canvasLayer}
         </>
+    );
+}
+
+/**
+ * The chips (R-SIM-104). A DCN run's follow the step shown (R-SIM-106), with their title: this row reads the version
+ * itself, since the panel's `view` is computed once per panel action and a move of the timeline is none.
+ */
+function MarkingChips({ modelId, chips, markingTitle, heading }: {
+    modelId: string; chips: readonly SimMarkingChip[]; markingTitle: string | null; heading: StateHeading;
+}): ReactElement {
+    useSimVersion();
+    const run = getSimRun(modelId);
+    const state = run ? shownChipsState(modelId, run) : undefined;
+    const lookup: any = (store.getState() as any).idlookup ?? {};
+    const viewed = run !== undefined && state !== undefined && state !== run.config.state;
+    const shown = viewed ? markingChips(state, lookup, run.net) : chips;
+    const title = viewed ? markingLine(state, run.net, lookup).title : markingTitle;
+    return (
+        <div className="sim-panel__chips" title={title === null ? undefined : headedStateLine(title, heading)}>
+            {shown.length === 0
+                ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
+                : shown.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
+        </div>
     );
 }
 

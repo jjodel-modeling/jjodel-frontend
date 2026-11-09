@@ -553,3 +553,76 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (merge; app checks by P-2026-11-09-0017 and P-2026-11-08-2320, crops read by the chat)
 **Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 40); probes as expected. Tip precondition waived by the chat: dcn-s5 moved to 57a7fc6da in session (P-2026-11-09-0055, not merged). 86 new tests run on the merge, total matched. First full vitest: irSelectionRing afterAll timeout, load about 30, green alone twice and in the rerun, accepted in the GO. check:docs 5/5, not 4/4. Lane board not restarted (no change).
 **Prompt document name**: 2026-11-09 00:53
+
+## 2026-11-09 — fix: DCN bare invocation arguments, chips at step back (P-2026-11-09-0055)
+**Prompt**: `claude_2026-11-09_0055_prompt_dcn_s5_t_tickets.md`, lane full: an argument read by its bare name in a DCN body and precondition; the panel's Classification chips follow the shown step (R-SIM-106); one probe run with the step-back check and a crop; gates, mutants.
+**Files touched**: 57a7fc6da `frontend/src/model/simulation/dcn/dcnStep.ts` and its test, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 10b207546 `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/SimulationPanel.tsx`, the same test; 93619a11a `frontend/scripts/probe/dcn-drone-run.ts`; docs commits: this entry, Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 16:06 and 2026-11-08 20:42 (their tickets)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (eight files, all in the DOVE of the prompt: dcnStep.ts and test, simBridge.ts and test, SimulationPanel.tsx, the probe, this inbox, the prompt)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (GO given; 1-stepback-chips read by the chat 2026-11-09 01:13: slider at step 0, chips dji.Mode = Charging)
+**Notes**: Probe 18/18, port 3155. Typecheck, scripts, build 0; vitest 15562 passed, 3 known import reds. Bench 12/13, survivor equivalent. Causa per ticket: 1606 (c), bare names outside the context; 2042 (c), the panel's view off the version. Slot keeps σ as self.[name]; roots win over an argument, an argument over an instance. Petri chips stay live: the panel's Petri line is live too. dji.charge(rate) not probed: in the drone charge is a monitor, no parameter.
+**Prompt document name**: 2026-11-09 00:55
+
+**Ticket** (low): `SimInspector.tsx:415` calls `markingChips(state, lookup)` without the net, so on a DCN run it lists places, of which a DCN net has none (read, not run). The panel's status line stays on the live step while a past step is shown (crop: `step 24` at step 0).
+
+## 2026-11-09 — feat: DCN coherence roles and their reader (P-2026-11-09-0124)
+**Prompt**: `claude_2026-11-09_0124_prompt_dcn_s5_7_coherence_roles.md`, lane full: nine optional roles of the dcn group binding coherence constraints, and a reader returning the constraints as plain data, with a defect for a bad k.
+**Files touched**: d6e051d6c `frontend/src/model/simulation/roleCatalog.ts`, `frontend/src/model/simulation/dcn/dcnRoles.ts`, `frontend/src/model/simulation/profileCodec.ts`, `frontend/src/model/simulation/__tests__/roleCatalog.test.ts`, `frontend/src/model/simulation/__tests__/simProfiles.test.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnRoles.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRolesDraft.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (minor, accepted by the chat: a dcn user copy stored before these roles now reads as modified, see the ticket below)
+**Out-of-scope changes**: yes (granted by the chat, nine files in all: `profileCodec.ts` for the off-and-omit fill of the nine roles, three lines of `simRolesDraft.test.ts`; `simProfiles.ts` needed no change, its dcn role list derives from the group)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path; GO given by the chat 2026-11-09)
+**Notes**: Two stops, both granted by the chat: DOVE cited a wrong directory; the new roles made stored dcn profiles undecodable. Reader: dcnCoherenceFromRoles(stc, view), a bad k is a DeclarationDefect `bounds` and drops the pattern only. Typecheck, build 0; vitest 15586 passed, 3 known import reds; check:docs 0. Bench 22/22. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 01:24
+
+**Ticket** (low): `isModified` (`simRolesDraft.ts:402`) compares a user copy with its system profile, where the nine coherence roles are in edit: a dcn copy stored before them holds them off, so it reads as modified. The copy stays readable and re-encodes to the same string. Left as is by the chat.
+
+## 2026-11-09 — test: DCN coherence constraints in the drone fixture (P-2026-11-09-0237)
+**Prompt**: `claude_2026-11-09_0237_prompt_dcn_s5_8_coherence_fixture.md`, lane full: three coherence constraints on Drone in the fixture, the nine coherence roles bound, checks through `dcnCoherenceFromRoles`, exports and measures regenerated.
+**Files touched**: b139d21b6 `frontend/scripts/probe/dcn-drone-fixture.ts`; 48f296d16 `docs/discovery/assets/dcn-drone/dcn-drone.json`, `docs/discovery/assets/dcn-drone/dcn-drone-class-level-light.png`; this inbox and the prompt's Status line. Outside the repo: both exports in `~/jjodel-demo-exports/dcn/`, previous ones in `~/.jjodel-lanes/P-2026-11-09-0237/prev/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (fixture and exports)
+**Notes**: Constraints are root objects of the M1 model: the metamodel gives them no container. Fixture probe 36/36, six new (CC-1..3, V-2, V-3, D-2); dcn-drone-run 18/18 on the new export. The export state is LZ-compressed, so a plain grep finds nothing; decompressed, both exports hold the nine roles and the constraints. Typecheck, build, check:scripts 0. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:37
+
+## 2026-11-09 — feat: DCN coherence constraints over a trajectory (P-2026-11-09-0259)
+**Prompt**: `claude_2026-11-09_0259_prompt_dcn_s5_9_coherence_eval.md`, lane full: a pure module compiling the coherence constraints and folding φ, BoundedPersistence and BoundedResponse over σ0..σn, per instance by context, with hits and pending responses; no wiring, no UI.
+**Files touched**: ae14c5fa9 `frontend/src/model/simulation/dcn/dcnCoherence.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnCoherence.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path)
+**Notes**: Semantics from SoSyM 2026 §3.1 (Examples 1, 2) and §4.2 (Def. 5). Test 42, bench 36/36. Unattended: φ and ψ at one step are one hit, φ first; an expression failing on a σ goes in `failures` and holds nothing; a blank pattern expression or no context is a `record` defect. Answers cached per configuration, the fold reruns. Typecheck, build 0; vitest 15628 passed, 3 known import reds. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:59
+
+## 2026-11-09 — feat: DCN coherence constraints in a run, as watch hits (P-2026-11-09-0320)
+**Prompt**: `claude_2026-11-09_0320_prompt_dcn_s5_10_coherence_wiring.md`, lane full: compile the coherence constraints at Reset, report their hits as invariants `<constraint>@<instance>` of `watchResults`, tests, the drone probe.
+**Files touched**: 31744a717 `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/simDcnRuns.ts`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 25532aae7 `frontend/scripts/probe/dcn-drone-run.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passed (crop 1-hit read by the chat 2026-11-09 03:50: hit line speedLimit@dji at step 39)
+**Notes**: Fold over σ(n−reach)..σn, replayed below the kept cut; a step's report kept per configuration. φ and ψ at one step stay one pointwise hit (lane 9). Hit at step 39, speed 16. Play has no ε on DCN: the stop is the press and clock path. The hit line stays live under the slider, inspector rows follow it. Test +11, bench 13/13, probe 22/22. Typecheck, build 0; vitest 15639, 3 known reds. Temporary node_modules link removed.
+**Prompt document name**: 2026-11-09 03:20
+
+**Ticket** (medium): Play never presses on a DCN run: every DCN transition has a trigger, so `playTick` finds no ε candidate and stops with `event` (test and probe, «Play waits for an event»). R-SIM-137's stop on a hit is reachable only by a pressed step or a clock (`SimulationPanel.tsx:803`).
+
+**Ticket** (low): the panel's hit line reads the live step, also while the timeline shows a past one (probe: step 38 shown, line at step 39); the inspector's rows follow the step shown. Same for Petri watches.
