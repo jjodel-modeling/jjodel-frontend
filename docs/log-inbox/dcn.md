@@ -626,3 +626,16 @@ active log is not touched by this lane.
 **Ticket** (medium): Play never presses on a DCN run: every DCN transition has a trigger, so `playTick` finds no ε candidate and stops with `event` (test and probe, «Play waits for an event»). R-SIM-137's stop on a hit is reachable only by a pressed step or a clock (`SimulationPanel.tsx:803`).
 
 **Ticket** (low): the panel's hit line reads the live step, also while the timeline shows a past one (probe: step 38 shown, line at step 39); the inspector's rows follow the step shown. Same for Petri watches.
+
+## 2026-11-09 — merge: dcn-s5 into alfonso-frontend-jjtl (P-2026-11-09-0350)
+**Prompt**: `claude_2026-11-09_0350_prompt_merge_dcn-s5.md`, lane full (merge; 1 conflict measured): bring `dcn-s5` at faa7b952c into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 013f2f912; re-measure, probes, union of `docs/log-inbox/dcn.md`, gates, hard stop for the chat's GO.
+**Files touched**: 42a62568a (merge), 25 files — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simBridge.ts`, `simDcnRuns.ts`, tests `simBridge`, `simRolesDraft`), `frontend/src/model/simulation/` (`profileCodec.ts`, `roleCatalog.ts`, tests `roleCatalog`, `simProfiles`; `dcn/dcnCoherence.ts`, `dcn/dcnRoles.ts`, `dcn/dcnStep.ts`, tests `dcnCoherence`, `dcnRoles`, `dcnStep`), `frontend/scripts/probe/` (`dcn-drone-fixture.ts`, `dcn-drone-run.ts`), `docs/discovery/assets/dcn-drone/` (2 files), five prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 594 passed files, 15820 passed, 0 failed and 3 skipped (15823, expected 15735 + 88): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 25, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app checks by P-2026-11-09-0055 and P-2026-11-09-0320, crops read by the chat)
+**Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 72); probes as expected. Vitest could not run on faa7b952c: its worktree has no node_modules; the 88 new tests were counted on the staged merge (353 on the trunk tip, 441 merged), total matched. check:docs 5/5, not 4/4. Lane board not restarted (no change). Exit codes of typecheck, build and the checks read in a second run: the first run's tail cut them.
+**Prompt document name**: 2026-11-09 03:50
