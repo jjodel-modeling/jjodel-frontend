@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { encodeExprBinding, type ExprBinding } from '../exprBinding';
 import { exprFoldHidden, exprFoldStatus, exprFoldViews } from '../exprFoldViews';
 import { validateIR } from '../../../components/editor-v2/viewpoint/ir/irValidate';
+import { viewNeedsMount } from '../../../components/editor-v2/onlyRenderVisible';
 
 type Lookup = Record<string, any>;
 
@@ -102,11 +103,15 @@ describe('exprFoldViews, one document per owner class', () => {
         ]);
     });
 
-    it('declares the class by name, its pin and the 460 width (dies if defaultSize or metaclasses change)', () => {
+    it('declares the class by name and its pin (dies if metaclasses or the pin change)', () => {
         const { ir } = byName.get('Reg')!;
         expect(ir.metaclasses).toEqual(['Reg']);
         expect(ir.authoringMetaclassPins).toEqual({ Reg: 'C_Reg' });
-        expect(ir.defaultSize).toEqual({ width: 460 });
+    });
+
+    it('needs no node mounted, so the canvas keeps rendering only what is in view (dies if a defaultSize comes back)', () => {
+        expect(views.length).toBeGreaterThan(0);
+        for (const v of views) expect(viewNeedsMount({ kind: v.ir.kind, ir: v.ir })).toBe(false);
     });
 
     it('adds the @shared label on the sharing host, a host with no slot included (dies if the host is ignored)', () => {

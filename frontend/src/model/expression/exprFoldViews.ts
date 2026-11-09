@@ -9,8 +9,6 @@ import { EXPR_SHARED_SLOT, exprFoldDep, exprFoldedObjects, type ExprLookup } fro
 import type { LabelSpec, VertexViewIR } from '../../components/editor-v2/viewpoint/ir/irTypes';
 
 const IR_VERSION = 'ir-1.2';
-/** Wide enough for a formula to wrap at its operators rather than at every token. */
-const FOLD_VIEW_WIDTH = 460;
 const NOTHING_HIDDEN: ReadonlySet<string> = new Set<string>();
 
 /** A `MetamodelSketch` is assignable to it. */
@@ -80,7 +78,7 @@ export function exprFoldViews(binding: ExprBinding, sketch: ExprFoldSketch): Exp
             className: c.name,
             ir: {
                 irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: { [c.name]: c.id }, exclusive: true,
-                label: c.name, defaultSize: { width: FOLD_VIEW_WIDTH }, shape: { form: 'rect', labels },
+                label: c.name, shape: { form: 'rect', labels },
             },
         });
     }

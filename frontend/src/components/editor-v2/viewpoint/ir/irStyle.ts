@@ -291,6 +291,9 @@ const EXPRESSION_LABEL_CSS = `
 .ir-node-content .ir-label__expr-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); }
 .ir-node-content .ir-label__expr-text--all { display: block; -webkit-line-clamp: none; overflow: visible; }
 .ir-node-content .ir-label__expr-more { display: block; padding: 0; border: 0; background: none; color: inherit; font-size: 0.85em; opacity: 0.7; text-decoration: underline; cursor: pointer; }
+/* Wide enough for a formula to wrap at its operators rather than at every token. In CSS, not in the view's defaultSize:
+   a defaultSize keeps every node of the view mounted (viewNeedsMount). */
+.ir-node-content .ir-label.ir-label--expr { max-width: 460px; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {
