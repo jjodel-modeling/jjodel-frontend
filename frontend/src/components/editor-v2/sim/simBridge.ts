@@ -121,13 +121,16 @@ import { configAt, getSimPolicy, getSimRun, getSimView, simCommit, simSetView, w
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { nucleusOf, petriNucleus } from './simNucleus';
 import { dcnRunOf, registerDcnRun } from './simDcnRuns';
-import type { DcnRunText } from './simDcnRuns';
+import type { DcnCoherenceAt, DcnRunCoherence, DcnRunText } from './simDcnRuns';
 import { storedProfile } from './simRoleStatus';
 import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
 import { defaultSimPins } from './simViewerPrefs';
 import type { SimAttrRef } from './simViewerPrefs';
-import { dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import { dcnCoherenceFromRoles, dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import type { DcnCoherenceConstraint } from '../../../model/simulation/dcn/dcnRoles';
+import { coherenceHits, compileDcnCoherence } from '../../../model/simulation/dcn/dcnCoherence';
+import type { DcnCompiledCoherence } from '../../../model/simulation/dcn/dcnCoherence';
 import { compileDcn, DCN_TICK_EVENT } from '../../../model/simulation/dcn/dcnCompile';
 import type { DcnCompileInput } from '../../../model/simulation/dcn/dcnCompile';
 import { readDcnModel } from '../../../model/simulation/dcn/dcnHandles';
@@ -864,7 +867,12 @@ function startDcnRun(
     const stepModel = readDcnStep(input, model);
     const nucleus = dcnNucleus(stepModel, snapshot);
     const net = nucleus.net;
-    registerDcnRun(net, { model: stepModel, nucleus, nameOf: id => elementName(lookup, id) });
+    const coherence = dcnCoherenceFromRoles(found.stc, found.view);
+    const compiledCoherence = compileDcnCoherence({ constraints: coherence.constraints, model, view: found.view, binding: found.binding, snapshot });
+    registerDcnRun(net, {
+        model: stepModel, nucleus, nameOf: id => elementName(lookup, id),
+        coherence: dcnRunCoherence(coherence.constraints, compiledCoherence, { state: nucleus.initial, event: null }, lookup),
+    });
     const entries = [...compiled.entries.values()];
     const invocations = entries.filter(e => e.kind === 'invocation' && !stepModel.redefines.has(e.id)).map(e => e.id);
     const inputs = new Map(entries.filter(e => e.inputs.length > 0).map(e => [e.id, e.inputs] as const));
@@ -886,7 +894,7 @@ function startDcnRun(
             trace: [],
             snapshot,
         },
-        compileDefects: [],
+        compileDefects: declarationDefectsOf([...coherence.defects, ...compiledCoherence.defects], lookup),
     };
 }
 
@@ -1289,7 +1297,11 @@ function defectSubject(d: CompileDefect, lookup: Lookup): string {
  * for all: a defect. `null` when none.
  */
 export function defectsLine(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
-    if (dcnRunOf(net)) return dcnDefectsLine(net, id => elementName(lookup, id));
+    if (dcnRunOf(net)) {
+        // R-DCN-28: the coherence defects, named by their constraint, after the net's own.
+        const coherence = compileDefects.map((d): DeclarationDefect => ({ index: null, name: d.element, code: 'record', message: d.short ?? defectShort(d.reason, d.detail) }));
+        return dcnDefectsLine({ declarationDefects: [...(net.declarationDefects ?? []), ...coherence] }, id => elementName(lookup, id));
+    }
     const items = [
         ...net.defects.map(d => `${elementName(lookup, d.element)} (${d.message})`),
         ...compileDefects.map(d => `${defectSubject(d, lookup)} (${d.short ?? defectShort(d.reason, d.detail)})`),
@@ -1798,12 +1810,97 @@ function runWatchesOf(run: SimRun, lookup: Lookup): readonly CompiledWatch[] {
 
 /**
  * R-SIM-137: every watch of the run's model read on `state`, the live configuration by default, in declaration
- * order, each with its reading and its hit. None without the M frozen at Reset, which the evaluator reads.
+ * order, each with its reading and its hit. None without the M frozen at Reset, which the evaluator reads. On a DCN
+ * run the coherence constraints follow (R-DCN-28), one invariant per constraint and instance, read at the step of
+ * `state`: the live one when not given, otherwise the step shown (the inspector's, the only caller that gives one).
  */
-export function watchResults(run: SimRun, lookup: Lookup, state: SimState = run.config.state): WatchResult[] {
+export function watchResults(run: SimRun, lookup: Lookup, state?: SimState): WatchResult[] {
     if (!run.snapshot) return [];
     const watches = runWatchesOf(run, lookup);
-    return watches.length === 0 ? [] : readWatches(watches, run.snapshot, run.net, state);
+    const read = watches.length === 0 ? [] : readWatches(watches, run.snapshot, run.net, state ?? run.config.state);
+    const dcn = dcnRunOf(run.net);
+    if (!dcn?.coherence) return read;
+    const live = run.trace?.length ?? 0;
+    return [...read, ...coherenceResults(run, dcn, dcn.coherence, state === undefined ? live : getSimView(run.net.modelId) ?? live)];
+}
+
+/** The condition or expression of a constraint as written, for the title of its row. */
+function coherenceText(c: DcnCoherenceConstraint): string {
+    const p = c.pattern;
+    const pattern = p === null ? null
+        : p.kind === 'persistence' ? `BoundedPersistence(${p.condition}, ${p.k})` : `BoundedResponse(${p.trigger}, ${p.response}, ${p.k})`;
+    return [c.pointwise, pattern].filter(t => t !== null).join(' and ');
+}
+
+/**
+ * What a run keeps of its coherence constraints (R-DCN-28): one row per constraint and instance, named
+ * `<constraint>@<instance>`. A row is an invariant whose reading comes from the fold, so its `output` is never evaluated.
+ */
+function dcnRunCoherence(
+    constraints: readonly DcnCoherenceConstraint[], compiled: DcnCompiledCoherence, initial: NetConfiguration, lookup: Lookup,
+): DcnRunCoherence {
+    const rows = constraints.flatMap(c => compiled.monitors.filter(m => m.constraint === c.id).map(m => {
+        const text = coherenceText(c);
+        const watch: CompiledWatch = { name: `${c.name}@${elementName(lookup, m.instance)}`, kind: 'invariant', text, output: { source: text, expr: null, defect: null } };
+        return { instance: m.instance, constraint: m.constraint, watch };
+    }));
+    const reach = compiled.monitors.reduce((max, m) => Math.max(max, m.pattern?.k ?? 0), 0);
+    return { compiled, rows, reach, initial, atConfig: new WeakMap() };
+}
+
+/**
+ * The configurations `from`..`to` of a run: the kept ones as kept, the older ones by one replay from σ0 (`configAt`
+ * would replay each from σ0 again). Empty where the replay disagrees with the trace.
+ */
+function coherenceWindow(run: SimRun, dcn: DcnRunText, initial: NetConfiguration, from: number, to: number, firstKept: number): NetConfiguration[] {
+    const kept = run.keptConfigs ?? [];
+    const trace = run.trace ?? [];
+    const out: NetConfiguration[] = [];
+    if (from < firstKept) {
+        let cfg = initial;
+        if (from === 0) out.push(cfg);
+        for (let i = 1; i <= Math.min(to, firstKept - 1); i++) {
+            const t = trace[i - 1];
+            const given = t.inputs ? withInputs(run, t.inputs) : run;
+            const o = dcn.nucleus.step({ state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
+            if (o.kind === 'inadmissible' || o.kind !== t.kind) return [];
+            cfg = o.next;
+            if (i >= from) out.push(cfg);
+        }
+    }
+    for (let i = Math.max(from, firstKept); i <= to; i++) out.push(kept[i - firstKept]);
+    return out;
+}
+
+/**
+ * The fold's report at `step` (R-DCN-31). A verdict at step n reads σ(n−reach)..σn and nothing older: a persistence
+ * needs its last k + 1 states, a response the trigger at n − k and what followed. So the fold runs over that window,
+ * replayed where it reaches before the kept configurations (R-SIM-106), and only its last position is a verdict.
+ * Remembered per kept configuration, so a commit folds its own step only.
+ */
+function coherenceAt(run: SimRun, dcn: DcnRunText, c: DcnRunCoherence, step: number): DcnCoherenceAt {
+    const kept = run.keptConfigs ?? [];
+    const firstKept = (run.trace?.length ?? 0) - kept.length + 1;
+    const asked: NetConfiguration | undefined = kept[step - firstKept];
+    const known = asked && c.atConfig.get(asked);
+    if (known) return known;
+    const window = coherenceWindow(run, dcn, c.initial, Math.max(0, step - c.reach), step, firstKept);
+    const report = coherenceHits(c.compiled, window);
+    const last = window.length - 1;
+    const at = { hits: report.hits.filter(h => h.step === last), failures: report.failures.filter(f => f.step === last) };
+    if (asked) c.atConfig.set(asked, at);
+    return at;
+}
+
+/** Every row of the coherence constraints at `step`: a hit reads false; an expression that gave no verdict is a defect, never a hit. */
+function coherenceResults(run: SimRun, dcn: DcnRunText, c: DcnRunCoherence, step: number): WatchResult[] {
+    const { hits, failures } = coherenceAt(run, dcn, c, step);
+    return c.rows.map(row => {
+        const mine = (x: { instanceId: string; constraintId: string }) => x.instanceId === row.instance && x.constraintId === row.constraint;
+        const hit = hits.some(mine);
+        const failure = hit ? undefined : failures.find(mine);
+        return { watch: row.watch, reading: failure ? { kind: 'defect', short: 'no verdict', detail: failure.detail } : { kind: 'value', value: !hit }, hit };
+    });
 }
 
 /** Per kept configuration, whether it hit, for the compiled watches it was read with. */
@@ -1819,10 +1916,9 @@ export function watchHitSteps(run: SimRun, lookup: Lookup): ReadonlySet<number> 
     const snapshot = run.snapshot;
     if (!snapshot) return out;
     const watches = runWatchesOf(run, lookup);
-    if (watches.length === 0) return out;
     const kept = run.keptConfigs ?? [];
     const first = (run.trace?.length ?? 0) - kept.length + 1;
-    kept.forEach((cfg, i) => {
+    if (watches.length > 0) kept.forEach((cfg, i) => {
         let known = keptHits.get(cfg);
         if (!known || known.watches !== watches) {
             known = { watches, hit: readWatches(watches, snapshot, run.net, cfg.state).some(r => r.hit) };
@@ -1830,6 +1926,12 @@ export function watchHitSteps(run: SimRun, lookup: Lookup): ReadonlySet<number> 
         }
         if (known.hit) out.add(first + i);
     });
+    const dcn = dcnRunOf(run.net);
+    if (dcn?.coherence) {
+        for (let step = first; step < first + kept.length; step++) {
+            if (coherenceAt(run, dcn, dcn.coherence, step).hits.length > 0) out.add(step);
+        }
+    }
     return out;
 }
 
