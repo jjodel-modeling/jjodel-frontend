@@ -378,3 +378,20 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-11-08-2214
 **Detail**: `~/.jjodel-lanes/P-2026-11-08-2214/probe-onto-s2-instantiate.log`
+
+## 2026-11-09 — merge: oi-rail takes alfonso-frontend-jjtl (P-2026-11-09-0943)
+**Prompt**: `claude_2026-11-09_0943_prompt_oi-rail_take_trunk.md`: bring the trunk at the explicit sha `733a67020` into `oi-rail` with one merge commit (RC-14), merge base `819c700b5`. The session stopped at step 2 on two code conflicts; chat `C-2026-10-25-2159` then authorized resolving exactly those two files by hand in the merge commit (RC-21) and gave the GO after the visual check.
+**Files touched**: merge `a1cb914c0` (322 files from the trunk side); by hand in it: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/panels/PalettePanel.tsx`; by union: `docs/log-inbox/instance-of.md`. This commit: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no. The merge brings 322 files, listed by `git show --stat a1cb914c0`; by hand only the two code files the chat authorized.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — GO of chat `C-2026-10-25-2159` on this tree, 2026-11-09, step 8, with a split-pane case asked for; this session ran no probe and the GO carries no numbers.
+**Notes**: Vitest: 15923 passed, 0 failed tests, the expected count, but exit 1: beyond the 3 import reds, irCollapsedRender and irSelectionRing time out on browser.close() at load above 50. Both pass alone; load is not proven the only cause. Step 5: decisions.md and this inbox compared by script with both parents, not read by eye. Merged 733a67020 as pinned; the trunk moved to 53e89405f with code. Details in the body of a1cb914c0.
+**Prompt document name**: 2026-11-09 09:43
+
+**Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): in a split, a click on the rail is centred without regard to the pane. `onOntoActivate` and `onClassActivate` (`EditorV2.tsx:3439`, `:3446`) use `getCanvasRightInset()`, where the trunk's `onPaletteActivate` uses `paneRightInset()`: a pane not under the rail centres the click off by the rail's inset. Read on `a1cb914c0`, not measured in the app.
+
+**Ticket** (open, to be fixed by the next lane of chat `C-2026-10-25-2159`): a rail drag can drop on the inactive pane of a split. The `ONTO_DRAG_MIME` path of `onDrop` (`EditorV2.tsx:2838-2841`) returns before the `paneAcceptsDropRef` guard (`:2844`), and the `onDragOver` guard (`:2865`) matches `application/reactflow` only, which a rail drag does not carry (`PalettePanel.tsx:132`, `:137`). Read on `a1cb914c0`, not measured in the app.
