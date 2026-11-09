@@ -5,7 +5,7 @@ Chat: C-2026-11-08-2220
 Front: maintenance
 Request: https://claude.ai/code/session_01DQt9R57EjNuookGRd8rukw (Alfonso, 2026-11-09 09:27: «Go» for the merge of notices-discovery)
 Lane: full (merge; zero conflicts measured with `git merge-tree`)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane merge · ca4887172
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`.
 Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release`

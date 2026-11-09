@@ -65,3 +65,16 @@ Stacking inside that area was not measured by a hit test on the rail. A comment 
 **Prompt document name**: 2026-11-09 00:36
 
 **Ticket** (smoke through `lane-run probe`): the probe runs under `tsx`, whose `__name` helper breaks `page.evaluate` in `scripts/smoke/assertions.ts:68` (`ReferenceError: __name is not defined`), so the recipe of the handoff of P-2026-11-08-2340 fails. A bare `npm run smoke` hits port 3000, served from `~/jjodel-release/frontend`. Measured here with a scratch `_tmp_` wrapper: lane-run served the worktree, npm run smoke ran under node with `SMOKE_URL`.
+
+## 2026-11-09 — merge: notices-discovery into alfonso-frontend-jjtl (P-2026-11-09-0930)
+**Prompt**: `claude_2026-11-09_0930_prompt_merge_notices.md`, lane full (merge; zero conflicts measured): bring `notices-discovery` at 42debddb3 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 6fea9e8e2; gates; one docs commit; no push.
+**Files touched**: ca4887172 (merge), 15 files — `frontend/src/components/NotificationWidget/` (`NotificationWidget.tsx`, `TipsBrowserModal.tsx`, `noticesStore.ts`, `notification-widget.scss`, test `noticesStore`), `frontend/src/components/settings/UnifiedSettingsModal/sections/NotificationsSection.tsx`, `frontend/src/events/registry.ts`, `frontend/src/pages/components/Navbar.tsx`, `frontend/scripts/probe/library-gallery-clone.ts`, `docs/decisions.md`, `docs/discovery/discovery_2026-11-08_notices_and_tips.md`, three prompts, `docs/log-inbox/notices.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 4 failed | 594 passed files, 15840 passed, 0 failed and 3 skipped (15843, expected 15823 + 20): the known 3 red at import plus irCollapsedRender, green alone; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:scripts PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 15, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app check by P-2026-11-08-2340 and P-2026-11-09-0036, crops read by the chat, GO Alfonso 09:27)
+**Notes**: No conflict; merge tree 71485c219, as `git merge-tree` measured. R-NT-1..5 each once in `docs/decisions.md`, control R-NT-6 none. The fourth vitest red, irCollapsedRender, is an `afterAll` 10 s hook timeout under load, a flaky file named by the prompt: rerun alone, 13 of 13, exit 0. check:agents and check:addonly not run: not gates of this prompt.
+**Prompt document name**: 2026-11-09 09:30
