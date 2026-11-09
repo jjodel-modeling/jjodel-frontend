@@ -12,6 +12,7 @@
  * the classification has `Mode = Flying` and the step is one trace entry (R-DCN-22).
  * P-2026-11-08-2042 (R-DCN-29): the run card of `dji` on the canvas, read from its DOM after Reset, in Flying and after
  * the timeline back to step 0; one crop each of the node with its card: 1-charging, 2-flying, 3-stepback.
+ * P-2026-11-09-0055 (R-SIM-106): the panel's chips at step 0, S5T-1, and a crop of the panel, 1-stepback-chips.
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-dcn-l45 frontend/scripts/probe/dcn-drone-run.ts \
  *         --port 3087 --id P-2026-11-08-0329
@@ -275,6 +276,8 @@ try {
     const sBack = await readPanel(page);
     meas('card step back', { moved, ...c3, line: sBack.line, panelChips: sBack.chips });
     await shootCard(page, dji, '3-stepback');
+    await shoot(page, '1-stepback-chips');
+    check('S5T-1 with the timeline at step 0 the chips read dji.Mode = Charging', moved && sBack.chips.includes('dji.Mode = Charging') && !sBack.chips.includes('dji.Mode = Flying'), { moved, chips: sBack.chips, title: sBack.chipsTitle?.split('\n')[0] ?? null });
     check('S5L3-8 the timeline at step 0 returns the Charging card', moved && c3.shown && activeIn(c3, 'Mode').join() === 'Charging' && !dormantNames(c3).includes('chargeRate'), { moved, shown: c3.shown, viewpoints: c3.viewpoints, dormant: c3.dormant });
     meas('step 4-flying', { classification: s4.chipsTitle?.split('\n')[0] ?? null, status: s4.pill, line: s4.line, slots: s4.chipsTitle });
     check('L45d-6 page errors', errors.length === 0, errors.slice(0, 5));
