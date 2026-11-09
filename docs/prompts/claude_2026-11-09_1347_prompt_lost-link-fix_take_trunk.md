@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-1347
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane lost-link-fix · 067e796bc
 
 Worktree: `/Users/alfonso/jjodel-w-lostfix`, branch `lost-link-fix`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-lostfix`, branch `lost-link-fix`, `git log -1` is the commit that adds this file (its parent `646c78b89`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-09-1347 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-1358
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane lost-link-fix · 067e796bc
 Lane: full (continuation of merge lane P-2026-11-09-1347, stopped at the context ceiling after committing the merge 067e796bc; no code change)
 Depends: merge 067e796bc (parents f2ac2d722, 7571f8a53); handoff ~/.jjodel-lanes/P-2026-11-09-1347/handoff.md
 Worktree: ~/jjodel-w-lostfix, branch lost-link-fix, at the commit that adds this prompt
