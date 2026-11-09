@@ -544,3 +544,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-09 01:24
 
 **Ticket** (low): `isModified` (`simRolesDraft.ts:402`) compares a user copy with its system profile, where the nine coherence roles are in edit: a dcn copy stored before them holds them off, so it reads as modified. The copy stays readable and re-encodes to the same string. Left as is by the chat.
+
+## 2026-11-09 — test: DCN coherence constraints in the drone fixture (P-2026-11-09-0237)
+**Prompt**: `claude_2026-11-09_0237_prompt_dcn_s5_8_coherence_fixture.md`, lane full: three coherence constraints on Drone in the fixture, the nine coherence roles bound, checks through `dcnCoherenceFromRoles`, exports and measures regenerated.
+**Files touched**: b139d21b6 `frontend/scripts/probe/dcn-drone-fixture.ts`; 48f296d16 `docs/discovery/assets/dcn-drone/dcn-drone.json`, `docs/discovery/assets/dcn-drone/dcn-drone-class-level-light.png`; this inbox and the prompt's Status line. Outside the repo: both exports in `~/jjodel-demo-exports/dcn/`, previous ones in `~/.jjodel-lanes/P-2026-11-09-0237/prev/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (fixture and exports)
+**Notes**: Constraints are root objects of the M1 model: the metamodel gives them no container. Fixture probe 36/36, six new (CC-1..3, V-2, V-3, D-2); dcn-drone-run 18/18 on the new export. The export state is LZ-compressed, so a plain grep finds nothing; decompressed, both exports hold the nine roles and the constraints. Typecheck, build, check:scripts 0. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:37

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0237
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · b139d21b6
 Lane: full (probe fixture and exports only; no frontend/src)
 Depends: lane 7 P-2026-11-09-0124 (roles `coherence`, `coherenceContext`, `coherencePointwise`, `coherencePattern`, `persistenceCondition`, `persistenceBound`, `responseTrigger`, `responseResponse`, `responseBound`; reader `dcnCoherenceFromRoles`, d6e051d6c) on dcn-s5
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
