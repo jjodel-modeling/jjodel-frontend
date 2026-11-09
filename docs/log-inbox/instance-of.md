@@ -408,3 +408,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — by this session, on the numbers of SP-0..SP-6 and the crops in the lane folder; no human GO in this lane.
 **Notes**: Typecheck 0, build 0, the 4 named test files 144 passed; full vitest not run. Probes: S2 57/57, S4 14/14, binding 10/10, S3a 8/8, S3b 6/6, split 28/28. Split on a031db094: 12 fail, a click 165.7 px off, 12 idlookup keys written on the inactive pane. The rail now follows the trunk's rule: inactive pane refuses, nothing written. Linguistic palette compared on dragover only (no rootable class). Crops: ~/.jjodel-lanes/P-2026-11-09-1115/probe/split/.
 **Prompt document name**: 2026-11-09 11:15
+
+## 2026-11-09 — merge: oi-rail into alfonso-frontend-jjtl (P-2026-11-09-1209)
+**Prompt**: `claude_2026-11-09_1209_prompt_merge_oi-rail.md`, a direct merge by `lane-run merge --direct`, no session: `oi-rail` at `b292b3d1b` into `alfonso-frontend-jjtl`, merge base `733a67020`, 47 commits on the branch side.
+**Files touched**: merge `b103b2481`: 42 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-08_onto_levels_class_rail_links.md`, `docs/discovery/discovery_2026-11-08_onto_rail_binding_declaration.md`, `docs/log-inbox/instance-of.md`, `docs/prompts/claude_2026-11-08_0049_prompt_onto_rail_binding_discovery.md`, `docs/prompts/claude_2026-11-08_0113_prompt_onto_binding_editor.md`, `docs/prompts/claude_2026-11-08_0151_prompt_onto_binding_editor_continue.md`, `docs/prompts/claude_2026-11-08_0212_prompt_onto_rail_section.md`, and 34 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b103b2481` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 15948 tests in 603 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato: Alfonso GO 2026-11-09 09:42 on oi-rail at localhost:3005; probes on the merged branch S2 57/57, S4 14/14, binding editor 10/10, s3a 8/8, s3b 6/6, split-pane 28/28 (P-2026-11-09-1115)
+**Notes**: Rollback tag `pre-oi-rail` on `53e89405f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-09-1209/result.json`.
+**Prompt document name**: 2026-11-09 12:09
