@@ -3357,3 +3357,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Prompt document name**: 2026-11-09 00:20
 
 **Ticket** (low): the mutation `referencesAt(offset, true)` survives `hoverCard.test.ts`, whose mock ignores the argument: nothing pins the exclusion of the declaration from the use lines.
+
+## 2026-11-09 — fix(codegen): D6b, the pinned card binds a chord, not Option+H (P-2026-11-09-0950)
+**Prompt**: `claude_2026-11-09_0950_prompt_textual_d6b_chord.md`: on the Mac Italian layout Option+H types «∆» instead of pinning the card; replace it with the chord Cmd+K Cmd+P (Ctrl+K Ctrl+P off the Mac) and update its label.
+**Files touched**: code `5221842dd`: `frontend/src/codegen/textual/ui/PinnedHoverCard.tsx`, `frontend/src/codegen/textual/ui/textualMonaco.ts`. Uncommitted (RC-17): this entry, the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 23:30 (P-2026-11-08-2330, Alt+H chosen in its discovery §2, risk 2)
+**Causa**: (c)
+**Regressions**: no. Typecheck exit 0; vitest on `src/codegen/textual` 1389 passed, 3 skipped, 36 files; build exit 0; the full suite not run, no file outside it changed
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe, 12 of 12, real keys and mouse, page errors 0: the chord pins at the caret, the first stroke alone pins nothing, the second is consumed, Option+H pins nothing, the hover shows `⌘K ⌘P`; crop `1-hover-chord.png` in `~/.jjodel-lanes/P-2026-11-09-0950/`; the physical chord on the Italian layout is for the chat
+**Notes**: Why Alt failed: on macOS, Option with a letter produces a dead or composed character on most layouts (here «∆» on Italian), so no Option+letter shortcut is safe in a text editor. Discovery §2 missed the Cmd+K listener at `Catalog.tsx:190`: only dashboard pages mount it, and the chord passed in the project. Not run: the real Italian layout (Playwright sends no composed character), Ctrl+K Ctrl+P off the Mac. No test asserts the label, so no red step.
+**Prompt document name**: 2026-11-09 09:50

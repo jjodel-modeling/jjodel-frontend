@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0950
 Chat: C-2026-11-08-1908
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane textual-d6-pinned-hover · 5221842dd · verifica visiva passata 2026-11-09 by the chat on the lane DOM checks (12/12; keybinding and label only); crop 1-hover-chord.png for Alfonso (probe 12/12, crop 1-hover-chord.png)
 Lane: fast (one keybinding and its label; app check with one crop)
 Depends: D6 on this branch (code e536fc071, 0d9fd1fa9, 34a586c28; docs 8d2fa8843)
 Worktree: ~/jjodel-w-textd6, branch textual-d6-pinned-hover
