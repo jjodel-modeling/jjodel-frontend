@@ -88,6 +88,26 @@ describe('slotAppendQueue', () => {
         expect(f.plan('s', 'B')).toEqual(['B']);
     });
 
+    it('drops an entry the store holds even while another dispatch is in flight: it is not listed twice', () => {
+        const f = fake();
+        f.plan('s', 'A');
+        f.flush();
+        f.inFlight(2);
+        f.land('s', ['A']);
+        expect(f.plan('s', 'B')).toEqual(['A', 'B']);
+    });
+
+    it('a store update settles every slot, not the first', () => {
+        const f = fake();
+        f.plan('s', 'A');
+        f.plan('t', 'B');
+        f.abort();
+        f.otherUpdate();
+        f.inFlight(1);
+        expect(f.plan('s', 'C')).toEqual(['C']);
+        expect(f.plan('t', 'D')).toEqual(['D']);
+    });
+
     it('the bound drops a write that never lands: buffer thrown away by an abort, nothing in flight', () => {
         const f = fake();
         f.plan('s', 'A');
