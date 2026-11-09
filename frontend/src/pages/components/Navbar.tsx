@@ -1698,6 +1698,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
         {name: 'divisor'},
         {name: 'What\'s New in Jjodel', function: ()=> open("https://github.com/jjodel-modeling/jjodel-frontend/releases"), icon: <i className="bi bi-bell" />},
+        {name: 'Tips', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.TIPS_BROWSER_OPEN)), icon: <i className="bi bi-lightbulb" />},
         {name: 'Homepage', function: ()=> open("https://jjodel.io"), icon: <i className="bi bi-house" />},
         {name: 'divisor'},
         {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
