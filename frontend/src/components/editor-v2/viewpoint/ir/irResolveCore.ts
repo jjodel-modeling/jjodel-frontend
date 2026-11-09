@@ -10,6 +10,7 @@ import { compileEdgeView, compileRowView, compileView } from './irCompile';
 import { classAncestry, type ClassAncestor, type ReadCtx } from './irReadCtx';
 import type { AnyViewIR, AuthoringMetaclassPins, CompiledEdgeView, CompiledRowView, CompiledView, EdgeViewIR, RowViewIR } from './irTypes';
 import { ensureViewCss, removeViewCss } from './irStyle';
+import { exprSnapshotOf } from '../../../../model/expression/exprBatch';
 
 export interface IndexEntry {
     compiled: CompiledView;
@@ -166,6 +167,10 @@ export function objectSnapshotParts(lookup: Record<string, any> | undefined, obj
     }
     snap.push(`n=${JSON.stringify(dObject.name ?? dObject.initialName ?? '')}`);
     snap.push(`c=${JSON.stringify(lookup?.[dObject.instanceof]?.name ?? '')}`);
+    // The folded subtree of an owner has no slot here: its printed text stands for it (R-EXP-5). Pushed only when
+    // there is some, so an object with no expression keeps the snapshot it always had.
+    const expression = exprSnapshotOf(lookup as Record<string, any>, objectId);
+    if (expression) snap.push(`x=${JSON.stringify(expression)}`);
     return snap;
 }
 

@@ -162,7 +162,7 @@ function findUnknownPredicateOp(node: unknown, seen: Set<object>): string | null
 }
 
 /** Closed vocabulary of `TextSource.from`, for the segments of an edge label template (R-VP-20). */
-const TEXT_SOURCE_KINDS: Record<TextSource['from'], true> = { path: true, literal: true, intrinsic: true };
+const TEXT_SOURCE_KINDS: Record<TextSource['from'], true> = { path: true, literal: true, intrinsic: true, expression: true };
 
 const isPlainObject = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const readOf = (v: unknown) => (typeof v === 'number' ? String(v) : JSON.stringify(v));
@@ -263,6 +263,7 @@ const isEndTextSource = (src: unknown): boolean => isPlainObject(src) && (
     (src.from === 'literal' && typeof src.text === 'string')
     || (src.from === 'path' && typeof src.expr === 'string')
     || (src.from === 'intrinsic' && typeof src.prop === 'string' && Object.prototype.hasOwnProperty.call(INTRINSIC_PROPS, src.prop))
+    || (src.from === 'expression' && typeof src.slot === 'string')
 );
 
 /** The keys of an `EdgeEndLabels` (slice E). */

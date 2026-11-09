@@ -266,6 +266,31 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
+/**
+ * The printed formula of an expression slot (R-EXP-2): monospace, wrapped and clamped by irStyle.ts. «show all» appears
+ * only when the clamp actually cuts something, which the box alone knows, and it stays to take the text back.
+ */
+function ExpressionLabel({ text, caption, className, style }: { text: string; caption?: string; className: string; style?: React.CSSProperties }) {
+    const [expanded, setExpanded] = useState(false);
+    const [clipped, setClipped] = useState(false);
+    const textRef = useRef<HTMLSpanElement>(null);
+    useLayoutEffect(() => {
+        const el = textRef.current;
+        if (el && !expanded) setClipped(el.scrollHeight > el.clientHeight + 1);
+    }, [text, expanded]);
+    return (
+        <div className={`${className} ir-label--expr`} style={style}>
+            {caption ? <span className="ir-label__expr-caption">{caption}</span> : null}
+            <span ref={textRef} className={`ir-label__expr-text${expanded ? ' ir-label__expr-text--all' : ''}`}>{text}</span>
+            {clipped ? (
+                <button type="button" className="ir-label__expr-more nodrag" onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}>
+                    {expanded ? 'show less' : 'show all'}
+                </button>
+            ) : null}
+        </div>
+    );
+}
+
 function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation, labelAnchors }: IRNodeContentProps) {
     const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
     // A collapsed fill that resolves empty (a conditional with no match) falls back to the
@@ -745,6 +770,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
                 // label that opts in edits its attribute (R-IRN-41).
                 const editsFeature = l.editsFeature;
+                if (l.expression) {
+                    return text === '' ? null : (
+                        <ExpressionLabel
+                            key={`label_${i}`}
+                            text={text}
+                            caption={l.expression.caption}
+                            className={`ir-label ir-label--${position}${anchorClass}`}
+                            style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
+                        />
+                    );
+                }
                 if ((l.editsName || editsFeature) && editingLabel === i) {
                     return (
                         <input

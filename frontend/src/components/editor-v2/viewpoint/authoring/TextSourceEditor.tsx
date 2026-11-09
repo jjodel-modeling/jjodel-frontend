@@ -15,6 +15,7 @@ const FROM_OPTIONS = [
     { value: 'intrinsic', label: 'Intrinsic property' },
     { value: 'path', label: 'Feature path' },
     { value: 'literal', label: 'Literal text' },
+    { value: 'expression', label: 'Expression slot' },
 ];
 
 const INTRINSIC_OPTIONS = [
@@ -40,6 +41,8 @@ export const TextSourceEditor: React.FC<TextSourceEditorProps> = ({
             onChange({ from: 'path', expr: source.from === 'path' ? source.expr : '' });
         } else if (from === 'literal') {
             onChange({ from: 'literal', text: source.from === 'literal' ? source.text : '' });
+        } else if (from === 'expression') {
+            onChange({ from: 'expression', slot: source.from === 'expression' ? source.slot : '' });
         } else {
             onChange({ from: 'intrinsic', prop: source.from === 'intrinsic' ? source.prop : 'name' });
         }
@@ -68,6 +71,15 @@ export const TextSourceEditor: React.FC<TextSourceEditorProps> = ({
                     value={source.text}
                     disabled={disabled}
                     onChange={(e) => onChange({ from: 'literal', text: e.target.value })}
+                />
+            )}
+
+            {source.from === 'expression' && (
+                <Input
+                    value={source.slot}
+                    disabled={disabled}
+                    placeholder="Slot feature name"
+                    onChange={(e) => onChange({ ...source, slot: e.target.value })}
                 />
             )}
 

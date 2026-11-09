@@ -122,7 +122,7 @@ import {
     setModelUri,
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
-import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, labelPathSamples, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
 import { computeContainedAutoLayout } from './utils/elkContainers';
 import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
@@ -4387,7 +4387,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     const p = g.querySelector<SVGPathElement>('path.reference-edge, path.inheritance-edge');
                     if (!id || !p) return;
                     const len = p.getTotalLength();
-                    const n = Math.max(2, Math.ceil(len / 6));
+                    const n = labelPathSamples(len);
                     const m = p.getScreenCTM();
                     if (!m) return;
                     const pts: DOMPoint[] = [];
@@ -4432,7 +4432,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 containment: irContainmentRef.current.model,
                 storedOf: v => { const r = readVertexLayout(lookup[v] ?? {}, layoutKey); return { w: r.w, h: r.h, isResized: !!r.isResized }; },
             });
-            const placed = currentNodes.map(n => {
+            // ELK ran in a worker and the canvas stayed live: what changed meanwhile is kept, only what is still there moves.
+            const placed = getNodes().map(n => {
                 const p = result.positions.get(n.id);
                 return p ? { ...n, position: p } : n;
             });
@@ -4555,12 +4556,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
     // A layout ELK cannot finish is reported, not thrown into the page (P-2026-11-04-1443): nothing moved.
-    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }).catch((err: unknown) => {
-        console.warn('[EditorV2] auto layout failed:', err);
-        toast.error(err instanceof RangeError
-            ? 'Auto layout: this diagram is too large for the layout engine. Nothing was moved.'
-            : 'Auto layout failed. Nothing was moved.');
-    }), [handleAutoLayout]);
+    // ELK runs in a worker, so the page can click again meanwhile: the ref drops that click before the toolbar is disabled.
+    const [autoLayoutBusy, setAutoLayoutBusy] = useState(false);
+    const autoLayoutBusyRef = useRef(false);
+    const handleToolbarAutoLayout = useCallback(() => {
+        if (autoLayoutBusyRef.current) return;
+        autoLayoutBusyRef.current = true;
+        setAutoLayoutBusy(true);
+        handleAutoLayout({ full: true }).catch((err: unknown) => {
+            console.warn('[EditorV2] auto layout failed:', err);
+            toast.error(err instanceof RangeError
+                ? 'Auto layout: this diagram is too large for the layout engine. Nothing was moved.'
+                : 'Auto layout failed. Nothing was moved.');
+        }).finally(() => {
+            autoLayoutBusyRef.current = false;
+            setAutoLayoutBusy(false);
+        });
+    }, [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
@@ -5510,7 +5522,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
-                        commandsDisabled={paneEl !== null && paneIsInactive(canvasSplit, paneEl)}
+                        commandsDisabled={autoLayoutBusy || (paneEl !== null && paneIsInactive(canvasSplit, paneEl))}
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}

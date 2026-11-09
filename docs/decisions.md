@@ -7013,6 +7013,8 @@ Chromium 151 only), verified: none, reversible: trunk (docs only, no code yet).
 - **R-PLG-11** (2026-10-31). **The first slice re-hosts the instance-of semantics** (`bindingReader`, `bindingCheck`)
   as a worker plugin bound through `ontoBindings v1` and writing `set` lines through `applyAsOneStep`; the JavaScript
   generator of the codegen pilot is not the first slice.
+  Amended 2026-11-08 by R-EXP-1: the first plugin is the expression catalog, made of data; instance-of follows on the
+  same catalog format.
 
 ## R-TXT: a default textual notation for every model (decisions 2026-11-01)
 
@@ -8015,6 +8017,57 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
 - **R-NT-3** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): "Show tips" is a per-browser preference in localStorage, toggled from the card ("Turn off tips") and from Settings, Notifications section. Cross-device storage is deferred (the persistence backend is outside this repo). `DUser` is not changed.
 - **R-NT-4** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): tips card at the bottom left of the work area, 16 px right of the Jjodie button and aligned with its bottom edge; announcements as a banner at the top of the work area, in the editor and on the dashboard, one at a time, with precedence over the tip as today.
 - **R-NT-5** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): the announcement link and date window need new Notion columns and a Worker change; deferred until the Worker source is in the repo (Alfonso exports it from Cloudflare). Severity reuses `priority`.
+
+## R-EXP: the expression role catalog, textual projection of expression subtrees (decisions 2026-11-08)
+
+Evidence: the project chat C-2026-11-01-1434 of 2026-11-08 (23:01-23:04: expression subtrees are not canvas nodes; no
+single expression language but a role catalog with a generic printer; the catalog is born as the first concrete plugin;
+for the hardware Brief the printed text is the same as the kernel's own view; 23:39 «ok alle raccomandazioni» on the
+twelve questions of the discovery), `docs/discovery/discovery_2026-11-08_expression_catalog.md` (P-2026-11-08-2310),
+front `plugins`. Measured case: `ddr4_closed_v.xmi` from the Micron prototype, 4269 objects of which 4020 fold under 246
+roots, 249 nodes left.
+
+- **R-EXP-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk).
+  **The expression catalog is the first plugin of R-PLG, made of data interpreted by the host.** It runs no plugin code
+  and does not engage the R-PLG-2 worker: render needs the text synchronously. It amends R-PLG-11: instance-of follows
+  on the same catalog format. Stored JjGen templates are budgeted JjEL, not `new Function`, so the unrun R-PLG-6 lane
+  does not block it.
+- **R-EXP-2** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Roles:** infix {symbol, precedence, assoc, operands}, n-ary, unary,
+  literal, reference, call, conditional, case, bracket, pattern; a per-metaclass template is the escape hatch for what the
+  roles do not cover.
+- **R-EXP-3** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The binding lives on the metamodel**, as a versioned record list in its
+  `_state`, key `exprBinding`, like `ontoBindings`; an unknown version is refused, unknown keys are preserved. It travels
+  with the metamodel (the intent of R-VAL-10).
+- **R-EXP-4** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A viewpoint activates the fold; it does not own the binding.** This
+  corrects the chat's wording of 23:02 («the viewpoint declares the binding»).
+- **R-EXP-5** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk). **The unit of folding is a slot, closed downward**
+  (`Register.next`, `Wire.expr`, `Property.expr`, ...); a metaclass alone does not decide, because a class such as
+  `ForEach` is both a design element and an expression.
+- **R-EXP-6** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The printer takes `parens: minimal | always` on the binding**, with a
+  per-row override, and a sharing pass that names repeated subexpressions (`D1`, `D2`, ...).
+- **R-EXP-7** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Text is computed in one batch and memoised** on D-record identity; render
+  reads it and never calls a template per node.
+- **R-EXP-8** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: measured, verified: probe, reversible: trunk). **For the Brief metamodel the reference is
+  `brief_view.py`, with `parens: always`**, held by a golden test on the 246 slots of `ddr4_closed_v`; `syncrtl-text.md`
+  becomes the SyncRTL metamodel's own binding. «Decision 34» of the Micron prototype has no record; `brief_view.py` is
+  normative until one appears. A change of the kernel view is followed by flipping the binding.
+- **R-EXP-9** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A problem or a selection on a folded object maps to its owner**, the
+  message prefixed with the slot (`Register.next:`).
+- **R-EXP-10** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **The first slice hides folded nodes and keeps their vertex records**;
+  removing them comes later, only if a measure asks for it, under a Layer Impact Report.
+- **R-EXP-11** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Automatic binding proposes and never chooses** among candidates
+  (protocol of `profileBinder`).
+- **R-EXP-12** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **A missing or invalid binding degrades explicitly** (R-PLG-7): the objects
+  stay nodes and authoring says why.
+- **R-EXP-13** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Implementation choices of the discovery's questions 7, 8, 11, 12:** a new
+  `TextSource` union member `{from:'expression', slot}` is allowed (additive, compiler-checked, rule 11); a small
+  separate printer now, converging with `printer.ts` and `textSyntax` when editing arrives (R-TXT); parameters and
+  properties as rows come in a later slice, not the first; no Ecore mirror of the binding yet, the Brief binding ships as
+  a JSON import.
+- **R-EXP-14** (2026-11-08, ratified by Alfonso 2026-11-08 23:39, evidence: read, verified: none, reversible: trunk). **Slices in order:** S1 DDR4 readable (binding codec, printer, batch memo,
+  slot fold by hide, `TextSource` kind, viewpoint activation, JSON import, golden test); S2 problems and selection on the
+  owner; S3 expand and collapse with local layout; S4 removal of folded vertices, only on a measure, critical zone; S5
+  rows for parameters and properties; S6 automatic binding and a binding panel (R-PLG-3); S7 editing through R-TXT.
 
 ## Superate
 

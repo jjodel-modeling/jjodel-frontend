@@ -21,14 +21,19 @@
  *   action, and one undo step (action.ts BEGIN/END).
  */
 
-import { DProject, DViewElement, DViewPoint, U, store } from '../joiner';
+import { DProject, DViewElement, DViewPoint, LPointerTargetable, U, store } from '../joiner';
 import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
 import { isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
-import { DERIVED_NOTATIONS, canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
+import { DERIVED_LAYOUT_KEY, DERIVED_NOTATIONS, canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
 import type { DeriveChoice, DerivedNotationId } from '../components/editor-v2/viewpoint/derive/notations';
 import { uniqueModelName } from '../model/nameLookup';
+import { sketchOfMetamodel } from '../components/editor-v2/sim/metamodelSketch';
+import { EXPR_BINDING_KEY, EXPR_FOLD_KEY, decodeExprBinding, encodeExprBinding, resolveBindingNames } from '../model/expression/exprBinding';
+import { exprFoldViews } from '../model/expression/exprFoldViews';
+import { EXPR_FOLD_LAYOUT } from '../components/editor-v2/utils/elkLayout';
+import briefBinding from '../model/expression/bindings/brief.json';
 
 /** The project's viewpoints, in its order: where the dialog looks for the latest derived viewpoint. */
 export function projectViewpointIds(): string[] {
@@ -84,6 +89,72 @@ export function createDerivedViewpoint(metamodelId: string, choice?: DeriveChoic
         DViewElement.new2(v.ir.label ?? `View for ${v.className}`, '', viewpoint, (d) => {
             // Same fields as a class view of createViewInWorkbench; the ir is set in the
             // callback, which runs before persist, so the view is persisted with it.
+            d.oclCondition = `context DObject inv: self.instanceof.id = '${v.classId}'`;
+            d.appliableToClasses = ['DObject'];
+            const appliableTo = appliableToForIRKind(v.ir.kind);
+            if (appliableTo) d.appliableTo = appliableTo;
+            d.css_MUST_RECOMPILE = true;
+            (d as any).ir = v.ir;
+        }, true);
+    }
+    U.isProjectModified = true;
+    DockManager.openViewpoint(viewpoint);
+    toast.success(`"${name}": ${views.length} views`, 'Viewpoint derived');
+    return viewpoint;
+}
+
+/**
+ * Writes a by-name binding document (R-EXP-13) on the metamodel, resolved to its ids: the merging `state` setter the
+ * simulation roles use, so the other keys of `_state` stay. Returns why it was refused, empty when written.
+ */
+export function importExprBinding(metamodelId: string, doc: unknown): readonly string[] {
+    const lookup: Record<string, any> = (store.getState() as any).idlookup ?? {};
+    // The decoder checks the shape, the names being non-empty strings as the ids are: a file is not trusted to have one.
+    const decoded = decodeExprBinding(doc);
+    if (!decoded.ok) return decoded.errors;
+    if (!decoded.value) return ['The document is empty.'];
+    const mapped = resolveBindingNames(decoded.value, sketchOfMetamodel(lookup, metamodelId));
+    if (!mapped.ok) return mapped.errors;
+    const lmm: any = LPointerTargetable.fromPointer(metamodelId as any);
+    lmm.state = { [EXPR_BINDING_KEY]: encodeExprBinding(mapped.value) };
+    U.isProjectModified = true;
+    return [];
+}
+
+/** The Brief binding shipped with the editor (R-EXP-13), imported as any other. */
+export function importBriefExprBinding(metamodelId: string): readonly string[] {
+    return importExprBinding(metamodelId, briefBinding);
+}
+
+/**
+ * A new viewpoint that activates the expression fold on the metamodel's binding (R-EXP-4): one view per owner class,
+ * not activated, its tab opened. NO OUTER TRANSACTION, as `createDerivedViewpoint`. Null with no valid binding.
+ */
+export function createExprFoldViewpoint(metamodelId: string): DViewPoint | null {
+    const lookup: Record<string, any> = (store.getState() as any).idlookup ?? {};
+    const metamodel = lookup[metamodelId];
+    if (!isDerivableMetamodel(metamodel)) return null;
+    const decoded = decodeExprBinding(metamodel._state?.[EXPR_BINDING_KEY]);
+    if (!decoded.ok || !decoded.value) {
+        toast.warning('Import a valid expression binding first.', 'Nothing to fold');
+        return null;
+    }
+    const views = exprFoldViews(decoded.value, sketchOfMetamodel(lookup, metamodelId));
+    if (views.length === 0) {
+        toast.warning(`No concrete class of "${metamodel.name}" owns an expression slot.`, 'Nothing to fold');
+        return null;
+    }
+
+    const taken = projectViewpointIds().map(id => lookup[id]?.name).filter((x: unknown): x is string => typeof x === 'string');
+    const name = uniqueModelName(`${metamodel.name} / Expression fold`, taken);
+    const viewpoint = DViewPoint.newVP(name, (vp) => {
+        vp.isExclusiveView = true;
+        vp.isValidation = false;
+        (vp as any).viewpointType = 'syntax';
+        (vp as any)._state = { [EXPR_FOLD_KEY]: true, [DERIVED_LAYOUT_KEY]: JSON.stringify(EXPR_FOLD_LAYOUT) };
+    });
+    for (const v of views) {
+        DViewElement.new2(v.ir.label ?? `View for ${v.className}`, '', viewpoint, (d) => {
             d.oclCondition = `context DObject inv: self.instanceof.id = '${v.classId}'`;
             d.appliableToClasses = ['DObject'];
             const appliableTo = appliableToForIRKind(v.ir.kind);

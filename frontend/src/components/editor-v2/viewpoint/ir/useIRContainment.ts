@@ -15,6 +15,9 @@ import { store } from '../../../../joiner';
 import { useSimVersion } from '../../sim/simRunState';
 import { computeIRSignature, getIRIndex } from './irResolveCore';
 import { makeReadCtx } from './irReadCtxLproxy';
+import { modelIdOf } from './irReadCtx';
+import { exprFoldDep } from '../../../../model/expression/exprBatch';
+import { exprFoldHidden } from '../../../../model/expression/exprFoldViews';
 import {
     applyContainerLayout,
     buildContainmentModel,
@@ -53,6 +56,15 @@ const EMPTY_MODEL: ContainmentModel = {
     vertexByObj: new Map(),
 };
 const EMPTY_NAMES = new Map<string, string>();
+const NOTHING_FOLDED: ReadonlySet<string> = new Set<string>();
+
+/** The viewpoint of a canvas (the active one for the root, as computeIRSignature reads it) and its DModel, by the
+ *  element its first vertex draws. */
+function foldTargetOf(state: any, nodes: Node[], vp: string | undefined): { viewpointId: string | undefined; modelId: string | null } {
+    const lookup = state.idlookup ?? {};
+    const element = nodes.length > 0 ? lookup[nodes[0].id]?.model : undefined;
+    return { viewpointId: vp ?? state.viewpoint, modelId: typeof element === 'string' ? modelIdOf(lookup, element) : null };
+}
 
 /**
  * The DValue ids the declared children channels read, published by the last decoration pass (R-GV-2, spec addendum
@@ -155,6 +167,13 @@ export function useIRContainment(nodes: Node[], edges: Edge[], viewpointId?: str
         return publishedChannelSlots.map(id => `${id}=${JSON.stringify(lookup?.[id]?.values ?? null)}`).join('|');
     });
 
+    // The expression fold (R-EXP-4): the metamodel's raw binding when this canvas's viewpoint activates the fold, so
+    // importing a binding re-decorates. '' otherwise, which keeps this memo's invalidation as it was without one.
+    const foldDep = useSelector((state: any) => {
+        const target = foldTargetOf(state, nodes, vp);
+        return target.modelId && target.viewpointId ? exprFoldDep(state.idlookup, target.viewpointId, target.modelId) : '';
+    });
+
     const decoration = useMemo(() => {
         // Drop the cross-dep registry on a viewpoint (irSig) change before any
         // observer re-publishes. This memo (EditorV2's) renders before the
@@ -190,18 +209,22 @@ export function useIRContainment(nodes: Node[], edges: Edge[], viewpointId?: str
         // Q7 (P-2026-10-03-1304): an object whose vertex view resolves `visible` false is not drawn either, by the same
         // pass. Empty at once when no view declares the key.
         const viewHidden = computeViewHidden(nodes, model.objByVertex, index, readCtx, state.idlookup);
+        // R-EXP-4: the objects folded into an owner's text, by the same pass. Empty at once with no `foldDep`.
+        const foldTarget = foldTargetOf(state, nodes, vp);
+        const foldHidden = foldDep ? exprFoldHidden(state.idlookup, foldTarget.viewpointId, foldTarget.modelId) : NOTHING_FOLDED;
 
         // Containment (collapse) + row-suppression pass. Unioning the two hidden sets
         // lets decorateEdges lift/suppress dangling edges to row children with no new
         // logic. A child both inside a collapsed hull and a row of another node is
         // handled by the union — no special precedence.
-        if (model.containers.size > 0 || rowHidden.size > 0 || viewHidden.size > 0) {
+        if (model.containers.size > 0 || rowHidden.size > 0 || viewHidden.size > 0 || foldHidden.size > 0) {
             for (const objectId of model.containers.keys()) {
                 names.set(objectId, readCtx.getName(objectId) ?? '');
             }
             const hidden = computeHidden(model, getCollapsedSet());
             for (const r of rowHidden) hidden.add(r);
             for (const v of viewHidden) hidden.add(v);
+            for (const f of foldHidden) hidden.add(f);
             hiddenObjects = hidden;
             outNodes = decorateNodes(outNodes, model, hidden);
             // R-GV-5..7 (S2): the containers that declare a layout go under the edges, and partitions fill theirs,
@@ -258,7 +281,7 @@ export function useIRContainment(nodes: Node[], edges: Edge[], viewpointId?: str
         // channel (0, hence inert, when no view of the index declares it);
         // channelSig the slots of the declared children channels ('' without one).
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig, markDep, channelSig]);
+    }, [nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig, markDep, channelSig, foldDep]);
 
     // Problems (R-GV-2): the objects claimed twice and those claimed by no one, on their nodes, owned by this canvas's
     // graph (the father of its vertices). Reconciled only when the set changes (containmentToProblems.ts).
