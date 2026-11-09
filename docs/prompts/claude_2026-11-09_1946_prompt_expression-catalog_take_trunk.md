@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-09-1946
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/decisions.md` measured)
-Status: da eseguire
+Status: eseguito ✅ c212f41fd (committed by the chat after the session ceiling; typecheck, check:scripts, check:docs, build green; vitest 16055 passed, only the 3 known import failures)
 
 Worktree: `/Users/alfonso/jjodel-w-exprcat`, branch `expression-catalog`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-exprcat`, branch `expression-catalog`, `git log -1` is the commit that adds this file (its parent `bccb80208`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-09-1946 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

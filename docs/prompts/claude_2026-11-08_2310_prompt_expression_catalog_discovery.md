@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-08-2310
 Chat: C-2026-11-01-1434
 Front: plugins
 Lane: full (Phase 1 read-only discovery; no Phase 2 in this prompt)
-Status: da eseguire
+Status: eseguito ✅ e137e6a8f
 Request: https://claude.ai/code/session_01DQt9R32KVprpjZZCfe6Sbp
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
