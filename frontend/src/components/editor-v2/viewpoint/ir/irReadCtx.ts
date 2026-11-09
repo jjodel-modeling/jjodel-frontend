@@ -53,6 +53,12 @@ export interface ReadCtx {
      */
     getPresentation?(elementId: string, attr: string): unknown;
     /**
+     * The text the metamodel's expression binding prints for the slot `slot` of the element (R-EXP-2), '' when there
+     * is none. Injected by makeReadCtx like the marking, so this module keeps its zero imports. Optional (rule 11):
+     * a ReadCtx without it draws an empty label.
+     */
+    getExpressionText?(elementId: string, slot: string): string;
+    /**
      * True when a simulation run is active on the model the element belongs to:
      * the source the `simActive` predicate reads (P-2026-10-19-0930). The model is
      * found by walking `father` up to the DModel, so a nested object and a slot
@@ -159,7 +165,7 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
 
 /** The DModel an element belongs to, by walking `father` (the idiom of simBridge.collectModelObjectIds); null when
  *  the walk ends elsewhere. Bounded like it, so a cycle in stale data ends the walk. */
-function modelIdOf(idlookup: Idlookup, elementId: string): string | null {
+export function modelIdOf(idlookup: Idlookup, elementId: string): string | null {
     let owner = idlookup[elementId];
     for (let depth = 0; owner && depth < 40; depth++) {
         if (owner.className === 'DModel') return typeof owner.id === 'string' ? owner.id : null;
@@ -185,12 +191,16 @@ function modelIdOf(idlookup: Idlookup, elementId: string): string | null {
  * `hasRun` too (P-2026-10-19-0930): whether a model, by DModel id, has a run.
  * The walk from the element to its model is here, on the lookup; the run-state is
  * asked only for the model. Without it no element is in a run.
+ *
+ * `getExpressionText` too (R-EXP-2): the printer lives in model/expression, and importing it here would end the
+ * zero-import contract. Without it every expression label reads empty.
  */
 export function makeDrawReadCtx(
     idlookup: Idlookup,
     isMarked: (elementId: string) => boolean = () => false,
     getPresentation: (elementId: string, attr: string) => unknown = () => undefined,
     hasRun: (modelId: string) => boolean = () => false,
+    getExpressionText: (elementId: string, slot: string) => string = () => '',
 ): ReadCtx {
     const getValue = (elementId: string, featureName: string): unknown => {
         const dValue = findFeatureRaw(idlookup, elementId, featureName);
@@ -227,6 +237,7 @@ export function makeDrawReadCtx(
         },
         isMarked,
         getPresentation,
+        getExpressionText,
         isRunActive(elementId) {
             const modelId = modelIdOf(idlookup, elementId);
             return modelId !== null && hasRun(modelId);

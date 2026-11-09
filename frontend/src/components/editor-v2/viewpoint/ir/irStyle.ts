@@ -283,6 +283,16 @@ const BINDING_ROWS_CSS = `
 .ir-node-content .ir-row__orphan-marker { color: var(--color-error); font-weight: 700; flex-shrink: 0; }
 `;
 
+/** Expression catalog S1b (P-2026-11-09-0035): the label that prints an expression. A text node of its own, after
+ *  the two above: it appends, and BASE_CSS stays byte-identical (shapeRegistry.test.ts pins its sections). */
+const EXPRESSION_LABEL_CSS = `
+.ir-node-content .ir-label.ir-label--expr { white-space: normal; overflow: visible; font-weight: 400; text-align: left; padding-top: 2px; padding-bottom: 2px; }
+.ir-node-content .ir-label__expr-caption { display: block; font-size: 0.85em; opacity: 0.7; }
+.ir-node-content .ir-label__expr-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); }
+.ir-node-content .ir-label__expr-text--all { display: block; -webkit-line-clamp: none; overflow: visible; }
+.ir-node-content .ir-label__expr-more { display: block; padding: 0; border: 0; background: none; color: inherit; font-size: 0.85em; opacity: 0.7; text-decoration: underline; cursor: pointer; }
+`;
+
 function ensureStyleTag(): HTMLStyleElement | null {
     if (typeof document === 'undefined') return null;
     let tag = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null;
@@ -291,6 +301,7 @@ function ensureStyleTag(): HTMLStyleElement | null {
         tag.id = STYLE_TAG_ID;
         tag.appendChild(document.createTextNode(BASE_CSS));
         tag.appendChild(document.createTextNode(BINDING_ROWS_CSS));
+        tag.appendChild(document.createTextNode(EXPRESSION_LABEL_CSS));
         document.head.appendChild(tag);
     }
     return tag;
