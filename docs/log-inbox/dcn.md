@@ -540,3 +540,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (GO given; 1-button and 2-saved read by the chat 2026-11-09 00:47: camera button last in the transport row, Saved as drone (snapshot step 24))
 **Notes**: Probe 29 PASS, 0 FAIL, SN-25..29 new. SN-30, a Petri run has no button, was skipped by MEAS: no Simulation panel on demoNet after two open2, so that absence rests on the dcnEngine guard, not on a browser read; hence Regressions unknown. SN-29: Play on DCN ends in its first beat, the off state read by a MutationObserver. Vitest: the 3 known import reds, 15551 pass. The load wait used Monitor, the wait the harness allows; no lane work ran in it.
 **Prompt document name**: 2026-11-09 00:17
+
+## 2026-11-09 — merge: dcn-s5 into alfonso-frontend-jjtl (P-2026-11-09-0053)
+**Prompt**: `claude_2026-11-09_0053_prompt_merge_dcn-s5.md`, lane full (merge; 1 conflict measured): bring `dcn-s5` at 013f2f912 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base bf8fc1454; re-measure, probes, union of `docs/log-inbox/dcn.md`, gates, hard stop for the chat's GO.
+**Files touched**: dfac90f9e (merge), 16 files — `frontend/src/components/editor-v2/sim/` (`SimulationPanel.tsx`, `simSnapshot.ts`, `simSnapshotButton.ts`, `simSnapshotWrite.ts`, their three tests in `__tests__/`), `frontend/scripts/probe/dcn-snapshot.ts`, `docs/discovery/lir_2026-11-08_dcn_snapshot_write.md`, six prompts, `docs/log-inbox/dcn.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 593 passed files, 15732 passed, 0 failed and 3 skipped (15735, expected 15649 + 86): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 16, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (merge; app checks by P-2026-11-09-0017 and P-2026-11-08-2320, crops read by the chat)
+**Notes**: One conflict, `docs/log-inbox/dcn.md`, by union (trunk 12 lines, a blank, branch 40); probes as expected. Tip precondition waived by the chat: dcn-s5 moved to 57a7fc6da in session (P-2026-11-09-0055, not merged). 86 new tests run on the merge, total matched. First full vitest: irSelectionRing afterAll timeout, load about 30, green alone twice and in the rerun, accepted in the GO. check:docs 5/5, not 4/4. Lane board not restarted (no change).
+**Prompt document name**: 2026-11-09 00:53
