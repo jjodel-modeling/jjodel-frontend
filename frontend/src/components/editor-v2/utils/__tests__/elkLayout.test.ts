@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import ELK from 'elkjs/lib/elk.bundled.js';
+import type { ElkNode } from 'elkjs';
 import type { Node, Edge } from '@xyflow/react';
 import {
     buildElkGraph,
@@ -12,7 +14,10 @@ import {
     getElkRoute,
     elkRoutesRevision,
     measureOutsideLabels,
+    labelPathSamples,
+    LABEL_PATH_MAX_SAMPLES,
     CLASS_VIEW_PROFILE,
+    EXPR_FOLD_LAYOUT,
     ELK_GRID,
     type ElkRoute,
     type ElkLayoutProfile,
@@ -105,10 +110,108 @@ describe('buildElkGraph: the input ELK receives', () => {
         const g = buildElkGraph([sized('a', 100, 40)], [], { profile: { algorithm: 'stress', overlapRemoval: true } });
         expect(rootOpt(g, 'algorithm')).toBe('stress');
     });
+
+    it('the iteration limit reaches ELK only when the profile sets one', () => {
+        const nodes = [sized('a', 100, 40)];
+        expect(EXPR_FOLD_LAYOUT.iterationLimit).toBeGreaterThan(0);
+        expect(rootOpt(buildElkGraph(nodes, [], { profile: EXPR_FOLD_LAYOUT }), 'stress.iterationLimit')).toBe(String(EXPR_FOLD_LAYOUT.iterationLimit));
+        expect(rootOpt(buildElkGraph(nodes, [], { profile: { algorithm: 'stress' } }), 'stress.iterationLimit')).toBeUndefined();
+    });
+});
+
+describe('the fold layout on a star of leaves (P-2026-11-09-0925)', () => {
+    const star = (n: number) => ({
+        nodes: Array.from({ length: n }, (_, i) => sized(`n${i}`, 460, 120)),
+        edges: Array.from({ length: n - 1 }, (_, i) => edge(`e${i}`, 'n0', `n${i + 1}`)),
+    });
+    const boxOf = (positions: Map<string, { x: number; y: number }>) => {
+        const xs = [...positions.values()].map(p => p.x), ys = [...positions.values()].map(p => p.y);
+        return { w: Math.max(...xs) - Math.min(...xs) + 460, h: Math.max(...ys) - Math.min(...ys) + 120 };
+    };
+
+    it('lays out as a block, where the default layered run makes one row', async () => {
+        const { nodes, edges } = star(120);
+        const folded = boxOf((await computeElkAutoLayout(nodes, edges, { profile: EXPR_FOLD_LAYOUT })).positions);
+        const layered = boxOf((await computeElkAutoLayout(nodes, edges, {})).positions);
+        expect(Math.max(folded.w, folded.h) / Math.min(folded.w, folded.h)).toBeLessThan(3);
+        expect(layered.w / layered.h).toBeGreaterThan(10);
+    }, 60000);
 });
 
 // P-2026-11-04-1443: ELK's network-simplex node placer recurses once per node of its auxiliary graph, which holds a
 // dummy per layer a long edge crosses: 200 classes in a ring with chords overflowed the stack (RangeError).
+describe('layoutOffThread: the worker, and the main-thread ELK as its fallback (P-2026-11-09-0952)', () => {
+    const graph = (): ElkNode => ({
+        id: 'root',
+        layoutOptions: { 'elk.algorithm': 'layered' },
+        children: ['a', 'b', 'c'].map(id => ({ id, width: 100, height: 40 })),
+        edges: [{ id: 'ab', sources: ['a'], targets: ['b'] }, { id: 'ac', sources: ['a'], targets: ['c'] }],
+    });
+    const positions = (g: ElkNode) => (g.children ?? []).map(c => [c.id, c.x, c.y]);
+    const engineSpy = () => {
+        const elk = new ELK();
+        return { layout: vi.fn((g: ElkNode) => elk.layout(g) as Promise<ElkNode>) };
+    };
+    /** A fresh module each time: the worker is a module-level singleton. */
+    const load = async () => { vi.resetModules(); return import('../elkWorker'); };
+
+    /** Answers a layout with `answer`, or fires its error event instead when `dies`. */
+    const stubWorker = (opts: { answer?: ElkNode; dies?: boolean }) => {
+        const instances: Array<{ posted: Array<{ cmd: string; id: number; graph?: ElkNode }> }> = [];
+        class FakeWorker {
+            onmessage: ((m: { data: unknown }) => void) | null = null;
+            posted: Array<{ cmd: string; id: number; graph?: ElkNode }> = [];
+            private errorListeners: Array<(e: unknown) => void> = [];
+            constructor() { instances.push(this); }
+            addEventListener(kind: string, l: (e: unknown) => void) { if (kind === 'error') this.errorListeners.push(l); }
+            postMessage(m: { cmd: string; id: number; graph?: ElkNode }) {
+                this.posted.push(m);
+                if (m.cmd !== 'layout') return;
+                if (opts.dies) this.errorListeners.forEach(l => l(new Error('script failed')));
+                else this.onmessage?.({ data: { id: m.id, data: opts.answer } });
+            }
+        }
+        vi.stubGlobal('Worker', FakeWorker);
+        return instances;
+    };
+
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('with no Worker, the main-thread ELK runs the graph and its positions are ELK\'s own', async () => {
+        expect(typeof Worker).toBe('undefined');
+        const { layoutOffThread } = await load();
+        const onThread = engineSpy();
+        const out = await layoutOffThread(graph(), onThread);
+        expect(onThread.layout).toHaveBeenCalledTimes(1);
+        expect(positions(out)).toEqual(positions(await new ELK().layout(graph())));
+    });
+
+    it('with a Worker, the graph goes to it and the main-thread ELK does not run', async () => {
+        const answer: ElkNode = { id: 'root', children: [{ id: 'a', x: 7, y: 9, width: 100, height: 40 }] };
+        const workers = stubWorker({ answer });
+        const { layoutOffThread } = await load();
+        const onThread = engineSpy();
+        const out = await layoutOffThread(graph(), onThread);
+        expect(positions(out)).toEqual([['a', 7, 9]]);
+        expect(onThread.layout).not.toHaveBeenCalled();
+        expect(workers).toHaveLength(1);
+        expect(workers[0].posted.filter(m => m.cmd === 'layout').map(m => m.graph?.children?.length)).toEqual([3]);
+    });
+
+    it('a worker that dies hands the waiting layout to the main thread, and is not started again', async () => {
+        const workers = stubWorker({ dies: true });
+        vi.spyOn(console, 'warn').mockImplementationOnce(() => undefined);
+        const { layoutOffThread } = await load();
+        const onThread = engineSpy();
+        const out = await layoutOffThread(graph(), onThread);
+        expect(positions(out)).toEqual(positions(await new ELK().layout(graph())));
+        await layoutOffThread(graph(), onThread);
+        expect(onThread.layout).toHaveBeenCalledTimes(2);
+        expect(workers).toHaveLength(1);
+        expect(workers[0].posted.filter(m => m.cmd === 'layout')).toHaveLength(1);
+    });
+});
+
 describe('long edges and the network-simplex placer', () => {
     /** N classes, `next` i -> i+1 around the ring and `far` i -> i+N/2: the graph of P-2026-11-04-1012. */
     const ring = (n: number) => ({
@@ -451,6 +554,18 @@ describe('Activity (UML) junctions and the grid snap', () => {
             expect(Math.abs(last.y - pt.y), `${id} end`).toBeLessThanOrEqual(0.5);
             expect(route.points.every((p, i) => i === 0 || p.x === route.points[i - 1].x || p.y === route.points[i - 1].y), id).toBe(true);
         }
+    });
+});
+
+describe('labelPathSamples: the points a drawn path is read at (P-2026-11-09-0806)', () => {
+    it('keeps the 6 px step up to the cap', () => {
+        expect(labelPathSamples(0)).toBe(2);
+        expect(labelPathSamples(600)).toBe(100);
+        expect(labelPathSamples(LABEL_PATH_MAX_SAMPLES * 6)).toBe(LABEL_PATH_MAX_SAMPLES);
+    });
+
+    it('does not follow a path across a canvas not laid out yet', () => {
+        expect(labelPathSamples(412731)).toBe(LABEL_PATH_MAX_SAMPLES);
     });
 });
 

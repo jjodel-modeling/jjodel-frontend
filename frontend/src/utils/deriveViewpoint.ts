@@ -26,12 +26,13 @@ import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
 import { isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
-import { DERIVED_NOTATIONS, canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
+import { DERIVED_LAYOUT_KEY, DERIVED_NOTATIONS, canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
 import type { DeriveChoice, DerivedNotationId } from '../components/editor-v2/viewpoint/derive/notations';
 import { uniqueModelName } from '../model/nameLookup';
 import { sketchOfMetamodel } from '../components/editor-v2/sim/metamodelSketch';
 import { EXPR_BINDING_KEY, EXPR_FOLD_KEY, decodeExprBinding, encodeExprBinding, resolveBindingNames } from '../model/expression/exprBinding';
 import { exprFoldViews } from '../model/expression/exprFoldViews';
+import { EXPR_FOLD_LAYOUT } from '../components/editor-v2/utils/elkLayout';
 import briefBinding from '../model/expression/bindings/brief.json';
 
 /** The project's viewpoints, in its order: where the dialog looks for the latest derived viewpoint. */
@@ -150,7 +151,7 @@ export function createExprFoldViewpoint(metamodelId: string): DViewPoint | null 
         vp.isExclusiveView = true;
         vp.isValidation = false;
         (vp as any).viewpointType = 'syntax';
-        (vp as any)._state = { [EXPR_FOLD_KEY]: true };
+        (vp as any)._state = { [EXPR_FOLD_KEY]: true, [DERIVED_LAYOUT_KEY]: JSON.stringify(EXPR_FOLD_LAYOUT) };
     });
     for (const v of views) {
         DViewElement.new2(v.ir.label ?? `View for ${v.className}`, '', viewpoint, (d) => {

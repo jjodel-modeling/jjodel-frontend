@@ -22,6 +22,7 @@ import type { ElkNode, ElkExtendedEdge } from 'elkjs';
 import type { Node, Edge } from '@xyflow/react';
 import type { AnchorSide } from '../types';
 import { JUNCTION_HALF } from '../viewpoint/ir/irJunctions';
+import { layoutOffThread } from './elkWorker';
 import type { LabelAnchor } from '../viewpoint/ir/irTypes';
 
 const elk = new ELK();
@@ -195,6 +196,8 @@ export interface ElkLayoutProfile {
     spacing?: { node?: number; layer?: number; edgeNode?: number; edgeEdge?: number; label?: number };
     /** stress only: the desired edge length. */
     edgeLength?: number;
+    /** stress only: the most iterations of the majorization; absent, ELK runs until it converges. */
+    iterationLimit?: number;
 }
 
 /** The compact spacing measured in Phase 1 (V4): node 40, layer 56, edge-node 24, edge-edge 16, label 4. */
@@ -203,6 +206,14 @@ export const COMPACT_SPACING = { node: 40, layer: 56, edgeNode: 24, edgeEdge: 16
 /** A metamodel canvas without a derived profile (Phase 1 §5.1: V4-ns best on both class scenes). */
 export const CLASS_VIEW_PROFILE: ElkLayoutProfile = {
     direction: 'DOWN', edgeRouting: 'ORTHOGONAL', nodePlacement: 'NETWORK_SIMPLEX', spacing: { ...COMPACT_SPACING },
+};
+
+/**
+ * A fold viewpoint (P-2026-11-09-0925): a few owners with hundreds of leaves, which layered puts in one row many screens
+ * wide. Stress packs them; the iteration limit bounds its run on that size.
+ */
+export const EXPR_FOLD_LAYOUT: ElkLayoutProfile = {
+    algorithm: 'stress', overlapRemoval: true, edgeLength: 240, spacing: { node: 24 }, iterationLimit: 150,
 };
 
 /** A label drawn on an edge, measured in the DOM: the centre one, or the one at either end. */
@@ -477,6 +488,7 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
         layoutOptions = {
             'elk.algorithm': 'stress',
             'elk.stress.desiredEdgeLength': String(profile.edgeLength ?? 110),
+            ...(profile.iterationLimit !== undefined ? { 'elk.stress.iterationLimit': String(profile.iterationLimit) } : {}),
             'elk.padding': padding,
         };
     } else {
@@ -511,6 +523,17 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
         };
     }
     return { id: 'root', layoutOptions, children, edges: elkEdges };
+}
+
+/** The most points a drawn path is read at to find a label's edge; up to 3072 px a path keeps its 6 px step. */
+export const LABEL_PATH_MAX_SAMPLES = 512;
+
+/**
+ * How many segments a drawn path of length `len` is cut into when a label looks for its edge. Bounded: before a first
+ * layout a path can cross the whole canvas, and 248 edges of ddr4_closed_v spent 7.2 s in getPointAtLength.
+ */
+export function labelPathSamples(len: number): number {
+    return Math.max(2, Math.min(LABEL_PATH_MAX_SAMPLES, Math.ceil(len / 6)));
 }
 
 /**
@@ -728,11 +751,11 @@ export async function computeElkAutoLayout(nodes: Node[], edges: Edge[], input: 
 async function layoutOnce(nodes: Node[], edges: Edge[], input: ElkAutoLayoutInput): Promise<ElkAutoLayoutResult> {
     const graph = buildElkGraph(nodes, edges, input);
     if (!graph.children?.length) return { positions: new Map(), routes: new Map() };
-    let out = await elk.layout(graph);
+    let out = await layoutOffThread(graph, elk);
     const profile = input.profile;
     if (profile?.algorithm === 'stress' && profile.overlapRemoval) {
         // Q6: ELK's overlap removal on the stress positions; edges are straight lines afterwards.
-        const second = await elk.layout({
+        const second = await layoutOffThread({
             id: 'root',
             layoutOptions: {
                 'elk.algorithm': 'sporeOverlap',
@@ -741,7 +764,7 @@ async function layoutOnce(nodes: Node[], edges: Edge[], input: ElkAutoLayoutInpu
             },
             children: (out.children ?? []).map(c => ({ id: c.id, x: c.x, y: c.y, width: c.width, height: c.height })),
             edges: [],
-        });
+        }, elk);
         const moved = new Map((second.children ?? []).map(c => [c.id, c] as const));
         out = { ...out, children: (out.children ?? []).map(c => ({ ...c, x: moved.get(c.id)?.x ?? c.x, y: moved.get(c.id)?.y ?? c.y })) };
     }
