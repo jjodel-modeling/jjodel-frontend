@@ -524,7 +524,7 @@ active log is not touched by this lane.
 **Regressions**: no
 **Out-of-scope changes**: no (eight files, all in the DOVE of the prompt: dcnStep.ts and test, simBridge.ts and test, SimulationPanel.tsx, the probe, this inbox, the prompt)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (crop 1-stepback-chips read by the lane: slider at step 0, chips dji.Mode = Charging, wau1.Alert = Safe; chat to read it)
+**Smoke visivo**: passato (GO given; 1-stepback-chips read by the chat 2026-11-09 01:13: slider at step 0, chips dji.Mode = Charging)
 **Notes**: Probe 18/18, port 3155. Typecheck, scripts, build 0; vitest 15562 passed, 3 known import reds. Bench 12/13, survivor equivalent. Causa per ticket: 1606 (c), bare names outside the context; 2042 (c), the panel's view off the version. Slot keeps σ as self.[name]; roots win over an argument, an argument over an instance. Petri chips stay live: the panel's Petri line is live too. dji.charge(rate) not probed: in the drone charge is a monitor, no parameter.
 **Prompt document name**: 2026-11-09 00:55
 
