@@ -147,3 +147,14 @@ Alfonso 16:23 «procedi in lane auto» on the candidate tickets, 17:58 «si a tu
 - C2h: index on the read-only rows of a frozen reference field.
 
 No lane of this chat running, no scheduled check left.
+
+## Update 2026-11-09 (chat C-2026-11-08-1908)
+
+The chat took over the textual part of the codegen front on 2026-11-08 at 22:25 (Alfonso: «procedi con lane auto»), after finding that R-TXT-42 said «implemented in step D» while the step D report never planned the pinned hover card.
+
+- D6, the pinned hover card of R-TXT-42 (P-2026-11-08-2330, P-2026-11-09-0020; discovery 53680294f; code e536fc071, 0d9fd1fa9, 34a586c28): opened by a Pin link in the hover or at the caret by a shortcut, rendered with react-markdown in a Monaco content widget, command links kept clickable, closed by the five rules of R-TXT-42. Monaco's hover covered the card after Pin: cleared with the public options hover.enabled and hover.sticky off from the Pin link, restored on close, unmount or a pointer move over 400 px. The first «card left of the editor» was a probe artefact (scrollLeft 335 left by a Playwright retry), not a product defect.
+- D6b (P-2026-11-09-0950, 5221842dd): Option+H typed «∆» on Alfonso's Italian layout; the shortcut is now the chord Cmd+K Cmd+P (Ctrl+K Ctrl+P off the Mac). Option plus a letter is not safe in a text editor on macOS.
+- Merged 7255e5c36 (P-2026-11-09-1001, gates green, vitest 15865 with the 3 known import reds), closure a8c327925. Visual GO by Alfonso on the D6 crops (09:45); D6b accepted by the chat on DOM checks 12/12.
+- Open: with no pointer movement after Pin the hover stays until the first pixel of movement; the restore on unmount is not measured; one surviving mutant (referencesAt mock ignores its argument), low ticket; discovery section 5.2 was wrong about React 18 portal listeners (the native listeners stay); a Cmd+K listener at Catalog.tsx:190 exists on dashboard pages only.
+- Prompt-ID collision: P-2026-11-08-2230 was taken by another chat in the same minute; D6 was renumbered P-2026-11-08-2330 (evidence for #720).
+- Worktree ~/jjodel-w-textd6 and branch textual-d6-pinned-hover to retire on Alfonso's yes.
