@@ -52,7 +52,7 @@ import { hasCreatableViewpoint, getLastEditedViewpointName, createViewInWorkbenc
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { toast } from '../Toast/toastDispatch';
 import { JjodelEvents } from '../../events/registry';
-import { createVertexForObject, createCompositionEdgeForObjects } from '../editor-v2/sync/canvasToJjom';
+import { createVertexForObject, createCompositionEdgeForObjects, planSlotAppend } from '../editor-v2/sync/canvasToJjom';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -392,7 +392,7 @@ function ContextMenuComponentInner(props: AllProps) {
                             close();
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
-                            l.values = [...(l.values as LObject[]), child];
+                            if (child) l.values = planSlotAppend(l as any, (child as LObject).id) as any;
                             syncChildToFlow(child as LObject);
                         }} className={'col item'} tabIndex={0}>
                             <Tooltip tooltip={'add to "'+ lref.name+'" reference'}><span>{lcname}</span></Tooltip>

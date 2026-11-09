@@ -110,6 +110,7 @@ import {
     syncCreateObject,
     syncCreateCompositionLink,
     syncCreateReferenceLink,
+    planSlotAppend,
     syncEdgeRefKind,
     syncRemoveAttribute,
     syncRemoveOperation,
@@ -2356,8 +2357,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const writeSlot = (lObject: any, featName: string, objId: string) => {
                 const slot = lObject['$' + featName];
                 if (!slot) return;
-                const meaningful = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
-                slot.values = [...meaningful, objId];
+                slot.values = planSlotAppend(slot, objId);
             };
             const writeSlotsAndMount = (attempt: number) => {
                 const lObject = (LPointerTargetable.fromPointer(vertexId) as any)?.model;
