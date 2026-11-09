@@ -189,8 +189,8 @@ export function openTextualSession(model: Monaco.editor.ITextModel, input: Textu
 
 const readingOf = (model: Monaco.editor.ITextModel): TextualReading | null => sessions.get(model)?.current() ?? null;
 
-/** The shortcut of the pinned card (lane D6, report §2): shown in the hover, bound by PinnedHoverCard.tsx. */
-const PIN_SHORTCUT: ShortcutConfig = { key: 'H', modifiers: ['alt'] };
+/** The shortcut of the pinned card (lane D6b), one entry per stroke of the chord: shown in the hover, bound by PinnedHoverCard.tsx. Option+letter types a character on macOS. */
+const PIN_SHORTCUT: readonly ShortcutConfig[] = [{ key: 'K', modifiers: ['cmd'] }, { key: 'P', modifiers: ['cmd'] }];
 const pinHandlers = new Map<Monaco.editor.ICodeEditor, (offset: number) => void>();
 const linesOf = (model: Monaco.editor.ITextModel): HoverCardLines => ({
     lineOf: offset => model.getPositionAt(offset).lineNumber,
@@ -302,7 +302,7 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             const h = r?.analysis.hoverAt(offset);
             if (!r || !h) return null;
             const reveal = (label: string, at: number): string => commandLink(TEXTUAL_REVEAL_COMMAND, model, label, at);
-            const pin = `${commandLink(TEXTUAL_PIN_COMMAND, model, 'Pin', offset)} · ${formatShortcut(PIN_SHORTCUT)}`;
+            const pin = `${commandLink(TEXTUAL_PIN_COMMAND, model, 'Pin', offset)} · ${PIN_SHORTCUT.map(formatShortcut).join(' ')}`;
             const links = [...hoverLinksMarkdown(hoverLinks(r.analysis, offset, linesOf(model)), reveal), pin].map(value => ({ value, isTrusted: trusted }));
             return { range: rangeOf(model, h), contents: [...h.contents.map(value => ({ value })), ...links] };
         },

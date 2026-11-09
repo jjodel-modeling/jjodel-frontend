@@ -1,6 +1,6 @@
 /**
  * The pinned hover card of the Text tab (lane D6, R-TXT-42; design in docs/discovery/discovery_2026-11-08_textual_d6_pinned_hover.md):
- * a Monaco content widget opened by the hover's Pin link or by Alt+H, one per editor, closed by the tab's own rules: ×,
+ * a Monaco content widget opened by the hover's Pin link or by the chord Cmd+K Cmd+P, one per editor, closed by the tab's own rules: ×,
  * Escape, a click on the text, an edit, its line out of view. Public Monaco API only.
  */
 
@@ -99,7 +99,7 @@ export function PinnedHoverCard({ editor, monaco, ui, notation }: PinnedHoverCar
         const action = editor.addAction({
             id: PIN_ACTION_ID,
             label: 'Pin hover card',
-            keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.KeyH],
+            keybindings: [monaco.KeyMod.chord(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP)],
             keybindingContext: 'editorTextFocus',
             run: () => {
                 const m = editor.getModel();
