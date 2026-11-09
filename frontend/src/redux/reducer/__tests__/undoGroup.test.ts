@@ -517,3 +517,406 @@ describe('an instantiation is one undo entry with exact contents', () => {
         expect(undone.idlookup.O1.name).toBe('a');
     });
 });
+
+// A canvas create opens its own undo entry (#682, P-2026-11-08-1202). The delta of a create carries a model root array
+// and, on the canvas, `vertexs` too (one batch, discovery §4.5); the sync's vertex in another graph lands later.
+// Mutation bench of the commit: dropping the root guard of the graph rule, the compose branch or the window override
+// each kills a test below.
+
+function canvasState(): any {
+    return {
+        timestamp: T0 - 5000, action_title: '', action_description: '', _lastSelected: { node: '' },
+        objects: [], classs: [], enumerators: [], packages: [], vertexs: [], graphs: [],
+        idlookup: { O1: { id: 'O1', className: 'DObject', name: 'lock' }, BOX: { id: 'BOX', className: 'DValue', values: [] } },
+    };
+}
+/** A model element and its vertex in one batch, the shape of `syncCreateObject` and of `syncCreateClass`. */
+const canvasCreate = (root: string, s: any, id: string, vid: string) => batch(`create ${id}`, [
+    setRoot(`idlookup.${id}`, { id, className: 'DObject', name: '' }),
+    setRoot(`idlookup.${vid}`, { id: vid, className: 'DVertex', model: id }),
+    setRoot(root, [...s[root], id]),
+    setRoot('vertexs', [...s.vertexs, vid]),
+]);
+/** A create with no vertex in it (`DObject.new`, the JjScript console). */
+const bareCreate = (s: any, id: string) => batch(`create ${id}`, [
+    setRoot(`idlookup.${id}`, { id, className: 'DObject', name: '' }),
+    setRoot('objects', [...s.objects, id]),
+]);
+/** The sync's vertex, in the same graph or another one: only graph roots. */
+const syncVertex = (s: any, vid: string, model: string) => batch(`vertex ${vid}`, [
+    setRoot(`idlookup.${vid}`, { id: vid, className: 'DVertex', model }),
+    setRoot('vertexs', [...s.vertexs, vid]),
+]);
+/** A settled move: the vertex's coordinates, no root array. */
+const move = (vid: string, x: number) => batch('move', [set(vid, 'x', x)]);
+/** The append of `EditorV2.tsx:2568`: a SetField-only batch on the slots. */
+const append = (slot: string, value: string) => batch('graphVertex create in container', [set(slot, 'values', [value])]);
+
+describe('a canvas create opens its own undo entry (#682)', () => {
+    beforeEach(() => {
+        clock = T0;
+        beginUndoGroup(USER);
+        endUndoGroup();
+    });
+
+    function afterEdit(): any { return at(0, canvasState(), rename('O1', 'a')); }
+
+    it('a delta with objects and vertexs at +1000 ms is an entry and one undo restores idlookup and the root arrays', () => {
+        let s = afterEdit();
+        const before = s;
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(ids(undone)).toEqual(ids(before));
+        expect(undone.objects).toEqual([]);
+        expect(undone.vertexs).toEqual([]);
+        expect(undone.idlookup.O1.name).toBe('a');
+        expect(history()).toHaveLength(1);
+        const redone = at(3500, undone, redoAction());
+        expect(ids(redone)).toContain('I1');
+        expect(ids(redone)).toContain('V1');
+        expect(redone.objects).toEqual(['I1']);
+    });
+
+    it('the same delta at +300 ms, inside the 450 ms window, is also an entry and leaves the older edit in place', () => {
+        let s = afterEdit();
+        s = at(300, s, canvasCreate('objects', s, 'I1', 'V1'));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.I1).toBeUndefined();
+        expect(undone.idlookup.V1).toBeUndefined();
+        expect(undone.idlookup.O1.name).toBe('a');
+    });
+
+    it('two creates 300 ms apart are two entries', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(1300, s, canvasCreate('objects', s, 'I2', 'V2'));
+        expect(history()).toHaveLength(3);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.I2).toBeUndefined();
+        expect(undone.idlookup.I1).toBeDefined();
+    });
+
+    it('a create before the first interaction opens no entry: the window override leaves the other guards alone', () => {
+        h.U.userHasInteracted = false;
+        try {
+            let s = at(0, canvasState(), rename('O1', 'a'));
+            s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+            expect(history()).toHaveLength(0);
+        } finally { h.U.userHasInteracted = true; }
+    });
+
+    it('a vertexs-only delta right after a create merges into it and one undo leaves no DVertex', () => {
+        let s = afterEdit();
+        s = at(1000, s, bareCreate(s, 'I1'));
+        expect(history()).toHaveLength(2);
+        s = at(1300, s, syncVertex(s, 'V1', 'I1'));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.I1).toBeUndefined();
+        expect(undone.idlookup.V1).toBeUndefined();
+        expect(undone.vertexs).toEqual([]);
+        expect(undone.idlookup.O1.name).toBe('a');
+    });
+
+    it('the sync vertex of another graph, past the window, still merges into the create and undoes with it', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(2000, s, syncVertex(s, 'V2', 'I1'));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.V1).toBeUndefined();
+        expect(undone.idlookup.V2).toBeUndefined();
+        expect(undone.vertexs).toEqual([]);
+    });
+
+    it('a move is an entry', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(3000, s, move('V1', 700));
+        expect(history()).toHaveLength(3);
+        const undone = at(4000, s, undoAction());
+        expect(undone.idlookup.V1.x).toBeUndefined();
+        expect(undone.idlookup.I1).toBeDefined();
+    });
+
+    it('a container create is one step: the SetField-only append composes into the create and one undo clears the slot', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(1025, s, append('BOX', 'I1'));
+        expect(history()).toHaveLength(2);
+        s = at(1300, s, syncVertex(s, 'V2', 'I1'));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.I1).toBeUndefined();
+        expect(undone.idlookup.V1).toBeUndefined();
+        expect(undone.idlookup.V2).toBeUndefined();
+        expect([...undone.idlookup.BOX.values]).toEqual([]);
+        expect(undone.idlookup.O1.name).toBe('a');
+    });
+
+    for (const root of ['classs', 'enumerators', 'packages']) {
+        it(`M2: a delta adding to root ${root} is an entry, even inside the window, and one undo removes element and vertex`, () => {
+            let s = afterEdit();
+            s = at(300, s, canvasCreate(root, s, 'C1', 'V1'));
+            expect(history()).toHaveLength(2);
+            const undone = at(3000, s, undoAction());
+            expect(undone.idlookup.C1).toBeUndefined();
+            expect(undone.idlookup.V1).toBeUndefined();
+            expect(undone[root]).toEqual([]);
+            expect(undone.idlookup.O1.name).toBe('a');
+        });
+    }
+
+    it('a delete inside the window does not open an entry: only a lengthening of a root does', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(3000, s, rename('O1', 'b'));
+        expect(history()).toHaveLength(3);
+        s = at(3100, s, batch('delete', [setRoot('objects', [])]));
+        expect(history()).toHaveLength(3);
+    });
+
+    it('R-UNDO-5: two non-graph writes in the window keep the first-wins merge of objectMergeInPlace', () => {
+        let s = at(0, canvasState(), rename('O1', 'a'));
+        s = at(1000, s, rename('O1', 'b'));
+        expect(history()).toHaveLength(2);
+        s = at(1200, s, batch('other', [set('BOX', 'values', ['x'])]));
+        expect(history()).toHaveLength(2);
+        expect(keysOf(top().idlookup)).toEqual(['O1']);
+    });
+
+    it('a new graph after a create does not compose into it: the undo of the create leaves the open tab its graph', () => {
+        let s = afterEdit();
+        s = at(1000, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(2000, s, batch('open a tab', [setRoot('idlookup.G1', { id: 'G1', className: 'DGraph' }), setRoot('graphs', ['G1'])]));
+        expect(history()).toHaveLength(2);
+        const undone = at(3000, s, undoAction());
+        expect(undone.idlookup.I1).toBeUndefined();
+        expect(undone.idlookup.G1).toBeDefined();
+    });
+
+    it('a graph delta on an entry no create opened keeps the legacy merge: the compose belongs to a create only', () => {
+        let s = afterEdit();
+        s = at(1000, s, syncVertex(s, 'V1', 'O1'));
+        expect(history()).toHaveLength(1);
+        expect(keysOf(top().idlookup)).toEqual(['O1']);
+    });
+
+    it('group path unchanged: a create inside a group folds into the group entry', () => {
+        let s = afterEdit();
+        beginUndoGroup();
+        s = at(300, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(600, s, canvasCreate('objects', s, 'I2', 'V2'));
+        endUndoGroup();
+        expect(history()).toHaveLength(2);
+    });
+
+    it('tail branch unchanged: a late create on a group entry still folds into it, in the window and past it', () => {
+        let s = afterEdit();
+        beginUndoGroup();
+        s = at(300, s, canvasCreate('objects', s, 'I1', 'V1'));
+        s = at(600, s, canvasCreate('objects', s, 'I2', 'V2'));
+        endUndoGroup();
+        s = at(800, s, bareCreate(s, 'I3'));
+        expect(history()).toHaveLength(2);
+        s = at(3000, s, canvasCreate('objects', s, 'I4', 'V4'));
+        expect(history()).toHaveLength(2);
+        const undone = at(4000, s, undoAction());
+        for (const id of ['I1', 'I2', 'I3', 'I4', 'V1', 'V2', 'V4']) expect(undone.idlookup[id]).toBeUndefined();
+        expect(undone.objects).toEqual([]);
+    });
+});
+
+// A tab open writes no undo entry (option B, P-2026-11-08-1800). The delta of a tab open lengthens root `graphs` and
+// writes no model root; a rebuild after an Undo is what made the duplicate graphs (discovery 2026-11-08, section 5).
+// Mutation bench in the commit message.
+
+function tabState(): any {
+    return {
+        timestamp: T0 - 5000, action_title: '', action_description: '', _lastSelected: { node: '' },
+        objects: [], classs: [], enumerators: [], packages: [], models: [], m1models: [], m2models: [], vertexs: [], graphs: [],
+        idlookup: { O1: { id: 'O1', className: 'DObject', name: 'lock' } },
+    };
+}
+/** The classic graph of a tab: its record and the root id, the shape of `DGraph.new` (`ModelTab.tsx:35`). */
+const openGraph = (s: any, gid: string) => batch(`open ${gid}`, [
+    setRoot(`idlookup.${gid}`, { id: gid, className: 'DGraph' }),
+    setRoot('graphs', [...s.graphs, gid]),
+]);
+/** The sync's populate: the v2-flow graph, written twice in the root as `useJjomSync.ts:815` does, and a vertex. */
+const populate = (s: any, gid: string, vid: string) => batch(`populate ${gid}`, [
+    setRoot(`idlookup.${gid}`, { id: gid, className: 'DGraph', graphStyle: 'v2-flow' }),
+    setRoot(`idlookup.${vid}`, { id: vid, className: 'DVertex' }),
+    setRoot('graphs', [...s.graphs, gid, gid]),
+    setRoot('vertexs', [...s.vertexs, vid]),
+]);
+const graphRecords = (s: any) => Object.values(s.idlookup).filter((o: any) => o?.className === 'DGraph').map((o: any) => o.id).sort();
+const orphanGraphs = (s: any) => graphRecords(s).filter((id) => !s.graphs.includes(id));
+
+describe('a tab open writes no undo entry (option B)', () => {
+    beforeEach(() => {
+        clock = T0;
+        beginUndoGroup(USER);
+        endUndoGroup();
+    });
+
+    const afterEdit = () => at(0, tabState(), rename('O1', 'a'));
+
+    for (const dt of [1000, 200]) {
+        it(`a graph-only delta ${dt} ms after an edit adds no entry and leaves the entry below as it was`, () => {
+            let s = afterEdit();
+            const below = top();
+            const before = JSON.stringify(below);
+            s = at(dt, s, openGraph(s, 'G1'));
+            expect(s.graphs).toEqual(['G1']);
+            expect(history()).toHaveLength(1);
+            expect(h.statehistory.all.undoable).toHaveLength(1);
+            expect(top()).toBe(below);
+            expect(JSON.stringify(below)).toBe(before);
+        });
+    }
+
+    it('a populate with graphs and vertices adds no entry either', () => {
+        let s = afterEdit();
+        const before = JSON.stringify(top());
+        s = at(1000, s, populate(s, 'G2', 'V1'));
+        expect(history()).toHaveLength(1);
+        expect(JSON.stringify(top())).toBe(before);
+    });
+
+    it('with an empty stack a tab open pushes nothing', () => {
+        let s = tabState();
+        s = at(1000, s, openGraph(s, 'G1'));
+        s = at(1300, s, populate(s, 'G2', 'V1'));
+        expect(history()).toHaveLength(0);
+        expect(h.statehistory.all.undoable).toHaveLength(0);
+    });
+
+    it('Undo below a tab open leaves the graphs where they are, no orphan, and Redo changes nothing on them', () => {
+        let s = afterEdit();
+        s = at(1000, s, openGraph(s, 'G1'));
+        s = at(1300, s, populate(s, 'G2', 'V1'));
+        s = at(3000, s, rename('O1', 'b'));
+        expect(history()).toHaveLength(2);
+        const graphsOpen = [...s.graphs];
+        s = at(4000, s, undoAction());
+        expect(s.idlookup.O1.name).toBe('a');
+        s = at(5000, s, undoAction());
+        expect(s.idlookup.O1.name).toBe('lock');
+        expect([...s.graphs]).toEqual(graphsOpen);
+        expect(graphRecords(s)).toEqual(['G1', 'G2']);
+        expect(orphanGraphs(s)).toEqual([]);
+        s = at(6000, s, redoAction());
+        expect(s.idlookup.O1.name).toBe('a');
+        expect([...s.graphs]).toEqual(graphsOpen);
+        expect(orphanGraphs(s)).toEqual([]);
+    });
+
+    it('two tabs on one model: neither open adds an entry, Undo below them keeps every graph', () => {
+        let s = afterEdit();
+        s = at(1000, s, openGraph(s, 'G1'));
+        s = at(1300, s, populate(s, 'G2', 'V1'));
+        s = at(2000, s, openGraph(s, 'G3'));
+        expect(history()).toHaveLength(1);
+        s = at(3000, s, undoAction());
+        expect(s.idlookup.O1.name).toBe('lock');
+        expect(graphRecords(s)).toEqual(['G1', 'G2', 'G3']);
+        expect(orphanGraphs(s)).toEqual([]);
+    });
+
+    it('a tab open does not disturb the entry of a create on top: its Undo still removes the create alone', () => {
+        let s = at(0, tabState(), rename('O1', 'a'));
+        s = at(1000, s, batch('create', [setRoot('idlookup.I1', { id: 'I1', className: 'DObject' }), setRoot('objects', ['I1'])]));
+        s = at(1100, s, openGraph(s, 'G1'));
+        expect(history()).toHaveLength(2);
+        s = at(3000, s, undoAction());
+        expect(s.idlookup.I1).toBeUndefined();
+        expect(s.idlookup.G1).toBeDefined();
+        expect(s.graphs).toEqual(['G1']);
+    });
+
+    for (const root of ['objects', 'classs', 'enumerators', 'packages']) {
+        it(`a delta adding a graph and writing root ${root} keeps its own entry and one undo removes both`, () => {
+            let s = afterEdit();
+            s = at(1000, s, batch('both', [
+                setRoot('idlookup.X1', { id: 'X1', className: 'DObject' }), setRoot(root, ['X1']),
+                setRoot('idlookup.G1', { id: 'G1', className: 'DGraph' }), setRoot('graphs', ['G1']),
+            ]));
+            expect(history()).toHaveLength(2);
+            s = at(3000, s, undoAction());
+            expect(s.idlookup.X1).toBeUndefined();
+            expect(s.idlookup.G1).toBeUndefined();
+            expect(s.graphs).toEqual([]);
+        });
+    }
+
+    for (const root of ['models', 'm1models', 'm2models']) {
+        it(`a delta adding a graph and writing root ${root} stays on its path: on an entry it merges, on an empty stack it pushes`, () => {
+            const both = (s: any) => batch('model and graph', [
+                setRoot('idlookup.M1', { id: 'M1', className: 'DModel' }), setRoot(root, ['M1']),
+                setRoot('idlookup.G1', { id: 'G1', className: 'DGraph' }), setRoot('graphs', ['G1']),
+            ]);
+            const s = afterEdit();
+            at(1000, s, both(s));
+            expect(history()).toHaveLength(1);
+            expect(top().graphs).toBeDefined();
+            for (const k of Object.keys(h.statehistory)) delete h.statehistory[k];
+            h.statehistory.globalcanundostate = true;
+            h.statehistory.all = new h.UserHistory();
+            const empty = tabState();
+            at(1000, empty, both(empty));
+            expect(history()).toHaveLength(1);
+        });
+    }
+
+    it('a delta writing a model root by shortening it is not a tab open: it keeps its path', () => {
+        let s = { ...afterEdit(), objects: ['X1', 'X2'] };
+        s = at(1000, s, batch('both', [setRoot('objects', ['X1']), setRoot('idlookup.G1', { id: 'G1', className: 'DGraph' }), setRoot('graphs', ['G1'])]));
+        expect(top().graphs).toBeDefined();
+    });
+
+    it('a delta that shortens root graphs is not a tab open: it stays on the merge path', () => {
+        let s = afterEdit();
+        s = { ...s, graphs: ['G1', 'G2'] };
+        s = at(1000, s, batch('remove', [setRoot('graphs', ['G1'])]));
+        expect(history()).toHaveLength(1);
+        expect(top().graphs).toBeDefined();
+    });
+
+    it('a delta that rewrites root graphs at the same length is not a tab open: it stays on the merge path', () => {
+        let s = afterEdit();
+        s = { ...s, graphs: ['G1', 'G2'] };
+        s = at(1000, s, batch('reorder', [setRoot('graphs', ['G2', 'G1'])]));
+        expect(history()).toHaveLength(1);
+        expect(top().graphs).toBeDefined();
+    });
+
+    it('inside an open group a graph-only delta still joins the group: one undo removes it', () => {
+        let s = afterEdit();
+        beginUndoGroup();
+        s = at(1000, s, createInstance('I1'));
+        s = at(1300, s, openGraph(s, 'G1'));
+        endUndoGroup();
+        expect(history()).toHaveLength(2);
+        s = at(3000, s, undoAction());
+        expect(s.idlookup.I1).toBeUndefined();
+        expect(s.idlookup.G1).toBeUndefined();
+        expect(s.graphs).toEqual([]);
+    });
+
+    it('on the tail of a group a graph-only delta still composes into it (group path unchanged)', () => {
+        let s = afterEdit();
+        beginUndoGroup();
+        s = at(1000, s, createInstance('I1'));
+        s = at(1300, s, createInstance('I2'));
+        endUndoGroup();
+        s = at(2000, s, openGraph(s, 'G1'));
+        expect(history()).toHaveLength(2);
+        expect(keysOf(top().idlookup)).toEqual(['G1', 'I1', 'I2']);
+        s = at(3000, s, undoAction());
+        expect(s.idlookup.G1).toBeUndefined();
+        expect(s.graphs).toEqual([]);
+    });
+});

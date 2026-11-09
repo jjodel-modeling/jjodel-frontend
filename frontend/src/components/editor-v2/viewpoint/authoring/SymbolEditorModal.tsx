@@ -50,7 +50,7 @@ import { resolvePreviewInstances, thumbnailCornerRadius, type ResolvedPreviewIns
 import { makeReadCtx } from '../ir/irReadCtxLproxy';
 import { useCanvasNodeBoxes } from './useCanvasNodeBox';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
-import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { getLayoutKeyFor, getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import { authoredDefaultSize } from '../../nodes/nodeSizing';
 import { IR_SECTION_LABELS, IR_TAB_LABELS, type IRSectionId, type IRTabId } from './irTabs';
 import './SymbolEditorModal.scss';
@@ -189,6 +189,10 @@ function instanceAxesPreset(r: ResolvedPreviewInstance): SymbolPreset {
 
 export const SymbolEditorModal: React.FC = () => {
     const [viewId, setViewId] = useState<string | null>(null);
+    // The viewpoint of the tab that opened the modal (multi-tab L5), when the opener names one:
+    // the instance sizes below are read under its layout key. `undefined` (the views editor, a
+    // dock panel with no tab) reads the root's key, as before.
+    const [openerViewpointId, setOpenerViewpointId] = useState<string | null | undefined>(undefined);
     // The nav entry in force. One piece of state for both the tab and the section:
     // they are two projections of one choice, and keeping them apart would let them
     // disagree (a section of Appearance selected while the Text body is showing).
@@ -206,9 +210,10 @@ export const SymbolEditorModal: React.FC = () => {
 
     useEffect(() => {
         const handler = (e: Event) => {
-            const detail = (e as CustomEvent<{ viewId?: string }>).detail;
+            const detail = (e as CustomEvent<{ viewId?: string; viewpointId?: string | null }>).detail;
             if (detail?.viewId) {
                 setViewId(detail.viewId);
+                setOpenerViewpointId(detail.viewpointId);
                 setNavKey('symbol');
                 setLastApplied(null);
                 setPickerOpen(false);
@@ -267,7 +272,7 @@ export const SymbolEditorModal: React.FC = () => {
     // reason as the selector of useIRView (irResolve.ts:49-72).
     const instanceSig = useSelector((s: any): string => {
         const lookup = s?.idlookup ?? {};
-        const layoutKey = getLayoutKeyOf(s);
+        const layoutKey = openerViewpointId === undefined ? getLayoutKeyOf(s) : getLayoutKeyFor(s, openerViewpointId);
         const parts: string[] = [];
         for (const b of boxes) {
             const raw = lookup[b.vertexId];
@@ -300,7 +305,7 @@ export const SymbolEditorModal: React.FC = () => {
     const instances = useMemo(() => {
         const s: any = store.getState();
         const lookup = s?.idlookup ?? {};
-        const layoutKey = getLayoutKeyOf(s);
+        const layoutKey = openerViewpointId === undefined ? getLayoutKeyOf(s) : getLayoutKeyFor(s, openerViewpointId);
         const readCtx = makeReadCtx(lookup);
         const inputs: { objectId: string; box: { w: number; h: number }; sizeCaption: string }[] = [];
         for (const b of boxes) {

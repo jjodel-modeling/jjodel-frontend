@@ -44,12 +44,16 @@ function ModelTabComponent(props: AllProps) {
     // is no longer mounted — EditorSwitch renders the flow editor only.
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu graph={graphid}/>
-        <EditorSwitch modelid={model.id} />
+        <EditorSwitch modelid={model.id} tabId={props.tabId} initialViewpointId={props.initialViewpointId} />
     </div>);
 }
 interface OwnProps {
     modelid: Pointer<DModel, 1, 1, LModel>,
     metamodelid?: Pointer<DModelElement, 1, 1, LModelElement>,
+    /** The dock id of this tab when it is not the model's first (R-MT-9). */
+    tabId?: string,
+    /** The viewpoint this tab starts on, null for abstract syntax. Omitted: as EditorSwitch decides. */
+    initialViewpointId?: string | null,
 }
 interface StateProps { model: LModel, graph?: LGraph }
 interface DispatchProps { }

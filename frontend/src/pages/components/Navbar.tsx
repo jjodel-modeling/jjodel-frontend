@@ -37,6 +37,7 @@ import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
+import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -703,9 +704,10 @@ function NavbarComponent(props: AllProps) {
             const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
             if (!activeId) return null;
             const state = store.getState() as any;
-            const raw = state[activeId] || state.idlookup?.[activeId];
+            const modelId = modelOfTabId(activeId);
+            const raw = state[modelId] || state.idlookup?.[modelId];
             if (!raw) return null;
-            return { id: activeId, isModel: raw.isMetamodel === false };
+            return { id: modelId, isModel: raw.isMetamodel === false };
         } catch { return null; }
     }, []);
 
@@ -1696,6 +1698,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
         {name: 'divisor'},
         {name: 'What\'s New in Jjodel', function: ()=> open("https://github.com/jjodel-modeling/jjodel-frontend/releases"), icon: <i className="bi bi-bell" />},
+        {name: 'Tips', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.TIPS_BROWSER_OPEN)), icon: <i className="bi bi-lightbulb" />},
         {name: 'Homepage', function: ()=> open("https://jjodel.io"), icon: <i className="bi bi-house" />},
         {name: 'divisor'},
         {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
@@ -1826,7 +1829,7 @@ function NavbarComponent(props: AllProps) {
                         // the backing DModel was deleted (or never existed) and the tab is
                         // a ghost: skip it instead of fabricating a placeholder "Unnamed M".
                         // Same existence-check pattern used in ProjectEditor.tsx:2343.
-                        const raw = (state as any)[id] || (state as any).idlookup?.[id];
+                        const raw = (state as any)[modelOfTabId(id)] || (state as any).idlookup?.[modelOfTabId(id)];
                         if (raw) {
                             title = raw.name || 'Unnamed';
                             type = raw.isMetamodel ? 'metamodel' : 'model';
@@ -1841,19 +1844,39 @@ function NavbarComponent(props: AllProps) {
                 // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
                 // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
                 // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
+                // A model tab opened beside another (R-MT-24, P-2026-11-08-1608) the same way; the target of a Refactoring
+                // tab (`jjs_`, P-2026-10-25-0040) and a metamodel are not: that split has no entry of its own in the strip.
+                const besideModels = !String(activeId || '').startsWith('jjs_');
                 const walkBeside = (node: any): void => {
                     if (!node || node === modelsPanel) return;
                     if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
                     const shown = node.activeId || node.tabs[0]?.id;
                     node.tabs.forEach((tab: any) => {
                         const id = tab.id || '';
-                        if (!id.startsWith('codegen_tpl_')) return;
+                        if (!id.startsWith('codegen_tpl_')) {
+                            const raw = besideModels ? ((state as any).idlookup?.[modelOfTabId(id)]) : null;
+                            if (raw?.className === 'DModel' && !raw.isMetamodel) {
+                                tabList.push({ id, title: raw.name || 'Unnamed', type: 'model', active: id === shown, closable: tab.closable !== false, beside: true });
+                            }
+                            return;
+                        }
                         const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
                         if (typeof named !== 'string' || !named) return;
                         tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
                     });
                 };
                 walkBeside(layout?.dockbox);
+
+                // Two tabs on one model read `<model> · <viewpoint>` (multi-tab L6c, P-2026-11-08-1855). A tab's viewpoint is its
+                // editor's state, and this strip reads it where the editor shows it; a tab with no editor mounted keeps the plain name.
+                const tabsPerModel = new Map<string, number>();
+                tabList.forEach(t => { if (t.type === 'model') tabsPerModel.set(modelOfTabId(t.id), (tabsPerModel.get(modelOfTabId(t.id)) || 0) + 1); });
+                tabList.forEach(t => {
+                    if (t.type !== 'model' || (tabsPerModel.get(modelOfTabId(t.id)) || 0) < 2) return;
+                    const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(t.id)}"]`);
+                    const viewpoint = pane?.querySelector('.toolbar-viewpoint-trigger__label')?.textContent?.trim();
+                    if (viewpoint) t.title = `${t.title} · ${viewpoint}`;
+                });
 
                 setOpenTabs(prev => {
                     if (prev.length === tabList.length && prev.every((t, i) =>

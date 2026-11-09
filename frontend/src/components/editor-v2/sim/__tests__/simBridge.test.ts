@@ -13,26 +13,27 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
-    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
+    pressRandom, pressStep, runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
 import { encodeWatches } from '../../../../model/simulation/watchCodec';
 import type { WatchRecord } from '../../../../model/simulation/watchCodec';
 import type { WatchResult } from '../../../../model/simulation/watchEvaluator';
 import {
-    __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
+    __resetSimRunsForTests, configAt, getSimActiveIds, getSimDcnNode, getSimRun, getSimVersion, getSimView, setSimPolicy, SIM_KEEP_CONFIGS, simClear, simReset, simSetView, simStepBack,
 } from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
+import { nucleusOf } from '../simNucleus';
 import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
 import * as netStepModule from '../../../../model/simulation/netStep';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
-import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import { encodeRoleValues, ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../../model/simulation/roleCatalog';
-import { EVENT_FROM_TRIGGER } from '../../../../model/simulation/simProfiles';
+import { EVENT_FROM_TRIGGER, systemProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileShape, RoleMode } from '../../../../model/simulation/simProfiles';
 import type { CompiledNet, NetRunStatus, NetTransition, SimState, SimValue } from '../../../../model/simulation/netTypes';
 
@@ -3162,5 +3163,563 @@ describe('R-SIM-144: event reads checked at Reset, the unset warning (P-2026-10-
         })).compileDefects?.map(d => [d.element, d.role, d.reason, d.detail]);
         expect(join(['C10'], [])).toEqual([['e1', 'guard', 'trigger-position', 'its trigger is ignored: join J takes the trigger of its choice edge, e3, the edge out of it']]);
         expect(join([], ['C10'])).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// DCN L4.5: the DCN run in startRun and the panel texts (P-2026-11-08-0248, P-2026-11-08-0303)
+// ---------------------------------------------------------------------------
+
+/** The DCN M2 classes and features under PKG of MM, beside the turnstile's (so both role sets can be bound). */
+const DCN_CLASSES: Record<string, { name: string; extends?: string[] }> = {
+    D_Named: { name: 'NamedElement' }, D_Class: { name: 'Class', extends: ['D_Named'] }, D_Static: { name: 'StaticClass', extends: ['D_Class'] },
+    D_Viewpoint: { name: 'Viewpoint', extends: ['D_Named'] }, D_Dynamic: { name: 'DynamicClass', extends: ['D_Named'] },
+    D_Property: { name: 'Property', extends: ['D_Named'] }, D_Operation: { name: 'Operation', extends: ['D_Named'] },
+    D_Instance: { name: 'InstanceSpecification', extends: ['D_Named'] }, D_Slot: { name: 'Slot' }, D_LitInt: { name: 'LiteralInteger' },
+    D_Primitive: { name: 'PrimitiveType', extends: ['D_Named'] },
+};
+const DCN_FEATURES: Record<string, { className: 'DAttribute' | 'DReference'; name: string; father: string }> = {
+    D_ownedAttributes: { className: 'DReference', name: 'ownedAttributes', father: 'D_Class' },
+    D_ownedOperations: { className: 'DReference', name: 'ownedOperations', father: 'D_Class' },
+    D_viewpoints: { className: 'DReference', name: 'viewpoints', father: 'D_Static' },
+    D_classes: { className: 'DReference', name: 'classes', father: 'D_Viewpoint' },
+    D_invariant: { className: 'DAttribute', name: 'invariant', father: 'D_Dynamic' },
+    D_dynOperations: { className: 'DReference', name: 'operations', father: 'D_Dynamic' },
+    D_body: { className: 'DAttribute', name: 'body', father: 'D_Operation' },
+    D_redefines: { className: 'DReference', name: 'redefines', father: 'D_Operation' },
+    D_type: { className: 'DReference', name: 'type', father: 'D_Property' },
+    D_classifier: { className: 'DReference', name: 'classifier', father: 'D_Instance' },
+    D_slots: { className: 'DReference', name: 'slots', father: 'D_Instance' },
+    D_definingFeature: { className: 'DReference', name: 'definingFeature', father: 'D_Slot' },
+    D_values: { className: 'DReference', name: 'values', father: 'D_Slot' },
+    D_litValue: { className: 'DAttribute', name: 'value', father: 'D_LitInt' },
+    D_precondition: { className: 'DAttribute', name: 'precondition', father: 'D_Operation' },
+    D_monitors: { className: 'DReference', name: 'monitors', father: 'D_Dynamic' },
+    D_ownedParameters: { className: 'DReference', name: 'ownedParameters', father: 'D_Operation' },
+    D_rangeMin: { className: 'DAttribute', name: 'rangeMin', father: 'D_Property' },
+    D_rangeMax: { className: 'DAttribute', name: 'rangeMax', father: 'D_Property' },
+};
+
+const DCN_ONTO = JSON.stringify({
+    v: 1,
+    bindings: [{
+        name: 'object', typeReference: 'D_classifier', featureContainer: 'D_ownedAttributes', featureType: 'D_type',
+        slotContainer: 'D_slots', definingFeature: 'D_definingFeature', valueHolder: 'D_values',
+        valueKinds: [{ when: 'primitive:Integer', create: 'D_LitInt', field: 'D_litValue' }],
+    }],
+});
+
+/** The dcn roles without the profile; `DCN_BAG` adds the «Dynamic classification» profile, or a run reads the dcn group off. */
+const DCN_ROLE_KEYS = {
+    simStaticClass: 'D_Static', simViewpoints: 'D_viewpoints', simDynamicClasses: 'D_classes', simInvariant: 'D_invariant',
+    simOperation: encodeRoleValues(['D_ownedOperations', 'D_dynOperations']), simBody: 'D_body', simRedefines: 'D_redefines',
+};
+const DCN_BAG = { simProfile: encodeProfile(systemProfile('dynamicClassification')!), ...DCN_ROLE_KEYS, ontoBindings: DCN_ONTO };
+
+/** The drone dji with speed and alt, Mode {Ready: speed 0, Flying: speed > 0}; `takeOff` adds 1 to speed, its Flying redefinition 5 to alt. */
+function dcnObjects(speed: number): Record<string, Obj & { name?: string }> {
+    return {
+        Integer: { cls: 'D_Primitive', name: 'Integer' },
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_takeOff'], D_viewpoints: ['vp_Mode'] } },
+        p_speed: { cls: 'D_Property', name: 'speed', slots: { D_type: ['Integer'] } },
+        p_alt: { cls: 'D_Property', name: 'alt', slots: { D_type: ['Integer'] } },
+        op_takeOff: { cls: 'D_Operation', name: 'takeOff', slots: { D_body: ['self.speed := self.speed + 1'] } },
+        vp_Mode: { cls: 'D_Viewpoint', name: 'Mode', slots: { D_classes: ['dc_Ready', 'dc_Flying'] } },
+        dc_Ready: { cls: 'D_Dynamic', name: 'Ready', slots: { D_invariant: ['self.speed == 0'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'] } },
+        op_Flying_takeOff: { cls: 'D_Operation', name: 'takeOff', slots: { D_body: ['self.alt := self.alt + 5'], D_redefines: ['op_takeOff'] } },
+        dji: { cls: 'D_Instance', name: 'dji', slots: { D_classifier: ['Drone'], D_slots: ['s_speed', 's_alt'] } },
+        s_speed: { cls: 'D_Slot', slots: { D_definingFeature: ['p_speed'], D_values: ['l_speed'] } },
+        l_speed: { cls: 'D_LitInt', slots: { D_litValue: [speed] } },
+        s_alt: { cls: 'D_Slot', slots: { D_definingFeature: ['p_alt'], D_values: ['l_alt'] } },
+        l_alt: { cls: 'D_LitInt', slots: { D_litValue: [0] } },
+    };
+}
+
+/** The turnstile's lookup with the DCN classes, features and objects added; `name` overrides the id as the object's name. */
+function dcnLookup(bag: Record<string, unknown>, speed = 1, extra: Record<string, Obj> = {}): Lookup {
+    const objects = { ...dcnObjects(speed), ...extra };
+    const lookup = buildLookup(bag, objects);
+    lookup.PKG = { className: 'DPackage', id: 'PKG', name: 'dcn', father: 'MM' };
+    for (const [id, c] of Object.entries(DCN_CLASSES)) lookup[id] = { className: 'DClass', id, name: c.name, father: 'PKG', extends: [...(c.extends ?? [])] };
+    for (const [id, f] of Object.entries(DCN_FEATURES)) lookup[id] = { ...f, id };
+    for (const [id, o] of Object.entries(objects)) if ((o as { name?: string }).name) lookup[id].name = (o as { name?: string }).name;
+    return lookup;
+}
+
+/** One plain handle per object of the model, as the real builder gives them. */
+const dcnBuilder = (lookup: Lookup): ContextBuilder => () => ({
+    instances: collectModelObjectIds(lookup, 'M').map(id => ({ id, __type: 'Object', name: lookup[id].name })),
+    classes: [],
+});
+
+function dcnStarted(lookup: Lookup) {
+    const r = startRun(lookup, 'M', 'MM', 'P', dcnBuilder(lookup), 7);
+    if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+    return r;
+}
+
+describe('DCN L4.5: startRun picks the DCN nucleus by the bound dcn roles (decision 1)', () => {
+    it('a DCN bag starts a run on the DCN nucleus: its net, the invocation alone in the alphabet, no compile defect, σ0 not classified (mutants: no DCN branch, the redefinition in the alphabet)', () => {
+        const lookup = dcnLookup(DCN_BAG);
+        const r = dcnStarted(lookup);
+        const run = r.run;
+        const nucleus = nucleusOf(run) as ReturnType<typeof nucleusOf> & { classify?: unknown };
+        expect(typeof nucleus.classify).toBe('function');
+        expect(run.nucleus).toBe(nucleus);
+        expect(run.alphabet).toHaveLength(1);
+        expect(run.halt).toBeNull();
+        expect(r.compileDefects).toEqual([]);
+        expect(markingLine(run.config.state, run.net, lookup).line).toBe('Classification: dji: Mode = Flying');
+        expect(markingChips(run.config.state, lookup, run.net).map(c => c.text)).toEqual(['dji.Mode = Flying']);
+        expect(candidateLabel(run.net, run.alphabet[0], lookup)).toBe('dji.takeOff()');
+    });
+
+    it('a Petri bag is unchanged: the Petri nucleus, the Marking line, the chips of the places (mutant: DCN tried first)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        const run = started(lookup);
+        expect((nucleusOf(run) as { classify?: unknown }).classify).toBeUndefined();
+        expect(markingLine(run.config.state, run.net, lookup).line).toBe('Marking: Locked');
+        expect(markingChips(run.config.state, lookup, run.net).map(c => c.text)).toEqual(['Locked']);
+    });
+
+    it('both role sets bound: the Petri run wins (mutant: DCN tried first)', () => {
+        // A user profile with no group off, so that the run reads both sets (R-SIM-78).
+        const modes = Object.fromEntries(ROLE_IDS.map(r => [r, r === 'event' ? EVENT_FROM_TRIGGER : { mode: 'edit' }])) as Record<RoleId, RoleMode>;
+        const simProfile = encodeProfile({
+            id: 'u-both', name: 'Both', system: false, shape: 'controlFlow', modes,
+            params: { bound: 1, selector: 'list' }, constraints: [], addedRequired: [],
+        });
+        const lookup = dcnLookup({ simProfile, ...ROLES, ...DCN_ROLE_KEYS, ontoBindings: DCN_ONTO }, 1, TURNSTILE);
+        expect(runBag(lookup.MM._state, lookup).simStaticClass).toBe('D_Static');
+        const run = started(lookup, dcnBuilder(lookup));
+        expect((nucleusOf(run) as { classify?: unknown }).classify).toBeUndefined();
+        expect(markingLine(run.config.state, run.net, lookup).line.startsWith('Marking: Locked')).toBe(true);
+    });
+
+    it('an incomplete DCN binding gives no DCN run: refused (mutant: a run on a null input)', () => {
+        const lookup = dcnLookup({ ...DCN_BAG, ontoBindings: undefined });
+        const r = startRun(lookup, 'M', 'MM', 'P', dcnBuilder(lookup), 7);
+        expect(r.kind).toBe('refused');
+    });
+});
+
+describe('DCN L4.5: the press through the DCN nucleus (decisions 2-3, R-DCN-22)', () => {
+    it('takeOff with the Flying redefinition active: forced, admissible, one step running both (mutant: candidates from netStep, the redefinition a candidate alone)', () => {
+        const lookup = dcnLookup(DCN_BAG);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const takeOff = run.alphabet[0];
+        expect(candidateLabel(run.net, takeOff, lookup)).toBe('dji.takeOff() + Mode::Flying');
+        const p = pressInput('M', takeOff, undefined, lookup, 'takeOff');
+        expect(p.pending).toBeNull();
+        expect(p.outcome?.kind).toBe('fired');
+        expect(p.lastStep).toBe('takeOff: dji.takeOff() + Mode::Flying fired');
+        const after = getSimRun('M')!;
+        expect(after.trace).toHaveLength(1);
+        expect(after.config.state.attrs.get('dji')?.get('speed')).toBe(2);
+        expect(after.config.state.attrs.get('dji')?.get('alt')).toBe(5);
+    });
+
+    it('from Ready takeOff runs the static operation alone and classifies Flying (mutant: the classification of the σ before the step ignored)', () => {
+        const lookup = dcnLookup(DCN_BAG, 0);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const p = pressInput('M', run.alphabet[0], undefined, lookup, 'takeOff');
+        expect(p.lastStep).toBe('takeOff: dji.takeOff() fired');
+        const after = getSimRun('M')!;
+        expect(after.config.state.attrs.get('dji')?.get('alt')).toBe(0);
+        expect(markingLine(after.config.state, after.net, lookup).line).toBe('Classification: dji: Mode = Flying');
+    });
+});
+
+describe('DCN L4.6: an input is on only when admissible (P-2026-11-08-1606)', () => {
+    const BAG = { ...DCN_BAG, simPrecondition: 'D_precondition', simMonitor: 'D_monitors' };
+    /** arm owned by Ready; land static with a false precondition below speed 6; drain a monitor of Flying. */
+    const EXTRA: Record<string, Obj & { name?: string }> = {
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_takeOff', 'op_land'], D_viewpoints: ['vp_Mode'] } },
+        op_land: { cls: 'D_Operation', name: 'land', slots: { D_body: ['self.speed := 0'], D_precondition: ['self.speed > 5'] } },
+        dc_Ready: { cls: 'D_Dynamic', name: 'Ready', slots: { D_invariant: ['self.speed == 0'], D_dynOperations: ['op_arm'] } },
+        op_arm: { cls: 'D_Operation', name: 'arm', slots: { D_body: ['self.alt := 1'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'], D_monitors: ['mon_drain'] } },
+        mon_drain: { cls: 'D_Operation', name: 'drain', slots: { D_body: ['self.alt := self.alt + 1'] } },
+    };
+    const armed = (speed: number) => {
+        const lookup = dcnLookup(BAG, speed, EXTRA);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        const id = (text: string) => run.alphabet.find(a => candidateLabel(run.net, a, lookup).startsWith(text))!;
+        return { lookup, run, id, off: (a: string) => dcnInputOff(run, a, lookup) };
+    };
+
+    it('the owner class inactive: off, naming the class (mutants: always on, the class of the static op, the viewpoint dropped)', () => {
+        const { id, off } = armed(1);
+        expect(off(id('dji.arm()'))).toBe('not in Mode::Ready');
+    });
+
+    it('the owner class active: on (mutant: always off)', () => {
+        const { id, off } = armed(0);
+        expect(off(id('dji.arm()'))).toBeNull();
+    });
+
+    it('a false precondition: off, says so; a true one: on (mutant: the precondition ignored)', () => {
+        expect(armed(1).off(armed(1).id('dji.land()'))).toBe('precondition false');
+        expect(armed(6).off(armed(6).id('dji.land()'))).toBeNull();
+    });
+
+    it('the Tick: on with a monitor of an active class, off without, id untouched (mutants: Tick always on, always off)', () => {
+        expect(armed(1).off('dcn-tick')).toBeNull();
+        expect(armed(0).off('dcn-tick')).toBe('no monitor of an active class contributes');
+    });
+
+    it('a Petri run is never off through here (mutant: the check on a Petri net)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        expect(dcnInputOff(started(lookup), 'whatever', lookup)).toBeNull();
+    });
+});
+
+describe('DCN L4.6: the arguments of an invocation reach its body (P-2026-11-08-1606, ticket of P-2026-11-08-0315)', () => {
+    const argLookup = (body: string, pre?: string, parameter = 'rate') => dcnLookup({ ...DCN_BAG, simPrecondition: 'D_precondition' }, 0, {
+        Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_charge'], D_viewpoints: ['vp_Mode'] } },
+        op_charge: { cls: 'D_Operation', name: 'charge', slots: { D_body: [body], D_ownedParameters: ['par_rate'], ...(pre ? { D_precondition: [pre] } : {}) } },
+        par_rate: { cls: 'D_Property', name: parameter, slots: { D_type: ['Integer'], D_rangeMin: [0], D_rangeMax: [10] } },
+    } as Record<string, Obj & { name?: string }>);
+    const start = (lookup: Lookup) => {
+        const { run } = dcnStarted(lookup);
+        simReset('M', run);
+        return { run, id: run.alphabet[0] };
+    };
+    const alt = () => getSimRun('M')!.config.state.attrs.get('dji')?.get('alt');
+
+    it('the value given reaches the body through self.[rate], as an R-SIM-88 input reads (mutants: the argument not overlaid, keyed on the transition)', () => {
+        const lookup = argLookup('self.alt := self.[rate]');
+        const { run, id } = start(lookup);
+        expect(inputAsks(run, id).map(a => a.attr)).toEqual(['rate']);
+        const p = pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 5 }]);
+        expect(p.outcome?.kind).toBe('fired');
+        expect(alt()).toBe(5);
+        expect(p.lastStep).toBe('charge: dji.charge(rate = 5) fired');
+    });
+
+    it('the bare name reads the answer in the body and in the precondition, through the one overlay (P-2026-11-09-0055; mutants: the name not bound, a defect read as off)', () => {
+        const lookup = argLookup('self.alt := rate', 'rate > 0');
+        const { run, id } = start(lookup);
+        expect(inputAsks(run, id).map(a => a.attr)).toEqual(['rate']);
+        expect(dcnInputOff(run, id, lookup)).toBeNull();
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 0 }]).outcome?.kind).toBe('discard');
+        expect(alt()).toBe(0);
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 5 }]).outcome?.kind).toBe('fired');
+        expect(alt()).toBe(5);
+    });
+
+    it('a precondition reads the argument: waiting before the answer, then decided by it (mutants: a defect read as off, the guards not overlaid)', () => {
+        const lookup = argLookup('self.alt := self.[rate]', 'self.[rate] > 0');
+        const { run, id } = start(lookup);
+        expect(dcnInputOff(run, id, lookup)).toBeNull();
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 0 }]).outcome?.kind).toBe('discard');
+        expect(alt()).toBe(0);
+        expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 3 }]).outcome?.kind).toBe('fired');
+        expect(alt()).toBe(3);
+    });
+
+    it('an argument named as a slot never shadows σ (mutant: the slot check dropped)', () => {
+        const lookup = argLookup('self.alt := self.[speed]', undefined, 'speed');
+        const { id } = start(lookup);
+        pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'speed', value: 7 }]);
+        expect(alt()).toBe(0);
+    });
+
+    it('a name that is no argument of the transition is ignored (mutant: any attr of a transition overlaid)', () => {
+        const lookup = argLookup('self.alt := self.[nosuch]');
+        const { id } = start(lookup);
+        const p = pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 1 }, { element: id, attr: 'nosuch', value: 9 }]);
+        expect(p.outcome?.kind).toBe('halted');
+        expect(alt()).toBe(0);
+    });
+});
+
+describe('DCN slice 5: getSimDcnNode, the run card of the shown step (P-2026-11-08-1905, R-DCN-29, R-SIM-106)', () => {
+    /** Ready renamed Charging, so speed 0 reads as the drone on its pad; Flying carries the monitor drain. */
+    const BAG = { ...DCN_BAG, simMonitor: 'D_monitors' };
+    const EXTRA: Record<string, Obj & { name?: string }> = {
+        dc_Ready: { cls: 'D_Dynamic', name: 'Charging', slots: { D_invariant: ['self.speed == 0'] } },
+        dc_Flying: { cls: 'D_Dynamic', name: 'Flying', slots: { D_invariant: ['self.speed > 0'], D_dynOperations: ['op_Flying_takeOff'], D_monitors: ['mon_drain'] } },
+        mon_drain: { cls: 'D_Operation', name: 'drain', slots: { D_body: ['self.alt := self.alt + 1'] } },
+    };
+    function reset(speed = 0) {
+        const lookup = dcnLookup(BAG, speed, EXTRA);
+        const run = dcnStarted(lookup).run;
+        simReset('M', run);
+        return { lookup, run, takeOff: () => pressInput('M', run.alphabet.find(id => id !== 'dcn-tick')!, undefined, lookup, 'takeOff') };
+    }
+    const active = (objectId: string) => getSimDcnNode(objectId)?.viewpoints.flatMap(v => v.classes.filter(c => c.active).map(c => c.name));
+
+    it('no run gives null (mutant: an empty card when no run answers)', () => {
+        expect(getSimDcnNode('dji')).toBeNull();
+    });
+
+    it('a Petri run gives null, on an element it marks (mutant: the guard on a run that is not DCN dropped)', () => {
+        simReset('M', started(buildLookup(ROLES, TURNSTILE)));
+        expect(getSimActiveIds('M')).toEqual(['Locked']);
+        expect(getSimDcnNode('Locked')).toBeNull();
+    });
+
+    it('a DCN run at Reset gives the Charging data: the classes of the viewpoint, no static slot changed (mutant: startDcnRun does not register the run)', () => {
+        reset();
+        expect(getSimDcnNode('dji')).toMatchObject({
+            viewpoints: [{ name: 'Mode', classes: [{ name: 'Charging', active: true }, { name: 'Flying', active: false }] }],
+            monitors: [],
+            changedStatic: [],
+        });
+    });
+
+    it('an object of a DCN run that is no instance gives null, a Slot or an unknown id (mutant: the card of any id)', () => {
+        reset();
+        expect(getSimDcnNode('s_speed')).toBeNull();
+        expect(getSimDcnNode('nosuch')).toBeNull();
+    });
+
+    it('monitors carry the names of the model read at Reset, not the ids (mutant: the id as the name in the registry)', () => {
+        reset(1);
+        expect(getSimDcnNode('dji')?.monitors).toEqual([{ viewpoint: 'Mode', dynamicClass: 'Flying', names: ['drain'] }]);
+    });
+
+    it('after a step the live record drives the result, and σ0 is the reset of changedStatic (mutants: the shown state as the reset, σ0 as the current state)', () => {
+        const { takeOff } = reset();
+        expect(takeOff().outcome?.kind).toBe('fired');
+        expect(active('dji')).toEqual(['Flying']);
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([{ name: 'speed', reset: 0, current: 1 }]);
+        expect(takeOff().outcome?.kind).toBe('fired');
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([
+            { name: 'speed', reset: 0, current: 2 },
+            { name: 'alt', reset: 0, current: 5 },
+        ]);
+    });
+
+    it('step back on the slider returns the earlier data, Back to live the later one (mutant: the live run read instead of the shown one)', () => {
+        const { takeOff } = reset();
+        takeOff();
+        simSetView('M', 0);
+        expect(active('dji')).toEqual(['Charging']);
+        expect(getSimDcnNode('dji')?.changedStatic).toEqual([]);
+        simSetView('M', null);
+        expect(active('dji')).toEqual(['Flying']);
+    });
+
+    it('the Classification chips follow the step shown, and return with Back to live (P-2026-11-09-0055; mutants: the live σ read, the view ignored after Back to live)', () => {
+        const { lookup, takeOff } = reset();
+        takeOff();
+        const run = getSimRun('M')!;
+        const chips = () => markingChips(shownChipsState('M', run), lookup, run.net).map(c => c.text);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+        simSetView('M', 0);
+        expect(chips()).toEqual(['dji.Mode = Charging']);
+        simSetView('M', null);
+        expect(chips()).toEqual(['dji.Mode = Flying']);
+    });
+
+    it('a step between Reset and live gives its own σ (mutants: σ0 for any viewed step, the live σ)', () => {
+        const { takeOff } = reset();
+        takeOff();
+        takeOff();
+        const run = getSimRun('M')!;
+        simSetView('M', 1);
+        expect(shownChipsState('M', run).attrs.get('dji')?.get('speed')).toBe(1);
+    });
+
+    it('the chips of a Petri run stay on the live σ, as its face does (R-SIM-104; mutant: the view read for every run)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        const live = getSimRun('M')!;
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        const run = getSimRun('M')!;
+        expect(run).not.toBe(live);
+        simSetView('M', 0);
+        expect(getSimView('M')).toBe(0);
+        expect(shownChipsState('M', run)).toBe(run.config.state);
+    });
+
+    it('two calls on one record return the same object, on the live and on a viewed record; a commit gives a new one (mutants: no cache, a cache not per record)', () => {
+        const { takeOff } = reset();
+        const atReset = getSimDcnNode('dji');
+        expect(atReset).not.toBeNull();
+        expect(getSimDcnNode('dji')).toBe(atReset);
+        takeOff();
+        const afterStep = getSimDcnNode('dji');
+        expect(afterStep).not.toBe(atReset);
+        expect(getSimDcnNode('dji')).toBe(afterStep);
+        simSetView('M', 0);
+        const viewed = getSimDcnNode('dji');
+        expect(viewed).not.toBe(afterStep);
+        expect(getSimDcnNode('dji')).toBe(viewed);
+    });
+
+    it('a Petri run of another model, started first, does not hide the DCN instance (mutant: the first run answers for every object)', () => {
+        simReset('X', started(buildLookup(ROLES, TURNSTILE)));
+        reset();
+        expect(active('dji')).toEqual(['Charging']);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// DCN slice 5, lane 10: coherence constraints in a run, as watch hits (R-DCN-28, R-DCN-31, P-2026-11-09-0320)
+// ---------------------------------------------------------------------------
+
+describe('DCN coherence constraints as watch hits (R-DCN-28)', () => {
+    const KEYS = {
+        simCoherence: 'D_Coherence', simCoherenceContext: 'D_ccContext', simCoherencePointwise: 'D_ccPointwise', simCoherencePattern: 'D_ccPattern',
+        simPersistenceCondition: 'D_pCondition', simPersistenceBound: 'D_pK',
+    };
+    type Named = Obj & { name?: string };
+
+    /** The DCN lookup with the coherence metaclasses and `objects` (the constraints). dji starts Flying: every takeOff is its redefinition, alt + 5. */
+    function coherenceLookup(objects: Record<string, Named>): Lookup {
+        const lookup = dcnLookup({ ...DCN_BAG, ...KEYS }, 1, objects);
+        for (const [id, name] of [['D_Coherence', 'CoherenceConstraint'], ['D_Persistence', 'BoundedPersistence']]) {
+            lookup[id] = { className: 'DClass', id, name, father: 'PKG', extends: [] };
+        }
+        const features: Array<[string, 'DAttribute' | 'DReference', string, string]> = [
+            ['D_ccContext', 'DReference', 'context', 'D_Coherence'], ['D_ccPointwise', 'DAttribute', 'pointwise', 'D_Coherence'], ['D_ccPattern', 'DReference', 'pattern', 'D_Coherence'],
+            ['D_pCondition', 'DAttribute', 'condition', 'D_Persistence'], ['D_pK', 'DAttribute', 'k', 'D_Persistence'],
+        ];
+        for (const [id, className, name, father] of features) lookup[id] = { className, id, name, father };
+        return lookup;
+    }
+
+    const pointwise = (text: string): Record<string, Named> => ({
+        cc_limit: { cls: 'D_Coherence', name: 'altLimit', slots: { D_ccContext: ['Drone'], D_ccPointwise: [text] } },
+    });
+    const persistence = (name: string, condition: string, k: number): Record<string, Named> => ({
+        [`cc_${name}`]: { cls: 'D_Coherence', name, slots: { D_ccContext: ['Drone'], D_ccPattern: [`p_${name}`] } },
+        [`p_${name}`]: { cls: 'D_Persistence', name: `p_${name}`, slots: { D_pCondition: [condition], D_pK: [k] } },
+    });
+
+    function reset(lookup: Lookup) {
+        const r = dcnStarted(lookup);
+        simReset('M', r.run);
+        return { r, takeOff: () => pressInput('M', r.run.alphabet[0], undefined, lookup, 'takeOff') };
+    }
+    const results = (lookup: Lookup) => watchResults(getSimRun('M')!, lookup);
+    const hitNames = (lookup: Lookup) => results(lookup).filter(x => x.hit).map(x => x.watch.name);
+
+    it('φ false after a press is a hit of kind invariant named constraint@instance at that step, none before (mutants: no results appended, the id in the name, every step a hit)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        expect(results(lookup).map(x => [x.watch.name, x.watch.kind, x.hit])).toEqual([['altLimit@dji', 'invariant', false]]);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+        takeOff();
+        const hits = results(lookup).filter(x => x.hit);
+        expect(hits.map(x => x.watch.name)).toEqual(['altLimit@dji']);
+        expect(hits[0].reading).toEqual({ kind: 'value', value: false });
+        expect(watchHitLine(hits, 2, '')!.line).toBe('Invariant altLimit@dji false at step 2');
+        expect(watchHitLine(hits, 2, '')!.title).toContain('self.alt <= 5');
+    });
+
+    it('the instance goes by its name, not its id (mutant: the id in the name)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        lookup.dji.name = 'phantom';
+        reset(lookup);
+        expect(results(lookup).map(x => x.watch.name)).toEqual(['altLimit@phantom']);
+    });
+
+    it('a persistence with k = 1 hits at the second consecutive step, and again at the next (mutants: k read off by one, the counter not reset)', () => {
+        const lookup = coherenceLookup(persistence('climbing', 'self.alt > 0', 1));
+        const { takeOff } = reset(lookup);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+    });
+
+    it('a bad expression is a defect of the Reset line, never a hit nor a run error (mutants: the coherence defects dropped, the DCN line reading only the net)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <='));
+        const { r, takeOff } = reset(lookup);
+        expect(r.compileDefects).toHaveLength(1);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toMatch(/^1 defect: altLimit \(/);
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toContain('altLimit');
+        takeOff();
+        takeOff();
+        expect(results(lookup)).toEqual([]);
+    });
+
+    it('a run with a watch keeps it, the coherence rows after it (mutant: the coherence rows replacing the watches)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        lookup.M._state = { runWatches: encodeWatches([{ name: 'w', kind: 'breakpoint', text: 'true' }]) };
+        reset(lookup);
+        expect(results(lookup).map(x => x.watch.name)).toEqual(['w', 'altLimit@dji']);
+    });
+
+    it('a step shown and step back read the fold at that step; the marks list the steps that hit (mutants: the live step always, the marks without coherence)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        takeOff();
+        takeOff();
+        const run = getSimRun('M')!;
+        expect([...watchHitSteps(run, lookup)]).toEqual([2]);
+        simSetView('M', 1);
+        expect(watchResults(run, lookup, configAt(run, 1)!.state).filter(x => x.hit)).toEqual([]);
+        // The panel's live read is not the view's.
+        expect(watchResults(run, lookup).filter(x => x.hit).map(x => x.watch.name)).toEqual(['altLimit@dji']);
+        simSetView('M', null);
+        expect(hitNames(lookup)).toEqual(['altLimit@dji']);
+        expect(simStepBack('M')).toBe(true);
+        expect(hitNames(lookup)).toEqual([]);
+        expect([...watchHitSteps(getSimRun('M')!, lookup)]).toEqual([]);
+    });
+
+    it('a persistence longer than the kept configurations counts the steps before the cut (mutants: the kept ones only, the replay one step short, the bound window one short)', () => {
+        const k = SIM_KEEP_CONFIGS + 5;
+        const lookup = coherenceLookup({ ...persistence('climbing', 'self.alt > 0', k), ...persistence('short', 'self.alt > 0', 1) });
+        const { takeOff } = reset(lookup);
+        for (let i = 0; i < k; i++) takeOff();
+        const atBound = getSimRun('M')!;
+        expect(atBound.keptConfigs).toHaveLength(SIM_KEEP_CONFIGS);
+        expect(atBound.trace).toHaveLength(k);
+        // σ0 has alt 0: σ1..σk are k states, one short of k + 1.
+        expect(hitNames(lookup)).toEqual(['short@dji']);
+        takeOff();
+        expect(hitNames(lookup).sort()).toEqual(['climbing@dji', 'short@dji']);
+    }, 60000);
+
+    it('a replay over the cut gives each step the inputs it was pressed with (mutant: the replay without inputs)', () => {
+        const k = SIM_KEEP_CONFIGS + 1;
+        const lookup = coherenceLookup({
+            Drone: { cls: 'D_Static', name: 'Drone', slots: { D_ownedAttributes: ['p_speed', 'p_alt'], D_ownedOperations: ['op_charge'], D_viewpoints: ['vp_Mode'] } },
+            op_charge: { cls: 'D_Operation', name: 'charge', slots: { D_body: ['self.alt := self.alt + rate'], D_ownedParameters: ['par_rate'] } },
+            par_rate: { cls: 'D_Property', name: 'rate', slots: { D_type: ['Integer'], D_rangeMin: [0], D_rangeMax: [10] } },
+            ...persistence('climbing', 'self.alt > 0', k),
+        });
+        const { r } = reset(lookup);
+        const id = r.run.alphabet[0];
+        for (let i = 0; i <= k; i++) expect(pressInput('M', id, undefined, lookup, 'charge', [{ element: id, attr: 'rate', value: 1 }]).outcome?.kind).toBe('fired');
+        expect(hitNames(lookup)).toEqual(['climbing@dji']);
+    }, 60000);
+
+    it('a verdict is the last step of its window: a φ broken earlier in the window of a longer pattern is not a hit now (mutant: every position of the window read as the step asked)', () => {
+        const lookup = coherenceLookup({ ...pointwise('self.alt != 5'), ...persistence('far', 'self.alt > 100', 3) });
+        const { takeOff } = reset(lookup);
+        takeOff();
+        expect(hitNames(lookup)).toEqual(['altLimit@dji']);
+        takeOff();
+        expect(hitNames(lookup)).toEqual([]);
+    });
+
+    it('a DCN net has no ε candidate, so Play presses nothing and waits; a pressed step that hits is what the panel stops Play and the clocks on (measured; mutant: an ε press offered to DCN runs)', () => {
+        const lookup = coherenceLookup(pointwise('self.alt <= 5'));
+        const { takeOff } = reset(lookup);
+        expect(playPress('M', lookup, 0).stop).toBe('event');
+        takeOff();
+        takeOff();
+        expect(results(lookup).some(x => x.hit)).toBe(true);
+    });
+
+    it('a Petri run has no coherence results (mutant: the coherence rows read off every run)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(watchResults(getSimRun('M')!, lookup)).toEqual([]);
     });
 });

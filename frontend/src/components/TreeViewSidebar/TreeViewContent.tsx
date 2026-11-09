@@ -18,6 +18,8 @@ import {
     U,
     store,
     getViewpointType,
+    Defaults,
+    isDataManagerViewpoint,
     isDataManagerViewpointId,
     DATA_MANAGER_VIEWPOINT_ID,
     DATA_MANAGER_VIEWPOINT_NAME,
@@ -29,6 +31,7 @@ import { hasCreatableViewpoint, resolveParentViewpoint, createViewInWorkbench, c
 import { isDerivableMetamodel } from '../editor-v2/viewpoint/derive/viewpointDerivation';
 import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
+import DockManager from '../abstract/DockManager';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import { getTypeName, getMultiplicity } from '../../common/featureSignature';
@@ -698,6 +701,100 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
                     <span>Derive viewpoint</span>
                 </div>
             )}
+        </div>
+    ) : null;
+
+    return { handleContextMenu, popup, nodeRef };
+}
+
+// ─── Model row menu: a further tab on a chosen viewpoint (R-MT-9, R-MT-24) ──
+
+/** Abstract syntax plus the syntaxes the toolbar picker offers (Toolbar.tsx, same filters). */
+function tabViewpointOptions(): Array<{ id: string | null; name: string }> {
+    const state = store.getState() as any;
+    const syntaxes = ((state.viewpoints || []) as string[])
+        .filter(ptr => !Defaults.isSystemViewpoint(ptr) && !isDataManagerViewpointId(ptr))
+        .map(ptr => state.idlookup?.[ptr])
+        .filter(raw => raw && !isDataManagerViewpoint(raw))
+        .map(raw => ({ id: raw.id as string | null, name: (raw.name as string) || 'Unnamed' }));
+    return [{ id: null, name: 'Abstract syntax' }, ...syntaxes];
+}
+
+type ModelTabMenuGroup = 'tab' | 'beside';
+
+function useModelTabContextMenu(modelId: string) {
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; group: ModelTabMenuGroup | null; options: ReturnType<typeof tabViewpointOptions> } | null>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!ctxMenu) return;
+        const close = () => setCtxMenu(null);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setCtxMenu(null);
+        };
+        document.addEventListener('click', close);
+        document.addEventListener('keydown', handleKeyDown);
+        const scrollContainer = nodeRef.current?.closest('.tree-view-panel-body');
+        scrollContainer?.addEventListener('scroll', close);
+        return () => {
+            document.removeEventListener('click', close);
+            document.removeEventListener('keydown', handleKeyDown);
+            scrollContainer?.removeEventListener('scroll', close);
+        };
+    }, [!ctxMenu]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const options = tabViewpointOptions();
+        const menuWidth = 220;
+        const menuHeight = (options.length + 2) * 34;
+        const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
+        const y = Math.max(8, Math.min(e.clientY, window.innerHeight - menuHeight - 8));
+        setCtxMenu({ x, y, group: null, options });
+    }, []);
+
+    const pick = (group: ModelTabMenuGroup, viewpointId: string | null) => {
+        setCtxMenu(null);
+        if (group === 'beside') DockManager.openModelTabBeside(modelId, viewpointId);
+        else void DockManager.openModelTab(modelId, viewpointId);
+    };
+
+    const renderGroup = (group: ModelTabMenuGroup, icon: string, label: string) => {
+        const expanded = ctxMenu?.group === group;
+        return (
+            <>
+                <div
+                    className="tree-node__context-item"
+                    onClick={() => setCtxMenu(m => m && { ...m, group: expanded ? null : group })}
+                >
+                    <i className={`bi ${icon}`} />
+                    <span>{label}</span>
+                    <i className={`bi ${expanded ? 'bi-chevron-down' : 'bi-chevron-right'}`} style={{ marginLeft: 'auto' }} />
+                </div>
+                {expanded && ctxMenu?.options.map(option => (
+                    <div
+                        key={option.id ?? ''}
+                        className="tree-node__context-item"
+                        style={{ paddingLeft: 28 }}
+                        onClick={() => pick(group, option.id)}
+                    >
+                        <i className={`bi ${option.id === null ? 'bi-diagram-3' : 'bi-eye'}`} />
+                        <span>{option.name}</span>
+                    </div>
+                ))}
+            </>
+        );
+    };
+
+    const popup = ctxMenu ? (
+        <div
+            className="tree-node__context-menu"
+            style={{ position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            {renderGroup('tab', 'bi-plus-square', 'Open in new tab')}
+            {renderGroup('beside', 'bi-layout-split', 'Open beside')}
         </div>
     ) : null;
 
@@ -1551,6 +1648,7 @@ const ModelNode = memo(function ModelNode({
     onToggleFn: (key: string) => void;
 }): ReactElement {
     const isSelected = selectedId === model.id;
+    const { handleContextMenu, popup, nodeRef } = useModelTabContextMenu(model.id);
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -1566,7 +1664,7 @@ const ModelNode = memo(function ModelNode({
     const canExpand = model.isActive && hasInstances;
 
     return (
-        <div className="tree-node" data-element-id={model.id}>
+        <div ref={nodeRef} className="tree-node" data-element-id={model.id}>
             <EntityRow
                 badge="m"
                 badgeClassName="tree-nested-model"
@@ -1577,10 +1675,12 @@ const ModelNode = memo(function ModelNode({
                 onToggle={onToggle}
                 selected={isSelected}
                 onClick={handleClick}
+                onContextMenu={handleContextMenu}
                 depth={depth}
                 dataElementId={model.id}
                 highlightQuery={highlightQuery}
             />
+            {popup}
             {isExpanded && canExpand && (
                 <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {model.instances.map(inst => (

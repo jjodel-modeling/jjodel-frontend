@@ -9,7 +9,9 @@
  * The dcn group (P-2026-11-07-0941) came after user profiles were stored. A
  * control-flow or Petri profile holds its roles as `DCN_OFF`: the decoder fills
  * them in when they are missing and the encoder leaves them out, so a profile
- * stored before the group re-encodes to the same string.
+ * stored before the group re-encodes to the same string. The coherence roles
+ * (P-2026-11-09-0124) came after dcn user profiles were stored: one without them
+ * holds them as `COHERENCE_OFF`, filled and left out the same way.
  *
  * Pure: nothing here reads or writes the store.
  */
@@ -30,12 +32,25 @@ function isDcnOff(shape: unknown, role: RoleId, mode: unknown): boolean {
     return mode.mode === DCN_OFF.mode && mode.reason === DCN_OFF.reason && Object.keys(mode).length === 2;
 }
 
-/** The `simProfile` value: the id for a system profile, the JSON otherwise, without the `DCN_OFF` roles. */
+const COHERENCE_ROLES: ReadonlySet<RoleId> = new Set<RoleId>([
+    'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+    'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
+]);
+
+const COHERENCE_OFF: Extract<RoleMode, { mode: 'off' }> = { mode: 'off', reason: 'Off in a profile saved before coherence constraints' };
+
+/** A coherence role of a dcn profile stored before those roles, as the decoder fills it. */
+function isCoherenceOff(shape: unknown, role: RoleId, mode: unknown): boolean {
+    if (shape !== 'dcn' || !COHERENCE_ROLES.has(role) || !isRecord(mode)) return false;
+    return mode.mode === COHERENCE_OFF.mode && mode.reason === COHERENCE_OFF.reason && Object.keys(mode).length === 2;
+}
+
+/** The `simProfile` value: the id for a system profile, the JSON otherwise, without the `DCN_OFF` and `COHERENCE_OFF` roles. */
 export function encodeProfile(profile: SimProfile): string {
     if (profile.system && isSystemProfileId(profile.id)) return profile.id;
     const modes: Partial<Record<RoleId, RoleMode>> = {};
     for (const [r, m] of Object.entries(profile.modes) as Array<[RoleId, RoleMode]>) {
-        if (!isDcnOff(profile.shape, r, m)) modes[r] = m;
+        if (!isDcnOff(profile.shape, r, m) && !isCoherenceOff(profile.shape, r, m)) modes[r] = m;
     }
     return JSON.stringify({ ...profile, modes });
 }
@@ -99,7 +114,9 @@ export function decodeProfile(value: unknown): SimProfile | null {
     const decoded = {} as Record<RoleId, RoleMode>;
     for (const r of ROLE_IDS) {
         // A control-flow or Petri profile stored before the dcn group, or written without its DCN_OFF roles.
-        const mode = modes[r] === undefined && shape !== 'dcn' && roleDescriptor(r).group === 'dcn' ? DCN_OFF : readMode(modes[r]);
+        const mode = modes[r] === undefined && shape !== 'dcn' && roleDescriptor(r).group === 'dcn' ? DCN_OFF
+            : modes[r] === undefined && shape === 'dcn' && COHERENCE_ROLES.has(r) ? COHERENCE_OFF
+            : readMode(modes[r]);
         if (!mode) return null;
         decoded[r] = mode;
     }

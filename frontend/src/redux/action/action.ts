@@ -96,9 +96,13 @@ class TransactionStatus{
     hasBegun: boolean = false;
     hasAborted: boolean = false;
     transactionDepthLevel: number = 0;
+    // fired actions whose async dispatch (Action.fire) has not run yet: out of the buffer, not in the store
+    dispatchesInFlight: number = 0;
 }
 let t = new TransactionStatus();
 windoww.transactionStatus = t;
+
+export function dispatchesInFlight(): number { return t.dispatchesInFlight; }
 
 export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
@@ -349,7 +353,8 @@ export class Action extends RuntimeAccessibleClass {
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
             // console.log('firing action:', printobj);
-            setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
+            t.dispatchesInFlight++;
+            setTimeout(()=>{ t.dispatchesInFlight--; storee.dispatch({...this}); }, 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
             /*
             // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
             PerformanceMetrics.countRender('Action_dispatch');

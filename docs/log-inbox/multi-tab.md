@@ -211,3 +211,153 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso 2026-11-07 17:38 «i crop vanno bene»: `crop_2_B.png`, `crop_3_A.png`, `crop_5_A_reload.png` in `~/.jjodel-lanes/P-2026-11-07-1536/crops-1536/`)
 **Notes**: `release/3.1.2-patch` lacks the 3.1.1 welcome-key seed in `states.ts`; the probes set it themselves, only the branch's smoke seeds are affected. The `staging` CHANGELOG entry `[3.1.2]` was reworded to describe this patch (`4f567dd45`). The merge started the branch's Docker and Azure test-jjodel workflows; the tag starts none. R-MT-23 still names `origin/staging` and a PR to `main`: the release followed Alfonso's 15:32 choice (PR #209 closed, fix-only 3.1.2 from 3.1.1).
 **Prompt document name**: 2026-11-07 15:36
+
+## 2026-11-07 — feat: IR resolution follows the tab's viewpoint (multi-tab L5)
+**Prompt**: `claude_2026-11-07_1516_prompt_multi_tab_l5_ir_resolution.md`, lane full (critical zone): IR hooks, `IRForm`, the metaclass palette and the Symbol Editor opener take the tab's viewpoint id; cut at the AM-8 ceiling and closed by P-2026-11-07-1730 (remaining gates, app check, crops).
+**Files touched**: `a87146a64` the LIR; `7b3cf6d2a` `irTabViewpoint.test.ts`, `metaclassPalette.test.ts`, red; `f2ddead3d` Option A, seven source files: `irResolve.ts`, `useIRContainment.ts`, `IRForm.tsx`, `metaclassPalette.ts`, `SymbolEditorModal.tsx`, `EditorV2.tsx`, `ObjectNode.tsx`, and the React stubs of `irPresentation.test.ts` and `irSimActive.test.ts` (`useContext: () => null`, no assertion changed); 1730: LIR §7, this entry, two Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: app check P-2026-11-07-1730, single-tab layout probe 3/3 every step x3, container probe 0 failures, 0457 V1/V2/V3/R-MT-18 and ONE summary lines identical to 1352 r1
+**Out-of-scope changes**: yes: `EditorV2.tsx`, `ObjectNode.tsx` and the two test mocks beyond the five files of the prompt, Option A ratified by Alfonso (RC-21) before the change
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (demo two tabs 18/18 and 25/25 nodes, own colours, x3; L3 pair 6/6, was 6/10; three light-theme crops, LIR §7; Alfonso's visual check due)
+**Notes**: Gates. 1516 on f2ddead3d: typecheck exit 0, 0 error TS; vitest 558 files, 14873 passed, 2 skipped; red: 3 known window files, tolerant (1274 ms > 1000), irCollapsedRender and irSelectionRing (Chromium hook timeouts), all green alone. 1730: build exit 0 (chunk warning only), check:docs 5/5. Benches: guard removed, only cross-deps red; null mapped to root, 7 of 14 red. No node-side Symbol Editor opener exists: contract checked by dispatch (LIR §7).
+**Prompt document name**: 2026-11-07 15:16
+
+## 2026-11-07 — ticket: publishedChannelSlots is one module-level list for every IR canvas
+**Ticket**: `publishedChannelSlots` (`useIRContainment.ts:61`) is a single module-level list shared by every IR canvas: two IR canvases (two tabs, or already two models before multi-tab) overwrite each other's list. Out of L5; L5 made only the cross-deps epoch and bar-orientation resets per instance.
+**Priority**: medium
+**Found in**: P-2026-11-07-1516
+**Detail**: docs/discovery/lir_2026-11-07_l5_ir_resolution_tab_viewpoint.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l5 (P-2026-11-08-0012)
+**Prompt**: `claude_2026-11-08_0012_prompt_multi-tab-l5_take_trunk.md`, lane full (trunk into branch, RC-14): the trunk `alfonso-frontend-jjtl` at `5c15e491e` into `multi-tab-l5`, one `--no-ff` merge commit of the explicit sha, merge base `4834b0edb`, 161 trunk commits, 1 conflict measured.
+**Files touched**: merge `f2b5d1934`: the 126 files of the trunk side; union resolution of `docs/log-inbox/multi-tab.md` (the trunk's 3.1.2 entry, then the branch's L5 entry and ticket, verbatim); `EditorV2.tsx` auto-merged; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f2b5d1934`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:scripts and check:addonly PASS, hooks 967/967; vitest 568 files, 15088 passed and 2 skipped as expected (trunk tip 15070 + 18), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the gates and the clean reading of the auto-merged EditorV2.tsx; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 18:58, stands)
+**Notes**: Probes 48/48 once, R-MT-25 absent; union removes 0 lines vs either parent. EditorV2.tsx read whole (5423 lines) by an explorer subagent: disjoint regions, no duplicate. No node_modules here: temporary symlink to ~/jjodel/frontend/node_modules for the gates, removed after (P14). Trunk moved during the gates to docs-only `819c700b5`; the merge stays on `5c15e491e`.
+**Prompt document name**: 2026-11-08 00:12
+
+## 2026-11-08 — merge: multi-tab-l5 into alfonso-frontend-jjtl (P-2026-11-08-0055)
+**Prompt**: `claude_2026-11-08_0055_prompt_merge_multi-tab-l5.md`, lane full (merge, RC-14): `multi-tab-l5` at `5bcafa843` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `5c15e491e`, 8 branch commits, zero conflicts measured.
+**Files touched**: merge `46554f772`: the 16 files of the branch side, no union resolution (index tree `2bab2be03` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `46554f772`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts and check:addonly PASS, hooks 967/967; vitest 568 files, 15100 passed and 2 skipped (15102 as expected: trunk tip 15084 + 18), 0 failed, 3 files red: the known `window` imports.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; the L5 app check P-2026-11-07-1730, crops OK by Alfonso 2026-11-07 18:58, and the take-trunk gates on `f2b5d1934` stand for this code)
+**Notes**: Probes 5/5 once. Files on both sides: none; governance files on the branch: none. Branch's 18 new tests counted from its test diff: vitest cannot start in the branch tree (no node_modules), not written there. Trunk-tip vitest at load ~112 had 5 timing-bound reds (timeouts, 50 ms budget, Chromium layout); all passed on the merge at load ~16. Lane board untouched, not restarted; 3001 up, not restarted.
+**Prompt document name**: 2026-11-08 00:55
+
+## 2026-11-08 — fix: one populate owner per model, the last instance clears (multi-tab L4)
+**Prompt**: `claude_2026-11-08_0131_prompt_multi_tab_l4_populate_owner.md`, lane full (critical zone): a per-model populate owner in `syncState.ts`, used by `useJjomSync.ts` to gate the populate creators; the registry clears run on the last instance of the model. Continued by P-2026-11-08-0150 (gates, two-tab measurement, cut at the AM-8 ceiling) and closed by P-2026-11-08-0245 (rerun, regressions, closure).
+**Files touched**: `f888be09f` the LIR; `634dceabf` `useJjomSyncPopulateOwner.test.ts`, `populateOwner.test.ts`, red (16 of 18 on `db65de069`); `587aed3cf` `syncState.ts`, `useJjomSync.ts`, `useJjomSyncPopulateOwner.test.ts`; 0245: LIR §7, this entry and the ticket, three Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: 0245 on `587aed3cf`, layout probe 3/3 every step x3, container 0 failures, 0457 V1/V3/V2/R-MT-18 17 PASS 0 FAIL, demo tabs 18/18 and 25/25; two-tab scene rerun identical to 0150 (vertex 2 -> 1, registries kept after the owner's close, cleared after the last)
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (probes of 0150 and 0245, pageerrors 0 in every run; four light-theme crops in `~/.jjodel-lanes/P-2026-11-08-0150/`, LIR §7; Alfonso's visual check due)
+**Notes**: Gates. 0131 on 587aed3cf: typecheck exit 0, 0 error TS; vitest 570 files, 15124 passed, 2 skipped, 3 files red: the known window imports; bench 10 mutations, all killed. 0150: build exit 0, check:docs exit 0; 0245: check:docs after the closure edits. Departures (console creation through ContextMenu.tsx:321, :325; viewport framing in tab 2; 0150 runs started at load 64.15, rerun at 2.40) and the §3.7 edge duplicate not reproducing on the parent: LIR §7.
+**Prompt document name**: 2026-11-08 01:31
+
+## 2026-11-08 — ticket: sync registries have no model key, the last tab of model N clears model M
+**Ticket**: The five registries the populate unmount clears (`canvasEdgePairs`, `edgeRefIds`, `canvasUpdatedIds`, `syncModes`, `dropCreatedIds`) are module-level and keyed by element id only: the last tab of model N unmounting clears the entries of an open tab on model M. L4 changed only when the clears run (the last instance of the model), not what they clear; out of L4. Keying them by model needs the writers outside L4 (`canvasToJjom.ts`, `useM1ReferenceEdges.ts`, `jjomTransformers.ts:679`, `EditorV2.tsx`) to pass a model id, or a clear by membership in the model's graph.
+**Priority**: medium
+**Found in**: P-2026-11-08-0131
+**Detail**: docs/discovery/lir_2026-11-07_l4_populate_owner.md
+
+## 2026-11-08 — merge: multi-tab-l4 into alfonso-frontend-jjtl (P-2026-11-08-0737)
+**Prompt**: `claude_2026-11-08_0737_prompt_merge_multi-tab-l4.md`, lane full (merge, RC-14): `multi-tab-l4` at `d2b184780` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `db65de069`, 6 branch commits, zero conflicts measured.
+**Files touched**: merge `0046f604a`: the 9 files of the branch side (`syncState.ts`, `useJjomSync.ts`, two tests, the LIR, three prompts, `docs/log-inbox/multi-tab.md`), no union resolution (index tree `7d6f75649` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0046f604a`: typecheck (0 `error TS`) and typecheck:scripts exit 0, build exit 0, check:docs 5/5, check:agents, check:scripts and check:addonly PASS, hooks 967/967 (967 + 0); vitest 574 files, 15184 passed and 2 skipped (as expected: trunk tip 15165 + 19), 0 failed tests; files red: the known 3 `window` imports, and two Chromium `afterAll` close timeouts (`irCollapsedRender`, `irSelectionRing`) at load 86, both green alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (the merge writes no code of its own; the critical-zone code it carries has the branch's LIR, `f888be09f`, `docs/discovery/lir_2026-11-07_l4_populate_owner.md`)
+**Smoke visivo**: passato (chat GO C-2026-11-07-0425 on the merge gates; Alfonso's Ok 2026-11-08 07:37 on the 0150 crops, and the 0150 and 0245 measurements on the same code)
+**Notes**: Probes 17/17 once. Files on both sides: none; governance files on the branch: none. The 19 new tests counted on the merge from the two added files, byte-equal to d2b184780: vitest cannot start in the branch tree (no node_modules), not written there; a first static count said 18. Trunk-tip vitest at load 32: the 3 import reds plus an irCollapsedRender close timeout, 13/13 alone. check:docs 5/5, not the prompt's 4/4. Lane board unchanged, not restarted; 3001 up, not restarted.
+**Prompt document name**: 2026-11-08 07:37
+
+## 2026-11-08 — feat: a second tab on one model, Open in new tab and Open beside (multi-tab L6)
+**Prompt**: `claude_2026-11-08_0808_prompt_multi_tab_l6_second_tab.md`, lane full: tab-id helper `<modelId>~tab<N>`, decoding at the sites that read a tab id as a model id, `closeTabsForEntity` on every tab of the entity, `openBeside` by tab id, the two menu items on the model row. List widened by Alfonso's GO (RC-21) with `EditorSwitch.tsx`, `ModelTab.tsx`, `MyRcDock.tsx`. Closed by the continuation lanes P-2026-11-08-0852 (app check) and P-2026-11-08-1003 (paint fix of the beside panel).
+**Files touched**: `46cde4fdc` and the follow-up: the discovery note; `64b18a050` five test files, red; `89fa42c59` `modelTabId.ts` (new), `TabDataMaker.tsx`, `ModelTab.tsx`, `EditorSwitch.tsx`, `Dock.tsx`, `DockManager.tsx`, `MyRcDock.tsx`, `Navbar.tsx`, `TreeViewContent.tsx`; `7f8e8c0fb` `ScriptTab.scss` (the beside panel is painted); the discovery note, this entry and the three Status flips.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (app probes; the maximized fallback stays red, known limit; Alfonso's visual check due)
+**Notes**: Partial: known limits. On 7f8e8c0fb: typecheck exit 0, build passed, the 5 L6 test files 38 passed, check:docs exit 0; no full vitest (no TS changed). App: Open beside painted 3/3, 27 nodes, left 18; Refactoring split 8 nodes; demo 15/15. Red: maximized fallback, tab in a hidden placeholder. Console not observed. Cause c: discovery 2026-11-06 §2.2 missed three readers. Tables: `discovery_2026-11-08_l6_second_tab.md`.
+**Prompt document name**: 2026-11-08 08:08
+
+## 2026-11-08 — ticket: the Console reads the dock tab id as a model id
+**Ticket**: `components/editors/Console.tsx:846-848,1058-1059` resolve the active tab id with `fromPointer`. On a second tab of a model (`<modelId>~tab<N>`, L6) the lookup misses: no crash, but the Console sees no active model and `:1059` clears its node. Read from the code, not observed at runtime (`.console-tab-v2` is not mounted in the demo layout). JjScript is not affected: measured, it finds the model through the `EDITOR_TYPE_CHANGE` cache. The fix is `modelOfTabId` (`components/abstract/tabs/modelTabId.ts`) at those lines.
+**Priority**: medium
+**Found in**: P-2026-11-08-0808
+**Detail**: docs/discovery/discovery_2026-11-08_l6_second_tab.md
+
+## 2026-11-08 — merge: alfonso-frontend-jjtl into multi-tab-l6 (P-2026-11-08-1156)
+**Prompt**: `claude_2026-11-08_1156_prompt_multi-tab-l6_take_trunk.md`: the trunk at `34a511ffb` into `multi-tab-l6`, one merge commit, `--no-ff`, before the branch's own merge (RC-14). Merge base `f64bd6592`, 74 commits on the trunk side, 8 on the branch side.
+**Files touched**: merge `7b4a75718`: the 45 files of the trunk side against the first parent (`git diff --name-only 7b4a75718^1 7b4a75718`), none by hand; both sides: `frontend/src/components/abstract/DockManager.tsx`, auto-merged, read top to bottom. Closure commit: this inbox and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on `7b4a75718`: typecheck exit 0; typecheck:scripts exit 0; vitest 15366 passed, 3 skipped, 584 files, the 3 files red at import (trunk 15328 + 38 of the branch); hooks 967; build exit 0; check:docs 5/5; check:scripts and check:addonly PASS. The visual probes were not rerun on the merge commit.
+**Out-of-scope changes**: no — above five files only as the merge the prompt names (RC-11), listed by the command in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok to the 0852 and 1003 crops, taken before the merge; no probe rerun on `7b4a75718`, the trunk merge lane reruns them.
+**Notes**: Vitest took three runs: at load 113-146 `tolerant.test.ts` broke its wall-clock guards (1726 and 1086 ms against 1000; 60 against 50 ms) and `irCollapsedRender` a hook timeout; both files green alone twice, run 3 green. `frontend/node_modules` absent: temporary symlink to the shared one (P14), removed after the gates. A hook run overran the tool timeout, stopped, rerun in the foreground. check:docs is 5/5 here, the prompt said 4/4.
+**Prompt document name**: 2026-11-08 11:56
+
+## 2026-11-08 — merge: multi-tab-l6 into alfonso-frontend-jjtl (P-2026-11-08-1247)
+**Prompt**: `claude_2026-11-08_1247_prompt_merge_multi-tab-l6.md`, lane full (merge, RC-14): `multi-tab-l6` at `76f051677` into `alfonso-frontend-jjtl`, one `--no-ff` merge commit of the explicit sha, merge base `34a511ffb`, 11 branch commits, zero conflicts measured.
+**Files touched**: merge `bc4b137cd`: the 21 files of the branch side (`git diff --name-only bc4b137cd^1 bc4b137cd`), none by hand, no union resolution (tree `64b0f76b9` equal to the merge-tree result); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on `bc4b137cd`: typecheck (0 `error TS`) and typecheck:scripts exit 0; build exit 0; check:docs 5/5; check:agents, check:scripts and check:addonly PASS; hooks 967/967 (967 + 0); vitest 584 files, 15381 passed and 3 skipped, 15384 total as stated before the merge (trunk tip 15346 + 38), 0 failed tests, the 3 files red at import. The GO cites no probe rerun on the merge commit.
+**Out-of-scope changes**: no — above five files only as the merge the prompt names (RC-11), listed by the command in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (C-2026-11-07-0425) on Alfonso's ok of 2026-11-08 11:56 to the 0852 and 1003 crops, the app checks 0852 and 1003 on the same code and the merge gates; this lane ran no probe on `bc4b137cd`.
+**Notes**: Probes 5/5 once. Files on both sides: none; governance files on the branch: none. The 38 new tests counted statically at 76f051677 (5 new files), confirmed by the merge total: vitest cannot start in the branch tree (no node_modules), not written there. Trunk-tip vitest at load 115: 4 wall-clock reds in 3 codegen/textual files, 176/176 alone, absent on the merge. A trunk-tip hook run overran the tool timeout, finished in background. check:docs 5/5, not 4/4. Lane board, 3001 not restarted.
+**Prompt document name**: 2026-11-08 12:47
+
+**Ticket** (merge prompt, step 6): the `check:addonly` rollback names `3d0cc984d` as the pre-merge tip, but the tip before the merge was `af51a3094`, the prompt's own commit. Not triggered here; run as written it would also drop the prompt commit.
+
+## 2026-11-08 — fix: the beside layout, rail column, width cap, app bar, minimap, toolbar (multi-tab L6b)
+**Prompt**: `claude_2026-11-08_1608_prompt_multi_tab_l6b_beside_layout.md` and its continuations `claude_2026-11-08_1633_prompt_multi_tab_l6b_finish.md` and `claude_2026-11-08_1729_prompt_multi_tab_l6b_rail_edge.md`, lane full, layout only: side panels off the left canvas, the 710 cap lifted, the app bar listing the tab beside, the right minimap in its canvas, a toolbar of icons that scrolls in a narrow pane, and (1729) the rail at the window's edge in a split. Extended by L6c, `claude_2026-11-08_1855_prompt_multi_tab_l6c_single_palette.md` and its finish `claude_2026-11-08_2025_prompt_multi_tab_l6c_finish.md`: one Instances palette for a split, following the active pane, the active pane marked on its toolbar, tabs of one model named by viewpoint, each canvas fitting its own area and refitting once on entering a split, auto layout written under its tab's key. Extended by L6d, `claude_2026-11-08_2045_prompt_multi_tab_l6d_divider_inactive_pane.md`, closed by P-2026-11-08-2200: a visible divider with a grip, the cyan mark of the active pane removed, the inactive pane's commands disabled with the first press only activating it.
+**Files touched**: `6d229bff2` the note; `1cb96945d` `abstract/style.scss`; `0aff5a02a` `abstract/style.scss`, `properties-with-tree-view.scss`; `541ba4cb8` `Navbar.tsx`; `fa3b09e2f`, `b89421b06` `EditorV2.scss`; `0189a0928` `abstract/style.scss`, `EditorV2.scss`, `properties-with-tree-view.scss`; the note, this entry and the three Status flips. L6c: `efb5cfa2c` the note; `3730eec83` `canvasSplit.ts` and its test (new), `useCanvasSplit.ts` (new), `DockManager.tsx`, `EditorV2.tsx`, `PalettePanel.tsx`, `EditorV2.scss`; `a204ce6ac` `EditorV2.tsx`, `EditorV2.scss`; `15c50dbd8` `Navbar.tsx`; `d10579948`, `7da938887`, `81c7608af` `EditorV2.tsx`; the note `discovery_2026-11-08_l6c_single_palette.md`, this entry and the two Status flips. L6d: `7dbaf45bb` `EditorV2.scss`; `f45805984` `abstract/style.scss`; `efcda31f1` `EditorV2.tsx`, `Toolbar.tsx`, `EditorV2.scss`, `canvasSplit.ts` and its test; the same note, this entry and the Status flip.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-08 08:08
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (L6c, E4: in chat before the diff; the rest not-required)
+**Smoke visivo**: passato (app probes at 1600 and 1280, L6c 24/24 four runs; Alfonso's visual check due; L6d 45/45 four runs, Alfonso's visual GO 2026-11-08 21:55)
+**Notes**: Typecheck 0, build 0, check:docs 0, vitest 12 files 147 passed. 1729, from Alfonso's look at the 1633 crops: the rail stood between the tabs; `0189a0928` puts its column after the last panel, at the window's edge. Split 3/3 at 1600 and 1280; single tab and Refactoring split same as 1633; demo 15/15. The divider was not dead (1608's probe). R-MT-26 kept every control. Tables and limits: `discovery_2026-11-08_l6b_beside_layout.md`. L6c: `discovery_2026-11-08_l6c_single_palette.md`.
+**Prompt document name**: 2026-11-08 17:29
+
+## 2026-11-08 — merge: multi-tab-l6b into alfonso-frontend-jjtl (P-2026-11-08-2223)
+**Prompt**: `claude_2026-11-08_2223_prompt_merge_multi-tab-l6b.md`, lane full (merge; zero conflicts measured): bring `multi-tab-l6b` at bc55c840b into the trunk with one `--no-ff` merge commit of the explicit sha, merge base f081ad4f2; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 5a9887622 (merge), 22 files — `frontend/src/components/abstract/DockManager.tsx`, `abstract/style.scss`, `editor-v2/EditorV2.scss`, `EditorV2.tsx`, `Toolbar.tsx`, `hooks/useCanvasSplit.ts`, `panels/PalettePanel.tsx`, `utils/canvasSplit.ts` and its test, `editors/properties-with-tree-view.scss`, `pages/components/Navbar.tsx`, three discovery notes (L6b, L6c, L6e), seven prompts, `docs/log-inbox/multi-tab.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 586 passed files, 15565 passed, 0 failed and 3 skipped (15568, expected 15546 + 22): the known 3 red at import; hooks 21 files 967/967 (expected 967 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 22, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat smoke 23:02: 3001 serves the trunk, index, EditorV2.tsx and DockManager.tsx transform with 200; Alfonso's visual GO on the same code on 3061 at 21:55)
+**Notes**: No conflict, no union; all probes as expected. Trunk tip full vitest: 2 load reds under concurrent runs (laneRun timeout, outline 10 ms), both green alone; none on the merge. The first trunk hook run went to the background on timeout: stopped, re-run in the foreground. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change). Rule 16: active log read only at closure. Tip moved after the merge by docs-only 6fea9e8e2 (P-2026-11-08-2230), another chat.
+**Prompt document name**: 2026-11-08 22:23

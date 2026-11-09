@@ -255,6 +255,36 @@ function cartesianProduct<T>(arrays: T[][]): T[][] {
     );
 }
 
+/** Several source models of one metamodel (R-JTG-26): an array whose items are all arrays. */
+function isSourceModelList(source: any): source is any[][] {
+    return Array.isArray(source) && source.length > 0 && source.every(Array.isArray);
+}
+
+/**
+ * The ids held by more than one model of the list, as an error message, or null.
+ * The trace keys a source element by id, so a shared id would merge two objects.
+ * A repeated id inside one model is left alone, as in a single model.
+ */
+function sharedSourceIdsError(models: any[][]): string | null {
+    const firstModelOf = new Map<any, number>();
+    const shared = new Map<any, [number, number]>();
+    models.forEach((model, index) => {
+        for (const item of model) {
+            const id = item?.id;
+            if (id === undefined || id === null) continue;
+            const first = firstModelOf.get(id);
+            if (first === undefined) firstModelOf.set(id, index);
+            else if (first !== index && !shared.has(id)) shared.set(id, [first, index]);
+        }
+    });
+    if (shared.size === 0) return null;
+    const limit = 5;
+    const shown = [...shared].slice(0, limit).map(([id, [a, b]]) => `'${id}' (models ${a + 1} and ${b + 1})`);
+    const more = shared.size > limit ? `, and ${shared.size - limit} more` : '';
+    return `The source models share ${shared.size} ${shared.size === 1 ? 'id' : 'ids'}: ${shown.join(', ')}${more}. ` +
+        'Ids must be unique across the source models: nothing was transformed.';
+}
+
 /**
  * Deep-copy a source model safely, handling circular references.
  * Falls back to the original value if serialization fails (e.g., due to proxies).
@@ -409,6 +439,54 @@ class JjtlEvaluationContext extends EvaluationContext {
                 }
             },
         });
+    }
+}
+
+/**
+ * The JjEL evaluator of a run: a demand used as the operand of an operator stops the run
+ * (P-2026-11-08-0740). A demand is carried out only where a binding places it; as an operand
+ * JjEL sees the marker object, and `+` wrote `"[object Object]_w"` or `null` with
+ * `success true`. Operands are marked when their operator node is evaluated, before them,
+ * so the check is structural; JjEL reaches every subexpression through `evaluate`. The
+ * receiver of a method call is marked the same way (P-2026-11-08-0835). A property read on
+ * a demand does not stop the run: it reads `null`, as R-FA-12 leaves a read on a missing
+ * feature, and is reported (P-2026-11-08-1025).
+ */
+class JjtlJjelEvaluator extends JjelEvaluator {
+    private readonly operands = new WeakMap<JjelExpression, string>();
+    private readonly reads = new WeakMap<JjelExpression, string>();
+
+    constructor(
+        private readonly demandSource: (value: unknown) => string | undefined,
+        private readonly demandRead: (source: string, property: string) => void,
+    ) {
+        super();
+    }
+
+    evaluate(expr: JjelExpression, ctx?: EvaluationContext): JjelValue {
+        if (expr.type === 'Binary') {
+            this.operands.set(expr.left, `an operand of '${expr.operator}'`);
+            this.operands.set(expr.right, `an operand of '${expr.operator}'`);
+        } else if (expr.type === 'Unary') {
+            this.operands.set(expr.operand, `the operand of '${expr.operator}'`);
+        } else if (expr.type === 'MethodCall' || expr.type === 'NullSafeMethodCall') {
+            this.operands.set(expr.object, `the receiver of method '${expr.method}'`);
+        } else if (expr.type === 'MemberAccess' || expr.type === 'NullSafeMemberAccess') {
+            this.reads.set(expr.object, expr.property);
+        }
+        const value = super.evaluate(expr, ctx);
+        if (value !== null && typeof value === 'object') {
+            const use = this.operands.get(expr);
+            const read = this.reads.get(expr);
+            const source = use !== undefined || read !== undefined ? this.demandSource(value) : undefined;
+            if (source !== undefined && read !== undefined) {
+                this.demandRead(source, read);
+            } else if (source !== undefined) {
+                throw new JjtlBuiltinError(source, `its result, a demand, is ${use}; a demand is carried out only ` +
+                    'where a binding places it; bind it with let, or read a bound value with envValue');
+            }
+        }
+        return value;
     }
 }
 
@@ -573,7 +651,14 @@ type CreationShape =
 export class JjtlExecutor {
     private ast: TransformationAST;
     private context!: ExecutionContext;
-    private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
+    private jjelEvaluator: JjelEvaluator = new JjtlJjelEvaluator(value => {
+        const demand = this.demandOf(value);
+        return demand?.kind === 'call' ? demand.rule.ruleName ?? 'a called rule' : demand ? 'envLookup' : undefined;
+    }, (source, property) => {
+        const read = `${property}\0${source}`;
+        if (this.demandReads) this.demandReads.add(read);
+        else this.warnDemandReads(undefined, new Set([read]));
+    });
     private errors: string[] = [];
     private warnings: string[] = [];
     // Target classes referenced by mappings that don't exist in the target
@@ -599,6 +684,8 @@ export class JjtlExecutor {
     // Member reads on unresolved references made by the JjEL evaluation in
     // progress; null outside one. Drained into a warning by evaluateExpression.
     private unresolvedReads: Set<string> | null = null;
+    // Property reads on a demand of the expression being evaluated, as `property\0source`.
+    private demandReads: Set<string> | null = null;
     // Containment placement (slice A, R-JTG-4): rule target -> the object whose
     // containment feature holds it. Decided here, before any write-back.
     private containerOf: Map<any, ContainmentClaim> = new Map();
@@ -639,11 +726,23 @@ export class JjtlExecutor {
     /**
      * Execute the transformation on a source model
      * NOTE: Creates a deep copy of sourceModel to prevent mutation of the original data
+     *
+     * sourceModel may also be a list of models of one metamodel, each an array of
+     * objects: they are united here, so everything below sees one array (R-JTG-26).
      */
     async execute(sourceModel: any, targetMetamodel?: any): Promise<ExecutionResult> {
         // console.log('[JjTL Executor] Starting execution...');
         // console.log('[JjTL Executor] AST:', this.ast);
         // console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
+
+        if (isSourceModelList(sourceModel)) {
+            const sharedIds = sharedSourceIdsError(sourceModel);
+            if (sharedIds) {
+                this.errors.push(sharedIds);
+                return { success: false, errors: this.errors, warnings: this.warnings, stats: this.stats };
+            }
+            sourceModel = sourceModel.flat();
+        }
 
         // Flatten L-layer proxies into plain objects (shallow — one level only).
         // JSON.parse(JSON.stringify()) is NOT used because L-layer proxies have
@@ -2998,6 +3097,8 @@ export class JjtlExecutor {
         // Convert JjTL AST to JjEL AST and delegate to JjEL evaluator
         const outerReads = this.unresolvedReads;
         this.unresolvedReads = new Set();
+        const outerDemandReads = this.demandReads;
+        this.demandReads = new Set();
         try {
             const jjelExpr = toJjelAst(expr);
             return this.jjelEvaluator.evaluate(jjelExpr, ctx);
@@ -3025,6 +3126,9 @@ export class JjtlExecutor {
             const reads = this.unresolvedReads;
             this.unresolvedReads = outerReads;
             if (reads.size > 0) this.warnUnresolvedReads(expr, reads);
+            const demandReads = this.demandReads;
+            this.demandReads = outerDemandReads;
+            if (demandReads.size > 0) this.warnDemandReads(expr, demandReads);
         }
     }
 
@@ -3051,6 +3155,25 @@ export class JjtlExecutor {
         const msg = `Rule '${rule}', ${where}: read ${[...reads].join(', ')}, ` +
             `a reference to an object that is not in the source model; the value is null.`;
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
+    /**
+     * One warning per property read on a demand of an expression, for each source
+     * element it runs on (P-2026-11-08-1025). `expr` is undefined for the JjEL
+     * argument of `resolve`, evaluated outside evaluateExpression.
+     */
+    private warnDemandReads(expr: ExpressionAST | undefined, reads: Set<string>): void {
+        const start = expr?.location?.start;
+        const where = start ? `expression at line ${start.line}, column ${start.column}` : 'expression';
+        const { currentRuleName, currentInstanceName } = this.context;
+        const origin = ` (rule '${currentRuleName ?? 'transformation'}', source element '${currentInstanceName ?? '?'}')`;
+        for (const read of reads) {
+            const [property, source] = read.split('\0');
+            const msg = `Read of property '${property}' on a demand in ${where}${origin}: the result of '${source}', ` +
+                'a demand, has no properties; the value is null; a demand is carried out only where a binding ' +
+                'places it; bind it with let, or read a bound value with envValue';
+            if (!this.warnings.includes(msg)) this.warnings.push(msg);
+        }
     }
 
     /**
@@ -3218,7 +3341,9 @@ export class JjtlExecutor {
      * The environment as JjEL sees it (R-JTG-5): `extendEnv(names, values)` returns a new
      * frame over the current environment, each value a closure over the current
      * environment, the binding site; `envHas(name)`; `envLookup(name)`, the bound value as
-     * a demand lowered under its closure's environment, or null when unbound.
+     * a demand lowered under its closure's environment; unbound, it fails as envValue does;
+     * `envValue(name[, env])`, the bound value as bound, never a demand, read from the
+     * current environment or from an `extendEnv` marker; unbound, it fails (R-FA-11).
      */
     private registerEnvironmentBuiltins(): void {
         const ctx = this.context.evalContext;
@@ -3237,7 +3362,14 @@ export class JjtlExecutor {
         ctx.registerBuiltin('envLookup', createFunction(['name'], (args: JjelValue[]) => {
             const name = String(args[0]);
             const closure = this.lookupClosure(this.currentEnvironment(), name);
-            return (closure ? this.makeDemand({ kind: 'closure', name, closure }) : null) as JjelValue;
+            if (!closure) throw new Error(`'${name}' is not bound in the environment; envHas tests it`);
+            return this.makeDemand({ kind: 'closure', name, closure }) as JjelValue;
+        }));
+        ctx.registerBuiltin('envValue', createFunction(['name', 'env'], (args: JjelValue[]) => {
+            const name = String(args[0]);
+            const closure = this.lookupClosure(this.environmentOf(args[1]) ?? this.currentEnvironment(), name);
+            if (!closure) throw new Error(`'${name}' is not bound in the environment; envHas tests it`);
+            return closure.value as JjelValue;
         }));
     }
 

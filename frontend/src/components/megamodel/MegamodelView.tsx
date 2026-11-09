@@ -25,9 +25,9 @@ import MegamodelNode from './MegamodelNode';
 import MegamodelContextMenu, { type MenuItem } from './MegamodelContextMenu';
 import {
     NODE_W, NODE_H,
-    type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type MmNodeStats, type MmNodeStatus, type Side, type Point,
+    type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type MmNodeStats, type MmNodeStatus, type Side, type RouteEnds, type Point,
     EDGE_STYLES,
-    getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides,
+    getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides, edgeLabelOf, edgeTitleOf, verticalTrackOffsets,
 } from './MegamodelEdge';
 import { Defaults, isDataManagerViewpointId } from '../../joiner';
 import { placeScriptNodes, scriptLinks, type MegamodelScriptInput } from './megamodelScripts';
@@ -206,7 +206,8 @@ function buildGraph(
             from: edge.source.id,
             to: edge.target.id,
             type: mmType,
-            label: styleDef.label,
+            label: edgeLabelOf(mmType, edge.metadata),
+            title: edgeTitleOf(mmType, edge.metadata),
             style: {
                 color: styleDef.color,
                 dasharray: styleDef.dasharray,
@@ -607,7 +608,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
         const anchorTs = computeAnchorTs(oriented);
 
-        return oriented.map(edge => {
+        const ended = oriented.map(edge => {
             const fromNode = nodeMap.get(edge.from);
             const toNode   = nodeMap.get(edge.to);
             if (!fromNode || !toNode) return null;
@@ -620,12 +621,19 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             if (!Number.isFinite(p1.x) || !Number.isFinite(p1.y) ||
                 !Number.isFinite(p2.x) || !Number.isFinite(p2.y)) return null;
 
-            const pts = routePoints(p1, edge.fromSide, p2, edge.toSide);
+            return { edge, p1, exitSide: edge.fromSide, p2, entrySide: edge.toSide };
+        }).filter(Boolean) as Array<RouteEnds & { edge: MmEdge }>;
+
+        const trackOffsets = verticalTrackOffsets(ended);
+
+        return ended.map(({ edge, p1, exitSide, p2, entrySide }, i) => {
+            const pts = routePoints(p1, exitSide, p2, entrySide, trackOffsets[i]);
             const path = buildRoundedPath(pts);
-            const mid = labelMidpoint(pts);
+            // The pill stays at the centre of the gap, wherever the edge's track falls
+            const mid = labelMidpoint(routePoints(p1, exitSide, p2, entrySide));
 
             return { edge, path, mid, pts };
-        }).filter(Boolean) as Array<{ edge: MmEdge; path: string; mid: Point; pts: Point[] }>;
+        });
     }, [visibleEdges, nodeMap, layoutReady]);
 
     // ── Pan handlers (middle-click or left-click on background) ───────────────
@@ -1179,6 +1187,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                                                     opacity={isEdgeDimmed ? 0 : 1}
                                                     style={{ transition: 'opacity 0.3s' }}
                                                 >
+                                                    {edge.title && <title>{edge.title}</title>}
                                                     <rect
                                                         x={-(edge.label.length * 3.2 + 8)}
                                                         y={-9}
@@ -1188,6 +1197,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                                                         fill="#ffffff"
                                                         stroke="#e2e8f0"
                                                         strokeWidth={0.5}
+                                                        style={edge.title ? { pointerEvents: 'auto' } : undefined}
                                                     />
                                                     <text
                                                         textAnchor="middle"

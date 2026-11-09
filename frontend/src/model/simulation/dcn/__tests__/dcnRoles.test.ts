@@ -8,7 +8,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { encodeRoleValues } from '../../roleCatalog';
-import { dcnStcFromRoles } from '../dcnRoles';
+import { dcnCoherenceFromRoles, dcnStcFromRoles } from '../dcnRoles';
+import type { DcnStc } from '../dcnRoles';
+import type { DcnReadView } from '../dcnCompile';
 
 const DRONE_BAG = {
     simStaticClass: 'StaticClass',
@@ -120,5 +122,190 @@ describe('dcnStcFromRoles', () => {
             'redefines', 'staticClass', 'viewpoints',
         ]);
         expect(JSON.stringify(bag)).toBe(before);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The coherence constraints (P-2026-11-09-0124, R-DCN-28, spec §3)
+// ---------------------------------------------------------------------------
+
+const COHERENCE_KEYS = {
+    simCoherence: 'CoherenceConstraint',
+    simCoherenceContext: 'CoherenceConstraint.context',
+    simCoherencePointwise: 'CoherenceConstraint.pointwise',
+    simCoherencePattern: 'CoherenceConstraint.pattern',
+    simPersistenceCondition: 'BoundedPersistence.condition',
+    simPersistenceBound: 'BoundedPersistence.k',
+    simResponseTrigger: 'BoundedResponse.trigger',
+    simResponseResponse: 'BoundedResponse.response',
+    simResponseBound: 'BoundedResponse.k',
+};
+
+const COHERENCE_BAG = { ...DRONE_BAG, ...COHERENCE_KEYS };
+
+interface Obj {
+    meta: string;
+    name?: string;
+    refs?: Record<string, string[]>;
+    attrs?: Record<string, unknown>;
+}
+type Model = Record<string, Obj>;
+
+const CONTEXT = 'CoherenceConstraint.context';
+const POINTWISE = 'CoherenceConstraint.pointwise';
+const PATTERN = 'CoherenceConstraint.pattern';
+
+/** One φ-only constraint, one persistence, one response, among objects of other metaclasses. */
+function coherenceModel(): Model {
+    return {
+        Drone: { meta: 'StaticClass', name: 'Drone' },
+        phi: { meta: 'CoherenceConstraint', name: 'chargeNonNegative', refs: { [CONTEXT]: ['Drone'] }, attrs: { [POINTWISE]: 'self.battery >= 0' } },
+        persists: { meta: 'CoherenceConstraint', name: 'notTooFast', refs: { [CONTEXT]: ['Drone'], [PATTERN]: ['p1'] } },
+        responds: { meta: 'CoherenceConstraint', name: 'landsWhenLow', refs: { [CONTEXT]: ['Drone'], [PATTERN]: ['p2'] }, attrs: { [POINTWISE]: 'self.power > 0' } },
+        p1: { meta: 'BoundedPersistence', attrs: { 'BoundedPersistence.condition': 'self.speed > 10', 'BoundedPersistence.k': 3 } },
+        p2: { meta: 'BoundedResponse', attrs: { 'BoundedResponse.trigger': 'self.battery < 5', 'BoundedResponse.response': 'self.altitude = 0', 'BoundedResponse.k': '2' } },
+    };
+}
+
+/** `SpecialConstraint` extends `CoherenceConstraint`, `SlowPersistence` extends `BoundedPersistence`. */
+const SUPERS: Record<string, string> = { SpecialConstraint: 'CoherenceConstraint', SlowPersistence: 'BoundedPersistence' };
+
+function viewOf(m: Model): DcnReadView {
+    return {
+        objects: () => Object.keys(m),
+        metaclassOf: id => m[id]?.meta,
+        referenceTargets: (id, ref) => [...(m[id]?.refs?.[ref] ?? [])],
+        attributeValue: (id, attr) => m[id]?.attrs?.[attr],
+        ownerOf: f => (f.includes('.') ? f.split('.')[0] : undefined),
+        conformsTo: (c, s) => c === s || SUPERS[c] === s,
+        nameOf: id => m[id]?.name,
+    };
+}
+
+const stcOf = (bag: Record<string, unknown>): DcnStc => dcnStcFromRoles(bag) as DcnStc;
+
+describe('the coherence roles of dcnStcFromRoles', () => {
+    it('reads the nine keys, and leaves the stc of a bag without them as it was', () => {
+        expect(stcOf(COHERENCE_BAG)).toMatchObject({
+            coherence: 'CoherenceConstraint',
+            coherenceContext: 'CoherenceConstraint.context',
+            coherencePointwise: 'CoherenceConstraint.pointwise',
+            coherencePattern: 'CoherenceConstraint.pattern',
+            persistenceCondition: 'BoundedPersistence.condition',
+            persistenceBound: 'BoundedPersistence.k',
+            responseTrigger: 'BoundedResponse.trigger',
+            responseResponse: 'BoundedResponse.response',
+            responseBound: 'BoundedResponse.k',
+        });
+        expect(stcOf(DRONE_BAG)).not.toHaveProperty('coherence');
+    });
+
+    it('a bag without them is still complete, and they do not stand in for the closure (mutant: a coherence role in the closure)', () => {
+        expect(dcnStcFromRoles(DRONE_BAG)).not.toBeNull();
+        expect(dcnStcFromRoles(without(COHERENCE_BAG, 'simInvariant'))).toBeNull();
+    });
+
+    it('drops what hangs on an unset role, transitively (mutant: a pattern role depending on the constraint only)', () => {
+        const noPattern = stcOf(without(COHERENCE_BAG, 'simCoherencePattern'));
+        expect(noPattern.persistenceCondition).toBeUndefined();
+        expect(noPattern.persistenceBound).toBeUndefined();
+        expect(noPattern.responseTrigger).toBeUndefined();
+        expect(noPattern.responseResponse).toBeUndefined();
+        expect(noPattern.responseBound).toBeUndefined();
+        // control: what hangs on the constraint stays
+        expect(noPattern.coherenceContext).toBe(CONTEXT);
+        expect(noPattern.coherencePointwise).toBe(POINTWISE);
+        const noConstraint = stcOf(without(COHERENCE_BAG, 'simCoherence'));
+        for (const k of ['coherenceContext', 'coherencePointwise', 'coherencePattern', 'responseBound'] as const) {
+            expect(noConstraint[k], k).toBeUndefined();
+        }
+    });
+});
+
+describe('dcnCoherenceFromRoles', () => {
+    const read = (m: Model = coherenceModel(), bag: Record<string, unknown> = COHERENCE_BAG) => dcnCoherenceFromRoles(stcOf(bag), viewOf(m));
+
+    it('reads a φ-only constraint, a persistence and a response, in model order, as plain data', () => {
+        expect(read()).toEqual({
+            constraints: [
+                { id: 'phi', name: 'chargeNonNegative', context: 'Drone', pointwise: 'self.battery >= 0', pattern: null },
+                {
+                    id: 'persists', name: 'notTooFast', context: 'Drone', pointwise: null,
+                    pattern: { kind: 'persistence', id: 'p1', condition: 'self.speed > 10', k: 3 },
+                },
+                {
+                    id: 'responds', name: 'landsWhenLow', context: 'Drone', pointwise: 'self.power > 0',
+                    pattern: { kind: 'response', id: 'p2', trigger: 'self.battery < 5', response: 'self.altitude = 0', k: 2 },
+                },
+            ],
+            defects: [],
+        });
+    });
+
+    it('is empty with the roles unbound, even with constraint objects in the model (mutant: the class role not checked)', () => {
+        expect(read(coherenceModel(), DRONE_BAG)).toEqual({ constraints: [], defects: [] });
+    });
+
+    it('takes subclasses of the constraint and of the pattern (mutants: metaclass by equality, in either place)', () => {
+        const m = coherenceModel();
+        m.phi.meta = 'SpecialConstraint';
+        m.p1.meta = 'SlowPersistence';
+        const { constraints } = read(m);
+        expect(constraints.map(c => c.id)).toEqual(['phi', 'persists', 'responds']);
+        expect(constraints[1].pattern?.kind).toBe('persistence');
+    });
+
+    it('reads a blank φ as null and an absent context as null (mutant: the raw value kept)', () => {
+        const m = coherenceModel();
+        m.phi.attrs = { [POINTWISE]: '   ' };
+        m.phi.refs = {};
+        expect(read(m).constraints[0]).toEqual({ id: 'phi', name: 'chargeNonNegative', context: null, pointwise: null, pattern: null });
+    });
+
+    it('falls back on the id for a constraint with no name', () => {
+        const m = coherenceModel();
+        delete m.phi.name;
+        expect(read(m).constraints[0].name).toBe('phi');
+    });
+
+    it('a pattern of neither kind is no pattern and no defect (mutant: the second kind as the default)', () => {
+        const m = coherenceModel();
+        m.p2.meta = 'SomethingElse';
+        const { constraints, defects } = read(m);
+        expect(constraints[2].pattern).toBeNull();
+        expect(defects).toEqual([]);
+    });
+
+    for (const [label, k, message] of [
+        ['absent', undefined, 'a pattern with no k'],
+        ['blank', '  ', 'a pattern with no k'],
+        ['zero', 0, 'k 0 is not a positive integer'],
+        ['negative', -1, 'k -1 is not a positive integer'],
+        ['negative text', '-4', 'k -4 is not a positive integer'],
+        ['fractional', 2.5, 'k 2.5 is not a positive integer'],
+        ['not a number', 'many', 'k many is not a positive integer'],
+    ] as const) {
+        it(`a persistence with a bad k (${label}) is a bounds defect, and its pattern is dropped (mutants: k > 0 relaxed, the defect not pushed)`, () => {
+            const m = coherenceModel();
+            m.p1.attrs = { 'BoundedPersistence.condition': 'self.speed > 10', ...(k === undefined ? {} : { 'BoundedPersistence.k': k }) };
+            const { constraints, defects } = read(m);
+            expect(defects).toEqual([{ index: null, name: 'notTooFast', code: 'bounds', message, element: 'p1' }]);
+            expect(constraints[1]).toEqual({ id: 'persists', name: 'notTooFast', context: 'Drone', pointwise: null, pattern: null });
+            // control: the others are read as before
+            expect(constraints[2].pattern?.kind).toBe('response');
+        });
+    }
+
+    it('a response with a bad k is a defect too, its φ stays (mutant: only the persistence k checked)', () => {
+        const m = coherenceModel();
+        (m.p2.attrs as Record<string, unknown>)['BoundedResponse.k'] = 0;
+        const { constraints, defects } = read(m);
+        expect(defects.map(d => [d.code, d.name, d.element])).toEqual([['bounds', 'landsWhenLow', 'p2']]);
+        expect(constraints[2]).toMatchObject({ pointwise: 'self.power > 0', pattern: null });
+    });
+
+    it('a pattern whose k role is unbound is a defect, as a missing k (mutant: an unbound k read as fine)', () => {
+        const { defects } = read(coherenceModel(), without(COHERENCE_BAG, 'simPersistenceBound'));
+        expect(defects.map(d => [d.message, d.element])).toEqual([['a pattern with no k', 'p1']]);
     });
 });

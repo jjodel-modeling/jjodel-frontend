@@ -1,6 +1,6 @@
 {
-  "url": "http://localhost:3084",
-  "at": "2026-11-06T22:47:43.607Z",
+  "url": "http://localhost:3086",
+  "at": "2026-11-09T01:39:16.154Z",
   "metamodel": {
     "classes": [
       {
@@ -325,12 +325,12 @@
       },
       "Property.visibility": {
         "type": "VisibilityKind",
-        "typeId": "Pointer1794005350596_USER_192",
+        "typeId": "Pointer1794188448065_USER_192",
         "d": "none"
       },
       "Property.aggregation": {
         "type": "AggregationKind",
-        "typeId": "Pointer1794005351199_USER_199",
+        "typeId": "Pointer1794188448669_USER_199",
         "d": "none"
       },
       "Property.isDerived": {
@@ -345,7 +345,7 @@
       },
       "Operation.visibility": {
         "type": "VisibilityKind",
-        "typeId": "Pointer1794005350596_USER_192",
+        "typeId": "Pointer1794188448065_USER_192",
         "d": "none"
       },
       "LiteralInteger.value": {
@@ -687,294 +687,319 @@
     "connectives": "jjel",
     "alertForm": "firstSingle"
   },
+  "lostContainment": [],
   "ids": {
     "pkg": {
-      "obj": "Pointer1794005402226_USER_237",
-      "vertex": "Pointer1794005402228_USER_241"
+      "obj": "Pointer1794188499906_USER_237",
+      "vertex": "Pointer1794188499908_USER_241"
     },
     "String": {
-      "obj": "Pointer1794005402486_USER_242",
-      "vertex": "Pointer1794005402487_USER_247"
+      "obj": "Pointer1794188500164_USER_242",
+      "vertex": "Pointer1794188500164_USER_247"
     },
     "Integer": {
-      "obj": "Pointer1794005402744_USER_248",
-      "vertex": "Pointer1794005402745_USER_253"
+      "obj": "Pointer1794188500448_USER_248",
+      "vertex": "Pointer1794188500448_USER_253"
     },
     "Boolean": {
-      "obj": "Pointer1794005403000_USER_254",
-      "vertex": "Pointer1794005403001_USER_259"
+      "obj": "Pointer1794188500729_USER_254",
+      "vertex": "Pointer1794188500729_USER_259"
     },
     "SensorStatus": {
-      "obj": "Pointer1794005403256_USER_260",
-      "vertex": "Pointer1794005403257_USER_266"
+      "obj": "Pointer1794188501022_USER_260",
+      "vertex": "Pointer1794188501022_USER_266"
     },
     "lit_OK": {
-      "obj": "Pointer1794005403569_USER_267",
-      "vertex": "Pointer1794005403570_USER_272"
+      "obj": "Pointer1794188501354_USER_267",
+      "vertex": "Pointer1794188501354_USER_272"
     },
     "lit_Fault": {
-      "obj": "Pointer1794005403845_USER_273",
-      "vertex": "Pointer1794005403845_USER_278"
+      "obj": "Pointer1794188501629_USER_273",
+      "vertex": "Pointer1794188501629_USER_278"
     },
     "lit_Calibrating": {
-      "obj": "Pointer1794005404163_USER_279",
-      "vertex": "Pointer1794005404163_USER_284"
+      "obj": "Pointer1794188501952_USER_279",
+      "vertex": "Pointer1794188501953_USER_284"
     },
     "Drone": {
-      "obj": "Pointer1794005404437_USER_285",
-      "vertex": "Pointer1794005404438_USER_294"
+      "obj": "Pointer1794188502250_USER_285",
+      "vertex": "Pointer1794188502251_USER_294"
     },
     "p_Drone_distance": {
-      "obj": "Pointer1794005404741_USER_295",
-      "vertex": "Pointer1794005404742_USER_308"
+      "obj": "Pointer1794188502557_USER_295",
+      "vertex": "Pointer1794188502558_USER_308"
     },
     "p_Drone_speed": {
-      "obj": "Pointer1794005405050_USER_309",
-      "vertex": "Pointer1794005405052_USER_322"
+      "obj": "Pointer1794188502851_USER_309",
+      "vertex": "Pointer1794188502852_USER_322"
     },
     "p_Drone_power": {
-      "obj": "Pointer1794005405328_USER_323",
-      "vertex": "Pointer1794005405330_USER_336"
+      "obj": "Pointer1794188503141_USER_323",
+      "vertex": "Pointer1794188503142_USER_336"
     },
     "p_Drone_battery": {
-      "obj": "Pointer1794005405638_USER_337",
-      "vertex": "Pointer1794005405639_USER_350"
+      "obj": "Pointer1794188503449_USER_337",
+      "vertex": "Pointer1794188503451_USER_350"
     },
     "p_Drone_vmax": {
-      "obj": "Pointer1794005405940_USER_351",
-      "vertex": "Pointer1794005405941_USER_364"
+      "obj": "Pointer1794188503746_USER_351",
+      "vertex": "Pointer1794188503747_USER_364"
     },
     "Mode": {
-      "obj": "Pointer1794005406247_USER_365",
-      "vertex": "Pointer1794005406248_USER_371"
+      "obj": "Pointer1794188504033_USER_365",
+      "vertex": "Pointer1794188504034_USER_371"
     },
     "Charging": {
-      "obj": "Pointer1794005406563_USER_372",
-      "vertex": "Pointer1794005406564_USER_380"
+      "obj": "Pointer1794188504376_USER_372",
+      "vertex": "Pointer1794188504377_USER_380"
+    },
+    "p_Charging_chargeRate": {
+      "obj": "Pointer1794188504656_USER_381",
+      "vertex": "Pointer1794188504657_USER_394"
     },
     "mon_Charging_charge": {
-      "obj": "Pointer1794005406868_USER_381",
-      "vertex": "Pointer1794005406868_USER_385"
+      "obj": "Pointer1794188504973_USER_395",
+      "vertex": "Pointer1794188504974_USER_399"
     },
     "Ready": {
-      "obj": "Pointer1794005407161_USER_386",
-      "vertex": "Pointer1794005407162_USER_394"
+      "obj": "Pointer1794188505266_USER_400",
+      "vertex": "Pointer1794188505266_USER_408"
     },
     "op_Ready_takeOff": {
-      "obj": "Pointer1794005407456_USER_395",
-      "vertex": "Pointer1794005407457_USER_404"
+      "obj": "Pointer1794188505568_USER_409",
+      "vertex": "Pointer1794188505569_USER_418"
     },
     "Flying": {
-      "obj": "Pointer1794005407776_USER_405",
-      "vertex": "Pointer1794005407777_USER_413"
+      "obj": "Pointer1794188505877_USER_419",
+      "vertex": "Pointer1794188505878_USER_427"
     },
     "op_Flying_rampUp": {
-      "obj": "Pointer1794005408073_USER_414",
-      "vertex": "Pointer1794005408074_USER_423"
+      "obj": "Pointer1794188506155_USER_428",
+      "vertex": "Pointer1794188506156_USER_437"
     },
     "op_Flying_rampDown": {
-      "obj": "Pointer1794005408349_USER_424",
-      "vertex": "Pointer1794005408350_USER_433"
+      "obj": "Pointer1794188506463_USER_438",
+      "vertex": "Pointer1794188506464_USER_447"
     },
     "mon_Flying_drain": {
-      "obj": "Pointer1794005408656_USER_434",
-      "vertex": "Pointer1794005408657_USER_438"
+      "obj": "Pointer1794188506750_USER_448",
+      "vertex": "Pointer1794188506750_USER_452"
     },
     "Empty": {
-      "obj": "Pointer1794005408959_USER_439",
-      "vertex": "Pointer1794005408959_USER_447"
+      "obj": "Pointer1794188507048_USER_453",
+      "vertex": "Pointer1794188507052_USER_461"
     },
     "WeatherAssessmentUnit": {
-      "obj": "Pointer1794005409264_USER_448",
-      "vertex": "Pointer1794005409265_USER_457"
+      "obj": "Pointer1794188507383_USER_462",
+      "vertex": "Pointer1794188507384_USER_471"
     },
     "Alert": {
-      "obj": "Pointer1794005409575_USER_458",
-      "vertex": "Pointer1794005409575_USER_464"
+      "obj": "Pointer1794188507671_USER_472",
+      "vertex": "Pointer1794188507671_USER_478"
     },
     "Safe": {
-      "obj": "Pointer1794005409874_USER_465",
-      "vertex": "Pointer1794005409875_USER_473"
+      "obj": "Pointer1794188507979_USER_479",
+      "vertex": "Pointer1794188507980_USER_487"
     },
     "Moderate": {
-      "obj": "Pointer1794005410176_USER_474",
-      "vertex": "Pointer1794005410176_USER_482"
+      "obj": "Pointer1794188508282_USER_488",
+      "vertex": "Pointer1794188508283_USER_496"
     },
     "Adverse": {
-      "obj": "Pointer1794005410477_USER_483",
-      "vertex": "Pointer1794005410478_USER_491"
+      "obj": "Pointer1794188508583_USER_497",
+      "vertex": "Pointer1794188508584_USER_505"
     },
     "Sensor": {
-      "obj": "Pointer1794005410774_USER_492",
-      "vertex": "Pointer1794005410775_USER_501"
+      "obj": "Pointer1794188508881_USER_506",
+      "vertex": "Pointer1794188508882_USER_515"
     },
     "TempSensor": {
-      "obj": "Pointer1794005411077_USER_502",
-      "vertex": "Pointer1794005411078_USER_511"
+      "obj": "Pointer1794188509150_USER_516",
+      "vertex": "Pointer1794188509151_USER_525"
     },
     "p_TempSensor_value": {
-      "obj": "Pointer1794005411359_USER_512",
-      "vertex": "Pointer1794005411361_USER_525"
+      "obj": "Pointer1794188509477_USER_526",
+      "vertex": "Pointer1794188509478_USER_539"
     },
     "p_TempSensor_unit": {
-      "obj": "Pointer1794005411669_USER_526",
-      "vertex": "Pointer1794005411670_USER_539"
+      "obj": "Pointer1794188509763_USER_540",
+      "vertex": "Pointer1794188509766_USER_553"
     },
     "p_TempSensor_status": {
-      "obj": "Pointer1794005411971_USER_540",
-      "vertex": "Pointer1794005411972_USER_553"
+      "obj": "Pointer1794188510059_USER_554",
+      "vertex": "Pointer1794188510060_USER_567"
     },
     "op_TempSensor_injectFailure": {
-      "obj": "Pointer1794005412273_USER_554",
-      "vertex": "Pointer1794005412274_USER_563"
+      "obj": "Pointer1794188510400_USER_568",
+      "vertex": "Pointer1794188510401_USER_577"
     },
     "op_TempSensor_reset": {
-      "obj": "Pointer1794005412591_USER_564",
-      "vertex": "Pointer1794005412592_USER_573"
+      "obj": "Pointer1794188510683_USER_578",
+      "vertex": "Pointer1794188510684_USER_587"
     },
     "WindSensor": {
-      "obj": "Pointer1794005412893_USER_574",
-      "vertex": "Pointer1794005412894_USER_583"
+      "obj": "Pointer1794188511004_USER_588",
+      "vertex": "Pointer1794188511005_USER_597"
     },
     "p_WindSensor_speed": {
-      "obj": "Pointer1794005413197_USER_584",
-      "vertex": "Pointer1794005413198_USER_597"
+      "obj": "Pointer1794188511296_USER_598",
+      "vertex": "Pointer1794188511298_USER_611"
     },
     "p_WindSensor_unit": {
-      "obj": "Pointer1794005413496_USER_598",
-      "vertex": "Pointer1794005413497_USER_611"
+      "obj": "Pointer1794188511607_USER_612",
+      "vertex": "Pointer1794188511609_USER_625"
     },
     "p_WindSensor_status": {
-      "obj": "Pointer1794005413801_USER_612",
-      "vertex": "Pointer1794005413802_USER_625"
+      "obj": "Pointer1794188511898_USER_626",
+      "vertex": "Pointer1794188511899_USER_639"
     },
     "op_WindSensor_injectFailure": {
-      "obj": "Pointer1794005414098_USER_626",
-      "vertex": "Pointer1794005414099_USER_635"
+      "obj": "Pointer1794188512191_USER_640",
+      "vertex": "Pointer1794188512192_USER_649"
     },
     "op_WindSensor_reset": {
-      "obj": "Pointer1794005414394_USER_636",
-      "vertex": "Pointer1794005414395_USER_645"
+      "obj": "Pointer1794188512506_USER_650",
+      "vertex": "Pointer1794188512507_USER_659"
     },
     "RainSensor": {
-      "obj": "Pointer1794005414699_USER_646",
-      "vertex": "Pointer1794005414700_USER_655"
+      "obj": "Pointer1794188512785_USER_660",
+      "vertex": "Pointer1794188512786_USER_669"
     },
     "p_RainSensor_intensity": {
-      "obj": "Pointer1794005415004_USER_656",
-      "vertex": "Pointer1794005415005_USER_669"
+      "obj": "Pointer1794188513091_USER_670",
+      "vertex": "Pointer1794188513092_USER_683"
     },
     "p_RainSensor_unit": {
-      "obj": "Pointer1794005415300_USER_670",
-      "vertex": "Pointer1794005415302_USER_683"
+      "obj": "Pointer1794188513395_USER_684",
+      "vertex": "Pointer1794188513396_USER_697"
     },
     "p_RainSensor_status": {
-      "obj": "Pointer1794005415600_USER_684",
-      "vertex": "Pointer1794005415601_USER_697"
+      "obj": "Pointer1794188513690_USER_698",
+      "vertex": "Pointer1794188513691_USER_711"
     },
     "p_RainSensor_presence": {
-      "obj": "Pointer1794005415906_USER_698",
-      "vertex": "Pointer1794005415908_USER_711"
+      "obj": "Pointer1794188514005_USER_712",
+      "vertex": "Pointer1794188514006_USER_725"
     },
     "op_RainSensor_injectFailure": {
-      "obj": "Pointer1794005416211_USER_712",
-      "vertex": "Pointer1794005416212_USER_721"
+      "obj": "Pointer1794188514306_USER_726",
+      "vertex": "Pointer1794188514307_USER_735"
     },
     "op_RainSensor_reset": {
-      "obj": "Pointer1794005416505_USER_722",
-      "vertex": "Pointer1794005416506_USER_731"
+      "obj": "Pointer1794188514608_USER_736",
+      "vertex": "Pointer1794188514609_USER_745"
     },
     "HumiditySensor": {
-      "obj": "Pointer1794005416805_USER_732",
-      "vertex": "Pointer1794005416806_USER_741"
+      "obj": "Pointer1794188514901_USER_746",
+      "vertex": "Pointer1794188514902_USER_755"
     },
     "p_HumiditySensor_relative": {
-      "obj": "Pointer1794005417108_USER_742",
-      "vertex": "Pointer1794005417109_USER_755"
+      "obj": "Pointer1794188515191_USER_756",
+      "vertex": "Pointer1794188515192_USER_769"
     },
     "p_HumiditySensor_unit": {
-      "obj": "Pointer1794005417408_USER_756",
-      "vertex": "Pointer1794005417410_USER_769"
+      "obj": "Pointer1794188515496_USER_770",
+      "vertex": "Pointer1794188515498_USER_783"
     },
     "p_HumiditySensor_status": {
-      "obj": "Pointer1794005417704_USER_770",
-      "vertex": "Pointer1794005417708_USER_783"
+      "obj": "Pointer1794188515792_USER_784",
+      "vertex": "Pointer1794188515796_USER_797"
     },
     "op_HumiditySensor_injectFailure": {
-      "obj": "Pointer1794005418007_USER_784",
-      "vertex": "Pointer1794005418008_USER_793"
+      "obj": "Pointer1794188516102_USER_798",
+      "vertex": "Pointer1794188516103_USER_807"
     },
     "op_HumiditySensor_reset": {
-      "obj": "Pointer1794005418302_USER_794",
-      "vertex": "Pointer1794005418303_USER_803"
+      "obj": "Pointer1794188516398_USER_808",
+      "vertex": "Pointer1794188516399_USER_817"
     },
     "gen_TempSensor": {
-      "obj": "Pointer1794005418603_USER_804",
-      "vertex": "Pointer1794005418604_USER_808"
+      "obj": "Pointer1794188516704_USER_818",
+      "vertex": "Pointer1794188516704_USER_822"
     },
     "gen_WindSensor": {
-      "obj": "Pointer1794005418900_USER_809",
-      "vertex": "Pointer1794005418900_USER_813"
+      "obj": "Pointer1794188516993_USER_823",
+      "vertex": "Pointer1794188516993_USER_827"
     },
     "gen_RainSensor": {
-      "obj": "Pointer1794005419203_USER_814",
-      "vertex": "Pointer1794005419203_USER_818"
+      "obj": "Pointer1794188517312_USER_828",
+      "vertex": "Pointer1794188517312_USER_832"
     },
     "gen_HumiditySensor": {
-      "obj": "Pointer1794005419504_USER_819",
-      "vertex": "Pointer1794005419505_USER_823"
+      "obj": "Pointer1794188517613_USER_833",
+      "vertex": "Pointer1794188517614_USER_837"
     },
     "DroneWAU": {
-      "obj": "Pointer1794005419801_USER_824",
-      "vertex": "Pointer1794005419804_USER_831"
+      "obj": "Pointer1794188517891_USER_838",
+      "vertex": "Pointer1794188517891_USER_845"
     },
     "end_DroneWAU_drone": {
-      "obj": "Pointer1794005420111_USER_832",
-      "vertex": "Pointer1794005420112_USER_845"
+      "obj": "Pointer1794188518207_USER_846",
+      "vertex": "Pointer1794188518208_USER_859"
     },
     "end_DroneWAU_WAU": {
-      "obj": "Pointer1794005420405_USER_846",
-      "vertex": "Pointer1794005420406_USER_859"
+      "obj": "Pointer1794188518510_USER_860",
+      "vertex": "Pointer1794188518511_USER_873"
     },
     "WAUSensors": {
-      "obj": "Pointer1794005420711_USER_860",
-      "vertex": "Pointer1794005420712_USER_867"
+      "obj": "Pointer1794188518806_USER_874",
+      "vertex": "Pointer1794188518807_USER_881"
     },
     "end_WAUSensors_wau": {
-      "obj": "Pointer1794005421011_USER_868",
-      "vertex": "Pointer1794005421013_USER_881"
+      "obj": "Pointer1794188519112_USER_882",
+      "vertex": "Pointer1794188519114_USER_895"
     },
     "end_WAUSensors_ownedSensors": {
-      "obj": "Pointer1794005421312_USER_882",
-      "vertex": "Pointer1794005421314_USER_895"
+      "obj": "Pointer1794188519405_USER_896",
+      "vertex": "Pointer1794188519406_USER_909"
+    },
+    "speedLimit": {
+      "obj": "Pointer1794188519706_USER_910",
+      "vertex": "Pointer1794188519706_USER_916"
+    },
+    "lowBatteryPersistence": {
+      "obj": "Pointer1794188520020_USER_917",
+      "vertex": "Pointer1794188520021_USER_923"
+    },
+    "pat_lowBatteryPersistence": {
+      "obj": "Pointer1794188520310_USER_924",
+      "vertex": "Pointer1794188520310_USER_928"
+    },
+    "lowBatteryResponse": {
+      "obj": "Pointer1794188520618_USER_929",
+      "vertex": "Pointer1794188520619_USER_935"
+    },
+    "pat_lowBatteryResponse": {
+      "obj": "Pointer1794188520913_USER_936",
+      "vertex": "Pointer1794188520913_USER_941"
     },
     "seed_Charging": {
-      "obj": "Pointer1794005473113_USER_1001",
-      "vertex": "Pointer1794005473114_USER_1014"
+      "obj": "Pointer1794188715841_USER_1630",
+      "vertex": "Pointer1794188715844_USER_1643"
     },
     "seed_Ready": {
-      "obj": "Pointer1794005473524_USER_1015",
-      "vertex": "Pointer1794005473525_USER_1028"
+      "obj": "Pointer1794188716188_USER_1644",
+      "vertex": "Pointer1794188716190_USER_1657"
     },
     "seed_Flying": {
-      "obj": "Pointer1794005473819_USER_1029",
-      "vertex": "Pointer1794005473820_USER_1042"
+      "obj": "Pointer1794188716482_USER_1658",
+      "vertex": "Pointer1794188716483_USER_1671"
     },
     "seed_Empty": {
-      "obj": "Pointer1794005474122_USER_1043",
-      "vertex": "Pointer1794005474124_USER_1056"
+      "obj": "Pointer1794188716796_USER_1672",
+      "vertex": "Pointer1794188716797_USER_1685"
     },
     "seed_Safe": {
-      "obj": "Pointer1794005474418_USER_1057",
-      "vertex": "Pointer1794005474420_USER_1070"
+      "obj": "Pointer1794188717084_USER_1686",
+      "vertex": "Pointer1794188717086_USER_1699"
     },
     "seed_Moderate": {
-      "obj": "Pointer1794005474722_USER_1071",
-      "vertex": "Pointer1794005474723_USER_1084"
+      "obj": "Pointer1794188717401_USER_1700",
+      "vertex": "Pointer1794188717403_USER_1713"
     },
     "seed_Adverse": {
-      "obj": "Pointer1794005475018_USER_1085",
-      "vertex": "Pointer1794005475019_USER_1098"
+      "obj": "Pointer1794188717695_USER_1714",
+      "vertex": "Pointer1794188717696_USER_1727"
     }
   },
   "parseStored": {
@@ -1071,66 +1096,345 @@
       "err": "1:13 The target of an action must end in '.[attribute]'"
     }
   },
+  "coherenceExprs": {
+    "speedLimit.pointwise": "self.speed <= self.vmax",
+    "lowBatteryPersistence.condition": "self.battery < 20",
+    "lowBatteryResponse.trigger": "self.battery < 20",
+    "lowBatteryResponse.response": "self.speed == 0"
+  },
   "binding": {
     "objectRecord": {
       "name": "object",
-      "typeReference": "Pointer1794005341306_USER_166",
-      "slotContainer": "Pointer1794005341710_USER_168",
-      "definingFeature": "Pointer1794005342514_USER_170",
-      "valueHolder": "Pointer1794005342916_USER_172",
-      "featureContainer": "Pointer1794005334462_USER_144",
+      "typeReference": "Pointer1794188438716_USER_166",
+      "slotContainer": "Pointer1794188439122_USER_168",
+      "definingFeature": "Pointer1794188439930_USER_170",
+      "valueHolder": "Pointer1794188440362_USER_172",
+      "featureContainer": "Pointer1794188431810_USER_144",
       "generalization": {
-        "via": "Pointer1794005333657_USER_142",
-        "general": "Pointer1794005338890_USER_156"
+        "via": "Pointer1794188431000_USER_142",
+        "general": "Pointer1794188436285_USER_156"
       },
-      "abstractFlag": "Pointer1794005352203_USER_205",
-      "featureType": "Pointer1794005339292_USER_158",
-      "defaultValue": "Pointer1794005357029_USER_211",
+      "abstractFlag": "Pointer1794188449680_USER_205",
+      "featureType": "Pointer1794188436691_USER_158",
+      "defaultValue": "Pointer1794188454540_USER_211",
       "valueKinds": [
         {
           "when": "primitive:Boolean",
-          "create": "Pointer1794005313436_USER_76",
-          "field": "Pointer1794005360247_USER_215"
+          "create": "Pointer1794188410673_USER_76",
+          "field": "Pointer1794188457780_USER_215"
         },
         {
           "when": "primitive:String",
-          "create": "Pointer1794005313034_USER_73",
-          "field": "Pointer1794005359443_USER_214"
+          "create": "Pointer1794188410233_USER_73",
+          "field": "Pointer1794188456971_USER_214"
         },
         {
           "when": "primitive:Integer",
-          "create": "Pointer1794005312632_USER_70",
-          "field": "Pointer1794005358639_USER_213"
+          "create": "Pointer1794188409826_USER_70",
+          "field": "Pointer1794188456161_USER_213"
         },
         {
           "when": "instance",
-          "create": "Pointer1794005314243_USER_82",
-          "field": "Pointer1794005343720_USER_174"
+          "create": "Pointer1794188411481_USER_82",
+          "field": "Pointer1794188441171_USER_174"
         }
       ],
       "featureSources": [
         {
           "path": [
-            "Pointer1794005344122_USER_176",
-            "Pointer1794005344929_USER_178",
-            "Pointer1794005345733_USER_180"
+            "Pointer1794188441576_USER_176",
+            "Pointer1794188442383_USER_178",
+            "Pointer1794188443194_USER_180"
           ]
         }
       ]
     },
     "linkRecord": {
       "name": "link",
-      "typeReference": "Pointer1794005341306_USER_166",
-      "slotContainer": "Pointer1794005341710_USER_168",
-      "definingFeature": "Pointer1794005342514_USER_170",
-      "valueHolder": "Pointer1794005342916_USER_172",
-      "featureContainer": "Pointer1794005336879_USER_150"
+      "typeReference": "Pointer1794188438716_USER_166",
+      "slotContainer": "Pointer1794188439122_USER_168",
+      "definingFeature": "Pointer1794188439930_USER_170",
+      "valueHolder": "Pointer1794188440362_USER_172",
+      "featureContainer": "Pointer1794188434241_USER_150"
     },
-    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1794005341306_USER_166\",\"slotContainer\":\"Pointer1794005341710_USER_168\",\"definingFeature\":\"Pointer1794005342514_USER_170\",\"valueHolder\":\"Pointer1794005342916_USER_172\",\"featureContainer\":\"Pointer1794005334462_USER_144\",\"generalization\":{\"via\":\"Pointer1794005333657_USER_142\",\"general\":\"Pointer1794005338890_USER_156\"},\"abstractFlag\":\"Pointer1794005352203_USER_205\",\"featureType\":\"Pointer1794005339292_USER_158\",\"defaultValue\":\"Pointer1794005357029_USER_211\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1794005313436_USER_76\",\"field\":\"Pointer1794005360247_USER_215\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1794005313034_USER_73\",\"field\":\"Pointer1794005359443_USER_214\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1794005312632_USER_70\",\"field\":\"Pointer1794005358639_USER_213\"},{\"when\":\"instance\",\"create\":\"Pointer1794005314243_USER_82\",\"field\":\"Pointer1794005343720_USER_174\"}],\"featureSources\":[{\"path\":[\"Pointer1794005344122_USER_176\",\"Pointer1794005344929_USER_178\",\"Pointer1794005345733_USER_180\"]}]}]}",
+    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1794188438716_USER_166\",\"slotContainer\":\"Pointer1794188439122_USER_168\",\"definingFeature\":\"Pointer1794188439930_USER_170\",\"valueHolder\":\"Pointer1794188440362_USER_172\",\"featureContainer\":\"Pointer1794188431810_USER_144\",\"generalization\":{\"via\":\"Pointer1794188431000_USER_142\",\"general\":\"Pointer1794188436285_USER_156\"},\"abstractFlag\":\"Pointer1794188449680_USER_205\",\"featureType\":\"Pointer1794188436691_USER_158\",\"defaultValue\":\"Pointer1794188454540_USER_211\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1794188410673_USER_76\",\"field\":\"Pointer1794188457780_USER_215\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1794188410233_USER_73\",\"field\":\"Pointer1794188456971_USER_214\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1794188409826_USER_70\",\"field\":\"Pointer1794188456161_USER_213\"},{\"when\":\"instance\",\"create\":\"Pointer1794188411481_USER_82\",\"field\":\"Pointer1794188441171_USER_174\"}],\"featureSources\":[{\"path\":[\"Pointer1794188441576_USER_176\",\"Pointer1794188442383_USER_178\",\"Pointer1794188443194_USER_180\"]}]}]}",
     "decoded": {
       "ok": true
     },
     "defects": []
+  },
+  "roles": {
+    "keys": [
+      "ontoBindings",
+      "simBody",
+      "simCoherence",
+      "simCoherenceContext",
+      "simCoherencePattern",
+      "simCoherencePointwise",
+      "simComplete",
+      "simDynamicClasses",
+      "simInvariant",
+      "simMonitor",
+      "simOperation",
+      "simOverlapping",
+      "simPersistenceBound",
+      "simPersistenceCondition",
+      "simPrecondition",
+      "simProfile",
+      "simRedefines",
+      "simResponseBound",
+      "simResponseResponse",
+      "simResponseTrigger",
+      "simStaticClass",
+      "simViewpoints"
+    ],
+    "stc": {
+      "staticClass": "Pointer1794188411900_USER_85",
+      "viewpoints": "Pointer1794188441576_USER_176",
+      "dynamicClasses": "Pointer1794188442383_USER_178",
+      "invariant": "Pointer1794188461016_USER_219",
+      "operation": [
+        "Pointer1794188432621_USER_146",
+        "Pointer1794188444004_USER_182"
+      ],
+      "precondition": "Pointer1794188462635_USER_221",
+      "body": [
+        "Pointer1794188463443_USER_222",
+        "Pointer1794188464251_USER_223"
+      ],
+      "redefines": "Pointer1794188445622_USER_186",
+      "monitor": "Pointer1794188444815_USER_184",
+      "overlapping": "Pointer1794188459397_USER_217",
+      "complete": "Pointer1794188460207_USER_218",
+      "coherence": "Pointer1794188413515_USER_97",
+      "coherenceContext": "Pointer1794188446029_USER_188",
+      "coherencePointwise": "Pointer1794188466675_USER_226",
+      "coherencePattern": "Pointer1794188446433_USER_190",
+      "persistenceCondition": "Pointer1794188467485_USER_227",
+      "persistenceBound": "Pointer1794188468296_USER_228",
+      "responseTrigger": "Pointer1794188469104_USER_229",
+      "responseResponse": "Pointer1794188469913_USER_230",
+      "responseBound": "Pointer1794188470729_USER_231"
+    },
+    "ontoKept": true,
+    "profile": {
+      "id": "dynamicClassification",
+      "name": "Dynamic classification",
+      "system": true,
+      "shape": "dcn",
+      "modes": {
+        "node": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "initial": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "initialMarking": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "terminal": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "accepting": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "activityFinal": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "bound": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "transition": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "ownedTransitions": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "source": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "nextState": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "fork": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "join": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "arc": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "arcSource": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "arcTarget": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "arcWeight": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "inhibitorArc": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "trigger": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "event": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "eventIdentifier": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "guard": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "action": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "entry": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "exit": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "stateAttributes": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "stateOutput": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "transitionOutput": {
+          "mode": "off",
+          "reason": "Not used by Dynamic classification"
+        },
+        "staticClass": {
+          "mode": "edit"
+        },
+        "viewpoints": {
+          "mode": "edit"
+        },
+        "dynamicClasses": {
+          "mode": "edit"
+        },
+        "invariant": {
+          "mode": "edit"
+        },
+        "operation": {
+          "mode": "edit"
+        },
+        "precondition": {
+          "mode": "edit"
+        },
+        "body": {
+          "mode": "edit"
+        },
+        "redefines": {
+          "mode": "edit"
+        },
+        "monitor": {
+          "mode": "edit"
+        },
+        "overlapping": {
+          "mode": "edit"
+        },
+        "complete": {
+          "mode": "edit"
+        },
+        "coherence": {
+          "mode": "edit"
+        },
+        "coherenceContext": {
+          "mode": "edit"
+        },
+        "coherencePointwise": {
+          "mode": "edit"
+        },
+        "coherencePattern": {
+          "mode": "edit"
+        },
+        "persistenceCondition": {
+          "mode": "edit"
+        },
+        "persistenceBound": {
+          "mode": "edit"
+        },
+        "responseTrigger": {
+          "mode": "edit"
+        },
+        "responseResponse": {
+          "mode": "edit"
+        },
+        "responseBound": {
+          "mode": "edit"
+        }
+      },
+      "params": {
+        "bound": 1,
+        "selector": "list"
+      },
+      "constraints": [],
+      "addedRequired": []
+    }
+  },
+  "coherence": {
+    "defects": [],
+    "constraints": [
+      {
+        "name": "speedLimit",
+        "context": "Drone",
+        "pointwise": "self.speed <= self.vmax",
+        "pattern": null
+      },
+      {
+        "name": "lowBatteryPersistence",
+        "context": "Drone",
+        "pointwise": null,
+        "pattern": {
+          "kind": "persistence",
+          "condition": "self.battery < 20",
+          "k": 10
+        }
+      },
+      {
+        "name": "lowBatteryResponse",
+        "context": "Drone",
+        "pointwise": null,
+        "pattern": {
+          "kind": "response",
+          "trigger": "self.battery < 20",
+          "response": "self.speed == 0",
+          "k": 15
+        }
+      }
+    ]
   },
   "linkDefects": [
     {
@@ -1146,13 +1450,19 @@
         "speed",
         "power",
         "battery",
-        "vmax"
+        "vmax",
+        "WAU",
+        "chargeRate"
       ],
       "cycles": [],
-      "dormantOwner": {}
+      "dormantOwner": {
+        "chargeRate": "Charging"
+      }
     },
     "WeatherAssessmentUnit": {
-      "features": [],
+      "features": [
+        "ownedSensors"
+      ],
       "cycles": [],
       "dormantOwner": {}
     },
@@ -1176,122 +1486,371 @@
     }
   },
   "conformance": {
-    "status": "warnings",
-    "n": 16,
-    "violations": [
+    "status": "conformant",
+    "n": 0,
+    "violations": []
+  },
+  "dcnClassLevel": {
+    "input": true,
+    "diagnostics": [],
+    "registry": {
+      "owned": 0,
+      "readable": true,
+      "active": []
+    }
+  },
+  "instantiate": {
+    "dji": {
+      "instance": "Pointer1794188581125_USER_1054",
+      "ok": true,
+      "slots": 7,
+      "values": 2,
+      "problems": []
+    },
+    "wau1": {
+      "instance": "Pointer1794188585496_USER_1124",
+      "ok": true,
+      "slots": 1,
+      "values": 0,
+      "problems": []
+    },
+    "temp": {
+      "instance": "Pointer1794188587615_USER_1138",
+      "ok": true,
+      "slots": 3,
+      "values": 2,
+      "problems": []
+    },
+    "wind": {
+      "instance": "Pointer1794188590607_USER_1181",
+      "ok": true,
+      "slots": 3,
+      "values": 2,
+      "problems": []
+    },
+    "rain": {
+      "instance": "Pointer1794188593637_USER_1224",
+      "ok": true,
+      "slots": 4,
+      "values": 3,
+      "problems": []
+    },
+    "humidity": {
+      "instance": "Pointer1794188596954_USER_1281",
+      "ok": true,
+      "slots": 3,
+      "values": 2,
+      "problems": []
+    }
+  },
+  "slots": {
+    "dji": [
       {
-        "objectName": "charge",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"charge\": attribute \"body\" expects Action but got \"self.battery := self.battery + 1\": 1:14 The target of an action must end in '.[attribute]'",
-        "meta": "Monitor"
+        "feature": "distance",
+        "values": [
+          [
+            "LiteralInteger",
+            0
+          ]
+        ]
       },
       {
-        "objectName": "takeOff",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"takeOff\": attribute \"body\" expects Action but got \"self.speed := 1\": 1:12 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "speed",
+        "values": [
+          [
+            "LiteralInteger",
+            0
+          ]
+        ]
       },
       {
-        "objectName": "rampUp",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"rampUp\": attribute \"body\" expects Action but got \"self.speed := self.speed + 1\": 1:12 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "power",
+        "values": [
+          [
+            "LiteralInteger",
+            0
+          ]
+        ]
       },
       {
-        "objectName": "rampUp",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"rampUp\": attribute \"body\" expects Action but got \"self.power := self.power + 1\": 1:12 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "battery",
+        "values": [
+          [
+            "LiteralInteger",
+            80
+          ]
+        ]
       },
       {
-        "objectName": "rampDown",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"rampDown\": attribute \"body\" expects Action but got \"self.speed := self.speed - 1\": 1:12 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "vmax",
+        "values": [
+          [
+            "LiteralInteger",
+            15
+          ]
+        ]
       },
       {
-        "objectName": "rampDown",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"rampDown\": attribute \"body\" expects Action but got \"self.power := self.power - 1\": 1:12 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "WAU",
+        "values": [
+          [
+            "InstanceValue",
+            "wau1"
+          ]
+        ]
       },
       {
-        "objectName": "drain",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"drain\": attribute \"body\" expects Action but got \"self.battery := self.battery - 1\": 1:14 The target of an action must end in '.[attribute]'",
-        "meta": "Monitor"
+        "feature": "chargeRate",
+        "values": [
+          [
+            "LiteralInteger",
+            1
+          ]
+        ]
+      }
+    ],
+    "wau1": [
+      {
+        "feature": "ownedSensors",
+        "values": [
+          [
+            "InstanceValue",
+            "temp"
+          ],
+          [
+            "InstanceValue",
+            "wind"
+          ],
+          [
+            "InstanceValue",
+            "rain"
+          ],
+          [
+            "InstanceValue",
+            "humidity"
+          ]
+        ]
+      }
+    ],
+    "temp": [
+      {
+        "feature": "value",
+        "values": [
+          [
+            "LiteralInteger",
+            20
+          ]
+        ]
       },
       {
-        "objectName": "drain",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"drain\": attribute \"body\" expects Action but got \"self.distance := self.distance + self.speed\": 1:15 The target of an action must end in '.[attribute]'",
-        "meta": "Monitor"
+        "feature": "unit",
+        "values": [
+          [
+            "LiteralString",
+            "°C"
+          ]
+        ]
       },
       {
-        "objectName": "injectFailure",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"injectFailure\": attribute \"body\" expects Action but got \"self.status := SensorStatus.Fault\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "status",
+        "values": [
+          [
+            "InstanceValue",
+            "OK"
+          ]
+        ]
+      }
+    ],
+    "wind": [
+      {
+        "feature": "speed",
+        "values": [
+          [
+            "LiteralInteger",
+            3
+          ]
+        ]
       },
       {
-        "objectName": "reset",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"reset\": attribute \"body\" expects Action but got \"self.status := SensorStatus.OK\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "unit",
+        "values": [
+          [
+            "LiteralString",
+            "m/s"
+          ]
+        ]
       },
       {
-        "objectName": "injectFailure",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"injectFailure\": attribute \"body\" expects Action but got \"self.status := SensorStatus.Fault\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "status",
+        "values": [
+          [
+            "InstanceValue",
+            "OK"
+          ]
+        ]
+      }
+    ],
+    "rain": [
+      {
+        "feature": "intensity",
+        "values": [
+          [
+            "LiteralInteger",
+            0
+          ]
+        ]
       },
       {
-        "objectName": "reset",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"reset\": attribute \"body\" expects Action but got \"self.status := SensorStatus.OK\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "unit",
+        "values": [
+          [
+            "LiteralString",
+            "mm/h"
+          ]
+        ]
       },
       {
-        "objectName": "injectFailure",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"injectFailure\": attribute \"body\" expects Action but got \"self.status := SensorStatus.Fault\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "status",
+        "values": [
+          [
+            "InstanceValue",
+            "OK"
+          ]
+        ]
       },
       {
-        "objectName": "reset",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"reset\": attribute \"body\" expects Action but got \"self.status := SensorStatus.OK\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "presence",
+        "values": [
+          [
+            "LiteralBoolean",
+            false
+          ]
+        ]
+      }
+    ],
+    "humidity": [
+      {
+        "feature": "relative",
+        "values": [
+          [
+            "LiteralInteger",
+            45
+          ]
+        ]
       },
       {
-        "objectName": "injectFailure",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"injectFailure\": attribute \"body\" expects Action but got \"self.status := SensorStatus.Fault\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "unit",
+        "values": [
+          [
+            "LiteralString",
+            "%"
+          ]
+        ]
       },
       {
-        "objectName": "reset",
-        "violationType": "type_mismatch",
-        "severity": "warning",
-        "message": "Object \"reset\": attribute \"body\" expects Action but got \"self.status := SensorStatus.OK\": 1:13 The target of an action must end in '.[attribute]'",
-        "meta": "Operation"
+        "feature": "status",
+        "values": [
+          [
+            "InstanceValue",
+            "OK"
+          ]
+        ]
       }
     ]
+  },
+  "instantiationProblems": {
+    "findings": [],
+    "onInstances": {
+      "dji": [],
+      "wau1": [],
+      "temp": [],
+      "wind": [],
+      "rain": [],
+      "humidity": []
+    },
+    "registry": {
+      "owned": 0,
+      "readable": true,
+      "active": []
+    }
+  },
+  "dcnObjectLevel": {
+    "input": true,
+    "diagnostics": [],
+    "registry": {
+      "owned": 0,
+      "readable": true,
+      "active": []
+    }
+  },
+  "conformanceObjects": {
+    "status": "conformant",
+    "n": 0,
+    "violations": []
+  },
+  "objectDiagram": {
+    "active": "UML object diagram",
+    "instances": [
+      {
+        "name": "dji",
+        "ir": true,
+        "rows": [
+          "distance = 0",
+          "speed = 0",
+          "power = 0",
+          "battery = 80",
+          "vmax = 15",
+          "WAU = wau1",
+          "chargeRate = 1"
+        ]
+      },
+      {
+        "name": "wau1",
+        "ir": true,
+        "rows": [
+          "ownedSensors = temp"
+        ]
+      },
+      {
+        "name": "temp",
+        "ir": true,
+        "rows": [
+          "value = 20",
+          "unit = °C",
+          "status = OK"
+        ]
+      },
+      {
+        "name": "wind",
+        "ir": true,
+        "rows": [
+          "speed = 3",
+          "unit = m/s",
+          "status = OK"
+        ]
+      },
+      {
+        "name": "rain",
+        "ir": true,
+        "rows": [
+          "intensity = 0",
+          "unit = mm/h",
+          "status = OK",
+          "presence = false"
+        ]
+      },
+      {
+        "name": "humidity",
+        "ir": true,
+        "rows": [
+          "relative = 45",
+          "unit = %",
+          "status = OK"
+        ]
+      }
+    ],
+    "others": [],
+    "overlaps": []
   },
   "closuresSeeded": {
     "Drone": {
@@ -1301,6 +1860,8 @@
         "power",
         "battery",
         "vmax",
+        "WAU",
+        "chargeRate",
         "seed_Charging",
         "seed_Ready",
         "seed_Flying",
@@ -1308,6 +1869,7 @@
       ],
       "cycles": [],
       "dormantOwner": {
+        "chargeRate": "Charging",
         "seed_Charging": "Charging",
         "seed_Ready": "Ready",
         "seed_Flying": "Flying",
@@ -1316,6 +1878,7 @@
     },
     "WeatherAssessmentUnit": {
       "features": [
+        "ownedSensors",
         "seed_Safe",
         "seed_Moderate",
         "seed_Adverse"
@@ -1339,7 +1902,7 @@
   },
   "errors": [],
   "checks": {
-    "pass": 17,
+    "pass": 36,
     "fail": 0
   }
 }

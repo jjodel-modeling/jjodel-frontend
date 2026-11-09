@@ -7426,6 +7426,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   2026-11-07 03:39; a fix there needs the Layer Impact Report drafted in §6.1 and his go-ahead.
 - **R-TXT-57** (2026-11-07, ratified by Alfonso 2026-11-07 09:53 «Dammi le 5 risposte», evidence: measured, verified: none, reversible: branch). **Ticket #656, the answers to §13 of docs/discovery/discovery_2026-11-07_slot_identity_656.md.** (1) The awaited per-create slot write (~270 ms per named create, 50 console creates 71 ms → 13.6 s) is not shipped as is: the executor lane first prototypes and measures the end-of-run write (every still-empty identity slot of the run written once, one commit per run) and keeps it if a `set h.name` right after the create always wins, one Undo removes the run, and timings stay near today's; otherwise it stops with the measurements before falling back. (2) Two lanes: the executor first (§3.2 trigger, Layer Impact Report updated to the chosen variant and shown to Alfonso before merge), then the canvas. (3) Canvas option (b): CHECK 2 and the XMI export read a never-written slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`); a slot written `[""]` stays nameless (R-TXT-45). Old models are healed by that reading, no migration. Option A's textual `set h.name` stays. (4) A canvas create that gets no undo step of its own (`reducer.ts:1280`) is a ticket of its own, outside #656. (5) The `identical assignment` console line for a same-value `set` is silenced in the executor lane.
 - **R-TXT-58** (2026-11-07, ratified by Alfonso 2026-11-07 12:27 «a», evidence: measured, verified: none, reversible: branch). **Ticket #656 after lane L1 (P-2026-11-07-1003, Outcome: question): option (a).** The end-of-run slot write failed R-TXT-57 (1) on the console (50 creates 45 ms → 11 s; one Undo no longer removes the console loop) and holds only on the `applyAsOneStep` paths, where it needs `PreviewBar.tsx`. Lane L1 is dropped: no executor change, no core change; `create instance of C "h"` keeps naming `DObject.name` and `initialName` only. Lane L2 alone ships: CHECK 2 and the XMI export read a never-written identity slot (raw `[]`) as `get_values` does (`initialName`, then `data.name`), on every path (console, scripts, canvas, Text tab, old saved models); a slot written `[""]` stays nameless (R-TXT-45). R-TXT-57 (1) and (5) (the `identical assignment` line) lapse with L1; (2) reduces to L2; (3) and (4) stand. The L1 prototype stays in `~/.jjodel-lanes/P-2026-11-07-1003/proto-endofrun.diff` if a written slot is ever needed. R-TXT-57's answers were also confirmed by Alfonso 2026-11-07 10:05 («Facciamo come dici tu»).
+- **R-TXT-59** (2026-11-08, ratified by Alfonso 2026-11-08 12:26, evidence: measured, verified: none, reversible: branch). Alfonso: «allinea tutto su `Port (unnamed)` con una lane separata»; measured in C2f. Amends R-TXT-47 D5 and D6: a nameless reference target reads `<Class> (unnamed)` on the default view, the IR chip, the IR reference field, list and picker; an index `<Class> (unnamed) 2`, ... only where two would read the same in one list (C2f). Replaces `: <Class>`.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7573,6 +7574,61 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   same error as for rule and nested targets, nothing is written. Only the shape of the creation stays unchecked in a
   let body. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900, `06ce85232`). Rewritten 2026-11-04 (P-2026-11-04-1442):
   the first text said the abstract class stayed unchecked and the amendment said the opposite; this text keeps the amendment.
+- **R-JTG-23** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  `envValue(name[, env])` returns the value bound to `name` as bound, never a demand: a string a string, an integer an
+  integer, a source element the element. The second argument, an `extendEnv` marker, is the environment read instead of
+  the current one. Extends R-JTG-11; `envLookup` stays unchanged. Evidence: §3.3 and §3.4 (4) of
+  `docs/discovery/discovery_2026-11-08_jjtl_kernel_gaps.md`, `env-value.test.ts`.
+- **R-JTG-24** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  an unbound name in `envValue` stops the run as R-FA-11 asks of a failing builtin, naming the rule and the source
+  element (R-FA-13); `envHas` is the test. `envLookup` keeps `null` for an unbound name. Evidence: `env-value.test.ts`.
+- **R-JTG-25** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  a demand (of a called rule or of `envLookup`) used as a value in an expression stops the run, worded as R-FA-12
+  (rule and source element); before, `envLookup(n) + "_w"` wrote `"[object Object]_w"` and `envLookup("w") + 1` wrote
+  `null`, with `success true`. A demand that a binding places stays legal. Implemented for the operands of binary and
+  unary operators. Extends R-FA-11. Evidence: cases A and C of the report's §3.3, `demand-as-value.test.ts`.
+- **R-JTG-26** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  several source models start as several models of one metamodel: their objects are united in pass 1 and the trace
+  keys by source id as now; typed `from A, B` is a later step. Not implemented (slices S3, S4 of the report, §4).
+- **R-JTG-27** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the run dialog keeps a primary source model plus an «also include» list of further models of the same metamodel.
+  Not implemented (slice S4 of the report).
+  Note (P-2026-11-08-1230): «also include» is a multi-value select with pills (D7 of P-2026-11-08-1120 superseded).
+- **R-JTG-28** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  matching on supertypes follows R-JTG-3: of the rules whose source class is the instance's class or a supertype, the
+  most specific wins; two of equal specificity are an error naming both. Not implemented (slice S5 of the report, §5).
+- **R-JTG-29** (2026-11-08, ratified by Alfonso 2026-11-08 07:34, registered by P-2026-11-08-0740, evidence: measured, verified: none, reversible: trunk):
+  the dynamic visibility of a caller's JjEL variables inside a helper body (report §3.2) is to be closed, after a lane
+  measures what relies on it. Not implemented.
+- **R-JTG-30** (2026-11-08, ratified by Alfonso 2026-11-08 08:33, registered by P-2026-11-08-0835, evidence: measured, verified: none, reversible: trunk):
+  R-JTG-25 extends to a comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`) with a demand as an operand and to a method call,
+  plain or null-safe, whose receiver is a demand: the run stops, same wording. A property read on a demand
+  (`envLookup(n).name`) does not stop the run and reads `null`, as R-FA-12 leaves a read on a missing feature (measured:
+  no warning is logged). Extends R-JTG-25, which stays unchanged. Evidence: `demand-as-value.test.ts`.
+- **R-JTG-31** (2026-11-08, ratified by Alfonso 2026-11-08 10:22, registered by P-2026-11-08-0836, evidence: measured, verified: none, reversible: trunk):
+  taken by P-2026-11-08-0836. The list of source models of R-JTG-26 reaches the executor as an array of arrays of objects (an array whose items are
+  all arrays): no change to the signature of `execute`, an array mixing objects and arrays stays a single model. The
+  trace's `modelName` stays the one metamodel name for every source element, not one per model as the report's S3 had
+  it: the list carries no model names and R-JTG-26 keys the trace by id. Evidence: `multi-model-source.test.ts`.
+- **R-JTG-32** (2026-11-08, decided by the chat under Alfonso's «decidi tu» 2026-11-08 10:22, registered by P-2026-11-08-1025, evidence: measured, verified: none, reversible: trunk):
+  a property read on a demand, plain or null-safe (`envLookup(n).name`, `mk(c)?.name`), gives a warning naming the rule,
+  the source element and the property, once per property, expression and source element, and still reads `null`, the
+  treatment R-FA-12 gives a read on a missing feature. Not an error: a read is not a use as a value. The run stays
+  `success true`. Replaces the «no warning is logged» that R-JTG-30 measured, which stays unchanged as the record of
+  that measure. Evidence: `demand-as-value.test.ts`.
+- **R-JTG-33** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 11:55, registered by P-2026-11-08-1200, evidence: measured, verified: none, reversible: trunk):
+  unbound `envLookup` stops the run, as an unbound `envValue` does: the failing builtin of R-FA-11, naming the rule and
+  the source element as R-FA-13 asks, same message pattern. `envHas` stays the test. Before, it read `null` and
+  `+ "_w"` succeeded (#758). Evidence: `demand-as-value.test.ts`.
+- **R-JTG-34** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 11:55, registered by P-2026-11-08-1200, evidence: measured, verified: none, reversible: trunk):
+  the run dialog restores the last included selection on reopen, no re-run command. Evidence: the probe of
+  P-2026-11-08-1230: reopening restores the pill and the primary, an older record restores nothing.
+- **R-JTG-35** (2026-11-08, decided by chat under Alfonso's delegation 2026-11-08 16:04 and ratified by Alfonso 2026-11-08 16:49 as stated below, registered by P-2026-11-08-1612 and P-2026-11-08-1720, evidence: measured, verified: none, reversible: trunk):
+  ratified by Alfonso 2026-11-08 16:49: the megamodel draws one `instanceInputOf` edge per included model of a run, with
+  pill `included` and the full text `instanceInputOf (included)` in the tooltip; edges with a vertical segment in one
+  gap take separate vertical tracks 8px apart. Decided by the chat under delegation 2026-11-08 16:04: `includedModelIds`
+  is an optional field of `generatedBy`, and no migration: a record without it draws no included edge. Evidence:
+  `megamodel.test.ts`, `MegamodelEdge.test.ts`, the probe of P-2026-11-08-1612.
 
 ## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
 
@@ -7818,6 +7874,41 @@ recommendations; 22:26 «il fronte è di questa chat»), `docs/spec/claude_spec_
   it; the handles of L4.3 stay as they are. The drone fixture moves `ownedSensors` and `WAU` to their classes. Reverse
   navigation through association-owned ends is not added: it would need backward references the binding cannot
   express (`featureSources` follows forward references only). Found by P-2026-11-07-1825 (F3).
+- **R-DCN-25** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run the object diagram shows one compartment per viewpoint under the slots of each instance, with the
+  dynamic classes as pills and the active ones highlighted. It is a run-time rendering only: the run never writes the
+  model (R-SIM).
+- **R-DCN-26** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  During a DCN run a slot of an inactive dynamic class is shown greyed with its kept value (R-DCN-3), and an active
+  class whose monitors run at the tick carries a monitor icon.
+- **R-DCN-27** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  «Save snapshot as object diagram» creates a new M1 model beside the original, named after it with the step
+  («drone (snapshot step 21)»), copying instances, links and the slot values of σ, in one undo group. The original
+  object diagram is not changed.
+- **R-DCN-28** (2026-11-08, ratified by Alfonso 16:24 on the chat's recommendation, evidence: read, verified: none, reversible: trunk).
+  Slice 5 implements coherence constraints as watches: φ as a state invariant, BoundedPersistence and BoundedResponse
+  as a counter automaton per instance, reported as watch hits (R-SIM-137). The batch of N Random runs estimating γ
+  (SoSyM, Definition 8) is a later slice.
+- **R-DCN-29** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto» on the recommendation of docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md, evidence: read, verified: none, reversible: trunk).
+  Amends R-DCN-25 and R-DCN-26 on where the run is drawn. The viewpoint compartments, the greyed dormant slots and the
+  monitor icon are drawn in a run card mounted by `SimNodeRunState` below the instance node, absolutely positioned,
+  as the Petri run overlay is (R-SIM-3); not inside the node box. No CLAUDE.md §3.1 file is touched, the node keeps its
+  size and no handle or edge moves at Reset or Stop. The drone fixture gains the UML object viewpoint. The card also
+  lists the static slots whose σ differs from the value at Reset; node rows keep showing the model's value. The dashed
+  ring is suppressed on an instance that shows the card.
+- **R-DCN-30** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  Refines R-DCN-27. Because R-OI keeps the class level and the instance level in one M1 model, the snapshot copies the
+  whole model (classes, instances, links) into the new model and then writes σ over the attribute slots, so the
+  snapshot opens and runs on its own. Links are copied from the model, not from σ. Snapshot is offered for DCN runs
+  only. The write lane carries a Layer Impact Report and runs with Alfonso's go-ahead, given in the same message.
+- **R-DCN-31** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  The bound k of BoundedPersistence and BoundedResponse counts committed steps of the trajectory (invocations and
+  ticks, as in the trace). Pattern counters are not part of σ: they are a fold over the configurations, so step back,
+  scenarios and the slider replay them. The exact pattern semantics are aligned with the SoSyM definitions before the
+  lane that implements them.
+- **R-DCN-32** (2026-11-08, ratified by Alfonso 18:21 «Go su tutto», evidence: read, verified: none, reversible: trunk).
+  No new test dependency for the Simulation panel: its rendering is asserted by the probes (`dcn-drone-run.ts`), not
+  by a jsdom or testing-library unit test.
 
 ## R-MT: several tabs on models, each with its own viewpoint (decisions 2026-11-06)
 
@@ -7903,6 +7994,7 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   **The layout-key fix ships as 3.1.2 along the 3.1.1 path**: branch `fix/layout-key-switch` from `origin/staging`,
   one app check on that base, merge into `staging`, release commit (version, CHANGELOG, welcome screen), PR to `main`.
   The tag and any deploy stay with Alfonso.
+  Amended 2026-11-08 (Alfonso's choice of 2026-11-07 15:32, PR #209 closed): 3.1.2 was cut from 3.1.1 (`dotnet-backend-integration` e080ab534) on `release/3.1.2-patch` with the fix's four commits, checked by P-2026-11-07-1536, merged as PR #210 into `dotnet-backend-integration` (ec4f2543e) and tagged there by Alfonso.
 - **R-MT-24** (2026-11-07, ratified by Alfonso 2026-11-07 15:22 «mettilo nelle decisioni», evidence: read, verified: none, reversible: trunk).
   **The model context menu of R-MT-9 also offers «Open beside ▸ <viewpoint>»**, which opens the second tab on that model,
   with the chosen viewpoint, in a panel to the right of the current editor. It reuses `DockManager.openBeside`
@@ -7911,6 +8003,18 @@ recommendations of R-MT-2..4), `docs/harness/fronts.json` (front `multi-tab`). D
   prompt: `openBeside` addresses the tab by `modelId`, so it must accept the id of a second tab on the same model; what
   happens when it returns false (fall back to a new tab or disable the item) is the lane's recommendation. Known limit,
   unchanged: a tab in the right panel does not drive the side panels (`Dock.tsx:360`, discovery 2026-11-06 §2).
+- **R-MT-25** (2026-11-08, ratified by Alfonso 2026-11-08 08:34 «Ok su tutto», evidence: read, verified: none, reversible: trunk).
+  **The second tab of L6 opens from the M1 model row of the Tree View only, and «Open beside» falls back to a new tab.** The L6 discovery (`docs/discovery/discovery_2026-11-08_l6_second_tab.md`) found no model rail with a context menu, and the metamodel row shares its menu with class and package rows; both items of R-MT-9 and R-MT-24 go on the M1 `ModelNode` row of `TreeViewContent.tsx`. A second tab on a metamodel is a known limit, a later lane if wanted. `openBeside` takes a tab id (a first tab's id stays the bare model id, so `ScriptTab` is unchanged); when it returns false the item opens a new tab with the same viewpoint. Later tabs are `<modelId>~tab<N>`. L6 widens its file list with `EditorSwitch.tsx`, `ModelTab.tsx` and `MyRcDock.tsx`.
+- **R-MT-26** (2026-11-08, decided by the chat on Alfonso's delegation 2026-11-08 16:06 «decidi tu al meglio per tutto», evidence: read, verified: none, reversible: trunk).
+  **Order of the remaining multi-tab work.** (1) L6b, the beside layout only (side panels over the left canvas, the 710 px cap of `style.scss:1055`, overlapping toolbar labels, the app bar missing the right tab); the maximized fallback stays a known limit. (2) L7, the selection highlight in every tab (R-MT-2). (3) L8, two small readers of the tab: the console's tab-id lookup and `publishedChannelSlots` (`useIRContainment.ts:61`) per canvas. (4) L4c, the sync registries keyed by model so that the last tab of one model no longer clears another model's entries (critical zone, go-ahead given by this delegation, Layer Impact Report first). Not now: a second tab on a metamodel (no use case yet, the menu is shared with class and package rows). Filed to their owners, no lane here: Refactoring finding no M1 target on the demo (`projectTargetCandidates`, refactoring front) and the merge template's reset sha (harness). One lane at a time, each with its app check and Alfonso's look at the crops before the merge.
+
+## R-NT: notices and tips (decisions 2026-11-08)
+
+- **R-NT-1** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): a tip counts as seen when it is displayed, and stays seen forever. No expiry window. Existing entries of `jjodel-quick-tips-state.seen` (keyed by Notion page id) stay valid; no migration. Evidence: `docs/discovery/discovery_2026-11-08_notices_and_tips.md` F3.
+- **R-NT-2** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): at most one tip is shown automatically per browser session (`sessionStorage`); "Next tip" shows another unseen tip on demand. When every tip in the payload is seen, the card does not appear. A tip added later in Notion appears once.
+- **R-NT-3** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): "Show tips" is a per-browser preference in localStorage, toggled from the card ("Turn off tips") and from Settings, Notifications section. Cross-device storage is deferred (the persistence backend is outside this repo). `DUser` is not changed.
+- **R-NT-4** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: measured, verified: none, reversible: trunk): tips card at the bottom left of the work area, 16 px right of the Jjodie button and aligned with its bottom edge; announcements as a banner at the top of the work area, in the editor and on the dashboard, one at a time, with precedence over the tip as today.
+- **R-NT-5** (2026-11-08, ratified by Alfonso 2026-11-08 23:38, registered by P-2026-11-08-2340, evidence: read, verified: none, reversible: trunk): the announcement link and date window need new Notion columns and a Worker change; deferred until the Worker source is in the repo (Alfonso exports it from Cloudflare). Severity reuses `priority`.
 
 ## Superate
 

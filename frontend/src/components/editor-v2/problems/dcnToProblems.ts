@@ -140,7 +140,7 @@ export function dcnInputOf(lookup: Lookup, modelId: string): DcnWellFormednessIn
         literals: byName.get(FEATURE_NAMES.literals),
         parameters: byName.get(FEATURE_NAMES.parameters),
     };
-    return { stc, binding, view: dcnReadView(lookup, modelId), features };
+    return { stc, binding, view: dcnReadView(lookup, modelId), features, associationEnds: byName.get('Association.ownedEnds') };
 }
 
 /**

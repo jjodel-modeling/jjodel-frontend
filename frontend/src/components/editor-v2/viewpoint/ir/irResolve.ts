@@ -12,6 +12,7 @@ import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { store } from '../../../../joiner';
 import { useSimVersion } from '../../sim/simRunState';
+import { useEditorContextSafe } from '../../contexts/EditorContext';
 import { type ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import type { CompiledRowView, CompiledView } from './irTypes';
@@ -30,6 +31,18 @@ import {
 export { computeIRSignature, getIRIndex, resolveIRView } from './irResolveCore';
 export type { IRViewpointIndex } from './irResolveCore';
 
+/**
+ * The viewpoint argument of the IR core for a tab's viewpoint (R-MT-1, R-LAY-19). The core reads
+ * its optional argument as `viewpointId ?? state.viewpoint`, so the three values of
+ * `EditorContext.viewpointId` are mapped here, once: a string stays itself; `undefined` (no tab
+ * owns the canvas) stays `undefined`, which the core reads as the root, exactly as before; `null`
+ * (a tab on abstract syntax) becomes `''`, which the core reads as no viewpoint, so the signature
+ * is empty and no index is built. A `null` handed over as-is would resolve under the root.
+ */
+export function irViewpointArg(viewpointId: string | null | undefined): string | undefined {
+    return viewpointId === null ? '' : viewpointId;
+}
+
 export interface IRViewResolution {
     compiled: CompiledView;
     objectId: string;
@@ -46,8 +59,11 @@ export interface IRViewResolution {
  * case ObjectNode renders exactly as before the spike.
  */
 export function useIRView(vertexId: string, instanceOfClassId: string | null | undefined): IRViewResolution | null {
+    // The tab's viewpoint (L5): the signature carries it as its first part, so every memo keyed
+    // on `signature` below moves when it does.
+    const vp = irViewpointArg(useEditorContextSafe()?.viewpointId);
     const signature = useSelector((state: any) => {
-        const irSig = computeIRSignature(state);
+        const irSig = computeIRSignature(state, vp);
         if (!irSig || !instanceOfClassId) return '';
         // Self feature snapshot: values of this object's DValue slots.
         // Kept unconditional (not filtered by dependency set) to avoid a
@@ -84,8 +100,8 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
     const markVersion = useSimVersion();
     const markDeclared = useMemo(() => {
         const state: any = store.getState();
-        const irSig = computeIRSignature(state);
-        const index = irSig ? getIRIndex(state, irSig) : null;
+        const irSig = computeIRSignature(state, vp);
+        const index = irSig ? getIRIndex(state, irSig, vp) : null;
         return !!index?.channelsInUse?.has('mark');
     }, [signature]);
     const markDep = markDeclared ? markVersion : 0;
@@ -96,8 +112,8 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
     return useMemo(() => {
         if (!signature || !instanceOfClassId) { clearCrossDeps(vertexId); return null; }
         const state: any = store.getState();
-        const irSig = computeIRSignature(state);
-        const index = getIRIndex(state, irSig);
+        const irSig = computeIRSignature(state, vp);
+        const index = getIRIndex(state, irSig, vp);
         if (!index) { clearCrossDeps(vertexId); return null; }
         const lookup = state.idlookup;
         const objectId = lookup?.[vertexId]?.model;
@@ -130,10 +146,11 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
  * so it recomputes exactly when the index can change.
  */
 export function useIRViewpointActive(): boolean {
-    const irSig = useSelector((state: any) => computeIRSignature(state) || '');
+    const vp = irViewpointArg(useEditorContextSafe()?.viewpointId);
+    const irSig = useSelector((state: any) => computeIRSignature(state, vp) || '');
     return useMemo(() => {
         if (!irSig) return false;
-        return !!getIRIndex(store.getState(), irSig);
+        return !!getIRIndex(store.getState(), irSig, vp);
     }, [irSig]);
 }
 
@@ -153,8 +170,10 @@ export interface IRRowResolution {
  * Returns null only when there is no active IR viewpoint or the child has no metaclass.
  */
 export function useIRRowView(childObjectId: string): IRRowResolution | null {
+    // The tab's viewpoint, as in useIRView.
+    const vp = irViewpointArg(useEditorContextSafe()?.viewpointId);
     const signature = useSelector((state: any) => {
-        const irSig = computeIRSignature(state);
+        const irSig = computeIRSignature(state, vp);
         if (!irSig) return '';
         const lookup = state.idlookup;
         const snap = objectSnapshotParts(lookup, childObjectId, irSig);
@@ -167,8 +186,8 @@ export function useIRRowView(childObjectId: string): IRRowResolution | null {
     const markVersion = useSimVersion();
     const markDeclared = useMemo(() => {
         const state: any = store.getState();
-        const irSig = computeIRSignature(state);
-        const index = irSig ? getIRIndex(state, irSig) : null;
+        const irSig = computeIRSignature(state, vp);
+        const index = irSig ? getIRIndex(state, irSig, vp) : null;
         return !!index?.channelsInUse?.has('mark');
     }, [signature]);
     const markDep = markDeclared ? markVersion : 0;
@@ -178,12 +197,12 @@ export function useIRRowView(childObjectId: string): IRRowResolution | null {
     return useMemo(() => {
         if (!signature) { clearCrossDeps(childObjectId); return null; }
         const state: any = store.getState();
-        const irSig = computeIRSignature(state);
+        const irSig = computeIRSignature(state, vp);
         const lookup = state.idlookup;
         const dObject = lookup?.[childObjectId];
         const metaclassId = dObject?.instanceof;
         if (typeof metaclassId !== 'string') { clearCrossDeps(childObjectId); return null; }
-        const index = getIRIndex(state, irSig);
+        const index = getIRIndex(state, irSig, vp);
         const readCtx = makeReadCtx(lookup);
         let compiled: CompiledRowView | null =
             index ? resolveRowView(childObjectId, metaclassId, index, readCtx, lookup) : null;

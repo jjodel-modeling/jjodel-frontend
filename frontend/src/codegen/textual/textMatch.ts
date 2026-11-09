@@ -3,12 +3,16 @@
  * of an edited text is. Pure, on plain objects (metamodel.ts), so it tests without the app.
  *
  * The evidence, strongest first:
+ * 0. The id in the text (step T8a; R-TXT-18, R-TXT-55 F9), the `@id` comment at the end of the object's head line
+ *    (`textIdsOf`): the model object of that id and class. An id the model does not hold, or holds for another class, is
+ *    no evidence; an id on two objects pairs neither of them by id, with a warning.
  * 1. The previous print's spans (R-TXT-22), as the editor carries them over the edit (decorations): a parsed object
  *    whose span overlaps a model object's carried span by at least half of their union, same class, is that object.
  *    A span collapsed to nothing (a cut) is no evidence.
- * 2. Class and name in the same container and containment feature (R-TXT-18). Homonyms there pair by their order
- *    among the homonyms and are uncertain; a nameless object counts as named `null`, so a lone nameless object in a
- *    slot is matched, two of them are homonyms.
+ * 2. Class and name in the same container and containment feature (R-TXT-18). Homonyms there, two or more on each side,
+ *    pair by the similarity of step 4, their order among the homonyms the tie-break (T8e); fewer pair by order. All are
+ *    uncertain; a nameless object counts as named `null`, so a lone nameless object in a slot is matched, two of them are
+ *    homonyms.
  * 2b. Nameless expression objects (the operators and primaries of an expression rule, P-2026-11-04-1158): under each
  *    matched object, the unmatched ones below it in the text pair with the unmatched ones below its match in the model,
  *    equal subtrees first (class, shown attributes, reference targets through the matches, children), then by class
@@ -23,10 +27,12 @@
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import { classFeatures, isOuterRef } from './metamodel';
 import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
-import type { SyntaxNode, TextParseResult } from './parser';
+import { commentsOf } from './parser';
+import type { SyntaxNode, TextNode, TextParseResult } from './parser';
+import { ID_COMMENT_TAG } from './printer';
 import type { ObjectSpan } from './printer';
 
-export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
+export type MatchEvidence = 'id' | 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
 
 export interface ObjectMatch {
     /** The parsed object's id. */
@@ -47,6 +53,16 @@ export interface TextMatch {
     readonly created: readonly string[];
     /** The model objects no parsed object matches, in model order. */
     readonly deleted: readonly string[];
+    /** T8a: one per id the text repeats; absent when there is none. */
+    readonly warnings?: readonly MatchWarning[];
+}
+
+/** T8a (R-TXT-18): an id written on several objects of the text, which pairs none of them by id. */
+export interface MatchWarning {
+    readonly id: string;
+    /** The parsed objects that carry it, in text order. */
+    readonly text: readonly string[];
+    readonly message: string;
 }
 
 /** R-TXT-21 (7): the cascade's thresholds, to be calibrated in step T8. */
@@ -142,6 +158,53 @@ export interface MatchInput {
     readonly previous?: readonly ObjectSpan[];
     /** Parsed objects whose container is unknown (orphans of a broken parse): never matched by step 2. */
     readonly unplaced?: ReadonlySet<string>;
+    /** T8a: the id each parsed object's head comment carries (`textIdsOf`); absent or empty when the text has none. */
+    readonly ids?: ReadonlyMap<string, string>;
+    /** T8e: the least similarity of a rename (step 4), `RENAME_THRESHOLD` when absent; only the calibration bench sets it. */
+    readonly renameThreshold?: number;
+    /** T8e: how far ahead of the second a rename's similarity must be (step 4), `RENAME_MARGIN` when absent; only the calibration bench sets it. */
+    readonly renameMargin?: number;
+}
+
+/**
+ * T8a (R-TXT-55 F9): the id each object of a parsed text carries, by parsed id. A comment of the shape `@id <id>` (in
+ * the style's line or block form, nothing else in it) on a line belongs to the first object that starts on that line,
+ * the outermost at one offset, as the printer writes it (`printTextModel` with `printIds`); one on a line no object
+ * starts on is not an id, nor is any other comment. A second id comment on one line is ignored.
+ */
+export function textIdsOf(tree: TextNode, g: ConcreteGrammar): Map<string, string> {
+    const { line, block } = g.style.comments;
+    const shape = new RegExp(`^\\s*${ID_COMMENT_TAG}\\s+(\\S+)\\s*$`);
+    const idIn = (text: string): string | undefined => {
+        const body = line && text.startsWith(line) ? text.slice(line.length)
+            : block && text.length >= block[0].length + block[1].length && text.startsWith(block[0]) && text.endsWith(block[1]) ? text.slice(block[0].length, text.length - block[1].length)
+                : undefined;
+        return body === undefined ? undefined : shape.exec(body)?.[1];
+    };
+    // The offset each line starts at, from the text the tokens hold byte for byte.
+    const text = tree.tokens.map(t => t.leading + t.raw + t.trailing).join('');
+    const lineStarts = [0];
+    for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineStarts.push(i + 1);
+    const lineOf = (at: number): number => {
+        let lo = 0;
+        let hi = lineStarts.length - 1;
+        while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= at) lo = mid; else hi = mid - 1; }
+        return lo;
+    };
+    // Pre-order is text order, a container before what it contains: the first object seen on a line heads it.
+    const heads = new Map<number, string>();
+    const walk = (n: SyntaxNode): void => {
+        if (n.kind === 'object' && n.end > n.start && !heads.has(lineOf(n.start))) heads.set(lineOf(n.start), n.id);
+        for (const c of n.children) if (c.kind !== 'token') walk(c);
+    };
+    walk(tree);
+    const out = new Map<string, string>();
+    for (const c of commentsOf(tree, g)) {
+        const id = idIn(c.text);
+        const head = id === undefined ? undefined : heads.get(lineOf(c.start));
+        if (head !== undefined && !out.has(head)) out.set(head, id!);
+    }
+    return out;
 }
 
 /** Matches the parsed objects to the model objects (R-TXT-18, R-TXT-22). */
@@ -156,6 +219,26 @@ export function matchObjects(input: MatchInput): TextMatch {
     const toModel = new Map<string, ObjectMatch>();
     const taken = new Set<string>();
     const accept = (m: ObjectMatch): void => { toModel.set(m.text, m); taken.add(m.model); };
+
+    // 0. Ids in the text (T8a): an id on two objects is no evidence for either, and a warning.
+    let warnings: MatchWarning[] | undefined;
+    if (input.ids?.size) {
+        const holders = new Map<string, TextObject[]>();
+        for (const t of parsed.objects) {
+            const id = input.ids.get(t.id);
+            if (id === undefined) continue;
+            const ts = holders.get(id);
+            if (ts) ts.push(t); else holders.set(id, [t]);
+        }
+        for (const [id, ts] of holders) {
+            if (ts.length > 1) {
+                (warnings ??= []).push({ id, text: ts.map(t => t.id), message: `The id ${id} is written on ${ts.length} objects: none of them keeps it.` });
+                continue;
+            }
+            const m = modelById.get(id);
+            if (m && m.cls === ts[0].cls && !taken.has(m.id)) accept({ text: ts[0].id, model: m.id, by: 'id', uncertain: false });
+        }
+    }
 
     // 1. Spans (R-TXT-22).
     if (input.previous?.length) {
@@ -184,6 +267,13 @@ export function matchObjects(input: MatchInput): TextMatch {
         return owner ? owner.model : null;
     };
     const slotOf = (place: Place | undefined): string => (place ? place.feature : '');
+    /** The features `similarity` compares for a class: what its rule prints, other than the name and what it contains. */
+    const contentFeatures = (cls: string): readonly TextFeature[] => {
+        const rule = g.objects[cls];
+        if (!rule) return [];
+        const shown = shownFeatures(rule);
+        return featuresOf(cls).filter(f => f.kind !== 'containment' && f.name !== 'name' && shown.has(f.name));
+    };
     const expr = expressionClasses(g);
     for (const t of parsed.objects) {
         if (toModel.has(t.id) || input.unplaced?.has(t.id) || expr.has(t.cls)) continue;
@@ -198,10 +288,9 @@ export function matchObjects(input: MatchInput): TextMatch {
             && (modelPlace.get(m.id)?.owner ?? '') === key && slotOf(modelPlace.get(m.id)) === slotOf(tp))
             .sort((a, b) => position(a.id) - position(b.id));
         const homonyms = siblings.length > 1 || candidates.length > 1;
-        siblings.forEach((s, i) => {
-            const m = candidates[i];
-            if (m) accept({ text: s.id, model: m.id, by: homonyms ? 'homonym' : 'name', uncertain: homonyms });
-        });
+        const paired = siblings.length > 1 && candidates.length > 1 ? pairByContent(siblings, candidates, contentFeatures(t.cls), toModel)
+            : siblings.flatMap((s, i) => (candidates[i] ? [[s, candidates[i]] as const] : []));
+        for (const [s, m] of paired) accept({ text: s.id, model: m.id, by: homonyms ? 'homonym' : 'name', uncertain: homonyms });
     }
 
     // 2b. Nameless expression objects, by slot under the matched objects.
@@ -220,15 +309,16 @@ export function matchObjects(input: MatchInput): TextMatch {
     const freeText = parsed.objects.filter(t => !toModel.has(t.id));
     const freeModel = model.filter(m => !taken.has(m.id));
     const scored: { text: string; model: string; score: number; order: number }[] = [];
+    const renameThreshold = input.renameThreshold ?? RENAME_THRESHOLD;
+    const renameMargin = input.renameMargin ?? RENAME_MARGIN;
     freeText.forEach((t, order) => {
         const rule = g.objects[t.cls];
         if (!rule) return;
-        const shown = shownFeatures(rule);
-        const fs = featuresOf(t.cls).filter(f => f.kind !== 'containment' && f.name !== 'name' && shown.has(f.name));
+        const fs = contentFeatures(t.cls);
         const scores = freeModel.filter(m => m.cls === t.cls).map(m => ({ m, score: similarity(fs, t, m, toModel) }))
             .sort((a, b) => b.score - a.score);
         const [best, second] = scores;
-        if (best && best.score >= RENAME_THRESHOLD && best.score - (second?.score ?? 0) >= RENAME_MARGIN) {
+        if (best && best.score >= renameThreshold && best.score - (second?.score ?? 0) >= renameMargin) {
             scored.push({ text: t.id, model: best.m.id, score: best.score, order });
         }
     });
@@ -239,6 +329,7 @@ export function matchObjects(input: MatchInput): TextMatch {
         matches: parsed.objects.flatMap(t => { const m = toModel.get(t.id); return m ? [m] : []; }),
         created: parsed.objects.filter(t => !toModel.has(t.id)).map(t => t.id),
         deleted: model.filter(m => !taken.has(m.id)).map(m => m.id),
+        ...(warnings ? { warnings } : {}),
     };
 }
 
@@ -360,6 +451,26 @@ function matchExpressions(x: ExprMatchInput): void {
             if (m) x.accept({ text: t.id, model: m.id, by: 'slot', uncertain: false });
         }
     }
+}
+
+/**
+ * T8e (step 2): homonyms, two or more on each side, paired by `similarity`, the highest first; among equal scores the
+ * text order, then the model order, so identical homonyms pair by order. As many pairs as the shorter side: the lowest
+ * score pairs too, the pairing stays uncertain.
+ */
+function pairByContent(ts: readonly TextObject[], ms: readonly TextObject[], fs: readonly TextFeature[], toModel: ReadonlyMap<string, ObjectMatch>): (readonly [TextObject, TextObject])[] {
+    const scored = ts.flatMap((t, i) => ms.map((m, j) => ({ t, m, i, j, score: similarity(fs, t, m, toModel) })));
+    scored.sort((a, b) => b.score - a.score || a.i - b.i || a.j - b.j);
+    const usedText = new Set<string>();
+    const usedModel = new Set<string>();
+    const out: (readonly [TextObject, TextObject])[] = [];
+    for (const { t, m } of scored) {
+        if (usedText.has(t.id) || usedModel.has(m.id)) continue;
+        usedText.add(t.id);
+        usedModel.add(m.id);
+        out.push([t, m]);
+    }
+    return out;
 }
 
 /** Equal set features over the features set on either side; a reference is equal when its targets match. */

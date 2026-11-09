@@ -97,6 +97,8 @@ interface PalettePanelProps {
     onClassActivate?: (kind: ClassRailKind, metaclassId: string) => void;
     /** True when the selection can hold a property: the «Attributes» entries take a click only then. */
     classPropertyEnabled?: boolean;
+    /** In a split, the viewpoint of the pane this palette is showing, read beside the Instances title (multi-tab L6c). */
+    viewpointName?: string;
 }
 
 const CLASS_GROUP_TITLES: Record<ClassRailKind, string> = {
@@ -106,7 +108,7 @@ const CLASS_GROUP_ICONS: Record<ClassRailKind, string> = {
     classifier: 'bi-box', association: 'bi-arrow-left-right', property: 'bi-list-ul', generalization: 'bi-arrow-up-short',
 };
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding, classGroups = null, onClassActivate, classPropertyEnabled = false }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding, classGroups = null, onClassActivate, classPropertyEnabled = false, viewpointName }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -200,7 +202,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
             <aside className={`editor-v2-palette editor-v2-palette--m1${collapsed ? ' editor-v2-palette--collapsed' : ''}`}>
                 {/* Instances — root instance creation (kept as drag-to-canvas) */}
                 {!classGroups?.length && <div className="palette-instances">
-                    <div className="palette-instances__title">Instances</div>
+                    <div className="palette-instances__title">Instances{viewpointName && <> · <span className="palette-instances__viewpoint">{viewpointName}</span></>}</div>
                     {irPaletteFallback && (
                         <div className="palette-notice">
                             Active viewpoint declares no views for creatable root classes. Showing all.

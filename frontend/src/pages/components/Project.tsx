@@ -8,6 +8,7 @@ import {Divisor, Item, Menu} from './menu/Menu';
 import {icon} from './icons/Icons';
 import {compressToUTF16} from "async-lz-string";
 import {formatVersionNumber} from '../../utils/versionUtils';
+import {useRecentlyImported} from './recentImports';
 import './project-card.scss';
 
 // ── Project Color for Gallery Header Band ────────────────
@@ -180,6 +181,15 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     project.state = await compressToUTF16(str);
     state.idlookup[project.id] = {...project, state: ''} as any;
     return project;
+}
+
+// A component of its own: the card variants are declared inside Project, so a re-render of Project would remount them.
+function ImportedMarker(props: {projectId: string}): JSX.Element | null {
+    if (!useRecentlyImported(props.projectId)) return null;
+    return (<>
+        <span className="imported-marker__bar" />
+        <span className="imported-marker__badge">Imported</span>
+    </>);
 }
 
 function Project(props: Props): JSX.Element {
@@ -486,6 +496,8 @@ function Project(props: Props): JSX.Element {
                     selectProject();
                 }}
             >
+                <ImportedMarker projectId={data.id} />
+
                 {/* Checkbox */}
                 <div className="project-row__checkbox" onClick={e => e.stopPropagation()}>
                     <input
@@ -592,6 +604,8 @@ function Project(props: Props): JSX.Element {
                 role="button"
                 aria-label={`Open project ${data.name}`}
             >
+                <ImportedMarker projectId={data.id} />
+
                 {/* Header: dot + name + actions */}
                 <div className="gallery-card__header">
                     <div className="gallery-card__name-row">

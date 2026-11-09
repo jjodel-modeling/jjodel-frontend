@@ -27,7 +27,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 import { assignableOptions } from '../slotValues';
 import ReferencePicker from './ReferencePicker';
-import { metaclassLetter, referenceName } from './ReferenceWidget';
+import { metaclassLetter, referenceName, unnamedReferenceLabels } from './ReferenceWidget';
 
 export interface ListWidgetProps {
     /** Raw values, holes included: the array index is the removal key. */
@@ -79,14 +79,18 @@ export function ListWidget(props: ListWidgetProps) {
     const rows = values
         .map((v, i) => ({ v, i }))
         .filter(({ v }) => v != null && v !== '');
+    // Over the rows, not row by row: the index of an unnamed target belongs to the list.
+    const unnamed = unnamedReferenceLabels(rows.map(({ v }) => String(v)));
 
     return (
         <div className="ir-list" id={id}>
             {rows.length === 0 && <div className="ir-field__row ir-field__empty">No values</div>}
 
-            {rows.map(({ v, i }) => {
+            {rows.map(({ v, i }, at) => {
                 const target = typeof v === 'string' ? v : String(v);
-                const name = referenceName(target) || target;
+                const name = unnamed[at] ?? referenceName(target);
+                // A dangling row has no name to read, and the button still needs one.
+                const removeLabel = `Remove ${name || typeName || 'element'}`;
                 const sub = secondary?.(target);
                 return (
                     <div className="ir-list__row" key={`${target}-${i}`}>
@@ -97,8 +101,8 @@ export function ListWidget(props: ListWidgetProps) {
                             <button
                                 type="button"
                                 className="ir-list__remove"
-                                aria-label={`Remove ${name}`}
-                                title={`Remove ${name}`}
+                                aria-label={removeLabel}
+                                title={removeLabel}
                                 onClick={() => onRemove(i)}
                             >
                                 <i className="bi bi-x" aria-hidden="true" />

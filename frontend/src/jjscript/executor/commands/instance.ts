@@ -393,6 +393,13 @@ function attributeScalar(shape: AttributeShape, value: LiteralValue | QualifiedN
 }
 
 /**
+ * How long a settle waits for dispatches already in flight. The worst fire-to-dispatch gap measured
+ * is 180 ms (T8f report, F2); past the bound the read is as stale as it was without the wait.
+ */
+const SETTLE_IN_FLIGHT_BOUND_MS = 1000;
+let settleBoundLogged = false;
+
+/**
  * Let every write already queued reach the store before a reference slot is read.
  *
  * The app keeps a transaction block open and commits it every `U.UpdatingTimer` (300 ms,
@@ -406,11 +413,27 @@ function attributeScalar(shape: AttributeShape, value: LiteralValue | QualifiedN
  * `COMMIT` is loaded here, not at the top: `joiner` does not export it, and a static import of
  * `action.ts` would evaluate it in the suites that mock `joiner` to load this file
  * (`handleRegistry.test.ts`, `elementWaiter.test.ts`), where it reads `windoww` from the mock.
+ *
+ * The timer covers only the dispatch scheduled here. A write the interval flushed just before has
+ * left the buffer but not reached the store, so it waits for those too: reading past it plans a
+ * write at the old length and leaves a null hole (T8f,
+ * `docs/discovery/discovery_2026-11-08_t8f_reorder_hole.md`).
  */
 async function settlePendingWrites(): Promise<void> {
-    const { COMMIT } = await import('../../../redux/action/action');
+    const { COMMIT, dispatchesInFlight } = await import('../../../redux/action/action');
     COMMIT(undefined, false);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const deadline = Date.now() + SETTLE_IN_FLIGHT_BOUND_MS;
+    while (dispatchesInFlight() > 0) {
+        if (Date.now() >= deadline) {
+            if (!settleBoundLogged) {
+                settleBoundLogged = true;
+                console.warn(`[JjScript] a dispatch still in flight after ${SETTLE_IN_FLIGHT_BOUND_MS} ms: this line reads the store without it`);
+            }
+            return;
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 1));
+    }
 }
 
 /**

@@ -39,6 +39,7 @@ import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
+import { irViewpointArg } from './viewpoint/ir/irResolve';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
@@ -129,6 +130,8 @@ import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSi
 import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
+import { paneAcceptsPaletteDrop, paneEventVerdict, paneIsInactive, type PaneActivation } from './utils/canvasSplit';
+import { useCanvasSplit } from './hooks/useCanvasSplit';
 import { PolymetricView } from '../polymetric';
 import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
@@ -236,12 +239,13 @@ function irVertexIdForObject(graphId: string | null, objectId: string): string |
  * (waypoints AND side pins) session-only. Default true (no IR index / no
  * resolved view / resolution error → persist).
  */
-function isIREdgeLayoutPersistable(objectId: string, state?: DState): boolean {
+function isIREdgeLayoutPersistable(objectId: string, state?: DState, viewpointId?: string): boolean {
     try {
         const s: any = state ?? store.getState();
-        const sig = computeIRSignature(s);
+        // `viewpointId` is the IR core's argument for the tab's viewpoint (L5, irViewpointArg); absent, the root.
+        const sig = computeIRSignature(s, viewpointId);
         if (!sig) return true;
-        const index = getIRIndex(s, sig);
+        const index = getIRIndex(s, sig, viewpointId);
         if (!index) return true;
         const metaclassId = s.idlookup?.[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') return true;
@@ -589,6 +593,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     // Phase 3: bidirectional incremental sync with JjOM/Redux
+    // This editor's place in a split of canvases (multi-tab L6c, P-2026-11-08-1855): one palette, the active pane's.
+    const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
+    const canvasSplit = useCanvasSplit(paneEl);
+    const inCanvasSplit = paneEl !== null && canvasSplit.panes.includes(paneEl);
+    const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
+    const paneActivationRef = useRef<PaneActivation>('none');
+    const paneAcceptsDropRef = useRef(true);
+    paneAcceptsDropRef.current = paneEl === null || paneAcceptsPaletteDrop(canvasSplit, paneEl);
+    // The rail covers only the last pane of a split (P-2026-11-08-1729): any other canvas reserves nothing for it (D6).
+    const paneUnderRail = !inCanvasSplit || canvasSplit.panes[canvasSplit.panes.length - 1] === paneEl;
+    const paneUnderRailRef = useRef(paneUnderRail);
+    paneUnderRailRef.current = paneUnderRail;
+    const paneRightInset = () => paneUnderRailRef.current ? getCanvasRightInset() : 0;
+    const paneFitPadding = () => paneUnderRailRef.current ? fitPadding() : 0.2;
+
     // fitViewRef / applyDistributionRef bridge hook ordering: useJjomSync's
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
@@ -606,6 +625,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const tabLayoutKey = (): string => viewpointIdRef.current === undefined
         ? getActiveLayoutKey()
         : getLayoutKeyFor(store.getState(), viewpointIdRef.current);
+    // The IR index of the tab's viewpoint (L5), read through the same ref: a tab on abstract syntax
+    // has none, and with no tab it is the root's, as before.
+    const tabIRViewpoint = (): string | undefined => irViewpointArg(viewpointIdRef.current);
+    const tabIRIndex = (state: any) => getIRIndex(state, computeIRSignature(state, tabIRViewpoint()), tabIRViewpoint());
     const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
     if (restoredViewportRef.current === undefined) {
         restoredViewportRef.current = readStoredViewport(modelid, tabLayoutKey());
@@ -827,16 +850,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const p = n.internals.positionAbsolute;
             rects.push({ id: n.id, x: p.x, y: p.y, w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
         }
-        return openViewportFallback(rects, getViewport(), { width, height, rightInset: getCanvasRightInset() }, fitPadding());
+        return openViewportFallback(rects, getViewport(), { width, height, rightInset: paneRightInset() }, paneFitPadding());
     }, [storeApi, getViewport]);
     const ensureNodeInView = useCallback((duration?: number) => {
         const next = openFallbackViewport();
         if (next) setViewport(next, { duration });
     }, [openFallbackViewport, setViewport]);
     viewportShowsNoNodeRef.current = () => openFallbackViewport() !== null;
-    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
+    fitViewRef.current = () => fitView({ padding: paneFitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
     // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
-    const fitViewOptions = useFitViewOptions();
+    const railFitViewOptions = useFitViewOptions();
+    const fitViewOptions = useMemo(() => paneUnderRail ? railFitViewOptions : { padding: 0.2, maxZoom: 1 }, [paneUnderRail, railFitViewOptions]);
+    // A pane entering a split refits once, to its own visible area (E2, P-2026-11-08-2025): when it has nodes, two
+    // frames on, so that the dock's layout and React Flow's measure of the new size have landed. Later resizes do not refit.
+    const wasInCanvasSplitRef = useRef(false);
+    const splitFitDueRef = useRef(false);
+    const hasNodes = nodes.length > 0;
+    useEffect(() => {
+        if (inCanvasSplit !== wasInCanvasSplitRef.current) splitFitDueRef.current = inCanvasSplit;
+        wasInCanvasSplitRef.current = inCanvasSplit;
+        if (!splitFitDueRef.current || !hasNodes) return;
+        splitFitDueRef.current = false;
+        let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => fitViewRef.current?.()); });
+        return () => cancelAnimationFrame(frame);
+    }, [inCanvasSplit, hasNodes]);
 
     const {
         activeEditorId,
@@ -1226,7 +1263,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     height: targetNode.measured?.height ?? 50,
                 };
                 const { width, height } = storeApi.getState();
-                const next = revealViewport(box, getViewport(), { width, height }, getCanvasRightInset());
+                const next = revealViewport(box, getViewport(), { width, height }, paneRightInset());
                 if (next) setViewport(next, { duration: 300 });
             }
         };
@@ -1326,7 +1363,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             const state: any = store.getState();
             const lookup = state.idlookup;
-            const index = getIRIndex(state, computeIRSignature(state));
+            const index = tabIRIndex(state);
             if (!index || !lookup) return;
             const readCtx = makeReadCtx(lookup);
 
@@ -1756,7 +1793,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR containment decoration (Fase 2b): hidden subtrees + lifted edges when
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
-    const irContainment = useIRContainment(stableNodes, stableEdges);
+    const irContainment = useIRContainment(stableNodes, stableEdges, viewpointId);
     // The containment model of the last decoration, read by the graphVertex gestures (S3, R-GV-8) in the drag-end,
     // resize, drop and connect paths below.
     const irContainmentRef = useRef(irContainment);
@@ -1770,7 +1807,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const model = irContainment.model;
         if (model.objByVertex.size === 0) return true;
         const state: any = store.getState();
-        const index = getIRIndex(state, computeIRSignature(state));
+        const index = tabIRIndex(state);
         return canRenderOnlyVisible(index, state.idlookup ?? {}, model.objByVertex.values(), model.containers.size);
     }, [irContainment.model]);
 
@@ -1878,7 +1915,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const merged = getIREdgeAnchorOverride(objectId);
         if (!merged) return;
         const layout = irEdgeLayoutFromOverride(merged);
-        if (!layout || !isIREdgeLayoutPersistable(objectId)) return;
+        if (!layout || !isIREdgeLayoutPersistable(objectId, undefined, tabIRViewpoint())) return;
         const vertexId = irVertexIdForObject(graphId, objectId);
         if (!vertexId) return;
         syncIREdgeLayoutToJjom(vertexId, layout);
@@ -1893,7 +1930,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     useEffect(() => {
         if (!graphId || irLayoutHydratedGraphs.has(graphId)) return;
         const state: any = store.getState();
-        if (!computeIRSignature(state)) return;
+        if (!computeIRSignature(state, tabIRViewpoint())) return;
         irLayoutHydratedGraphs.add(graphId);
         const lookup = state.idlookup ?? {};
         const subs: string[] = lookup[graphId]?.subElements ?? [];
@@ -1902,7 +1939,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const vid of subs) {
             const v = lookup[vid];
             if (!v || v.className !== 'DVertex' || typeof v.model !== 'string') continue;
-            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state)) {
+            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state, tabIRViewpoint())) {
                 layoutEntries.push([v.model, {
                     sourceSide: v.irEdgeLayout.sourceSide,
                     targetSide: v.irEdgeLayout.targetSide,
@@ -1918,7 +1955,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
-    const irInteractionPlan = useIRInteractionPlan();
+    const irInteractionPlan = useIRInteractionPlan(viewpointId);
     irPlanRef.current = irInteractionPlan;
 
     // Palette intersection with the rootable classes, with normative fallback
@@ -2804,7 +2841,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
 
             const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
+            if (!rawType || !paneAcceptsDropRef.current) return;
 
             createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
         },
@@ -2817,13 +2854,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         (type: string, metaclassId?: string) => {
             const canvas = editorContainerRef.current;
             if (!canvas) return;
-            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
         },
         [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
     const onDragOver = useCallback((event: React.DragEvent) => {
+        // In a split only the active pane takes a palette drop (L6c): no preventDefault, no drop, no-drop cursor.
+        if (!paneAcceptsDropRef.current && event.dataTransfer.types.includes('application/reactflow')) {
+            event.dataTransfer.dropEffect = 'none';
+            return;
+        }
         event.preventDefault();
 
         // M1: show not-allowed cursor for non-rootable classes (they need context menu)
@@ -2858,7 +2900,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const onClassicDrop = useCallback((event: React.DragEvent) => {
         event.preventDefault();
         const metaclassId = event.dataTransfer.getData('application/jjodel-classic');
-        if (!metaclassId || !modelid) return;
+        if (!metaclassId || !modelid || !paneAcceptsDropRef.current) return;
 
         try {
             const lModel: any = LPointerTargetable.fromPointer(modelid);
@@ -2877,7 +2919,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // dataTransfer.types is readable during dragOver (unlike getData), so we
     // can filter out unrelated drags (e.g. files from the desktop) early.
     const onClassicDragOver = useCallback((event: React.DragEvent) => {
-        if (!event.dataTransfer.types.includes('application/jjodel-classic')) return;
+        if (!event.dataTransfer.types.includes('application/jjodel-classic') || !paneAcceptsDropRef.current) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
@@ -3972,7 +4014,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (node?.type === 'objectNode') {
                 const st: any = store.getState();
                 const lookup = st?.idlookup;
-                const index = lookup ? getIRIndex(st, computeIRSignature(st)) : null;
+                const index = lookup ? tabIRIndex(st) : null;
                 const objectId = lookup?.[node.id]?.model;
                 const classId = (node.data as any)?.instanceOfClassId;
                 if (index && typeof objectId === 'string' && classId) {
@@ -4144,9 +4186,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setViewport({ ...getViewport(), zoom: next }, { duration: 150 });
     }, [storeApi, setViewport, getViewport]);
     const handleResetZoom = useCallback(() => {
-        fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 });
+        fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 });
     }, [fitView]);
-    const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
+    const handleFitView = useCallback(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
 
     // Persist pan/zoom at the end of every move (React Flow fires onMoveEnd once per
     // gesture, so no debounce is needed) and once more on unmount, which covers a
@@ -4383,7 +4425,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const outsideMap = container ? measureOutsideLabels(container) : new Map();
             // Across graphVertex containers (S6): bottom-up by container, each laid-out container a block one level up;
             // with no container that declares a layout, today's flat run (utils/elkContainers.ts).
-            const layoutKey = getActiveLayoutKey();
+            // The canvas's own key, the one its sync reads (E4, P-2026-11-08-2025): the root's would move the other pane of a split.
+            const layoutKey = tabLayoutKey();
             const result = await computeContainedAutoLayout(currentNodes, currentEdges, {
                 profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id),
                 containment: irContainmentRef.current.model,
@@ -4401,14 +4444,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const s = result.sizes.get(n.id);
                 return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
             });
-            if (moved.length > 0) syncPositionBatchToJjom(moved);
+            if (moved.length > 0) syncPositionBatchToJjom(moved, layoutKey);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
                 const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
-                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })), layoutKey);
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
@@ -4455,7 +4498,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     },
                 };
             })));
-            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+            requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
             return;
         }
 
@@ -4467,7 +4510,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const n of layoutedNodes) {
             updates.push({ id: n.id, x: n.position.x, y: n.position.y });
         }
-        if (updates.length > 0) syncPositionBatchToJjom(updates);
+        if (updates.length > 0) syncPositionBatchToJjom(updates, tabLayoutKey());
 
         // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
         // applyDistribution alone only re-indexes handles and inherits the side that
@@ -4507,7 +4550,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+        requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
@@ -4707,7 +4750,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         const state: any = store.getState();
         const idlookup = state.idlookup ?? {};
-        const index = getIRIndex(state, computeIRSignature(state));
+        const index = tabIRIndex(state);
         if (!index) return null;
         const readCtx = makeReadCtx(idlookup);
         const rendered = getNodes();
@@ -5284,6 +5327,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
                 fitViewOptions={fitViewOptions}
+                // A split's canvas is narrow, so its fit goes below the default floor; 0.5 is that default, spelled out because the store skips an undefined prop (D6).
+                minZoom={inCanvasSplit ? 0.05 : 0.5}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -5401,34 +5446,71 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         </HighlightProvider>
     );
 
+    const palette = (
+        <PalettePanel
+            editorMode={modeInfo.mode}
+            rootableClasses={irPalette.classes}
+            irPaletteFallback={irPalette.fallback}
+            undeclaredClasses={irPalette.undeclared}
+            allClasses={modeInfo.allClasses}
+            selectedDObjectId={lastSelectedModelElement ?? null}
+            onItemActivate={onPaletteActivate}
+            collapsed={!!scriptPreview?.owner}
+            ontoSections={ontoSections}
+            onOntoActivate={onOntoActivate}
+            onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
+            classGroups={classGroups}
+            onClassActivate={onClassActivate}
+            classPropertyEnabled={classPropertyEnabled}
+            viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
+        />
+    );
+    // In a split the inactive pane runs no command: its first press only activates it (P-2026-11-08-2045). Wheel events are not guarded, so it can still be looked at.
+    const guardPaneEvent = (event: React.SyntheticEvent) => {
+        if (!paneEl) return;
+        const verdict = paneEventVerdict(DockManager.getCanvasSplit(), paneEl, paneActivationRef.current, { type: event.type, detail: (event.nativeEvent as UIEvent).detail });
+        paneActivationRef.current = verdict.activation;
+        if (!verdict.consume) return;
+        event.stopPropagation();
+        // A cancelled pointerdown would suppress the mousedown the verdict counts on; a key keeps its browser default.
+        if (event.type !== 'pointerdown' && event.type !== 'keydown') event.preventDefault();
+        if (verdict.activate) {
+            DockManager.activateCanvasPane(paneEl);
+            paneEl.focus({ preventScroll: true });
+        }
+    };
+    const paneGuardProps = {
+        onPointerDownCapture: (event: React.PointerEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onKeyDownCapture: (event: React.KeyboardEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onMouseDownCapture: guardPaneEvent,
+        onPointerUpCapture: guardPaneEvent,
+        onMouseUpCapture: guardPaneEvent,
+        onClickCapture: guardPaneEvent,
+        onDoubleClickCapture: guardPaneEvent,
+        onContextMenuCapture: guardPaneEvent,
+        onDragStartCapture: guardPaneEvent,
+    };
+
+    // In a split the active pane shows its palette in the first pane's slot, at the window's left edge; the other pane shows none.
+    const paletteSlot = inCanvasSplit && canvasSplit.active === paneEl
+        ? canvasSplit.panes[0].querySelector<HTMLElement>(':scope > .editor-v2-palette-slot')
+        : null;
+
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div ref={setPaneEl} className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}${inCanvasSplit ? ' editor-v2--split-pane' : ''}${inCanvasSplit && canvasSplit.active === paneEl ? ' editor-v2--active-pane' : ''}`} tabIndex={0} onKeyDown={onKeyDown} {...paneGuardProps}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <InstantiationProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
                 <DcnProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
-                <PalettePanel
-                    editorMode={modeInfo.mode}
-                    rootableClasses={irPalette.classes}
-                    irPaletteFallback={irPalette.fallback}
-                    undeclaredClasses={irPalette.undeclared}
-                    allClasses={modeInfo.allClasses}
-                    selectedDObjectId={lastSelectedModelElement ?? null}
-                    onItemActivate={onPaletteActivate}
-                    collapsed={!!scriptPreview?.owner}
-                    ontoSections={ontoSections}
-                    onOntoActivate={onOntoActivate}
-                    onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
-                    classGroups={classGroups}
-                    onClassActivate={onClassActivate}
-                    classPropertyEnabled={classPropertyEnabled}
-                />
+                <div className="editor-v2-palette-slot" />
+                {inCanvasSplit ? (paletteSlot && createPortal(palette, paletteSlot)) : palette}
                 {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
-                <div className="editor-v2__main">
+                <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
+                        commandsDisabled={paneEl !== null && paneIsInactive(canvasSplit, paneEl)}
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}

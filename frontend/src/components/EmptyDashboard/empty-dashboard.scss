@@ -63,6 +63,23 @@
     }
 }
 
+.empty-projects__actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.empty-projects__cta--secondary {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-primary);
+    padding: 8px 19px; /* the border's pixel, to match the height of the primary button */
+
+    &:hover { background: var(--color-bg-tertiary); }
+
+    i { color: var(--color-text-secondary); }
+}
+
 .empty-projects__links {
     display: flex;
     align-items: center;

@@ -117,14 +117,28 @@ import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, Domain, GuardOracle, HaltReason,
     InputRead, NetConfiguration, NetModelView, NetRunStatus, NetStc, NetTransition, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
-import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, getSimView, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { nucleusOf, petriNucleus } from './simNucleus';
+import { dcnRunOf, registerDcnRun } from './simDcnRuns';
+import type { DcnCoherenceAt, DcnRunCoherence, DcnRunText } from './simDcnRuns';
 import { storedProfile } from './simRoleStatus';
 import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
 import { defaultSimPins } from './simViewerPrefs';
 import type { SimAttrRef } from './simViewerPrefs';
+import { dcnCoherenceFromRoles, dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import type { DcnCoherenceConstraint } from '../../../model/simulation/dcn/dcnRoles';
+import { coherenceHits, compileDcnCoherence } from '../../../model/simulation/dcn/dcnCoherence';
+import type { DcnCompiledCoherence } from '../../../model/simulation/dcn/dcnCoherence';
+import { compileDcn, DCN_TICK_EVENT } from '../../../model/simulation/dcn/dcnCompile';
+import type { DcnCompileInput } from '../../../model/simulation/dcn/dcnCompile';
+import { readDcnModel } from '../../../model/simulation/dcn/dcnHandles';
+import { dcnNucleus, readDcnStep } from '../../../model/simulation/dcn/dcnStep';
+import type { DcnClassification } from '../../../model/simulation/dcn/dcnStep';
+import { dcnCandidateLabel, dcnDefectsLine, dcnInputOffWords, dcnLastStepText, dcnMarkingChips, dcnMarkingLine } from '../../../model/simulation/dcn/dcnPanelText';
+// A cycle at module level, used inside functions on both sides only (report F2, P-2026-11-08-0248).
+import { dcnInputOf } from '../problems/dcnToProblems';
 
 type Lookup = Record<string, any>;
 
@@ -731,7 +745,9 @@ export function startRun(
     // the Trigger's type, derived here and never read from the bag (R-SIM-38).
     const bag = raw ? runBag(raw, lookup) : undefined;
     const stc = netStcFromRoles(bag);
-    if (!stc) return { kind: 'refused', reason: 'The simulation roles are incomplete.' };
+    // Petri first: with both role sets bound the run is the Petri one; a DCN run only when the Petri roles are incomplete.
+    if (!stc) return (dcnStcFromRoles(bag) ? startDcnRun(lookup, modelId, configModelId, projectId, build, seed) : null)
+        ?? { kind: 'refused', reason: 'The simulation roles are incomplete.' };
     const ids = collectModelObjectIds(lookup, modelId);
     const view = makeNetModelView(lookup, stc.eventIdentifier);
     // The declarations (R-SIM-67, R-SIM-68): an absent key is the empty set, any other value is decoded.
@@ -795,6 +811,112 @@ export function startRun(
             ...declarationDefectsOf(net.declarationDefects ?? [], lookup, net.attributes),
         ],
     };
+}
+
+// ---------------------------------------------------------------------------
+// The DCN run (lane L4.5, P-2026-11-08-0248 decisions 1-4, P-2026-11-08-0303)
+// ---------------------------------------------------------------------------
+
+/** The classification of the live run of `net`, when `net` is its net; `null` otherwise. */
+function liveClassification(net: Pick<CompiledNet, 'modelId'>, d: DcnRunText): DcnClassification | null {
+    const run = getSimRun(net.modelId);
+    return run && run.net === net ? d.nucleus.classify(run.config.state) : null;
+}
+
+/** The M2 feature of a property's upper bound, found by name in the metamodel: `MultiplicityElement.upper`, else `Property.upper`. */
+function upperFeatureOf(lookup: Lookup, metamodelId: string | null): string | undefined {
+    if (!metamodelId) return undefined;
+    const found = new Map<string, string>();
+    for (const id in lookup) {
+        const d = lookup[id];
+        if (d?.className !== 'DAttribute' || d.name !== 'upper') continue;
+        const owner = lookup[d.father];
+        if (owner?.className !== 'DClass' || (owner.name !== 'MultiplicityElement' && owner.name !== 'Property')) continue;
+        let m: any = owner;
+        for (let depth = 0; m && m.className !== 'DModel' && depth < 40; depth++) m = lookup[m.father];
+        if (m?.id === metamodelId && !found.has(owner.name)) found.set(owner.name, id);
+    }
+    return found.get('MultiplicityElement') ?? found.get('Property');
+}
+
+/**
+ * The run of a model whose metamodel binds the dcn roles (R-DCN-8): the DCN
+ * nucleus over the placeless net of `compileDcn`, its oracles, the alphabet of
+ * the tick (when some monitor contributes) and the invocations a press can
+ * name (a redefinition is re-triggered by its operation, R-DCN-22), the
+ * arguments as inputs (R-SIM-88). σ0 is not classified (Reset never halts);
+ * the declaration defects go to the panel line, not to the node problems.
+ * `null` when no binding fits the static class.
+ */
+function startDcnRun(
+    lookup: Lookup, modelId: string, configModelId: string | null, projectId: string, build: ContextBuilder, seed: number,
+): RunStart | null {
+    const found = dcnInputOf(lookup, modelId);
+    if (found === null) return null;
+    const input: DcnCompileInput = { modelId, stc: found.stc, binding: found.binding, view: found.view, features: found.features };
+    const compiled = compileDcn(input);
+    const model = readDcnModel(input, compiled, { upper: upperFeatureOf(lookup, configModelId) });
+    const globals = build(evalContextFor(lookup, modelId, projectId), { extentModelId: modelId });
+    let snapshot: SimSnapshot;
+    try {
+        snapshot = freezeSnapshot(globals, { id: modelId, name: String(lookup[modelId]?.name ?? '') });
+    } catch (e) {
+        if (e instanceof SimSnapshotError) return { kind: 'refused', reason: `The model cannot be frozen: ${e.message}.` };
+        throw e;
+    }
+    const stepModel = readDcnStep(input, model);
+    const nucleus = dcnNucleus(stepModel, snapshot);
+    const net = nucleus.net;
+    const coherence = dcnCoherenceFromRoles(found.stc, found.view);
+    const compiledCoherence = compileDcnCoherence({ constraints: coherence.constraints, model, view: found.view, binding: found.binding, snapshot });
+    registerDcnRun(net, {
+        model: stepModel, nucleus, nameOf: id => elementName(lookup, id),
+        coherence: dcnRunCoherence(coherence.constraints, compiledCoherence, { state: nucleus.initial, event: null }, lookup),
+    });
+    const entries = [...compiled.entries.values()];
+    const invocations = entries.filter(e => e.kind === 'invocation' && !stepModel.redefines.has(e.id)).map(e => e.id);
+    const inputs = new Map(entries.filter(e => e.inputs.length > 0).map(e => [e.id, e.inputs] as const));
+    return {
+        kind: 'started',
+        run: {
+            net,
+            nucleus,
+            config: { state: nucleus.initial, event: null },
+            halt: null,
+            guards: nucleus.guards,
+            actions: nucleus.actions,
+            derived: undefined,
+            alphabet: [...(entries.some(e => e.kind === 'tick') ? [DCN_TICK_EVENT] : []), ...invocations],
+            signature: runSignature(lookup, modelId, configModelId),
+            ...(inputs.size > 0 ? { inputs } : {}),
+            seed,
+            draws: 0,
+            trace: [],
+            snapshot,
+        },
+        compileDefects: declarationDefectsOf([...coherence.defects, ...compiledCoherence.defects], lookup),
+    };
+}
+
+/** The candidates of a press on `run`: the DCN nucleus folds a redefinition into its invocation (R-DCN-22, report F3). */
+function runCandidates(run: SimRun, cfg: NetConfiguration, guards: GuardOracle): CandidateSet {
+    const d = dcnRunOf(run.net);
+    return d ? d.nucleus.candidates(cfg, guards) : candidates(run.net, cfg, guards);
+}
+
+/**
+ * Why a DCN input is off in the live configuration, `null` when it has a
+ * candidate; `null` on a Petri run. An input that asks may have a candidate
+ * once answered (R-SIM-88): a precondition that cannot be read before the
+ * answer is waiting, not false.
+ */
+export function dcnInputOff(run: SimRun, event: string, lookup: Lookup): string | null {
+    const d = dcnRunOf(run.net);
+    if (!d) return null;
+    const cs = d.nucleus.candidates({ state: run.config.state, event }, run.guards);
+    if (cs.candidates.length > 0) return null;
+    if (inputAsks(run, event).length > 0 && cs.evaluated.some(e => e.outcome.kind === 'defect')) return null;
+    return dcnInputOffWords(d.model, event, id => elementName(lookup, id), d.nucleus.classify(run.config.state));
 }
 
 // ---------------------------------------------------------------------------
@@ -949,6 +1071,8 @@ function arcsText(arcs: readonly Arc[], lookup: Lookup): string {
  * after, `node#edge`), then its preset and postset: "tCoin (Locked → Unlocked)".
  */
 export function candidateLabel(net: CompiledNet, transitionId: string, lookup: Lookup): string {
+    const d = dcnRunOf(net);
+    if (d) return dcnCandidateLabel(d.model, transitionId, id => elementName(lookup, id), liveClassification(net, d));
     const t = net.transitions.find(x => x.id === transitionId);
     const own = elementName(lookup, transitionId.split('#')[0]);
     if (!t) return own;
@@ -975,6 +1099,8 @@ export function choiceHead(input: string): { heading: string; input: string; sub
  * `Marking: p2 ×2, p3 · coins = 2, paid = true`.
  */
 export function markingLine(state: SimState, net: Pick<CompiledNet, 'modelId'>, lookup: Lookup): { line: string; title: string } {
+    const d = dcnRunOf(net);
+    if (d) return dcnMarkingLine(state, d.model, d.nucleus.classify(state));
     const places = [...state.marking]
         .filter(([, n]) => n > 0)
         .map(([place, n]) => ({ name: elementName(lookup, place), n }))
@@ -1095,13 +1221,25 @@ export interface SimMarkingChip {
     readonly text: string;
 }
 
-/** The Marking chips (R-SIM-104): the places `markingLine` lists, in its order and its words, one chip each. */
-export function markingChips(state: SimState, lookup: Lookup): SimMarkingChip[] {
+/** The Marking chips (R-SIM-104): the places `markingLine` lists, in its order and its words, one chip each; of a DCN run's `net`, the classification. */
+export function markingChips(state: SimState, lookup: Lookup, net?: Pick<CompiledNet, 'modelId'>): SimMarkingChip[] {
+    const d = net ? dcnRunOf(net) : undefined;
+    if (d) return dcnMarkingChips(d.model, d.nucleus.classify(state));
     return [...state.marking]
         .filter(([, n]) => n > 0)
         .map(([place, n]) => ({ place, name: elementName(lookup, place), tokens: n }))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(c => ({ ...c, text: c.tokens === 1 ? c.name : `${c.name} ×${c.tokens}` }));
+}
+
+/**
+ * σ of the step a DCN run shows (R-SIM-106), for its Classification chips: the
+ * viewed step's, as the run card and the canvas read it, the live one otherwise.
+ * A Petri run's face stays on the live σ (R-SIM-104).
+ */
+export function shownChipsState(modelId: string, run: SimRun): SimState {
+    const viewed = dcnRunOf(run.net) ? getSimView(modelId) : null;
+    return viewed === null ? run.config.state : configAt(run, viewed)?.state ?? run.config.state;
 }
 
 /**
@@ -1159,6 +1297,11 @@ function defectSubject(d: CompileDefect, lookup: Lookup): string {
  * for all: a defect. `null` when none.
  */
 export function defectsLine(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
+    if (dcnRunOf(net)) {
+        // R-DCN-28: the coherence defects, named by their constraint, after the net's own.
+        const coherence = compileDefects.map((d): DeclarationDefect => ({ index: null, name: d.element, code: 'record', message: d.short ?? defectShort(d.reason, d.detail) }));
+        return dcnDefectsLine({ declarationDefects: [...(net.declarationDefects ?? []), ...coherence] }, id => elementName(lookup, id));
+    }
     const items = [
         ...net.defects.map(d => `${elementName(lookup, d.element)} (${d.message})`),
         ...compileDefects.map(d => `${defectSubject(d, lookup)} (${d.short ?? defectShort(d.reason, d.detail)})`),
@@ -1581,7 +1724,7 @@ export function playTick(run: SimRun | undefined, policy: SimPolicy, steps: numb
     if (status === 'Terminated' || status === 'Deadlock' || status === 'Halted') return { kind: 'stop', reason: status };
     if (steps >= policy.k) return { kind: 'stop', reason: 'limit' };
     if (inputAsks(run, null).length > 0) return { kind: 'stop', reason: 'input' };
-    const found = candidates(run.net, { state: run.config.state, event: null }, run.guards).candidates.length;
+    const found = runCandidates(run, { state: run.config.state, event: null }, run.guards).candidates.length;
     if (found === 0) return { kind: 'stop', reason: 'event' };
     if (found > 1 && policy.choices === 'ask') return { kind: 'stop', reason: 'choice' };
     return { kind: 'press' };
@@ -1667,12 +1810,97 @@ function runWatchesOf(run: SimRun, lookup: Lookup): readonly CompiledWatch[] {
 
 /**
  * R-SIM-137: every watch of the run's model read on `state`, the live configuration by default, in declaration
- * order, each with its reading and its hit. None without the M frozen at Reset, which the evaluator reads.
+ * order, each with its reading and its hit. None without the M frozen at Reset, which the evaluator reads. On a DCN
+ * run the coherence constraints follow (R-DCN-28), one invariant per constraint and instance, read at the step of
+ * `state`: the live one when not given, otherwise the step shown (the inspector's, the only caller that gives one).
  */
-export function watchResults(run: SimRun, lookup: Lookup, state: SimState = run.config.state): WatchResult[] {
+export function watchResults(run: SimRun, lookup: Lookup, state?: SimState): WatchResult[] {
     if (!run.snapshot) return [];
     const watches = runWatchesOf(run, lookup);
-    return watches.length === 0 ? [] : readWatches(watches, run.snapshot, run.net, state);
+    const read = watches.length === 0 ? [] : readWatches(watches, run.snapshot, run.net, state ?? run.config.state);
+    const dcn = dcnRunOf(run.net);
+    if (!dcn?.coherence) return read;
+    const live = run.trace?.length ?? 0;
+    return [...read, ...coherenceResults(run, dcn, dcn.coherence, state === undefined ? live : getSimView(run.net.modelId) ?? live)];
+}
+
+/** The condition or expression of a constraint as written, for the title of its row. */
+function coherenceText(c: DcnCoherenceConstraint): string {
+    const p = c.pattern;
+    const pattern = p === null ? null
+        : p.kind === 'persistence' ? `BoundedPersistence(${p.condition}, ${p.k})` : `BoundedResponse(${p.trigger}, ${p.response}, ${p.k})`;
+    return [c.pointwise, pattern].filter(t => t !== null).join(' and ');
+}
+
+/**
+ * What a run keeps of its coherence constraints (R-DCN-28): one row per constraint and instance, named
+ * `<constraint>@<instance>`. A row is an invariant whose reading comes from the fold, so its `output` is never evaluated.
+ */
+function dcnRunCoherence(
+    constraints: readonly DcnCoherenceConstraint[], compiled: DcnCompiledCoherence, initial: NetConfiguration, lookup: Lookup,
+): DcnRunCoherence {
+    const rows = constraints.flatMap(c => compiled.monitors.filter(m => m.constraint === c.id).map(m => {
+        const text = coherenceText(c);
+        const watch: CompiledWatch = { name: `${c.name}@${elementName(lookup, m.instance)}`, kind: 'invariant', text, output: { source: text, expr: null, defect: null } };
+        return { instance: m.instance, constraint: m.constraint, watch };
+    }));
+    const reach = compiled.monitors.reduce((max, m) => Math.max(max, m.pattern?.k ?? 0), 0);
+    return { compiled, rows, reach, initial, atConfig: new WeakMap() };
+}
+
+/**
+ * The configurations `from`..`to` of a run: the kept ones as kept, the older ones by one replay from σ0 (`configAt`
+ * would replay each from σ0 again). Empty where the replay disagrees with the trace.
+ */
+function coherenceWindow(run: SimRun, dcn: DcnRunText, initial: NetConfiguration, from: number, to: number, firstKept: number): NetConfiguration[] {
+    const kept = run.keptConfigs ?? [];
+    const trace = run.trace ?? [];
+    const out: NetConfiguration[] = [];
+    if (from < firstKept) {
+        let cfg = initial;
+        if (from === 0) out.push(cfg);
+        for (let i = 1; i <= Math.min(to, firstKept - 1); i++) {
+            const t = trace[i - 1];
+            const given = t.inputs ? withInputs(run, t.inputs) : run;
+            const o = dcn.nucleus.step({ state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
+            if (o.kind === 'inadmissible' || o.kind !== t.kind) return [];
+            cfg = o.next;
+            if (i >= from) out.push(cfg);
+        }
+    }
+    for (let i = Math.max(from, firstKept); i <= to; i++) out.push(kept[i - firstKept]);
+    return out;
+}
+
+/**
+ * The fold's report at `step` (R-DCN-31). A verdict at step n reads σ(n−reach)..σn and nothing older: a persistence
+ * needs its last k + 1 states, a response the trigger at n − k and what followed. So the fold runs over that window,
+ * replayed where it reaches before the kept configurations (R-SIM-106), and only its last position is a verdict.
+ * Remembered per kept configuration, so a commit folds its own step only.
+ */
+function coherenceAt(run: SimRun, dcn: DcnRunText, c: DcnRunCoherence, step: number): DcnCoherenceAt {
+    const kept = run.keptConfigs ?? [];
+    const firstKept = (run.trace?.length ?? 0) - kept.length + 1;
+    const asked: NetConfiguration | undefined = kept[step - firstKept];
+    const known = asked && c.atConfig.get(asked);
+    if (known) return known;
+    const window = coherenceWindow(run, dcn, c.initial, Math.max(0, step - c.reach), step, firstKept);
+    const report = coherenceHits(c.compiled, window);
+    const last = window.length - 1;
+    const at = { hits: report.hits.filter(h => h.step === last), failures: report.failures.filter(f => f.step === last) };
+    if (asked) c.atConfig.set(asked, at);
+    return at;
+}
+
+/** Every row of the coherence constraints at `step`: a hit reads false; an expression that gave no verdict is a defect, never a hit. */
+function coherenceResults(run: SimRun, dcn: DcnRunText, c: DcnRunCoherence, step: number): WatchResult[] {
+    const { hits, failures } = coherenceAt(run, dcn, c, step);
+    return c.rows.map(row => {
+        const mine = (x: { instanceId: string; constraintId: string }) => x.instanceId === row.instance && x.constraintId === row.constraint;
+        const hit = hits.some(mine);
+        const failure = hit ? undefined : failures.find(mine);
+        return { watch: row.watch, reading: failure ? { kind: 'defect', short: 'no verdict', detail: failure.detail } : { kind: 'value', value: !hit }, hit };
+    });
 }
 
 /** Per kept configuration, whether it hit, for the compiled watches it was read with. */
@@ -1688,10 +1916,9 @@ export function watchHitSteps(run: SimRun, lookup: Lookup): ReadonlySet<number> 
     const snapshot = run.snapshot;
     if (!snapshot) return out;
     const watches = runWatchesOf(run, lookup);
-    if (watches.length === 0) return out;
     const kept = run.keptConfigs ?? [];
     const first = (run.trace?.length ?? 0) - kept.length + 1;
-    kept.forEach((cfg, i) => {
+    if (watches.length > 0) kept.forEach((cfg, i) => {
         let known = keptHits.get(cfg);
         if (!known || known.watches !== watches) {
             known = { watches, hit: readWatches(watches, snapshot, run.net, cfg.state).some(r => r.hit) };
@@ -1699,6 +1926,12 @@ export function watchHitSteps(run: SimRun, lookup: Lookup): ReadonlySet<number> 
         }
         if (known.hit) out.add(first + i);
     });
+    const dcn = dcnRunOf(run.net);
+    if (dcn?.coherence) {
+        for (let step = first; step < first + kept.length; step++) {
+            if (coherenceAt(run, dcn, dcn.coherence, step).hits.length > 0) out.add(step);
+        }
+    }
     return out;
 }
 
@@ -1735,7 +1968,7 @@ function press(
     const cfg = { state: run.config.state, event };
     let chosen: string | null;
     if (selector === undefined) {
-        const cs = candidates(run.net, cfg, live.guards);
+        const cs = runCandidates(run, cfg, live.guards);
         if (cs.candidates.length > 1) return { pending: cs.candidates, lastStep: null, outcome: null };
         chosen = cs.candidates[0]?.transition ?? null;
     } else {
@@ -1746,7 +1979,11 @@ function press(
     // The values given are kept on the step, so a replay reads them (R-SIM-106).
     simCommit(modelId, outcome, origin, values);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(live, outcome, lookup) : null;
-    const lastStep = lastStepText(outcome, run.net, lookup, input, why);
+    const dcn = dcnRunOf(run.net);
+    // A DCN step is labelled on the classification of the σ it read: the redefinitions that ran with the invocation.
+    const lastStep = dcn
+        ? dcnLastStepText(outcome, dcn.model, id => elementName(lookup, id), dcn.nucleus.classify(run.config.state), input, values)
+        : lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
     const asked = (values ?? []).map(v => `${inputLabel(v, run.net, lookup)} = ${String(v.value)}`);
     const derivedValues = outcome.kind === 'fired' ? derivedText(outcome.next.state, lookup) : [];

@@ -6,17 +6,24 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RowValue from '../../nodes/RowValue';
 import { detectValueRenderer } from '../../nodes/valueRenderer';
-import { namelessTargetLabel } from '../namelessTargetLabel';
+import { namelessTargetLabel, unnamedTargetLabels } from '../namelessTargetLabel';
 import { IRFormField } from '../../viewpoint/ir/IRFormField';
+import ReferenceWidget, { referenceName } from '../../viewpoint/ir/widgets/ReferenceWidget';
+import ListWidget from '../../viewpoint/ir/widgets/ListWidget';
+import ReferencePicker from '../../viewpoint/ir/widgets/ReferencePicker';
 
 // The render bench of D6: the `joiner` barrel pulls monaco, so it is replaced by the one
 // export IRFormField reads; the writes are never exercised here.
 const RENDER_LOOKUP = vi.hoisted(() => ({
     p_named: { name: 'Port_1', instanceof: { name: 'Port' } },
     p_nameless: { name: '', instanceof: { name: 'Port' } },
+    p_nameless2: { id: 'p_nameless2', name: '', instanceof: { name: 'Port' } },
+    g_nameless: { id: 'g_nameless', name: '', instanceof: { name: 'Gate' } },
 } as { [id: string]: any }));
 vi.mock('../../../../joiner', () => ({ LPointerTargetable: { fromPointer: (p: any) => RENDER_LOOKUP[p] } }));
 vi.mock('../../viewpoint/ir/formWrite', () => ({ appendValue: () => ({}), clearValue: () => ({}), setValue: () => ({}) }));
+// The server renderer has no portals: ReferencePicker's popover is rendered in place.
+vi.mock('react-dom', async (importOriginal) => ({ ...(await importOriginal<typeof import('react-dom')>()), createPortal: (node: any) => node }));
 
 /**
  * R-TXT-46 D4 — a reference to a nameless object is not broken on the v2-flow canvas.
@@ -61,8 +68,8 @@ const refBranch = (() => {
 })();
 const resolveRefs = compile(
     `let values, refTargets, value;\n${refBranch}\nreturn { values, refTargets, value };`,
-    ['fv', 'rememberRefTargetName', 'lastSeenRefTargetName', 'namelessTargetLabel'],
-) as (fv: any, r: any, l: any, n: typeof namelessTargetLabel) => { values: string[]; refTargets: Array<{ id: string; name: string; label?: string; broken?: boolean }>; value: string };
+    ['fv', 'rememberRefTargetName', 'lastSeenRefTargetName', 'unnamedTargetLabels'],
+) as (fv: any, r: any, l: any, u: typeof unnamedTargetLabels) => { values: string[]; refTargets: Array<{ id: string; name: string; label?: string; broken?: boolean }>; value: string };
 
 function rowOf(raw: string[], resolved: Array<{ id: string; name: any; instanceof?: any }>, lastKnown = 'LAST_KNOWN') {
     const remembered: Array<[string, string]> = [];
@@ -70,7 +77,7 @@ function rowOf(raw: string[], resolved: Array<{ id: string; name: any; instanceo
         { __raw: { values: raw }, values: resolved },
         (id: string, name: string) => { remembered.push([id, name]); },
         (_id: string) => lastKnown,
-        namelessTargetLabel,
+        unnamedTargetLabels,
     );
     return { ...out, remembered };
 }
@@ -93,7 +100,7 @@ const isBrokenChip = (v: string) => displayValue(v) === v;
 describe('D4 — jjomTransformers: a nameless target resolves', () => {
     it("a target whose name is '' is not broken", () => {
         const r = rowOf(['p_nameless'], [{ id: 'p_nameless', name: '', instanceof: { name: 'Port' } }]);
-        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '', label: ': Port' }]);
+        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '', label: 'Port (unnamed)' }]);
     });
 
     it('a named target, as before (control)', () => {
@@ -115,9 +122,10 @@ describe('D4 — jjomTransformers: a nameless target resolves', () => {
 });
 
 describe('D4 — IRFormField.displayValue: a nameless target is not a broken chip', () => {
-    // R-TXT-47 D6 (C2e) changed the label from '' to `: <Class>`; the chip stays not broken.
-    it('a pointer to a nameless object labels `: <Class>` and is not broken', () => {
-        expect(displayValue('p_nameless')).toBe(': Port');
+    // R-TXT-47 D6 (C2e) changed the label from '' to a class label, `<Class> (unnamed)` since
+    // R-TXT-59; the chip stays not broken.
+    it('a pointer to a nameless object labels `<Class> (unnamed)` and is not broken', () => {
+        expect(displayValue('p_nameless')).toBe('Port (unnamed)');
         expect(isBrokenChip('p_nameless')).toBe(false);
     });
 
@@ -130,18 +138,22 @@ describe('D4 — IRFormField.displayValue: a nameless target is not a broken chi
 });
 
 /**
- * R-TXT-47 D5 (C2d, P-2026-11-05-0148) — a nameless target is labelled `: <Class>` on the
- * default view, as its own header reads, instead of an empty slot drawn as a dash.
+ * R-TXT-47 D5 (C2d, P-2026-11-05-0148), amended by R-TXT-59 — a nameless target is labelled
+ * `<Class> (unnamed)` on the default view, instead of an empty slot drawn as a dash.
  * Report: `docs/discovery/discovery_2026-11-05_textual_c2_syntax_form.md` §3.3.
  */
 const PORT = { name: 'Port' };
 
-describe('D5 — jjomTransformers: a nameless target carries the label `: <Class>`', () => {
+describe('D5 — jjomTransformers: a nameless target carries the label `<Class> (unnamed)`', () => {
     it('three nameless Ports: three labels, the names stay empty, the row is not blank', () => {
         const r = rowOf(['p1', 'p2', 'p3'], ['p1', 'p2', 'p3'].map(id => ({ id, name: '', instanceof: PORT })));
-        expect(r.refTargets).toStrictEqual(['p1', 'p2', 'p3'].map(id => ({ id, name: '', label: ': Port' })));
-        expect(r.values).toEqual([': Port', ': Port', ': Port']);
-        expect(r.value).toBe(': Port, : Port, : Port');
+        expect(r.refTargets).toStrictEqual([
+            { id: 'p1', name: '', label: 'Port (unnamed)' },
+            { id: 'p2', name: '', label: 'Port (unnamed) 2' },
+            { id: 'p3', name: '', label: 'Port (unnamed) 3' },
+        ]);
+        expect(r.values).toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Port (unnamed) 3']);
+        expect(r.value).toBe('Port (unnamed), Port (unnamed) 2, Port (unnamed) 3');
     });
 
     it('the memory of names is fed the empty name, never the label', () => {
@@ -155,9 +167,9 @@ describe('D5 — jjomTransformers: a nameless target carries the label `: <Class
         expect(r.values).toEqual(['Port_1']);
     });
 
-    it('a nameless target without a readable metaclass falls back to `: Object`', () => {
+    it('a nameless target without a readable metaclass falls back to `Object (unnamed)`', () => {
         const r = rowOf(['p1'], [{ id: 'p1', name: '' }]);
-        expect(r.refTargets[0].label).toBe(': Object');
+        expect(r.refTargets[0].label).toBe('Object (unnamed)');
     });
 
     it('a deleted nameless target keeps the broken path, with no label', () => {
@@ -172,6 +184,77 @@ describe('D5 — jjomTransformers: a nameless target carries the label `: <Class
     });
 });
 
+/**
+ * C2h (P-2026-11-08-1626, R-TXT-59) — one reference slot of one object is one list on the default
+ * view: two different unnamed targets of a class would read the same in it, so they are numbered.
+ * Layer Impact Report: `docs/discovery/lir_2026-11-08_c2h_unnamed_index.md`.
+ */
+describe('C2h — jjomTransformers: unnamed homonyms of one slot are numbered', () => {
+    const unnamed = (id: string, cls: { name: string } = PORT) => ({ id, name: '', instanceof: cls });
+    const labelsOf = (raw: string[], resolved: any[]) => rowOf(raw, resolved).refTargets.map(t => t.label);
+
+    it('two different unnamed Ports read 1 and 2, in the order of the values', () => {
+        const r = rowOf(['p2', 'p1'], [unnamed('p2'), unnamed('p1')]);
+        expect(r.refTargets).toStrictEqual([
+            { id: 'p2', name: '', label: 'Port (unnamed)' },
+            { id: 'p1', name: '', label: 'Port (unnamed) 2' },
+        ]);
+        expect(r.values).toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+        expect(r.value).toBe('Port (unnamed), Port (unnamed) 2');
+    });
+
+    it('one unnamed target reads without an index', () => {
+        expect(labelsOf(['p1'], [unnamed('p1')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('named targets are unchanged and are not counted', () => {
+        const r = rowOf(['p1', 'a', 'p2'], [unnamed('p1'), { id: 'a', name: 'Port_1', instanceof: PORT }, unnamed('p2')]);
+        expect(r.refTargets).toStrictEqual([
+            { id: 'p1', name: '', label: 'Port (unnamed)' },
+            { id: 'a', name: 'Port_1' },
+            { id: 'p2', name: '', label: 'Port (unnamed) 2' },
+        ]);
+    });
+
+    it('unnamed targets of two classes do not collide', () => {
+        expect(labelsOf(['p1', 'g1'], [unnamed('p1'), unnamed('g1', { name: 'Gate' })]))
+            .toEqual(['Port (unnamed)', 'Gate (unnamed)']);
+    });
+
+    it('the same target held twice is one target, with one label', () => {
+        expect(labelsOf(['p1', 'p1', 'p2'], [unnamed('p1'), unnamed('p1'), unnamed('p2')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('a slot is its own list: the numbering does not carry to the next slot', () => {
+        expect(labelsOf(['p1', 'p2'], [unnamed('p1'), unnamed('p2')])).toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+        expect(labelsOf(['p3'], [unnamed('p3')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('a pointer that resolves to nothing stays broken and is not counted', () => {
+        const r = rowOf(['p1', 'p_gone', 'p2'], [unnamed('p1'), unnamed('p2')]);
+        expect(r.refTargets).toStrictEqual([
+            { id: 'p1', name: '', label: 'Port (unnamed)' },
+            { id: 'p_gone', name: 'LAST_KNOWN', broken: true },
+            { id: 'p2', name: '', label: 'Port (unnamed) 2' },
+        ]);
+    });
+
+    it('the memory of names is fed the empty name, never a numbered label', () => {
+        const r = rowOf(['p1', 'p2'], [unnamed('p1'), unnamed('p2')]);
+        expect(r.remembered).toEqual([['p1', ''], ['p2', '']]);
+    });
+
+    it('a proxy that throws costs only what comes after it, as before: the earlier label stays', () => {
+        const throwing: any = { get id(): string { throw new Error('proxy'); } };
+        const r = rowOf(['p1', 'p2'], [unnamed('p1'), throwing]);
+        expect(r.refTargets).toStrictEqual([
+            { id: 'p1', name: '', label: 'Port (unnamed)' },
+            { id: 'p2', name: 'LAST_KNOWN', broken: true },
+        ]);
+    });
+});
+
 describe('D5 — RowValue paints the label of a nameless target', () => {
     const paint = (targets: any[]) => renderToStaticMarkup(createElement(RowValue as any, {
         decision: { kind: 'refPill', reason: 'test' },
@@ -180,10 +263,10 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
         targets,
     }));
 
-    it('a reference pill shows `: Port` as its text and title', () => {
-        const html = paint([{ id: 'p1', name: '', label: ': Port' }]);
-        expect(html).toContain('</i>: Port</span>');
-        expect(html).toContain('title="Go to : Port"');
+    it('a reference pill shows `Port (unnamed)` as its text and title', () => {
+        const html = paint([{ id: 'p1', name: '', label: 'Port (unnamed)' }]);
+        expect(html).toContain('</i>Port (unnamed)</span>');
+        expect(html).toContain('title="Go to Port (unnamed)"');
     });
 
     it('a singleton pill target takes the label in its title', () => {
@@ -191,10 +274,10 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
             decision: { kind: 'refPill', reason: 'test' },
             values: [''],
             variant: 'row',
-            targets: [{ id: 'p1', name: '', label: ': Port' }],
+            targets: [{ id: 'p1', name: '', label: 'Port (unnamed)' }],
             pillTargets: new Map([['p1', 'Port']]),
         }));
-        expect(html).toContain('title="Go to : Port"');
+        expect(html).toContain('title="Go to Port (unnamed)"');
     });
 
     it('a named target still shows its name (control)', () => {
@@ -205,14 +288,14 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
 });
 
 /**
- * R-TXT-47 D6 (C2e, P-2026-11-06-2041) — the same `: <Class>` label on the IR form, through
+ * R-TXT-47 D6 (C2e, P-2026-11-06-2041), amended by R-TXT-59 — the same label on the IR form, through
  * the one helper both readers call. Report: `docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md`
  * §3.3: the three readers of `displayValue`, rendered with the `joiner` barrel mocked.
  */
 describe('D6 — namelessTargetLabel, the helper', () => {
-    it('a nameless target reads `: <Class>`, without a metaclass `: Object`', () => {
-        expect(namelessTargetLabel({ name: '', instanceof: { name: 'Port' } })).toBe(': Port');
-        expect(namelessTargetLabel({ name: '' })).toBe(': Object');
+    it('a nameless target reads `<Class> (unnamed)`, without a metaclass `Object (unnamed)`', () => {
+        expect(namelessTargetLabel({ name: '', instanceof: { name: 'Port' } })).toBe('Port (unnamed)');
+        expect(namelessTargetLabel({ name: '' })).toBe('Object (unnamed)');
     });
 
     it('a named target and a missing one have no label', () => {
@@ -221,7 +304,7 @@ describe('D6 — namelessTargetLabel, the helper', () => {
     });
 });
 
-describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => {
+describe('D6 — IRFormField: a nameless target is labelled `<Class> (unnamed)`', () => {
     const fieldOf = (over: any) => ({
         slotId: 's', name: 'inputs', widget: 'chips', derivedWidget: 'chips', typeName: 'Port',
         lowerBound: 0, upperBound: -1, isMultivalued: true, isRequired: false, isEnum: false,
@@ -235,25 +318,176 @@ describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => 
         [...html.matchAll(/<span class="ir-chipinput__pill([^"]*)">.*?<span class="ir-chipinput__pill-text" title="([^"]*)">([^<]*)<\/span>/g)]
             .map(m => ({ broken: m[1].includes('--broken'), title: m[2], text: m[3] }));
 
-    it('the chip input: `: Port` beside a named chip and a broken one, unchanged', () => {
+    it('the chip input: `Port (unnamed)` beside a named chip and a broken one, unchanged', () => {
         const html = paint(fieldOf({}), { widget: 'chips' });
         expect(pillTexts(html)).toEqual([
             { broken: false, title: 'Port_1', text: 'Port_1' },
-            { broken: false, title: ': Port', text: ': Port' },
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
             { broken: true, title: 'p_gone', text: 'p_gone' },
         ]);
     });
 
-    it('a read-only single value set to a nameless target reads `: Port`, not «empty»', () => {
+    it('C2h: two different unnamed Ports on the chips of one field read 1 and 2, text and title', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless', 'p_nameless2'] }), { widget: 'chips' }))).toEqual([
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
+            { broken: false, title: 'Port (unnamed) 2', text: 'Port (unnamed) 2' },
+        ]);
+    });
+
+    it('C2h: the order of the values sets the index', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless2', 'p_nameless'] }), { widget: 'chips' })).map(p => p.text))
+            .toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('C2h: one unnamed target on the chips reads without an index', () => {
+        expect(pillTexts(paint(fieldOf({ values: ['p_nameless'] }), { widget: 'chips' })))
+            .toEqual([{ broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' }]);
+    });
+
+    it('C2h: named and broken chips are unchanged and not counted, a hole does not disturb the index', () => {
+        const values = ['p_named', 'p_nameless', '', 'p_gone', 'p_nameless2', 'g_nameless'];
+        expect(pillTexts(paint(fieldOf({ values }), { widget: 'chips' }))).toEqual([
+            { broken: false, title: 'Port_1', text: 'Port_1' },
+            { broken: false, title: 'Port (unnamed)', text: 'Port (unnamed)' },
+            { broken: true, title: 'p_gone', text: 'p_gone' },
+            { broken: false, title: 'Port (unnamed) 2', text: 'Port (unnamed) 2' },
+            { broken: false, title: 'Gate (unnamed)', text: 'Gate (unnamed)' },
+        ]);
+    });
+
+    it('a read-only single value set to a nameless target reads `Port (unnamed)`, not «empty»', () => {
         const one = (v: string) => paint(fieldOf({ isMultivalued: false, isReadOnly: true, upperBound: 1, values: [v] }));
-        expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">: Port</div>');
+        expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port (unnamed)</div>');
         expect(one('p_named')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port_1</div>');
         expect(one('p_gone')).toContain('<div class="ir-field__readonly" id="ir-field-s">p_gone</div>');
     });
 
-    it('the rows of a read-only list keep the nameless target, as `: Port`', () => {
+    it('the rows of a read-only list keep the nameless target, as `Port (unnamed)`', () => {
         const html = paint(fieldOf({ isReadOnly: true }));
         const rows = [...html.matchAll(/<div class="ir-field__row">([^<]*)<\/div>/g)].map(m => m[1]);
-        expect(rows).toEqual(['Port_1', ': Port', 'p_gone']);
+        expect(rows).toEqual(['Port_1', 'Port (unnamed)', 'p_gone']);
+    });
+});
+
+/**
+ * C2f (P-2026-11-08-0843) — the IR reference widgets read an unnamed target as
+ * `<Class> (unnamed)`, the form the Text tab's confirm panel uses, with an index only where two
+ * different targets of one class would read the same in one list.
+ * Layer Impact Report: `docs/discovery/lir_2026-11-08_nameless_reference_labels.md`.
+ */
+describe('C2f — unnamedTargetLabels, the labels of one list', () => {
+    const unnamed = (id: string, cls = 'Port') => ({ id, name: '', instanceof: { name: cls } });
+    const named = { id: 'a', name: 'Port_1', instanceof: { name: 'Port' } };
+
+    it('a named target and a missing one have no label, and keep their position', () => {
+        expect(unnamedTargetLabels([named, undefined, null])).toEqual([undefined, undefined, undefined]);
+    });
+
+    it('one unnamed target reads `<Class> (unnamed)`, with no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1')])).toEqual(['Port (unnamed)']);
+    });
+
+    it('R-TXT-59: the first of a class reads what namelessTargetLabel reads, so the surfaces cannot drift', () => {
+        for (const t of [unnamed('n1'), unnamed('g1', 'Gate'), { id: 'x', name: '' }]) {
+            expect(unnamedTargetLabels([t])[0]).toBe(namelessTargetLabel(t));
+        }
+    });
+
+    it('unnamed targets of one class: the first bare, the later ones numbered', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n2'), unnamed('n3')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Port (unnamed) 3']);
+    });
+
+    it('unnamed targets of two classes do not collide, so neither takes an index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('g1', 'Gate')]))
+            .toEqual(['Port (unnamed)', 'Gate (unnamed)']);
+    });
+
+    it('a named target between two unnamed ones is not counted', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), named, unnamed('n2')]))
+            .toEqual(['Port (unnamed)', undefined, 'Port (unnamed) 2']);
+    });
+
+    it('the same target twice in a list is one target: same label, no index', () => {
+        expect(unnamedTargetLabels([unnamed('n1'), unnamed('n1'), unnamed('n2')]))
+            .toEqual(['Port (unnamed)', 'Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('a target without a readable metaclass reads `Object (unnamed)`', () => {
+        expect(unnamedTargetLabels([{ id: 'x', name: '' }])).toEqual(['Object (unnamed)']);
+    });
+});
+
+describe('C2f — the IR reference widgets read an unnamed target by its label', () => {
+    const noop = () => { /* never called by a static render */ };
+    const widget = (value: string) => renderToStaticMarkup(createElement(ReferenceWidget as any, {
+        value, options: [], typeName: 'Port', allowNone: true, onPick: noop, onClear: noop,
+    }));
+    const list = (values: unknown[]) => renderToStaticMarkup(createElement(ListWidget as any, {
+        values, options: [], typeName: 'Port', onRemove: noop,
+    }));
+    const rowNames = (html: string) =>
+        [...html.matchAll(/<span class="ir-list__name" title="[^"]*">([^<]*)<\/span>/g)].map(m => m[1]);
+    const picked = (options: any[]) => {
+        // computeListStyle reads the viewport and the portal's target is the body.
+        vi.stubGlobal('window', { innerHeight: 900, innerWidth: 1600 });
+        vi.stubGlobal('document', { body: {} });
+        try {
+            const html = renderToStaticMarkup(createElement(ReferencePicker as any, {
+                anchor: { top: 10, bottom: 30, left: 10, right: 200 }, options, value: '',
+                allowNone: false, typeName: 'Port', onPick: noop, onClear: noop, onClose: noop,
+            }));
+            return [...html.matchAll(/<span class="ir-picker__name">([^<]*)<\/span>/g)].map(m => m[1]);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    };
+
+    it('referenceName: a name, the label of an unnamed target, nothing for a dangling pointer', () => {
+        expect(referenceName('p_named')).toBe('Port_1');
+        expect(referenceName('p_nameless')).toBe('Port (unnamed)');
+        expect(referenceName('p_gone')).toBe('');
+        expect(referenceName('')).toBe('');
+    });
+
+    it('ReferenceWidget: a slot holding an unnamed target is not painted as empty', () => {
+        const html = widget('p_nameless');
+        expect(html).toContain('<span class="ir-ref__name">Port (unnamed)</span>');
+        expect(html).not.toContain('ir-ref--empty');
+        expect(html).not.toContain('Select a');
+    });
+
+    it('ReferenceWidget: an empty slot and a dangling pointer keep the placeholder (control)', () => {
+        for (const v of ['', 'p_gone']) {
+            expect(widget(v)).toContain('ir-ref--empty');
+            expect(widget(v)).toContain('Select a Port');
+        }
+    });
+
+    it('ListWidget: labels with the index of this list, no raw id', () => {
+        const html = list(['p_named', 'p_nameless', 'p_nameless2', 'g_nameless', 'p_gone']);
+        expect(rowNames(html)).toEqual(['Port_1', 'Port (unnamed)', 'Port (unnamed) 2', 'Gate (unnamed)', '']);
+        expect(html).not.toContain('p_gone');
+    });
+
+    it('ListWidget: a hole in the raw values does not disturb the index', () => {
+        expect(rowNames(list(['p_nameless', undefined, 'p_nameless2']))).toEqual(['Port (unnamed)', 'Port (unnamed) 2']);
+    });
+
+    it('ListWidget: the remove button of a dangling row keeps an accessible name', () => {
+        expect(list(['p_gone'])).toContain('aria-label="Remove Port"');
+        expect(list(['p_nameless'])).toContain('aria-label="Remove Port (unnamed)"');
+    });
+
+    it('ReferencePicker: an unnamed candidate reads its label across the groups, not its id', () => {
+        expect(picked([
+            { label: 'Free Objects', options: [{ value: 'p_nameless', label: 'p_nameless' }] },
+            { label: 'Bound Objects', options: [{ value: 'p_nameless2', label: 'p_nameless2' }, { value: 'g_nameless', label: 'g_nameless' }] },
+        ])).toEqual(['Port (unnamed)', 'Port (unnamed) 2', 'Gate (unnamed)']);
+    });
+
+    it('ReferencePicker: a named candidate keeps the label it was offered, an unresolved one too (control)', () => {
+        expect(picked([{ label: '', options: [{ value: 'p_named', label: 'pkg.Port_1' }, { value: 'p_gone', label: 'offered' }] }]))
+            .toEqual(['pkg.Port_1', 'offered']);
     });
 });

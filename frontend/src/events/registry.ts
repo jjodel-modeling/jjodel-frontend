@@ -82,6 +82,10 @@ export const JjodelEvents = {
   // Notifications
   TOAST: 'jjodel:toast',
   TOAST_PREFS_CHANGED: 'jjodel:toast-prefs-changed',
+  // P-2026-11-08-2340 (R-NT-3). The "Show tips" preference changed in this tab (noticesStore.ts).
+  TIPS_PREFS_CHANGED: 'jjodel:tips-prefs-changed',
+  // P-2026-11-08-2340. Help menu, opens the list of every tip (TipsBrowserModal.tsx).
+  TIPS_BROWSER_OPEN: 'jjodel:tips-browser-open',
   // P-2026-10-10-1825 (R-GEN-2). The experimental code generation setting changed in this tab
   // (codegen/setting.ts). detail: { enabled: boolean }.
   EXPERIMENTAL_CODEGEN_CHANGED: 'jjodel:experimental-codegen-changed',
@@ -105,6 +109,10 @@ export const JjodelEvents = {
   // model. detail: ScriptPreviewRequest { script, modelId } (components/editor-v2/preview/scriptPreviewStore.ts);
   // an empty script clears the preview.
   SCRIPT_PREVIEW_REQUEST: 'jjodel:script-preview-request',
+  // P-2026-11-08-0027 (R-TXT-55 F6, F12). A model span clicked in a generator tab: the Text tab of the model, when
+  // open, reveals and highlights the line of the element (its feature's item when there is one) without moving the
+  // caret. detail: { modelId: string; elementId: string; featureName?: string }.
+  TEXTUAL_REVEAL: 'jjodel:textual-reveal',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────

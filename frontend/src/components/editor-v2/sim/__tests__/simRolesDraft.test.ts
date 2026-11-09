@@ -115,14 +115,14 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are Â
         expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toEqual(roleSections(SM, {}).off);
     });
 
-    it('Dynamic classification: only the dcn group, 4 Required and 7 Optional, nothing Not used (ticket of P-2026-11-07-0941; killed by the general, events, data or output group shown, and by M16: the control-flow and Petri groups shown)', () => {
+    it('Dynamic classification: only the dcn group, 4 Required and 16 Optional, nothing Not used (ticket of P-2026-11-07-0941; killed by the general, events, data or output group shown, and by M16: the control-flow and Petri groups shown)', () => {
         const DCN = systemProfile('dynamicClassification') as SimProfile;
         const s = roleSections(DCN, {});
         expect(s.required).toEqual([['staticClass'], ['viewpoints'], ['dynamicClasses'], ['invariant']]);
-        expect(s.optional).toEqual(['operation', 'precondition', 'body', 'redefines', 'monitor', 'overlapping', 'complete']);
+        expect(s.optional).toEqual(['operation', 'precondition', 'body', 'redefines', 'monitor', 'overlapping', 'complete', 'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern', 'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound']);
         expect([s.parameters, s.derived, s.off]).toEqual([[], [], []]);
         const rows = [...s.required.flat(), ...s.parameters, ...s.optional, ...s.derived, ...s.off];
-        expect(rows).toHaveLength(11);
+        expect(rows).toHaveLength(20);
         expect(rows.filter(r => roleDescriptor(r).group !== 'dcn')).toEqual([]);
         // control: the net shapes still hide the dcn group and nothing else of theirs
         expect([SM, PETRI].map(p => { const t = roleSections(p, {}); return [...t.required.flat(), ...t.parameters, ...t.optional, ...t.derived, ...t.off].filter(r => roleDescriptor(r).group === 'dcn'); })).toEqual([[], []]);

@@ -8,7 +8,7 @@
  * returning the same array references (zero cost for non-IR sessions).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import type { Edge, Node } from '@xyflow/react';
 import { store } from '../../../../joiner';
@@ -26,7 +26,8 @@ import {
     suppressChannelEdges,
     type ContainmentModel,
 } from './irContainment';
-import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { getLayoutKeyFor, getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { irViewpointArg } from './irResolve';
 import { containmentProblemsOf, reconcileContainmentProblems } from '../../problems/containmentToProblems';
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
 import { resetBarOrientations } from './barOrientation';
@@ -71,20 +72,29 @@ export interface IRContainmentDecoration {
  * Interaction plan of the active IR viewpoint (Fase 3, spec v1.2 sez. 6).
  * Null when the active viewpoint is not IR — consumers fall back to the
  * unrestricted (model-derived) gestures.
+ *
+ * `viewpointId` is the tab's (L5), a parameter and not a context read: the only caller,
+ * EditorV2Inner, renders the EditorContext.Provider below itself. `undefined` is the root.
  */
-export function useIRInteractionPlan(): IRInteractionPlan | null {
-    const irSig = useSelector((state: any) => computeIRSignature(state));
+export function useIRInteractionPlan(viewpointId?: string | null): IRInteractionPlan | null {
+    const vp = irViewpointArg(viewpointId);
+    const irSig = useSelector((state: any) => computeIRSignature(state, vp));
     return useMemo(() => {
         if (!irSig) return null;
-        const index = getIRIndex(store.getState(), irSig);
+        const index = getIRIndex(store.getState(), irSig, vp);
         return index ? deriveIRInteraction(index) : null;
     }, [irSig]);
 }
 
-export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDecoration {
+/** `viewpointId` is the tab's (L5), passed for the same reason as in useIRInteractionPlan; `undefined` is the root. */
+export function useIRContainment(nodes: Node[], edges: Edge[], viewpointId?: string | null): IRContainmentDecoration {
     const collapseVersion = useCollapseVersion();
     const edgeInteractionVersion = useEdgeInteractionVersion();
-    const irSig = useSelector((state: any) => computeIRSignature(state));
+    const vp = irViewpointArg(viewpointId);
+    const irSig = useSelector((state: any) => computeIRSignature(state, vp));
+    // The signature this instance last decorated with: the resets below fire on a change of THIS
+    // canvas's viewpoint, not whenever another tab, on another viewpoint, decorated in between.
+    const decoratedSigRef = useRef<string | undefined>(undefined);
 
     // Reactivity for synthetic edges (spec v1.2 sez. 9, partial): snapshot of
     // the endpoint slots of every object whose metaclass has an object-as-edge
@@ -92,9 +102,9 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
     // synthetic edge immediately. Exact-name metaclass match (no ancestry walk
     // in the hot selector); empty string when the viewpoint has no such views.
     const oaeSlotsSig = useSelector((state: any) => {
-        const sig = computeIRSignature(state);
+        const sig = computeIRSignature(state, vp);
         if (!sig) return '';
-        const index = getIRIndex(state, sig);
+        const index = getIRIndex(state, sig, vp);
         if (!index || index.objectAsEdgeByMetaclass.size === 0) return '';
         const featNames = new Set<string>();
         for (const entries of index.objectAsEdgeByMetaclass.values()) {
@@ -132,7 +142,7 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
     // dep is a constant 0 and this memo's invalidation is byte-identical to before.
     const markVersion = useSimVersion();
     const markDeclared = useMemo(() => {
-        const index = irSig ? getIRIndex(store.getState(), irSig) : null;
+        const index = irSig ? getIRIndex(store.getState(), irSig, vp) : null;
         return !!index?.channelsInUse?.has('mark');
     }, [irSig]);
     const markDep = markDeclared ? markVersion : 0;
@@ -150,12 +160,17 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         // observer re-publishes. This memo (EditorV2's) renders before the
         // ObjectNodes, so clearing here and letting everyone re-publish in the
         // same commit avoids leaking the previous viewpoint's deps.
-        resetCrossDepsEpoch(irSig);
-        // Q3 (P-2026-10-03-1304): the bars' remembered orientations belong to one viewpoint, dropped on a change as above.
-        resetBarOrientations(irSig);
+        // Both registries are one per app and remember the last signature seen: with two tabs on two
+        // viewpoints, a reset on every recompute would wipe the other tab's deps each time (L5 LIR §3).
+        if (decoratedSigRef.current !== irSig) {
+            decoratedSigRef.current = irSig;
+            resetCrossDepsEpoch(irSig);
+            // Q3 (P-2026-10-03-1304): the bars' remembered orientations belong to one viewpoint, dropped on a change as above.
+            resetBarOrientations(irSig);
+        }
         if (!irSig) { publishedChannelSlots = []; return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES }; }
         const state: any = store.getState();
-        const index = getIRIndex(state, irSig);
+        const index = getIRIndex(state, irSig, vp);
         if (!index) { publishedChannelSlots = []; return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES }; }
         const readCtx = makeReadCtx(state.idlookup);
         const model = buildContainmentModel(nodes, state.idlookup, index, readCtx);
@@ -191,7 +206,7 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
             outNodes = decorateNodes(outNodes, model, hidden);
             // R-GV-5..7 (S2): the containers that declare a layout go under the edges, and partitions fill theirs,
             // in session only (the boxes are derived, R-LAY-4). Same array when no container declares one.
-            outNodes = applyContainerLayout(outNodes, model, state.idlookup, getLayoutKeyOf(state), hidden);
+            outNodes = applyContainerLayout(outNodes, model, state.idlookup, viewpointId === undefined ? getLayoutKeyOf(state) : getLayoutKeyFor(state, viewpointId), hidden);
             outEdges = decorateEdges(outEdges, model, hidden, outNodes);
             // R-GV-4: the edges that draw a channel itself, flagged hidden like the rows and the collapsed children.
             outEdges = suppressChannelEdges(outEdges, model);

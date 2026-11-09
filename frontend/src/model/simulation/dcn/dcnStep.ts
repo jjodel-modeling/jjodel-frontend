@@ -19,6 +19,10 @@
  *   throw is an `exception`), then the precondition, compiled in the DCN subset
  *   mode. An action is compiled in the DCN action mode, so a slot write carries
  *   `slot: true`.
+ * - The arguments of an invocation (R-SIM-88, R-DCN-15) are names in its body and
+ *   precondition, read as `self.[name]` reads them: the value of the press, and a
+ *   slot of that name keeps σ. Below the three roots, above the instances. A
+ *   redefinition reads those of the operation it redefines too.
  * - The slot marker is read before any lookup by name (L3.4 ticket): an
  *   assignment whose marker disagrees with "the attribute is a slot of the
  *   element" halts `undeclared`, so `self.[battery] := e` never lands on the
@@ -250,6 +254,20 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
         return b;
     };
 
+    /** The binding of `site` with the arguments of its invocation as names; one with no value stays absent. */
+    const siteBinding = (site: string, access: SimStateAccess): DcnBinding => {
+        const binding = bindingOf(access);
+        const entry = compiled.entries.get(site);
+        if (entry === undefined) return binding;
+        const redefined = compiled.entries.get(m.redefines.get(site) ?? '');
+        const named: Record<string, JjelValue> = { ...binding.named };
+        for (const { attr } of [...entry.inputs, ...(redefined?.inputs ?? [])]) {
+            const value = access.read(entry.instance, attr);
+            if (isSimValue(value)) named[attr] = value;
+        }
+        return { ...binding, named };
+    };
+
     const classOf = (instance: string, id: string): DcnDynamicClass | undefined => {
         for (const dcs of m.model.instances.get(instance)?.viewpoints.values() ?? []) {
             for (const dc of dcs.values()) if (dc.id === id) return dc;
@@ -277,7 +295,7 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
             compiledGuards.set(site, g);
         }
         if (g.expr === null && g.defect === null) return TRUE;
-        return evaluateGuard(g, buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(access, net.places), undefined, binding));
+        return evaluateGuard(g, buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(access, net.places), undefined, siteBinding(site, access)));
     };
 
     const compiledActions = new Map<string, CompiledAction[]>();
@@ -288,7 +306,7 @@ export function dcnNucleus(m: DcnStepModel, snapshot: SimSnapshot, policy: DcnPo
             compiledActions.set(site.element, list);
         }
         if (list.length === 0) return { kind: 'ok', assignments: [] };
-        const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event }, toJjelStateAccess(access, net.places), undefined, bindingOf(access));
+        const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event }, toJjelStateAccess(access, net.places), undefined, siteBinding(site.element, access));
         if (ctx === null) return { kind: 'defect', detail: `'${list[0].source}': the site ${site.element} has no DCN instance` };
         const assignments: ActionAssignment[] = [];
         for (const c of list) {

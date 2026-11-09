@@ -39,6 +39,8 @@ export const ROLE_IDS = [
     'stateOutput', 'transitionOutput',
     'staticClass', 'viewpoints', 'dynamicClasses', 'invariant', 'operation', 'precondition', 'body',
     'redefines', 'monitor', 'overlapping', 'complete',
+    'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+    'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
 ] as const;
 
 export type RoleId = typeof ROLE_IDS[number];
@@ -232,6 +234,43 @@ const DESCRIPTORS: { readonly [K in RoleId]: Omit<RoleDescriptor, 'id'> } = {
     complete: {
         group: 'dcn', key: 'simComplete', kind: 'attribute', dependsOn: ['viewpoints'], label: 'Complete',
         description: 'The boolean attribute of a viewpoint that requires every state to fall in one of its classes.',
+    },
+    // The coherence constraints (R-DCN-28, spec §3), all optional. `dcnCoherenceFromRoles` (dcn/dcnRoles.ts) reads them.
+    coherence: {
+        group: 'dcn', key: 'simCoherence', kind: 'class', dependsOn: ['staticClass'], label: 'Coherence constraint',
+        description: 'The metaclass whose instances are the coherence constraints of a model.',
+    },
+    coherenceContext: {
+        group: 'dcn', key: 'simCoherenceContext', kind: 'reference', dependsOn: ['coherence'], label: 'Context',
+        description: 'The reference from a coherence constraint to the static class it applies to.',
+    },
+    coherencePointwise: {
+        group: 'dcn', key: 'simCoherencePointwise', kind: 'expressionAttribute', dependsOn: ['coherence'], label: 'Pointwise',
+        description: 'The Expression attribute of a coherence constraint that must hold in every single state.',
+    },
+    coherencePattern: {
+        group: 'dcn', key: 'simCoherencePattern', kind: 'reference', dependsOn: ['coherence'], label: 'Pattern',
+        description: 'The reference from a coherence constraint to its trajectory pattern.',
+    },
+    persistenceCondition: {
+        group: 'dcn', key: 'simPersistenceCondition', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Persistence condition',
+        description: 'The Expression attribute of a bounded persistence pattern: the condition that may not persist.',
+    },
+    persistenceBound: {
+        group: 'dcn', key: 'simPersistenceBound', kind: 'intAttribute', dependsOn: ['coherencePattern'], label: 'Persistence bound',
+        description: 'The integer attribute of a bounded persistence pattern: its k, in committed steps.',
+    },
+    responseTrigger: {
+        group: 'dcn', key: 'simResponseTrigger', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Response trigger',
+        description: 'The Expression attribute of a bounded response pattern: the condition that asks for the response.',
+    },
+    responseResponse: {
+        group: 'dcn', key: 'simResponseResponse', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Response',
+        description: 'The Expression attribute of a bounded response pattern: the condition that answers the trigger.',
+    },
+    responseBound: {
+        group: 'dcn', key: 'simResponseBound', kind: 'intAttribute', dependsOn: ['coherencePattern'], label: 'Response bound',
+        description: 'The integer attribute of a bounded response pattern: its k, in committed steps.',
     },
 };
 

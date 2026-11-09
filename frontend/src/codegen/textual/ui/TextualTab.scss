@@ -246,6 +246,17 @@
             left: 0 !important;
         }
 
+        // D2d (P-2026-11-08-0738): the same global rule shifted the suggest list 30 px right in a box sized to
+        // the widget, so the selected row overflowed its right edge. The list goes back to the widget's box and
+        // the row takes the 30 px as left padding, so the icon and the label stay where they were.
+        .suggest-widget .monaco-list .monaco-scrollable-element {
+            left: 0 !important;
+        }
+
+        .suggest-widget .monaco-list-row {
+            padding-left: 30px;
+        }
+
         .monaco-hover code {
             padding: 0;
             font-family: var(--font-mono);

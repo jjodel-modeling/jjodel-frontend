@@ -85,17 +85,19 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useSta
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, getSimView, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack, useSimVersion } from './simRunState';
 import type { SimChoices } from './simRunState';
 import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
+import { saveRunSnapshot } from './simSnapshotWrite';
+import { snapshotFailed, snapshotLine, snapshotOff, snapshotStep } from './simSnapshotButton';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
-    profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
+    profileBindings, profilePatch, profileSummary, profileSummaryText, runEngine, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, dcnInputOff, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
-    runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
+    runBag, runSignature, runStatus, shownChipsState, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -104,6 +106,8 @@ import type { StateHeading } from './simLabels';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
+import { dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
+import { DCN_PANEL_HEADING } from '../../../model/simulation/dcn/dcnPanelText';
 import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
@@ -118,7 +122,7 @@ import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import type { Candidate, InputRead, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
-import type { RoleKey, Roles } from './simRoleStatus';
+import type { RoleKey, Roles, RunEngine } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
@@ -319,6 +323,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
         modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw, modelWatchesRaw, modelScenariosRaw,
+        modelEngine,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -358,6 +363,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // The steps of the current Play press: written by its timer only, never read by a render.
     const playSteps = useRef(0);
     useEffect(() => { setPlaying(null); setPlayNote(null); setKDraft(null); }, [modelid]);
+    // «Save snapshot» (R-DCN-30): the model whose write is in flight, and the line of the last write.
+    const [savingSnapshot, setSavingSnapshot] = useState<string | null>(null);
+    const [savedSnapshot, setSavedSnapshot] = useState<{ modelId: string; text: string; error: boolean } | null>(null);
     // R-SIM-105: the run inspector, opened by the header's expand button.
     const [inspectorOpen, setInspectorOpen] = useState(false);
     useEffect(() => { setInspectorOpen(false); }, [modelid]);
@@ -440,7 +448,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     /** Labels of the engine roles the shape lacks, and of the invalid ones (simRoleStatus.ts). */
     const missingRoles = missingEngineRoles(roles);
     const invalidRoles = invalidEngineRoles(roles);
-    const rolesComplete = missingRoles.length === 0 && invalidRoles.length === 0;
+    // The run controls show when startRun would start a nucleus: the Petri roles, else the dcn ones (runEngine).
+    const rolesComplete = modelEngine !== null;
+    /** A DCN run: its inputs row, its chips and its heading «Classification» (P-2026-11-08-0315). */
+    const dcnEngine = modelEngine === 'dcn';
     /**
      * The event role is declared: the rule of netStcFromRoles, both keys set, on
      * the derived roles, so a Trigger typed to a class (R-SIM-38).
@@ -472,6 +483,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // The run of this model, read on the panel's renders: the ones its own state
     // triggers (tick) and the ones connect triggers; never on the version.
     const run = isModelMode ? getSimRun(modelid) : undefined;
+    // The line of a snapshot lasts until the next step or a new run.
+    useEffect(() => { setSavedSnapshot(null); }, [run, run?.trace?.length]);
 
     // R-SIM-34: while a run exists its signature is read on every dispatch, and a
     // model edit that changes it withdraws the run with one line of declaration.
@@ -536,7 +549,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!r) {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
-                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
+                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(), dcnOff: new Map<string, string>(),
                 watch: [] as SimWatchRow[], chips: [] as SimMarkingChip[], markingTitle: null as string | null,
                 accepting: null as 'accepting' | null, output: null as { line: string; title: string } | null,
                 step: 0, seed: undefined as number | undefined, hits: [] as WatchResult[],
@@ -546,7 +559,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const status = runStatus(r);
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const inputs = panelInputs(status, structuralInputs(r.net, r.config.state));
-        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? (dcnEngine ? candidateLabel(r.net, e, lookup) : e));
         // R-SIM-60: a button that is on while its input has no candidate says why in its title.
         const noCandidate = new Map<string | null, string>();
         // R-SIM-88: a button whose press reads an input names it in its title.
@@ -555,11 +568,20 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const guards = roleValues(roles.simGuard);
         if (status === 'Running') {
             // R-SIM-104: an event that is off says why in its title too, so every event is asked, not only the enabled ones.
-            for (const e of [...(inputs.epsilon ? [null] : []), ...events.map(x => x.id)]) {
+            // A DCN run's inputs are its alphabet (Tick, the invocations), asked as the events are.
+            for (const e of [...(inputs.epsilon ? [null] : []), ...events.map(x => x.id), ...(dcnEngine ? r.alphabet : [])]) {
                 const why = inputReason(r, e, lookup, label, guards);
                 if (why) noCandidate.set(e, why.full);
                 const read = inputAsks(r, e);
                 if (read.length > 0) asks.set(e, read.map(a => inputLabel(a, r.net, lookup)).join(', '));
+            }
+        }
+        // A DCN input is on only when the nucleus has a candidate for it; the title says why not (P-2026-11-08-1606).
+        const dcnOff = new Map<string, string>();
+        if (status === 'Running' && dcnEngine) {
+            for (const id of r.alphabet) {
+                const off = dcnInputOff(r, id, lookup);
+                if (off !== null) dcnOff.set(id, off);
             }
         }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
@@ -577,11 +599,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, guards) : null,
             noCandidate,
+            dcnOff,
             asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3), as rows
             // and chips (R-SIM-104); the marking line stays the title of the chips, so its readers change a selector only.
             watch,
-            chips: markingChips(r.config.state, lookup),
+            chips: markingChips(r.config.state, lookup, r.net),
             markingTitle: markingLine(r.config.state, r.net, lookup).title,
             // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's output, a Watch row from Reset to Stop or never.
             accepting: acceptingMark(r.net, r.config.state),
@@ -593,7 +616,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         };
         // tick is the real input of this memo: the run changes only through this panel; prefsVersion re-reads the pins;
         // an edit of the invariants and breakpoints, which interrupts nothing, reads them again.
-    }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
+    }, [isModelMode, rolesComplete, dcnEngine, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
 
     /** Reset; `null` when the run started, the line's reason when it was refused (a scenario's replay reads it). */
     const resetRun = useCallback((): string | null => {
@@ -744,6 +767,20 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setTick(t => t + 1);
     }, [modelid]);
 
+    // R-DCN-30: the step is read at the press; a press of Step while the write is in flight does not move it.
+    const onSaveSnapshot = useCallback((): void => {
+        const live = getSimRun(modelid);
+        if (!live) return;
+        setSavedSnapshot(null);
+        setSavingSnapshot(modelid);
+        saveRunSnapshot(modelid, snapshotStep(getSimView(modelid), live.trace?.length ?? 0))
+            .then(snapshotLine, (e: unknown) => ({ text: snapshotFailed(e instanceof Error ? e.message : String(e)), error: true }))
+            .then((line) => {
+                setSavedSnapshot({ modelId: modelid, ...line });
+                setSavingSnapshot(null);
+            });
+    }, [modelid]);
+
     /**
      * The outcome of one press, a hand's or Play's (R-SIM-35, R-SIM-36): the
      * input dialog, the list, «Last step», as the bridge gives them back.
@@ -784,7 +821,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      */
     const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[], keepPlay?: boolean): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
+        const live = getSimRun(modelid);
+        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? (dcnEngine && live ? candidateLabel(live.net, event, lookup) : event));
         if (!keepPlay) {
             setPlaying(null);
             setPlayNote(null);
@@ -795,7 +833,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 ? pressStep(modelid, lookup, values)
                 : pressInput(modelid, event, selector, lookup, input, values);
         show(pressed, event, input, values);
-    }, [modelid, events, show]);
+    }, [modelid, events, dcnEngine, show]);
 
     const onStep = useCallback((): void => { fire(null); }, [fire]);
 
@@ -889,6 +927,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const reason: StopReason | null = view?.reason ?? null;
     const policy = getSimPolicy(modelid);
     const isPlaying = playing === modelid;
+    const snapshotOffTitle = snapshotOff(isPlaying, savingSnapshot === modelid);
+    const shownSnapshotLine = savedSnapshot?.modelId === modelid ? savedSnapshot : null;
     /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60); the board's devices say the same. */
     const inputTitle = (base: string, event: string | null): string => inputPressTitle(base, view?.noCandidate.get(event), view?.asks.get(event));
     /** An event button that is off says why in its title (R-SIM-104): the run's reason while it runs, its status otherwise. */
@@ -1231,12 +1271,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {/* R-SIM-104: one chip per marked place, `×n` from two tokens; the marking line is the title. */}
                         {run && view && (
                             <>
-                                <div className="sim-panel__section">{modelStateHeading}</div>
-                                <div className="sim-panel__chips" title={view.markingTitle === null ? undefined : headedStateLine(view.markingTitle, modelStateHeading)}>
-                                    {view.chips.length === 0
-                                        ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
-                                        : view.chips.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
-                                </div>
+                                <div className="sim-panel__section">{dcnEngine ? DCN_PANEL_HEADING : modelStateHeading}</div>
+                                <MarkingChips modelId={modelid} chips={view.chips} markingTitle={view.markingTitle} heading={modelStateHeading} />
                             </>
                         )}
                         {/* Events above the buttons (R-SIM-104): an event that is off says why in its title, and a press that
@@ -1268,6 +1304,34 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                         })}
                                     </div>
                                 )}
+                            </>
+                        )}
+                        {/* A DCN run's inputs (P-2026-11-08-0315): Tick and one button per invocation of its alphabet, labelled as
+                            the choice list labels them, pressed through the event path; on while the run is Running and the input admissible. */}
+                        {dcnEngine && run && view && (
+                            <>
+                                <div className="sim-panel__section">Inputs</div>
+                                <div className="sim-panel__events">
+                                    {run.alphabet.map(id => {
+                                        const on = view.status === 'Running' && !view.dcnOff.has(id);
+                                        const asks = view.asks.get(id);
+                                        const text = candidateLabel(run.net, id, lookupNow);
+                                        return (
+                                            <button
+                                                type="button"
+                                                className="sim-panel__event"
+                                                key={id}
+                                                title={on ? inputTitle(`Fire ${text}`, id) : inputOffTitle(`Fire ${text}`, view.dcnOff.get(id), status)}
+                                                onClick={() => fire(id)}
+                                                disabled={!on}
+                                            >
+                                                <i className="bi bi-chevron-right" />
+                                                <span>{text}</span>
+                                                {on && asks && <span className="sim-state-chip sim-state-chip--ivar sim-panel__event-chip" title={`Asks: ${asks}`}>IVAR</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </>
                         )}
                         {/* R-SIM-137: one row right above the buttons while the live step hits, the full list in its title; an
@@ -1317,6 +1381,19 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <button type="button" className="sim-panel__btn" title="Stop" onClick={onStop}>
                                 <i className="bi bi-stop-fill" />
                             </button>
+                            {/* R-DCN-30: σ of the step shown, as a new model; DCN runs only. */}
+                            {dcnEngine && run && (
+                                <button
+                                    type="button"
+                                    className="sim-panel__btn"
+                                    aria-label="Save snapshot"
+                                    title={snapshotOffTitle ?? 'Save snapshot'}
+                                    onClick={onSaveSnapshot}
+                                    disabled={snapshotOffTitle !== null}
+                                >
+                                    <i className="bi bi-camera" />
+                                </button>
+                            )}
                         </div>
                         {/* R-SIM-142: the timeline, from step 1; nothing at step 0, so the panel is as it was there. */}
                         {run && <SimTimeline modelId={modelid} onGrab={onGrab} onContinue={onContinue} />}
@@ -1361,6 +1438,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 ))}
                             </ul>
                         )}
+                        {shownSnapshotLine && (
+                            <div className={`sim-panel__hint${shownSnapshotLine.error ? ' sim-panel__hint--error' : ''}`} role="status">
+                                {shownSnapshotLine.text}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -1389,6 +1471,29 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         )}
         {canvasLayer}
         </>
+    );
+}
+
+/**
+ * The chips (R-SIM-104). A DCN run's follow the step shown (R-SIM-106), with their title: this row reads the version
+ * itself, since the panel's `view` is computed once per panel action and a move of the timeline is none.
+ */
+function MarkingChips({ modelId, chips, markingTitle, heading }: {
+    modelId: string; chips: readonly SimMarkingChip[]; markingTitle: string | null; heading: StateHeading;
+}): ReactElement {
+    useSimVersion();
+    const run = getSimRun(modelId);
+    const state = run ? shownChipsState(modelId, run) : undefined;
+    const lookup: any = (store.getState() as any).idlookup ?? {};
+    const viewed = run !== undefined && state !== undefined && state !== run.config.state;
+    const shown = viewed ? markingChips(state, lookup, run.net) : chips;
+    const title = viewed ? markingLine(state, run.net, lookup).title : markingTitle;
+    return (
+        <div className="sim-panel__chips" title={title === null ? undefined : headedStateLine(title, heading)}>
+            {shown.length === 0
+                ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
+                : shown.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
+        </div>
     );
 }
 
@@ -1487,6 +1592,8 @@ interface StateProps {
     modelWatchesRaw: string | null;
     /** The raw `runScenarios` string of the M1 model's own bag (R-SIM-139), `null` when unset or on the M2 face: a primitive. */
     modelScenariosRaw: string | null;
+    /** The nucleus a run of the roles starts (`runEngine`, the rule of startRun), `null` when neither role set is complete. */
+    modelEngine: RunEngine | null;
 }
 
 interface DispatchProps { }
@@ -1533,6 +1640,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         modelBoardRaw: ownProps.isModelMode && typeof dModel?._state?.[IO_BOARD_KEY] === 'string' ? dModel._state[IO_BOARD_KEY] : null,
         modelWatchesRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_WATCHES_KEY] === 'string' ? dModel._state[RUN_WATCHES_KEY] : null,
         modelScenariosRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_SCENARIOS_KEY] === 'string' ? dModel._state[RUN_SCENARIOS_KEY] : null,
+        // The dcn roles of the bag the run reads (profile applied); the raw bag first, so an unbound metamodel pays no runBag.
+        modelEngine: runEngine(roles, dcnStcFromRoles(rawState) === null ? undefined : runBag(rawState, lookup)),
     };
 }
 

@@ -74,3 +74,8 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Probe (DemoPEST demoSM): (1) click A, shift B, shift C: React Flow selects A, A+B, A+B+C. (2) selectElement does not collapse it; D isSelected also holds all three. (3) _lastSelected follows the last click. Event detail {modelId,nodeIds,elementIds}, one emission per step. Out of scope: new pure module canvasSelection.ts, needed for a bench test. Bench 3/3 killed. Two probe runs saw 0 nodes on a stale dev server after the registry reload; a restart cleared it, A/B showed EditorV2 not the cause.
 **Prompt document name**: 2026-10-24 01:55
+
+## 2026-11-08 — ticket: Refactoring finds no M1 target on the multi-tab demo project
+**Ticket**: In the L6 app check (P-2026-11-08-1003, front multi-tab) a Refactoring opened on an M1 model of the multi-tab demo project (`~/Downloads/jjodel-multitab-demo.jjodel`) found no model: `projectTargetCandidates` listed only the metamodel, so the probe used an M2 target. Not traced. Reproduce: import the demo, open Refactoring with an M1 target.
+**Priority**: low
+**Found in**: P-2026-11-08-1003

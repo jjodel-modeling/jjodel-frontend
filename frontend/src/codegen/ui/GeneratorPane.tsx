@@ -281,7 +281,12 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
             goToTemplate(entry.fragment);
             return;
         }
-        if (entry.origin.kind === 'model') selectOnCanvas(entry.origin.elementId);
+        if (entry.origin.kind !== 'model') return;
+        // F2 (R-TXT-55 F6, F7, F12): the model's Text tab, when open, reveals the line of the origin; closed, nothing listens.
+        if (targetId !== null) {
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TEXTUAL_REVEAL, { detail: { modelId: targetId, elementId: entry.origin.elementId, featureName: entry.origin.featureName } }));
+        }
+        selectOnCanvas(entry.origin.elementId);
     };
 
     // Canvas to code: the selected vertex's element, or the element an edge stands for.
