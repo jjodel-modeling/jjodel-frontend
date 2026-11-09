@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-08-2330
 Chat: C-2026-11-08-1908
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane textual-d6-pinned-hover · e536fc071 · verifica visiva passata 2026-11-09 (crops of P-2026-11-09-0020, Alfonso «go» 09:45; Option+H types ∆ on the Italian layout, shortcut replaced by the next lane)
 Lane: full (new Monaco content widget in the Text tab, new UI, more than three files likely; app check with crops)
 Depends: trunk 788bb6e71 (steps A..F merged, T8e merged 3589668e7)
 Worktree: ~/jjodel-w-textd6, branch textual-d6-pinned-hover (from 788bb6e71)
