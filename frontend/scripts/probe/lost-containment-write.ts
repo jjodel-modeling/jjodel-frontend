@@ -10,13 +10,16 @@
  * edge, and the child's `father`.
  *
  * Arms, on empty slots of their own, read after a settle:
- *   sameSlotSameTick    two writes, same slot, no await between: the condition of H1, must lose the first (detector control, P12)
+ *   sameSlotSameTick    two writes, same slot, no await between: the condition of H1. Lost the first until P-2026-11-09-1227 (11 of 11 runs, P-2026-11-09-1020); keeps both now, and the arm stays as the regression detector
  *   sameSlotMacrotask   same, one setTimeout(0) between
  *   otherContainer      two writes, two containers, same tick
  *   sameContainerOtherRef two writes, one container, two references, same tick
  *   syncCommitBetween   same slot, `COMMIT(undefined, false)` called synchronously after the first write: `TRANSACTION` is async, so its END is still owed
  *   commitBetween       same slot, a macrotask, `COMMIT(undefined, false)`, a macrotask between: must keep both (control of the writes)
  *   apart700            same slot, 700 ms between
+ *
+ * The drop arm (P-2026-11-09-1227, the report's §10 Q4) is the user's way in: two real `drop` events on one container, through `performContainmentDrop`, in one tick,
+ * 60 ms apart, and 700 ms apart. It reads the slot, the edges, the undo stack, and what each Cmd+Z takes away. It runs after the bursts, because its viewpoint would change the models after it.
  *
  * Env: LOST_RUNS (default 5), LOST_FIRST (number of the first run, default 1), LOST_TRACE_EDGES=1 (the removals useM1ReferenceEdges logs, by edge end).
  * Run: node frontend/scripts/lane-run.mjs probe ~/jjodel-w-lostlink frontend/scripts/probe/lost-containment-write.ts --port 3096 --id P-2026-11-09-1020
@@ -30,7 +33,7 @@ if (/:300[01]$/.test(URL)) throw new Error('never 3000 or 3001');
 
 // The BPMN fixture creates its GV_OUT at import: keep it out of the repo.
 process.env.GV_OUT = `${homedir()}/.jjodel-lanes/P-2026-11-09-1020/probe-out`;
-const { buildMetamodel, buildObjects, createProject, ev, openPage } = await import('./bpmn-lanes-fixture.ts');
+const { buildMetamodel, buildObjects, buildViewpoint, createProject, ev, openPage, screenBox } = await import('./bpmn-lanes-fixture.ts');
 
 const RUNS = Number(process.env.LOST_RUNS || 5);
 const FIRST = Number(process.env.LOST_FIRST || 1);
@@ -47,8 +50,9 @@ const meas = (name: string, v: unknown) => console.log(`MEAS  ${name}  ${JSON.st
 type Ids = Record<string, { obj: string; vertex: string }>;
 type Link = [string, string, string];
 
-const CLASSES: Array<[string, boolean, string[]]> = [['Named', true, []], ['Root', false, ['Named']], ['Leaf', false, ['Named']]];
-const REFS: Array<[string, string, string, boolean, boolean]> = [['Root', 'a', 'Leaf', true, true], ['Root', 'b', 'Leaf', true, true]];
+const CLASSES: Array<[string, boolean, string[]]> = [['Named', true, []], ['Root', false, ['Named']], ['Leaf', false, ['Named']], ['Box', false, ['Named']], ['Item', false, ['Named']]];
+// `Box` has one containment for `Item`: two would open the reference picker instead of `performContainmentDrop`.
+const REFS: Array<[string, string, string, boolean, boolean]> = [['Root', 'a', 'Leaf', true, true], ['Root', 'b', 'Leaf', true, true], ['Box', 'items', 'Item', true, true]];
 
 /** Blocks of consecutive appends to one slot, as the fixture's plan has, and a block alternating two containers. */
 function plan(): { roots: string[]; links: Link[] } {
@@ -114,6 +118,70 @@ const ARM_JS = `const c2j = await import('/src/components/editor-v2/sync/canvasT
         default: write(a.w[0]); write(a.w[1]);
     }
     return 1;`;
+
+const DROP_VARIANTS = [{ name: 'dropsSameTick', gap: -1 }, { name: 'dropsGap60', gap: 60 }, { name: 'dropsApart700', gap: 700 }];
+
+const DROP_JS = `const fire = (p) => { const el = document.elementFromPoint(p.x, p.y); const dt = new DataTransfer();
+        dt.setData('application/reactflow', 'objectNode'); dt.setData('metaclassId', a.cls);
+        for (const type of ['dragover', 'drop']) el?.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: p.x, clientY: p.y, dataTransfer: dt })); };
+    fire(a.p[0]);
+    if (a.gap >= 0) await new Promise((res) => setTimeout(res, a.gap));
+    fire(a.p[1]);
+    return 1;`;
+
+const READ_DROP_JS = `const idl = w.store.getState().idlookup; const P = w.LPointerTargetable;
+    const slot = P.fromPointer(a.box)['$items']; const inSlot = (idl[slot.id].values || []).filter((v) => v != null && v !== '');
+    const ids = Object.keys(idl); const kind = (k, re) => idl[k] && re.test(String(idl[k].className));
+    const items = ids.filter((k) => kind(k, /^DObject$/) && idl[k].instanceof === a.cls && !a.before.includes(k));
+    const vertexOf = (o) => ids.find((k) => kind(k, /Vertex/) && idl[k].model === o);
+    const edges = items.map((o) => { const v = vertexOf(o); return ids.filter((k) => kind(k, /Edge/) && idl[k].start === a.vertex && idl[k].end === v).length; });
+    return { items, inSlot, kept: items.filter((o) => inSlot.includes(o)).length, edges, undoable: w.statehistory.all.undoable.length };`;
+
+/** Two real drops on one container, then Cmd+Z until the slot is empty, at most three times so the arm does not undo the boxes of the next. */
+async function dropArm(page: Page) {
+    const VP = 'drops';
+    await buildViewpoint(page, VP, [['Box', { kind: 'graphVertex', metaclasses: ['Box'], label: 'Box', shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 } } }]]);
+    const shell = await newModel(page);
+    if (!shell.graphId) { check('drops: v2-flow graph', false, shell); return; }
+    // Not the fixture's pickViewpoint: with one tab per model its `.first()` is the toolbar of a hidden tab.
+    await page.locator('.toolbar-viewpoint-trigger:not([disabled]):visible').first().click();
+    await page.waitForTimeout(400);
+    await page.locator('.toolbar-viewpoint-menu__option:visible', { hasText: VP }).first().click();
+    await page.waitForTimeout(4000);
+    const ids: Ids = await buildObjects(page, shell.graphId, DROP_VARIANTS.map((_, i) => [`Box${i}`, 'Box', `Box${i}_drops`, 40 + (i % 2) * 300, 60 + Math.floor(i / 2) * 200, [260, 160]] as [string, string, string, number, number, [number, number]]));
+    await page.waitForTimeout(SETTLE_MS);
+    // Boxes kept left of about 800 px, where a drop reaches the canvas (a third box further right received none, measured). Two points
+    // far apart in a large box: the first child, centred on its drop point, must not lie over the second.
+    const cls = await ev<string>(page, `return w.LProject.getProject().metamodels[0].packages[0].classes.find((c) => c.name === 'Item').id;`, undefined, 0);
+    type DropRead = { items: string[]; inSlot: string[]; kept: number; edges: number[]; undoable: number };
+    for (const [i, v] of DROP_VARIANTS.entries()) {
+        const box = ids[`Box${i}`];
+        const r = await screenBox(page, box.vertex);
+        if (!r) { check(`drops ${v.name}: the box is on screen`, false, box); continue; }
+        const before = (await ev<DropRead>(page, READ_DROP_JS, { box: box.obj, vertex: box.vertex, cls, before: [] }, 0)).items;
+        const read = () => ev<DropRead>(page, READ_DROP_JS, { box: box.obj, vertex: box.vertex, cls, before }, 0);
+        const stackBefore = (await read()).undoable;
+        await ev(page, DROP_JS, { cls, gap: v.gap, p: [{ x: r.x + r.width * 0.75, y: r.y + r.height * 0.75 }, { x: r.x + r.width * 0.15, y: r.y + r.height * 0.2 }] }, 0);
+        await page.waitForTimeout(SETTLE_MS);
+        const after = await read();
+        await page.locator('.dock-tabpane-active .react-flow__pane').first().click({ position: { x: 15, y: 15 }, force: true });
+        await page.waitForTimeout(400);
+        const trail: Array<{ kept: number; itemsAlive: number; undoable: number }> = [];
+        for (let u = 0; u < 3 && (trail.length ? trail[trail.length - 1].itemsAlive : after.items.length) > 0; u++) {
+            await page.keyboard.press('Meta+z');
+            await page.waitForTimeout(1500);
+            const x = await read();
+            trail.push({ kept: x.kept, itemsAlive: x.items.length, undoable: x.undoable });
+        }
+        meas(`drops ${v.name}`, { itemsCreated: after.items.length, keptInSlot: after.kept, slotSize: after.inSlot.length, edgesPerItem: after.edges, stack: [stackBefore, after.undoable], undos: trail.length, trail });
+        check(`drops ${v.name}: both children kept in the slot`, after.items.length === 2 && after.kept === 2, { items: after.items.length, kept: after.kept });
+        check(`drops ${v.name}: both edges drawn`, after.edges.length === 2 && after.edges.every((n) => n === 1), after.edges);
+        // As measured before the fix (LIR, Measures): one entry for drops in one commit, one for each drop 700 ms apart; a 60 ms gap may or may not straddle a commit.
+        const last = trail[trail.length - 1];
+        check(`drops ${v.name}: one undo per entry, nothing left`, trail.length === after.undoable - stackBefore && !!last && last.kept === 0 && last.itemsAlive === 0
+            && (v.gap !== -1 || trail.length === 1) && (v.gap !== 700 || trail.length === 2), { stack: [stackBefore, after.undoable], trail });
+    }
+}
 
 let traceRemoved: Array<{ start: string; end: string }> | null = null;
 
@@ -245,8 +313,10 @@ try {
     meas('summary', { runs: results.length, lostPerRun: results.map((x) => x.lostAt9), staleSameSlotPerRun: results.map((x) => x.stale), lostAt0PerRun: results.map((x) => x.lostAt0),
         arms: Object.fromEntries(ARMS.map((a) => [a.name, tally(a.name)])), pageErrors: errors.length });
     const armOk = (name: string, want: [boolean, boolean]) => results.every((x) => { const v = (x.arms as Record<string, boolean[]>)[name]; return v[0] === want[0] && v[1] === want[1]; });
-    check('detector control: two writes to one slot in one tick lose the first and keep the second', armOk('sameSlotSameTick', [false, true]), tally('sameSlotSameTick'));
+    for (const name of ['sameSlotSameTick', 'sameSlotMacrotask', 'syncCommitBetween']) check(`regression detector: ${name} keeps both writes`, armOk(name, [true, true]), tally(name));
+    check('the organic burst loses nothing', results.every((x) => x.lostAt9 === 0), results.map((x) => x.lostAt9));
     check('control of the writes: a macrotask, COMMIT and a macrotask between keeps both', armOk('commitBetween', [true, true]), tally('commitBetween'));
+    await dropArm(page);
     console.log(`DONE  ${pass} passed, ${fail} failed`);
 } catch (e) {
     check('probe crashed', false, String((e as Error)?.stack ?? e));
