@@ -529,3 +529,18 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-09 00:55
 
 **Ticket** (low): `SimInspector.tsx:415` calls `markingChips(state, lookup)` without the net, so on a DCN run it lists places, of which a DCN net has none (read, not run). The panel's status line stays on the live step while a past step is shown (crop: `step 24` at step 0).
+
+## 2026-11-09 — feat: DCN coherence roles and their reader (P-2026-11-09-0124)
+**Prompt**: `claude_2026-11-09_0124_prompt_dcn_s5_7_coherence_roles.md`, lane full: nine optional roles of the dcn group binding coherence constraints, and a reader returning the constraints as plain data, with a defect for a bad k.
+**Files touched**: d6e051d6c `frontend/src/model/simulation/roleCatalog.ts`, `frontend/src/model/simulation/dcn/dcnRoles.ts`, `frontend/src/model/simulation/profileCodec.ts`, `frontend/src/model/simulation/__tests__/roleCatalog.test.ts`, `frontend/src/model/simulation/__tests__/simProfiles.test.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnRoles.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRolesDraft.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (minor, accepted by the chat: a dcn user copy stored before these roles now reads as modified, see the ticket below)
+**Out-of-scope changes**: yes (granted by the chat, nine files in all: `profileCodec.ts` for the off-and-omit fill of the nine roles, three lines of `simRolesDraft.test.ts`; `simProfiles.ts` needed no change, its dcn role list derives from the group)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Two stops, both granted by the chat: DOVE cited a wrong directory; the new roles made stored dcn profiles undecodable. Reader: dcnCoherenceFromRoles(stc, view), a bad k is a DeclarationDefect `bounds` and drops the pattern only. Typecheck, build 0; vitest 15586 passed, 3 known import reds; check:docs 0. Bench 22/22. Gates ran through a temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 01:24
+
+**Ticket** (low): `isModified` (`simRolesDraft.ts:402`) compares a user copy with its system profile, where the nine coherence roles are in edit: a dcn copy stored before them holds them off, so it reads as modified. The copy stays readable and re-encodes to the same string. Left as is by the chat.
