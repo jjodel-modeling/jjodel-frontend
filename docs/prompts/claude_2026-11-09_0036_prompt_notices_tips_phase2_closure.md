@@ -5,7 +5,7 @@ Chat: C-2026-11-08-2220
 Front: maintenance
 Request: https://claude.ai/code/session_01DQt9R57EjNuookGRd8rukw (continuation after the context ceiling of P-2026-11-08-2340)
 Lane: full (continuation; gates and closure only)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane notices · 45d3b1794 · verifica visiva passata 2026-11-09 (chat crops; GO Alfonso 09:27)
 
 Protocollo: docs/PROTOCOL.md: clausole P1..P16 applicabili.
 

@@ -5,7 +5,7 @@ Chat: C-2026-11-08-2220
 Front: maintenance
 Request: https://claude.ai/code/session_01DQt9R57EjNuookGRd8rukw (Alfonso, 2026-11-08 23:38: «ok alle raccomandazioni procedi in lane auto»)
 Lane: full (more than three files; persistence of seen state; shared payload)
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane notices · 633351f8f · verifica visiva passata 2026-11-09 (chat crops; GO Alfonso 09:27)
 
 Protocollo: docs/PROTOCOL.md: clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
