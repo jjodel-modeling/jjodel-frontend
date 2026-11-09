@@ -557,3 +557,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (fixture and exports)
 **Notes**: Constraints are root objects of the M1 model: the metamodel gives them no container. Fixture probe 36/36, six new (CC-1..3, V-2, V-3, D-2); dcn-drone-run 18/18 on the new export. The export state is LZ-compressed, so a plain grep finds nothing; decompressed, both exports hold the nine roles and the constraints. Typecheck, build, check:scripts 0. Temporary node_modules symlink to ~/jjodel, removed after.
 **Prompt document name**: 2026-11-09 02:37
+
+## 2026-11-09 — feat: DCN coherence constraints over a trajectory (P-2026-11-09-0259)
+**Prompt**: `claude_2026-11-09_0259_prompt_dcn_s5_9_coherence_eval.md`, lane full: a pure module compiling the coherence constraints and folding φ, BoundedPersistence and BoundedResponse over σ0..σn, per instance by context, with hits and pending responses; no wiring, no UI.
+**Files touched**: ae14c5fa9 `frontend/src/model/simulation/dcn/dcnCoherence.ts`, `frontend/src/model/simulation/dcn/__tests__/dcnCoherence.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI path)
+**Notes**: Semantics from SoSyM 2026 §3.1 (Examples 1, 2) and §4.2 (Def. 5). Test 42, bench 36/36. Unattended: φ and ψ at one step are one hit, φ first; an expression failing on a σ goes in `failures` and holds nothing; a blank pattern expression or no context is a `record` defect. Answers cached per configuration, the fold reruns. Typecheck, build 0; vitest 15628 passed, 3 known import reds. Temporary node_modules symlink to ~/jjodel, removed after.
+**Prompt document name**: 2026-11-09 02:59

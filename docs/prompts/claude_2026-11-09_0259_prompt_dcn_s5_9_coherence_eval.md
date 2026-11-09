@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0259
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · ae14c5fa9
 Lane: full (one pure module and its test; no wiring, no UI)
 Depends: lane 7 (`dcnCoherenceFromRoles`, d6e051d6c), lane 8 (drone constraints) on dcn-s5; R-DCN-28, R-DCN-31
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt
