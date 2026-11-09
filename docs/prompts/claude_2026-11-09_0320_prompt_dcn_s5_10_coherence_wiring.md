@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-09-0320
 Chat: C-2026-11-06-2159
 Front: dcn
-Status: da eseguire
+Status: eseguito 2026-11-09 · lane full · 31744a717 · verifica visiva passata 2026-11-09
 Lane: full (wiring in simBridge.ts; probe and crop)
 Depends: lanes 7 (`dcnCoherenceFromRoles`), 8 (drone constraints), 9 (`dcnCoherence.ts`: compile and `coherenceHits`) on dcn-s5; R-DCN-28, R-DCN-31; discovery docs/discovery/discovery_2026-11-08_dcn_slice5_rendering.md §C (Plug-in)
 Worktree: ~/jjodel-w-dcn-s5, branch dcn-s5, at the commit that adds this prompt

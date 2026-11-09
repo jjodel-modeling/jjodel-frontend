@@ -570,3 +570,20 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no UI path)
 **Notes**: Semantics from SoSyM 2026 §3.1 (Examples 1, 2) and §4.2 (Def. 5). Test 42, bench 36/36. Unattended: φ and ψ at one step are one hit, φ first; an expression failing on a σ goes in `failures` and holds nothing; a blank pattern expression or no context is a `record` defect. Answers cached per configuration, the fold reruns. Typecheck, build 0; vitest 15628 passed, 3 known import reds. Temporary node_modules symlink to ~/jjodel, removed after.
 **Prompt document name**: 2026-11-09 02:59
+
+## 2026-11-09 — feat: DCN coherence constraints in a run, as watch hits (P-2026-11-09-0320)
+**Prompt**: `claude_2026-11-09_0320_prompt_dcn_s5_10_coherence_wiring.md`, lane full: compile the coherence constraints at Reset, report their hits as invariants `<constraint>@<instance>` of `watchResults`, tests, the drone probe.
+**Files touched**: 31744a717 `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/simDcnRuns.ts`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`; 25532aae7 `frontend/scripts/probe/dcn-drone-run.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passed (crop 1-hit read by the chat 2026-11-09 03:50: hit line speedLimit@dji at step 39)
+**Notes**: Fold over σ(n−reach)..σn, replayed below the kept cut; a step's report kept per configuration. φ and ψ at one step stay one pointwise hit (lane 9). Hit at step 39, speed 16. Play has no ε on DCN: the stop is the press and clock path. The hit line stays live under the slider, inspector rows follow it. Test +11, bench 13/13, probe 22/22. Typecheck, build 0; vitest 15639, 3 known reds. Temporary node_modules link removed.
+**Prompt document name**: 2026-11-09 03:20
+
+**Ticket** (medium): Play never presses on a DCN run: every DCN transition has a trigger, so `playTick` finds no ε candidate and stops with `event` (test and probe, «Play waits for an event»). R-SIM-137's stop on a hit is reachable only by a pressed step or a clock (`SimulationPanel.tsx:803`).
+
+**Ticket** (low): the panel's hit line reads the live step, also while the timeline shows a past one (probe: step 38 shown, line at step 39); the inspector's rows follow the step shown. Same for Petri watches.
