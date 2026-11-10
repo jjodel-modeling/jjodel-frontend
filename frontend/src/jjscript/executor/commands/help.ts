@@ -227,6 +227,7 @@ SYNTAX:
   set <target>.<property> to <value>
   set <target> <property> += <value>  (append to collection)
   set <target> <property> -= <value>  (remove from collection)
+  set <target>.<property> = [v1, v2, ...]  (replace a collection / vector)
 
 COMMON PROPERTIES:
   Classes: abstract, interface, singleton, superTypes
@@ -244,6 +245,10 @@ EXAMPLES:
   set Person.name.default = "Unknown"
   set Person.age.readonly = true
   set Person.superTypes += Animal
+  set Person.superTypes = [Animal, Plant]
+  set Alice.tags = ["new", "urgent"]
+  set Alice.tags += "billable"
+  set Alice.tags -= "new"
 `,
         add: `
 ADD Command
