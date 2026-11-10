@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-10 — feat(#211): multiple assignment in set on multi-valued attributes
+**Prompt**: issue #211 — the vector forms of `set` on an attribute with multiplicity (`= [a, b]`, `+= c`, `-= a`); plan with four ratified decisions, lane executed
+**Files touched**: `parser.ts` (`parseSetValue`), `types.ts` (`ArrayLiteral` widened), `parser/grammar.ts` (`literalValueToString`), `consumerProposalModel.ts` + `grammar.test.ts` (mandatory compile ripples), `executor/commands/instance.ts` (M1 attribute branch, `writeVector`), `executor/effectsPlanner.ts` (planner alignment), `SPEC.md` (was untracked, committed for the first time), `help.ts`, `__tests__/parser.test.ts`, new `executor/__tests__/m1AttributeVectors.test.ts`, the discovery report, this entry, the R-JS-13 amendment in `decisions.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `m1Operators` 25/25 unchanged (reference semantics and the single-valued attribute refusal stand), full suite 12276 green; the 11 red files are the nine known monaco-import ones plus two Playwright-environmental (`irCollapsedRender`, `irSelectionRing`: Chromium binary missing)
+**Out-of-scope changes**: yes — `consumerProposalModel.ts` and `grammar.test.ts`: mandatory compile ripples of the `ArrayLiteral` widening (the plan's rule-11 exception); `SPEC.md` committed for the first time (untracked, no history)
+**Layer Impact Report**: produced (in chat before the diff: D-layer `values` writes + L-layer reads only, canvas/sync untouched)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers the parser + executor paths
+**Notes**: R-JS-13 amended (multi-valued carve-out, single-valued refusal retained), the four ratified decisions in the discovery §4; the `[1]`-as-MULTIPLICITY sharp edge documented in SPEC; candidate ticket: `eval.ts:502` `multiValued` misses numeric `upperBound > 1`. Detail: `docs/discovery/discovery_2026-11-10_211_set_attribute_vectors.md`
+**Prompt document name**: 2026-11-10 16:00 (#211: set vector forms on multi-valued attributes)
+
 **Incidenti — sanatoria batch L1–L4 (2026-09-02).** Tre commit del batch portano un
 contenuto che il loro messaggio non descrive. Nessun rewrite di history: e' stato un
 rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> contenuto reale».
