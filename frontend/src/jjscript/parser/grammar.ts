@@ -385,7 +385,10 @@ export function literalValueToString(value: LiteralValue): string {
         case 'string':
             return `"${value.value}"`;
         case 'array':
-            return '[' + value.values.map(literalValueToString).join(', ') + ']';
+            // #211: an element may be a name (`[Animal, Plant]`), not only a literal.
+            return '[' + value.values.map((v: any) =>
+                v && typeof v === 'object' && 'kind' in v ? literalValueToString(v) : qualifiedNameToString(v)
+            ).join(', ') + ']';
         case 'enumLiteral':
             return `${qualifiedNameToString(value.enum)}::${value.literal}`;
     }
