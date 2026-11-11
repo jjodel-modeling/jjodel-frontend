@@ -1061,3 +1061,8 @@ Workaround until fixed: before acting on a merge result, read the merge commit's
 **Ticket**: In three lanes of 2026-11-08 (P-2026-11-08-1313, P-2026-11-08-1800, P-2026-11-08-1759) the first npm run smoke after a fresh Vite start went RED with 30 s page.goto timeouts during setup (waiting for the first state, for example the New Project button), and the next run on the same, now warm, server went GREEN 12/0/3. The control tree in 1313 was green on its single cold run, so the cause is not proven. Expected: the smoke either warms the server (one throwaway page load before the first timed state) or gives the first page.goto a longer timeout, so a cold Vite does not read as a regression.
 **Priority**: low
 **Found in**: P-2026-11-08-1759
+
+## 2026-11-11 — ticket: handoff seal refuses section headings with a suffix
+**Ticket**: handoffBody in frontend/scripts/lane-run.mjs (HANDOFF_SECTIONS, around line 1447) matches section headings exactly (^## Name\s*\n). Lane P-2026-11-11-1925 wrote ## Decisions taken (unattended) and ## Evidence (all read at HEAD ...), so lane-run handoff refused to seal (handoff needs a nonempty section) and the project chat had to rename the headings by hand twice before resume --fresh. Fix: accept a parenthesised suffix after the section name, or have the context-ceiling hook template the exact headings.
+**Priority**: low
+**Found in**: P-2026-11-11-1925
