@@ -958,3 +958,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: All 16 mounts covered, none left (step 2). Child editors pass only valueNoun: subjectName is optional, falls back to 'instance', no interface change. Row visible: always shown, withRowVisible (undefined drops the key), Reset when set. Negative control: rulesTable dropped from badge icon, 1 failed / 23 passed. Gates: typecheck 0, authoring 436/436, unit 16159 passed + 3 known import failures, build. No smoke scene. Vertex V-12 visible (S1a) also lacks rulesTable: out of scope.
 **Prompt document name**: 2026-11-11 21:20
+
+## 2026-11-11 — merge: ir-panel-s2 into alfonso-frontend-jjtl (P-2026-11-11-2128)
+**Prompt**: `claude_2026-11-11_2128_prompt_merge_ir-panel-s2.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s2` at `8c1b5bb48` into `alfonso-frontend-jjtl`, merge base `c5a07acc9`, 3 commits on the branch side.
+**Files touched**: merge `7c51baec4`: 10 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2120_prompt_ir_panel_s2.md`, `frontend/src/components/editor-v2/viewpoint/authoring/BadgeListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldCompartmentListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/RowAuthoringPanel.tsx`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7c51baec4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16162 tests in 615 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scenes for these editors; covered by irPanelS2 tests with negative control. Alfonso visual GO owed on localhost:3000: rules table in Advanced on label, badge and compartment visible, badge icon, TextStyle axes, graphVertex visible, edge line and ends; row visible can be added when absent.
+**Notes**: Rollback tag `pre-ir-panel-s2` on `c5a07acc9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2128/result.json`.
+**Prompt document name**: 2026-11-11 21:28
