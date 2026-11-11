@@ -5,7 +5,7 @@ Chat: C-2026-11-11-1925
 Front: maintenance
 Lane: fast (missing controls listed by P-2026-11-11-1925, slice S2 of its report §6, R-IPC-11; UI only, the shared `ConditionalEditor` already supports `rulesTable`; outside the critical zone)
 Depends: P-2026-11-11-2035, P-2026-11-11-2036, P-2026-11-11-2037
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane fast · 941649249 · gates green (typecheck 0, build, authoring 436/436, unit 16159 passed, 3 known import failures) · visual check skipped (no smoke scene opens these editors) · log entry in docs/log-inbox/maintenance.md
 Request: https://claude.ai/code/session_01DQt9R2kJaz9XevLeJNUgpJ
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt states an exception).

@@ -945,3 +945,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scene opens a TextStyle popover; covered by textStyleScalarAxes tests. Alfonso visual GO owed on localhost:3000: TextStyle popover, letter spacing and case rows.
 **Notes**: Rollback tag `pre-ir-panel-s1c` on `33c98dcc4` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2109/result.json`.
 **Prompt document name**: 2026-11-11 21:09
+
+## 2026-11-11 — feat: IR view panel S2, rules table on the remaining Conditional controls (P-2026-11-11-2120)
+**Prompt**: `claude_2026-11-11_2120_prompt_ir_panel_s2.md`, fast lane, slice S2 of the IR view panel coverage audit (R-IPC-11): pass `rulesTable` on every Conditional control that showed a saved `rules` value as the read-only chip (V-28/G-30, V-32, V-34, V-56, X3, G-12, E-13..17, R-10), and offer row `visible` from absent; UI only
+**Files touched**: `941649249`: `authoring/LabelEntryEditor.tsx`, `authoring/BadgeListEditor.tsx`, `authoring/FieldCompartmentListEditor.tsx`, `authoring/TextStyleEditor.tsx`, `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/EdgeAuthoringPanel.tsx`, `authoring/RowAuthoringPanel.tsx`, `authoring/__tests__/irPanelS2.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2120_prompt_ir_panel_s2.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (ten files across two commits, above five, all in the declared scope: the eight code files listed by the prompt, the inbox and the prompt Status)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: All 16 mounts covered, none left (step 2). Child editors pass only valueNoun: subjectName is optional, falls back to 'instance', no interface change. Row visible: always shown, withRowVisible (undefined drops the key), Reset when set. Negative control: rulesTable dropped from badge icon, 1 failed / 23 passed. Gates: typecheck 0, authoring 436/436, unit 16159 passed + 3 known import failures, build. No smoke scene. Vertex V-12 visible (S1a) also lacks rulesTable: out of scope.
+**Prompt document name**: 2026-11-11 21:20
