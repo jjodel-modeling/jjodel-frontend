@@ -8069,6 +8069,24 @@ roots, 249 nodes left.
   owner; S3 expand and collapse with local layout; S4 removal of folded vertices, only on a measure, critical zone; S5
   rows for parameters and properties; S6 automatic binding and a binding panel (R-PLG-3); S7 editing through R-TXT.
 
+## R-IPC: IR coverage of the view properties panel (decisions 2026-11-11)
+
+Evidence: `docs/discovery/discovery_2026-11-11_ir_view_panel_coverage.md` (P-2026-11-11-1925, front `maintenance`), 157 IR
+paths over vertex, graphVertex, edge and row: 82 covered, 38 partial, 21 missing, 15 out of scope, 1 in progress. Alfonso
+answered «ok alle raccomandazioni» on the ten questions of §Questions in the project chat C-2026-11-11-1925 at 20:15.
+
+- **R-IPC-1** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): `irVersion` and `generated` are not authored in the view panel.
+- **R-IPC-2** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): `form.order`, `form.labels`, `form.hidden`, `hosts.manager` and `table.columns` stay out of the view panel of a diagrammatic viewpoint, by R-DMV-2, R-DMV-3, R-DMV-4 and R-DMV-7.
+- **R-IPC-3** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): the graphVertex `form` stays classed `missing` until slice S5 decides whether it enters the panel.
+- **R-IPC-4** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): where `form` lives (FRM addendum §2 says row view, `irTypes.ts` says edge view, `irTabs.tsx:65-66` says neither) is settled before any Form tab for edge or row is built.
+- **R-IPC-5** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): `bar` does not enter the Shape select while the R-VP-16 freeze holds.
+- **R-IPC-6** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): edge `exclusive` stays out of the panel (ratifica E-ref R-5) until the resolver gives edges an `exclusive` semantics.
+- **R-IPC-7** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): slice S0 runs alone, before S1, and fixes both data losses: `FieldSegmentEditor.tsx:64` dropping a persisted `literal.style`, and the graphVertex `cornerRadius` control reading a persisted `Conditional<number>` as default and overwriting it on the first edit (G-14).
+- **R-IPC-8** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): the v1.1 base keys absent from code (report §3.1, §3.2: `id`, `migratedFrom`, field segments `value.path`, `multiplicity`, `badge`) are recorded as an erratum against v1.2 §3-§4, not as panel gaps.
+- **R-IPC-9** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): multi-hop PathBuilder and the `marked` predicate operator stay with slice M2 of R-MK-9, not with the panel slices.
+- **R-IPC-10** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): `collapsed.*` and the widget-object `editable` get Conditional or widget authoring only on a user request.
+- **R-IPC-11** (2026-11-11, ratified by Alfonso 2026-11-11 20:15, registered by P-2026-11-11-1925, evidence: read, verified: none, reversible: trunk): the Phase 2 slices run in the order of report §6: S0, S1, S2, S3, S4 (after P-2026-11-11-1110 lands), S5 (decision-gated).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
