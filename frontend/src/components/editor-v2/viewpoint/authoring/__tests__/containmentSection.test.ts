@@ -66,7 +66,7 @@ describe('ContainmentSection — progressive disclosure', () => {
     it('Basic shows the channel, the layout mode, the frame and the channel edges, and nothing else', () => {
         const ids = testIds(render({ advanced: false }));
         for (const id of BASIC) expect(ids).toContain(id);
-        for (const id of [...ADVANCED, 'gv-membership-create', 'gv-header-size', 'gv-layout-axis', 'gv-collapsed']) {
+        for (const id of [...ADVANCED, 'gv-membership-create', 'gv-header-size', 'gv-layout-axis', 'gv-separator', 'gv-collapsed']) {
             expect(ids).not.toContain(id);
         }
     });
@@ -88,6 +88,36 @@ describe('ContainmentSection — progressive disclosure', () => {
         expect(ids).not.toContain('gv-header-size');
         // Partitions are always their own frame (spec addendum §11): no Frame row.
         expect(ids).not.toContain('gv-frame');
+        expect(ids).toContain('gv-separator');
+    });
+});
+
+describe('ContainmentSection — the separator, partitions only (S2b, spec addendum §11)', () => {
+    const SEED: GraphVertexViewIR = { ...graphVertexSeedIR(), metaclasses: ['Region'], label: 'Region' };
+    const partitions = (separator?: 'solid' | 'dashed'): GraphVertexViewIR =>
+        ({ ...SEED, containment: { layout: { mode: 'partitions', axis: 'vertical', ...(separator ? { separator } : {}) } } });
+    const checked = (html: string) => [...html.matchAll(/aria-checked="true"[^>]*><span>([^<]+)<\/span>/g)].map(m => m[1]);
+
+    it('in Basic, on Partitions only: Free shows the Frame row and no Separator row', () => {
+        expect(testIds(render({ draft: partitions(), advanced: false }))).toContain('gv-separator');
+        for (const advanced of [false, true]) {
+            const ids = testIds(render({ draft: SEED, advanced }));
+            expect(ids).not.toContain('gv-separator');
+            expect(ids).toContain('gv-frame');
+        }
+    });
+
+    it('no separator: «Solid» checked, a solid line', () => {
+        const row = block(render({ draft: partitions() }), 'gv-separator');
+        expect(checked(row)).toEqual(['Solid']);
+        expect(text(row)).toContain('A solid line between partitions');
+    });
+
+    it('separator dashed: «Dashed» checked, the orthogonal regions hint', () => {
+        const row = block(render({ draft: partitions('dashed') }), 'gv-separator');
+        expect(checked(row)).toEqual(['Dashed']);
+        expect(text(row)).toContain('A dashed line between partitions, like the orthogonal regions of a state.');
+        expect(text(row)).not.toContain('A solid line');
     });
 });
 
