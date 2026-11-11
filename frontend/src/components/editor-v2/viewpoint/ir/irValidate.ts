@@ -52,6 +52,10 @@ export const VALID_ENTRY_VALUES: ReadonlyArray<EntryMark> = ['dot', 'arrow'];
 /** Closed vocabulary of `edge.curve` (R-VP-22), same shape and reasoning as VALID_ROUTING_VALUES; absent = the routing path. */
 export const VALID_CURVE_VALUES: ReadonlyArray<EdgeCurve> = ['arc'];
 
+/** Closed vocabulary of `edge.labels.placement` (P-2026-11-11-2140), same shape and reasoning as VALID_ROUTING_VALUES; absent = auto. */
+export const VALID_LABEL_PLACEMENTS: ReadonlyArray<NonNullable<NonNullable<EdgeViewIR['edge']['labels']>['placement']>> =
+    ['auto', 'above', 'below'];
+
 /**
  * Closed vocabulary of `edge.terminations` (P-2026-09-30-1521, R-VP-24): the persisted ends, `hollowCircle`
  * among them. A Record keyed on the union, as VALID_PREDICATE_OPS below: an end added to the type without
@@ -193,6 +197,25 @@ function textStyleKeyError(style: unknown, where: string): string | null {
 }
 
 /**
+ * The `caption` of an expression text source (irTypes.ts `TextSource`, P-2026-11-11-2140): a string when present.
+ * The render passes it through as read (irCompile compiled.expression), so a non-string reaches the label.
+ */
+function captionError(src: unknown, where: string): string | null {
+    if (!isPlainObject(src) || src.from !== 'expression' || src.caption === undefined || typeof src.caption === 'string') return null;
+    return `[ir] ${where}.caption must be a string, or absent for no caption, read ${readOf(src.caption)}`;
+}
+
+/** captionError over the segments of a template, when it is an array (its own rule names any other shape). */
+function templateCaptionError(template: unknown, where: string): string | null {
+    if (!Array.isArray(template)) return null;
+    for (let i = 0; i < template.length; i++) {
+        const bad = captionError(template[i], `${where}[${i}]`);
+        if (bad) return bad;
+    }
+    return null;
+}
+
+/**
  * The C2 keys (R-VP-20, P-2026-09-30-0150), authoring-time by the R-B9-bis criterion: the render
  * reads a value outside the vocabulary as absent (irCompile resolveTextStyle, compileLabelText), the
  * authoring surface refuses it here. Read as unknown for the reason given at `routing` below.
@@ -205,7 +228,8 @@ function c2KeysError(ir: AnyViewIR): string | null {
         const labels: unknown = node.shape?.labels;
         if (Array.isArray(labels)) {
             for (let i = 0; i < labels.length; i++) {
-                const bad = textStyleAxesError(labels[i]?.style, `shape.labels[${i}].style`);
+                const bad = textStyleAxesError(labels[i]?.style, `shape.labels[${i}].style`)
+                    ?? captionError(labels[i]?.source, `shape.labels[${i}].source`);
                 if (bad) return bad;
             }
         }
@@ -234,7 +258,9 @@ function c2KeysError(ir: AnyViewIR): string | null {
             }
         }
     }
-    if (ir.kind === 'row') return textStyleAxesError((ir as RowViewIR).style, 'style');
+    if (ir.kind === 'row') {
+        return templateCaptionError((ir as RowViewIR).template, 'template') ?? textStyleAxesError((ir as RowViewIR).style, 'style');
+    }
     if (ir.kind === 'edge') {
         const labels: unknown = (ir as EdgeViewIR).edge?.labels;
         if (isPlainObject(labels)) {
@@ -245,9 +271,15 @@ function c2KeysError(ir: AnyViewIR): string | null {
             }
             const style = textStyleKeyError(labels.style, 'edge.labels.style');
             if (style) return style;
+            const caption = captionError(labels.center, 'edge.labels.center') ?? templateCaptionError(template, 'edge.labels.template');
+            if (caption) return caption;
             // R-VP-23: an end label is a text source, or absent (slice E: or {multiplicity?, role?}); the compile reads anything else as absent.
             for (const end of ['sourceEnd', 'targetEnd'] as const) {
-                const bad = endLabelError(labels[end], `edge.labels.${end}`);
+                const src = labels[end];
+                const bad = endLabelError(src, `edge.labels.${end}`)
+                    ?? (isPlainObject(src) && !('from' in src)
+                        ? captionError(src.multiplicity, `edge.labels.${end}.multiplicity`) ?? captionError(src.role, `edge.labels.${end}.role`)
+                        : captionError(src, `edge.labels.${end}`));
                 if (bad) return bad;
             }
         }
@@ -555,6 +587,25 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true; warnings?
             return {
                 ok: false,
                 error: `[ir] edge.curve must be ${VALID_CURVE_VALUES.join(' | ')}, or absent for the routing path, read ${JSON.stringify(curve)}`,
+            };
+        }
+
+        // Label placement vocabulary (P-2026-11-11-2140): same criterion as routing, read as unknown for the same reason.
+        const placement: unknown = (ir as EdgeViewIR).edge?.labels?.placement;
+        if (placement !== undefined && !(VALID_LABEL_PLACEMENTS as readonly unknown[]).includes(placement)) {
+            return {
+                ok: false,
+                error: `[ir] edge.labels.placement must be one of ${VALID_LABEL_PLACEMENTS.join(' | ')}, or absent for auto, read ${JSON.stringify(placement)}`,
+            };
+        }
+
+        // persistWaypoints (P-2026-11-11-2140): a boolean, as `resizable`; the compile reads it with `?? true`, so a
+        // present non-boolean would gate the layout persistence on its truthiness.
+        const persistWaypoints: unknown = (ir as EdgeViewIR).edge?.persistWaypoints;
+        if (persistWaypoints !== undefined && typeof persistWaypoints !== 'boolean') {
+            return {
+                ok: false,
+                error: `[ir] edge.persistWaypoints must be a boolean, or absent for true, read ${JSON.stringify(persistWaypoints)}`,
             };
         }
 
