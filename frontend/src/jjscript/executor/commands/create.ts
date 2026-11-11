@@ -792,11 +792,27 @@ async function createAttribute(
 
             const newAttr = DAttribute.new(name, typed.typePointer, parentId, true);
 
+            // Apply multiplicity if specified -- the clause the parser already settles
+            // (`options.multiplicity`, parser/parser.ts:419-423). Before this, the
+            // DStructuralFeature seeds (lowerBound 0, upperBound 1) were all that ever got
+            // written, so every attribute came out [0..1] (#214). The shape is the
+            // reference's own block (createReference below): the same two fields, the
+            // same '*' -> -1.
+            if (options?.multiplicity) {
+                const { lower, upper } = options.multiplicity;
+                SetFieldAction.new(newAttr, 'lowerBound', lower, undefined, false);
+                // Convert '*' to -1 for unbounded upper bound (EMF/Ecore convention)
+                const upperValue = upper === '*' ? -1 : upper;
+                SetFieldAction.new(newAttr, 'upperBound', upperValue, undefined, false);
+            }
+
+            const multiplicityStr = options?.multiplicity?.raw || '';
+
             resolve({
                 success: true,
                 command: 'create',
-                message: `Created attribute '${name}'${typed.enumName ? ` : ${typed.enumName}` : ''}`,
-                data: { id: newAttr.id, name, type: 'attribute', attributeType: typed.typeLabel },
+                message: `Created attribute '${name}'${typed.enumName ? ` : ${typed.enumName}` : ''}${multiplicityStr ? ` ${multiplicityStr}` : ''}`,
+                data: { id: newAttr.id, name, type: 'attribute', attributeType: typed.typeLabel, multiplicity: options?.multiplicity },
                 affectedElements: [newAttr.id, parentId],
                 undoable: true
             });
@@ -1034,11 +1050,24 @@ async function createParameter(
             // DParameter.new(name, type, father, persist)
             const newParam = DParameter.new(name, typeName, parentId, true);
 
+            // Apply multiplicity if specified -- the same DStructuralFeature fields as on an
+            // attribute (#214): EcoreParameter carries lowerBound/upperBound, and the planner
+            // already lets `set` write them (SET_PROPERTIES, Parameter).
+            if (options?.multiplicity) {
+                const { lower, upper } = options.multiplicity;
+                SetFieldAction.new(newParam, 'lowerBound', lower, undefined, false);
+                // Convert '*' to -1 for unbounded upper bound (EMF/Ecore convention)
+                const upperValue = upper === '*' ? -1 : upper;
+                SetFieldAction.new(newParam, 'upperBound', upperValue, undefined, false);
+            }
+
+            const multiplicityStr = options?.multiplicity?.raw || '';
+
             resolve({
                 success: true,
                 command: 'create',
-                message: `Created parameter '${name}'`,
-                data: { id: newParam.id, name, type: 'parameter' },
+                message: `Created parameter '${name}'${multiplicityStr ? ` ${multiplicityStr}` : ''}`,
+                data: { id: newParam.id, name, type: 'parameter', multiplicity: options?.multiplicity },
                 affectedElements: [newParam.id, parentId],
                 undoable: true
             });
