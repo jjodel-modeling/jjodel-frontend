@@ -893,3 +893,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scene for the vertex panel; covered by irPanelS1a tests with negative control. Alfonso visual GO owed on localhost:3000: vertex view Structure/Appearance, rows visible, entry, bar thickness, compartment exclude, literal segment style.
 **Notes**: Rollback tag `pre-ir-panel-s1a` on `dc2126f5d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2054/result.json`.
 **Prompt document name**: 2026-11-11 20:54
+
+## 2026-11-11 — feat: IR view panel S1b, edge curve, label template, label style (P-2026-11-11-2036)
+**Prompt**: `claude_2026-11-11_2036_prompt_ir_panel_s1b.md`, fast lane, slice S1 of the IR view panel coverage audit (R-IPC-11): controls in the edge panel for `edge.curve` (E-19, R-VP-22), `edge.labels.template` (E-22) and `edge.labels.style` (E-23, R-VP-20); UI only
+**Files touched**: `5d9cc9ea6`: `authoring/EdgeAuthoringPanel.tsx`, `authoring/__tests__/edgeCurveLabelControls.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2036_prompt_ir_panel_s1b.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Curve: Select from VALID_CURVE_VALUES, empty option drops the key. Template: ListEditor + TextSourceEditor; last segment removed drops the key (validator refuses empty). Style: TextStyleField. Both via setLabelsKey (spread, labels dropped when empty). Tests SSR, writes seen through a withMetaclassPins spy; negative control (labels rebuilt from {}) fails 7/15. Full suite: tolerant.test.ts timing guard 1295>1000 ms under load, green alone (64/64). No IR edge scene in the smoke harness.
+**Prompt document name**: 2026-11-11 20:36

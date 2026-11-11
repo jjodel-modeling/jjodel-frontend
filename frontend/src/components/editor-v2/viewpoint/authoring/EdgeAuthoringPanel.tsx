@@ -14,14 +14,15 @@ import {
     PathBuilder,
     PredicateBuilder,
     FormSection,
+    ListEditor,
     forPredicateKind,
     type PathBuilderFeatures,
 } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
-import { validateIR } from '../ir/irValidate';
+import { validateIR, VALID_CURVE_VALUES } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
 import { CONTAINER_ENDPOINT } from '../ir/irTypes';
-import type { EdgeViewIR, TextSource, EdgeTermination, Conditional } from '../ir/irTypes';
+import type { EdgeViewIR, EdgeCurve, TextSource, TextStyle, EdgeTermination, Conditional } from '../ir/irTypes';
 import { TERMINATION_OPTION_GROUPS, endLabelParts, withEndLabelPart } from '../../edges/edgeEndGlyphs';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import {
@@ -44,6 +45,7 @@ import {
     type EdgeNature,
 } from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
+import { TextStyleField } from './TextStyleField';
 import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
@@ -119,6 +121,10 @@ const ROUTING_OPTIONS = [
 // Slice E (P-2026-09-30-1810): grouped (Arrows, UML, ER, Petri), the seven ends of before in their order and
 // wording, the seven new ones slotted in; the list lives in edgeEndGlyphs, where it is tested.
 const TERMINATION_OPTIONS = TERMINATION_OPTION_GROUPS;
+// R-VP-22: the closed vocabulary of `edge.curve`, read from the validator so the menu cannot offer a value it
+// refuses. The routing path is the Select's empty option, as Manhattan is for Routing: it drops the key.
+const CURVE_LABELS: Record<EdgeCurve, string> = { arc: 'Arc' };
+const CURVE_OPTIONS = VALID_CURVE_VALUES.map((c) => ({ value: c, label: CURVE_LABELS[c] }));
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -501,6 +507,67 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         }
     };
 
+    // --- curve (R-VP-22) ---
+    // Absent = the routing path; a value outside the vocabulary reads as absent, as the renderer does, and is
+    // left in the draft for the validator to name. Only the empty option drops the key.
+    const curve = (VALID_CURVE_VALUES as readonly unknown[]).includes(draft.edge.curve) ? draft.edge.curve! : '';
+    const setCurve = (next: string) => {
+        if ((VALID_CURVE_VALUES as readonly string[]).includes(next)) {
+            patchEdge({ curve: next as EdgeCurve });
+        } else {
+            const edge = { ...draft.edge };
+            delete edge.curve;
+            patch({ ...draft, edge });
+        }
+    };
+
+    /**
+     * One key of `edge.labels` set or dropped (R-VP-20 template and style): the siblings are spread, never
+     * rebuilt, and `labels` itself goes when left empty, as the centre label and the end labels do.
+     */
+    const setLabelsKey = <K extends keyof NonNullable<EdgeViewIR['edge']['labels']>>(
+        key: K,
+        value: NonNullable<EdgeViewIR['edge']['labels']>[K] | undefined,
+    ) => {
+        const labels = { ...draft.edge.labels };
+        if (value === undefined) delete labels[key];
+        else labels[key] = value;
+        if (Object.keys(labels).length === 0) {
+            const edge = { ...draft.edge };
+            delete edge.labels;
+            patch({ ...draft, edge });
+        } else {
+            patchEdge({ labels });
+        }
+    };
+
+    // --- label template (R-VP-20) ---
+    // The validator refuses an empty template, so removing the last segment drops the key: absent and empty are
+    // the same «no template», and the centre source applies again.
+    const template = draft.edge.labels?.template ?? [];
+    const setTemplate = (next: TextSource[]) => setLabelsKey('template', next.length > 0 ? next : undefined);
+    const removeTemplateSegment = (idx: number) => {
+        const n = [...template];
+        n.splice(idx, 1);
+        setTemplate(n);
+    };
+    const moveTemplateSegment = (idx: number, delta: number) => {
+        const j = idx + delta;
+        if (j < 0 || j >= template.length) return;
+        const n = [...template];
+        [n[idx], n[j]] = [n[j], n[idx]];
+        setTemplate(n);
+    };
+    const replaceTemplateSegment = (idx: number, seg: TextSource) => {
+        const n = [...template];
+        n[idx] = seg;
+        setTemplate(n);
+    };
+
+    // --- label style (R-VP-20, TextStyle addendum TS3) ---
+    // `undefined` (the field's Reset, or every axis cleared) drops the key: the label gets its box back.
+    const setLabelStyle = (style: TextStyle | undefined) => setLabelsKey('style', style);
+
     // --- label center ---
     const hasCenterLabel = draft.edge.labels?.center !== undefined;
     const setHasCenterLabel = (checked: boolean) => {
@@ -860,6 +927,22 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     </HelpText>
                 )}
             </div>
+            <div className="jj-field">
+                <label className="jj-field-label">Curve</label>
+                <Select
+                    options={CURVE_OPTIONS}
+                    placeholder="Routing path (default)"
+                    value={curve}
+                    onChange={(e) => setCurve(e.target.value)}
+                />
+                {curve === 'arc' && (
+                    <HelpText>
+                        An arc runs between the centres of its two handles and wins over the routing: straight when
+                        it is the only edge between its nodes, bowed when another one runs the other way, a loop over
+                        the top of the node for a self-loop.
+                    </HelpText>
+                )}
+            </div>
 
             </FormSection>
 
@@ -904,6 +987,39 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         : 'Without a label the edge keeps its default label (the reference name).'}</HelpText>
                 )}
             </div>
+            <div className="jj-field">
+                <label className="jj-field-label">Template</label>
+                <ListEditor<TextSource>
+                    items={template}
+                    onRemove={removeTemplateSegment}
+                    onMove={moveTemplateSegment}
+                    onAdd={() => setTemplate([...template, newCenterSource()])}
+                    addLabel="Add segment"
+                    emptyHint="No template: the center label applies."
+                    itemLabel={(seg, i) => `Segment #${i + 1} — ${seg.from}`}
+                    renderItem={(seg, i) => (
+                        <TextSourceEditor
+                            source={seg}
+                            features={features}
+                            disabledHint={FEATURES_HINT}
+                            onChange={(s) => replaceTemplateSegment(i, s)}
+                        />
+                    )}
+                />
+                {template.length > 0 && (
+                    <HelpText>The segments are concatenated and win over the center label. A value that resolves empty draws nothing and takes the literal right before it along.</HelpText>
+                )}
+            </div>
+            <TextStyleField
+                value={draft.edge.labels?.style}
+                onChange={setLabelStyle}
+                features={features}
+                featuresHint={FEATURES_HINT}
+                classNames={classNames}
+            />
+            {draft.edge.labels?.style !== undefined && (
+                <HelpText icon={false}>With a style the label drops its box for a halo; its color applies to the text only, the ends keep the line color.</HelpText>
+            )}
             </FormSection>
 
             {/* End labels (slice E, Advanced): a multiplicity and a role at each end */}
