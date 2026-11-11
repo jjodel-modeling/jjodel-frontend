@@ -19,7 +19,7 @@ import {
     admittedMembershipModes, channelExpr, channelFacts, channelHops, wholeListHop, withBorderAxis, withChannel,
     withChannelEdges, withChannelStep, withChildFilter, withCollapsedForm, withCollapsedKey, withCollapsible,
     withDefaultSizeAxis, withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutFrame, withLayoutMode,
-    withLayoutPadding, withMembershipCreate, withMembershipMode, withShape, withVisible, withoutCornerRadius, withoutLastChannelStep,
+    withLayoutPadding, withLayoutSeparator, withMembershipCreate, withMembershipMode, withShape, withVisible, withoutCornerRadius, withoutLastChannelStep,
     type ChannelClass,
 } from '../graphVertexAuthoring';
 import type { GraphVertexViewIR, LabelSpec, Predicate, VertexViewIR } from '../../ir/irTypes';
@@ -317,6 +317,40 @@ describe('every default is the absence of its key', () => {
         expect(validateIR('t-gv-separator-to-free', f).ok).toBe(true);
         const bare: GraphVertexViewIR = { ...seed(), containment: { layout: { mode: 'partitions', separator: 'dashed' } } };
         expect('layout' in withLayoutMode(bare, 'free').containment).toBe(false);
+    });
+
+    it('separator: «Dashed» writes dashed, «Solid» removes the key, a change replaces it, the rest of the IR untouched', () => {
+        const base: GraphVertexViewIR = {
+            ...seed(), label: 'Region', metaclasses: ['Region'],
+            containment: {
+                children: '$subvertices.values', edges: 'hide', collapsible: false,
+                layout: { mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 30 }, padding: 8 },
+            },
+        };
+        const layout = base.containment.layout;
+        const dashed = withLayoutSeparator(base, 'dashed');
+        expect(dashed.containment.layout).toEqual({ ...layout, separator: 'dashed' });
+        expect(validateIR('t-gv-separator-dashed', dashed).ok).toBe(true);
+        // Set: everything but the one key deep-equals the view before the write.
+        const { layout: _d, ...dashedRest } = dashed.containment;
+        const { layout: _b, ...baseRest } = base.containment;
+        expect({ ...dashed, containment: dashedRest }).toEqual({ ...base, containment: baseRest });
+        expect(base.containment.layout).toEqual(layout);
+        // Change: an absent key stays absent on Solid, which is no write at all.
+        expect(withLayoutSeparator(base, 'solid')).toEqual(base);
+        expect(withLayoutSeparator(dashed, 'dashed')).toEqual(dashed);
+        // Reset: Solid removes the key, and only it.
+        const solid = withLayoutSeparator(dashed, 'solid');
+        expect(solid).toEqual(base);
+        expect(solid.containment.layout && 'separator' in solid.containment.layout).toBe(false);
+        // A bare partitions layout keeps its mode and axis when the separator leaves: partitions are not the default.
+        const bare = withLayoutSeparator(withLayoutMode(seed(), 'partitions'), 'dashed');
+        expect(bare.containment.layout).toEqual({ mode: 'partitions', axis: 'vertical', separator: 'dashed' });
+        expect(withLayoutSeparator(bare, 'solid').containment.layout).toEqual({ mode: 'partitions', axis: 'vertical' });
+        // A separator is a key of its own: the axis, the band and Partitions again leave it alone.
+        expect(withLayoutAxis(dashed, 'vertical').containment.layout).toEqual({ ...layout, axis: 'vertical', separator: 'dashed' });
+        expect(withHeaderSide(dashed, 'none').containment.layout).toEqual({ mode: 'partitions', axis: 'horizontal', padding: 8, separator: 'dashed' });
+        expect(withLayoutMode(dashed, 'partitions')).toEqual(dashed);
     });
 
     it('membership: none drops it; create lives on reference only and goes with it', () => {

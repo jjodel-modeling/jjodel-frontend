@@ -5,20 +5,20 @@ import {
 } from '../../../ui';
 import type {
     BadgePosition, ChannelEdges, ContainerFrame, ContainmentLayoutMode, GraphVertexViewIR, HeaderSide, MembershipMode,
-    PartitionAxis, Predicate, ShapeForm,
+    PartitionAxis, PartitionSeparator, Predicate, ShapeForm,
 } from '../ir/irTypes';
 import {
     DEFAULT_COLLAPSED_BADGE, admittedMembershipModes, channelFacts, channelHops, hopExpr, wholeListHop,
     withChannel, withChannelEdges, withChildFilter, withCollapsedForm, withCollapsedKey, withCollapsible,
     withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutFrame, withLayoutMode, withLayoutPadding,
-    withMembershipCreate, withMembershipMode, withChannelStep, withoutLastChannelStep, type ChannelClass,
-    type ChannelFacts, type ChannelHop,
+    withLayoutSeparator, withMembershipCreate, withMembershipMode, withChannelStep, withoutLastChannelStep,
+    type ChannelClass, type ChannelFacts, type ChannelHop,
 } from './graphVertexAuthoring';
 
 export interface ContainmentSectionProps {
     draft: GraphVertexViewIR;
     patch: (next: GraphVertexViewIR) => void;
-    /** Global disclosure mode: Basic shows the channel, the layout mode, the frame and the channel edges; Advanced the rest. */
+    /** Global disclosure mode: Basic shows the channel, the layout mode, the frame or the separator and the channel edges; Advanced the rest. */
     advanced: boolean;
     /** The view's metaclass as the metamodel checks read it; null for the wildcard or an unresolved name. */
     rootClass: ChannelClass | null;
@@ -45,6 +45,10 @@ const LAYOUT_MODE_OPTIONS: { value: ContainmentLayoutMode; label: string }[] = [
 const FRAME_OPTIONS: { value: ContainerFrame; label: string }[] = [
     { value: 'hull', label: 'Around children' },
     { value: 'self', label: 'This node' },
+];
+const SEPARATOR_OPTIONS: { value: PartitionSeparator; label: string }[] = [
+    { value: 'solid', label: 'Solid' },
+    { value: 'dashed', label: 'Dashed' },
 ];
 const EDGES_OPTIONS: { value: ChannelEdges; label: string }[] = [
     { value: 'show', label: 'Show' },
@@ -127,6 +131,7 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
     const membershipMode: MembershipMode = c.membership?.mode ?? 'none';
     const layoutMode: ContainmentLayoutMode = c.layout?.mode ?? 'free';
     const frame: ContainerFrame = c.layout?.frame ?? 'hull';
+    const separator: PartitionSeparator = c.layout?.separator ?? 'solid';
     const header = c.layout?.header;
     const pathMode = hops.length > 0 || pendingStep;
 
@@ -174,7 +179,7 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
 
     return (
         <FormSection title="Containment" divider={false}>
-            {/* ── Basic: channel, layout mode, frame, channel edges ── */}
+            {/* ── Basic: channel, layout mode, frame or separator, channel edges ── */}
             <div className="jj-field" data-testid="gv-channel">
                 <label className="jj-field-label">Children</label>
                 <Select
@@ -240,6 +245,22 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
                         : c.layout === undefined
                             ? 'A frame is drawn around this node and its children.'
                             : 'This node keeps its own size; no frame is drawn around its children.'}</HelpText>
+                </div>
+            )}
+
+            {/* Partitions only (spec addendum §11). Absent is a solid line; Free drops the key in the same write. */}
+            {layoutMode === 'partitions' && (
+                <div className="jj-field" data-testid="gv-separator">
+                    <label className="jj-field-label">Separator</label>
+                    <SegmentedControl<PartitionSeparator>
+                        ariaLabel="The line between two partitions"
+                        value={separator}
+                        options={SEPARATOR_OPTIONS}
+                        onChange={(v) => patch(withLayoutSeparator(draft, v))}
+                    />
+                    <HelpText icon={false}>{separator === 'dashed'
+                        ? 'A dashed line between partitions, like the orthogonal regions of a state.'
+                        : 'A solid line between partitions, like the lanes of a pool.'}</HelpText>
                 </div>
             )}
 

@@ -20,7 +20,7 @@
 import { parsePathExpr } from '../ir/pathExpr';
 import type {
     BadgeSpec, ChannelEdges, ContainerFrame, ContainmentLayout, ContainmentLayoutMode, Conditional, GraphVertexViewIR,
-    HeaderSide, MembershipMode, PartitionAxis, Predicate, ShapeForm,
+    HeaderSide, MembershipMode, PartitionAxis, PartitionSeparator, Predicate, ShapeForm,
 } from '../ir/irTypes';
 
 export type GraphVertexContainment = GraphVertexViewIR['containment'];
@@ -209,6 +209,12 @@ export function withLayoutAxis(ir: GraphVertexViewIR, axis: PartitionAxis): Grap
 export function withLayoutFrame(ir: GraphVertexViewIR, frame: ContainerFrame): GraphVertexViewIR {
     const { frame: _dropped, ...rest } = layoutOf(ir);
     return withLayoutOf(ir, frame === 'self' ? { ...rest, frame: 'self' } : rest);
+}
+
+/** The view after a new separator (partitions only; the panel offers it there alone); `solid` drops the key (absent = solid). */
+export function withLayoutSeparator(ir: GraphVertexViewIR, separator: PartitionSeparator): GraphVertexViewIR {
+    const { separator: _dropped, ...rest } = layoutOf(ir);
+    return withLayoutOf(ir, separator === 'dashed' ? { ...rest, separator: 'dashed' } : rest);
 }
 
 /** The view after a new band side; 'none' drops the band. A new band starts at DEFAULT_HEADER_SIZE. */

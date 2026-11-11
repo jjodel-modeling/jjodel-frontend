@@ -1023,3 +1023,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No graphVertex panel scene in the smoke harness; covered by irPanelS4a tests with negative control. Alfonso visual GO owed on localhost:3000: graphVertex Appearance padding, marker with rules table, entry, bar thickness, text style, badges, field compartments.
 **Notes**: Rollback tag `pre-ir-panel-s4a` on `2d05fdcee` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2321/result.json`.
 **Prompt document name**: 2026-11-11 23:21
+
+## 2026-11-11 — feat: IR view panel S4b, graphVertex partition separator (P-2026-11-11-2316)
+**Prompt**: `claude_2026-11-11_2316_prompt_ir_panel_s4b.md`, fast lane, slice S4b of the IR view panel coverage audit (R-IPC-11): G-44 `containment.layout.separator`, a Containment row visible on Partitions only, mirroring the «Frame» row of P-2026-11-11-1110
+**Files touched**: `ad99a39c0`: `authoring/ContainmentSection.tsx`, `authoring/graphVertexAuthoring.ts` (`withLayoutSeparator`), `authoring/__tests__/containmentSection.test.ts`, `authoring/__tests__/graphVertexAuthoring.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2316_prompt_ir_panel_s4b.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (six files across two commits, above five, all declared: the two code files, two tests in `authoring/__tests__`, the inbox and the prompt Status)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Basic row after Layout, like Frame (they never show together). Solid drops the key, Dashed writes it; the Free switch already dropped it (withLayoutMode, P-2026-11-11-1110), so no mode-switch change. Negative control: Solid writing separator: 'solid', 1 failed / 27 passed, restored. Gates: typecheck 0, unit 16200 passed + 3 known import failures, build 0. No smoke scene with a graphVertex view; visual GO follows the merge.
+**Prompt document name**: 2026-11-11 23:16
