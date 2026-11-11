@@ -906,3 +906,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Curve: Select from VALID_CURVE_VALUES, empty option drops the key. Template: ListEditor + TextSourceEditor; last segment removed drops the key (validator refuses empty). Style: TextStyleField. Both via setLabelsKey (spread, labels dropped when empty). Tests SSR, writes seen through a withMetaclassPins spy; negative control (labels rebuilt from {}) fails 7/15. Full suite: tolerant.test.ts timing guard 1295>1000 ms under load, green alone (64/64). No IR edge scene in the smoke harness.
 **Prompt document name**: 2026-11-11 20:36
+
+## 2026-11-11 — merge: ir-panel-s1b into alfonso-frontend-jjtl (P-2026-11-11-2101)
+**Prompt**: `claude_2026-11-11_2101_prompt_merge_ir-panel-s1b.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s1b` at `18397b4d0` into `alfonso-frontend-jjtl`, merge base `dc2126f5d`, 3 commits on the branch side.
+**Files touched**: merge `f33239a6d`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2036_prompt_ir_panel_s1b.md`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/edgeCurveLabelControls.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f33239a6d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16125 tests in 613 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by edgeCurveLabelControls tests with negative control. Alfonso visual GO owed on localhost:3000: edge view, curve control, label template list, label style.
+**Notes**: Rollback tag `pre-ir-panel-s1b` on `c50d9e689` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2101/result.json`.
+**Prompt document name**: 2026-11-11 21:01
