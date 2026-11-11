@@ -458,6 +458,7 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                             featuresHint={FEATURES_HINT}
                             classNames={classNames}
                             allowConditional={advanced}
+                            rulesTable={{ subjectName, valueNoun: 'visibility' }}
                         />
                         <HelpText icon={false}>Off hides the container on the canvas; the object stays in the model and in the tree.</HelpText>
                     </div>
