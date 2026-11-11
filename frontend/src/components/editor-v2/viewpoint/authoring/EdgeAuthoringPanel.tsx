@@ -613,6 +613,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 featuresHint={FEATURES_HINT}
                 classNames={classNames}
                 allowConditional={advanced}
+                rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: end === 'sourceEnd' ? 'source end' : 'target end' }}
             />
         );
     };
@@ -880,6 +881,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line color' }}
                 />
             </div>
             <div className="jj-field">
@@ -892,6 +894,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line width' }}
                 />
             </div>
             <div className="jj-field">
@@ -910,6 +913,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line dash' }}
                 />
             </div>
             <div className="jj-field">

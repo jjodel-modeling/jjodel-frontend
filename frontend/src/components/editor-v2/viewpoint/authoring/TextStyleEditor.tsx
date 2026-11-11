@@ -142,6 +142,7 @@ function AxisRow<T>({
                         features={features}
                         featuresHint={featuresHint}
                         classNames={classNames}
+                        rulesTable={{ valueNoun: label.toLowerCase() }}
                     />
                 </div>
             )}

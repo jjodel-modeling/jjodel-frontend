@@ -353,6 +353,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                 features={features}
                                 featuresHint={featuresHint}
                                 classNames={classNames}
+                                rulesTable={{ valueNoun: 'visibility' }}
                             />
                         </div>
                     </>
