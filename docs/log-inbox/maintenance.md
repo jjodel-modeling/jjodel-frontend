@@ -932,3 +932,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Rows Spacing (em, step 0.01) and Case (Default/Uppercase/Lowercase/None) after Color, same row classes, no ƒx: both keys are plain scalars in irTypes. Writes through setAxis. TextStyleField untouched (holds no axis list). Tests call the hook-free editor and fire the row onChange. Negative control: Case onChange rebuilding the style, 3 failed / 10 passed. Gates: typecheck 0, authoring 376/376, unit 16099 passed + 3 known import failures, build. No smoke scene with a TextStyle popover.
 **Prompt document name**: 2026-11-11 20:37
+
+## 2026-11-11 — merge: ir-panel-s1c into alfonso-frontend-jjtl (P-2026-11-11-2109)
+**Prompt**: `claude_2026-11-11_2109_prompt_merge_ir-panel-s1c.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s1c` at `2516db6ac` into `alfonso-frontend-jjtl`, merge base `dc2126f5d`, 3 commits on the branch side.
+**Files touched**: merge `d520c2923`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2037_prompt_ir_panel_s1c.md`, `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/textStyleScalarAxes.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d520c2923` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16138 tests in 614 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scene opens a TextStyle popover; covered by textStyleScalarAxes tests. Alfonso visual GO owed on localhost:3000: TextStyle popover, letter spacing and case rows.
+**Notes**: Rollback tag `pre-ir-panel-s1c` on `33c98dcc4` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2109/result.json`.
+**Prompt document name**: 2026-11-11 21:09
