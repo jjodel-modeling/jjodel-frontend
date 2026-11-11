@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-11-2028
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane merge · 919c9e2e0 · verifica visiva passata 2026-11-11 (Gates green on the merge tip. Chat visual check not run: no graphVertex scene in the smoke harness and 3001 down; the change is covered by tests (literal style kept, conditional corner radius not overwritten, negative control fails on the old line). Alfonso visual GO owed on localhost:3000: graphVertex Appearance tab, conditional radius shows chip in Basic and rules in Advanced.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-11-2028 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

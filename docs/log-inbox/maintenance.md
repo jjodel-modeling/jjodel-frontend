@@ -854,3 +854,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Literal: `applyLiteralText` spreads the segment; forKind left as is (a kind switch resets by design). gV: the vertex panel's ConditionalEditor mount with rulesTable, writers unchanged, graphVertexAuthoring.ts untouched. Negative control: Input wiring test fails on the old line (1 failed, 14 passed). Node bench has no DOM: mount tests are SSR with spies on view.ir and the writers. Corregge: gV S4 (stepper); the literal loss dates from C2, P-2026-09-30-0150. No gV smoke scene.
 **Prompt document name**: 2026-11-11 20:25
+
+## 2026-11-11 — merge: ir-panel-s0 into alfonso-frontend-jjtl (P-2026-11-11-2028)
+**Prompt**: `claude_2026-11-11_2028_prompt_merge_ir-panel-s0.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s0` at `8de50544e` into `alfonso-frontend-jjtl`, merge base `6c77a7bce`, 3 commits on the branch side.
+**Files touched**: merge `919c9e2e0`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/fieldSegmentEditor.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/graphVertexCornerRadius.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `919c9e2e0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16089 tests in 611 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. Chat visual check not run: no graphVertex scene in the smoke harness and 3001 down; the change is covered by tests (literal style kept, conditional corner radius not overwritten, negative control fails on the old line). Alfonso visual GO owed on localhost:3000: graphVertex Appearance tab, conditional radius shows chip in Basic and rules in Advanced.
+**Notes**: Rollback tag `pre-ir-panel-s0` on `191a97892` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2028/result.json`.
+**Prompt document name**: 2026-11-11 20:28
