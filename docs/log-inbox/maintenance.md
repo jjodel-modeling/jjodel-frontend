@@ -971,3 +971,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scenes for these editors; covered by irPanelS2 tests with negative control. Alfonso visual GO owed on localhost:3000: rules table in Advanced on label, badge and compartment visible, badge icon, TextStyle axes, graphVertex visible, edge line and ends; row visible can be added when absent.
 **Notes**: Rollback tag `pre-ir-panel-s2` on `c5a07acc9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2128/result.json`.
 **Prompt document name**: 2026-11-11 21:28
+
+## 2026-11-11 — feat: IR view panel S3, edge label, placement, waypoints, caption (P-2026-11-11-2140)
+**Prompt**: `claude_2026-11-11_2140_prompt_ir_panel_s3.md`, fast lane, slice S3 of the IR view panel coverage audit (R-IPC-11): edge view `label` (E-10), `edge.labels.placement` (E-21), `edge.persistWaypoints` (E-26), expression-source `caption` in TextSourceEditor, and three `irValidate` checks (placement, persistWaypoints, caption)
+**Files touched**: `16639fa43`: `ir/irValidate.ts`, `ir/__tests__/irS3Keys.test.ts` (new), `authoring/EdgeAuthoringPanel.tsx`, `authoring/TextSourceEditor.tsx`, `authoring/__tests__/irPanelS3.test.ts` (new), `authoring/__tests__/panelSections.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2140_prompt_ir_panel_s3.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (eight files across two commits, above five, all in the declared scope: the three code files, tests in `authoring/__tests__` and beside the irValidate tests, the inbox and the prompt Status; `panelSections.test.ts` edge snapshot gains the new General section)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Step 1: validateIR is authoring-only (panels, creation seed); the render never calls it, so sibling severity (ok: false) takes no saved view off the canvas. View label drops the key when emptied (vertex keeps ''). Placement menu: above, below; Auto is the empty option. Negative control: persistWaypoints reset writing undefined, 1 failed / 20 passed. Gates: typecheck 0, unit 16191 passed + 3 known import failures, build. No smoke scene with an IR edge view.
+**Prompt document name**: 2026-11-11 21:40
