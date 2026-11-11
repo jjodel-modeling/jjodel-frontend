@@ -5,7 +5,7 @@ Chat: C-2026-11-11-1925
 Front: maintenance
 Lane: fast (two UI defects found and read by P-2026-11-11-1925, slice S0 of its report §6, ratified as R-IPC-7; outside the critical zone)
 Depends: P-2026-11-11-1925
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane fast · 999ea5d5a · gates green (typecheck 0, build, authoring 363/363, unit 16086 passed, 3 known import failures) · visual check skipped (no graphVertex scene in the smoke harness) · log entry in docs/log-inbox/maintenance.md
 Request: https://claude.ai/code/session_01DQt9R2kJaz9XevLeJNUgpJ
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt states an exception).
