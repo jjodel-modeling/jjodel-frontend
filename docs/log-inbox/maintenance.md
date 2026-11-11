@@ -919,3 +919,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by edgeCurveLabelControls tests with negative control. Alfonso visual GO owed on localhost:3000: edge view, curve control, label template list, label style.
 **Notes**: Rollback tag `pre-ir-panel-s1b` on `c50d9e689` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2101/result.json`.
 **Prompt document name**: 2026-11-11 21:01
+
+## 2026-11-11 — feat: IR view panel S1c, letter spacing and case in TextStyleEditor (P-2026-11-11-2037)
+**Prompt**: `claude_2026-11-11_2037_prompt_ir_panel_s1c.md`, fast lane, slice S1 row X3 of the IR view panel coverage audit (R-IPC-11): `TextStyle.letterSpacing` and `TextStyle.textTransform` had no control in `TextStyleEditor`
+**Files touched**: `f4c06dcc2`: `authoring/TextStyleEditor.tsx`, `authoring/__tests__/textStyleScalarAxes.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2037_prompt_ir_panel_s1c.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Rows Spacing (em, step 0.01) and Case (Default/Uppercase/Lowercase/None) after Color, same row classes, no ƒx: both keys are plain scalars in irTypes. Writes through setAxis. TextStyleField untouched (holds no axis list). Tests call the hook-free editor and fire the row onChange. Negative control: Case onChange rebuilding the style, 3 failed / 10 passed. Gates: typecheck 0, authoring 376/376, unit 16099 passed + 3 known import failures, build. No smoke scene with a TextStyle popover.
+**Prompt document name**: 2026-11-11 20:37
