@@ -101,6 +101,7 @@ describe('IR authoring panels: the section list', () => {
             "Matching",
             "Line",
             "Ends",
+            "General",
             "Label",
             "Source",
           ]
@@ -111,6 +112,7 @@ describe('IR authoring panels: the section list', () => {
             "Matching",
             "Line",
             "Ends",
+            "General",
             "Label",
             "End labels",
             "Source",

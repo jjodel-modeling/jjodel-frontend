@@ -24,6 +24,15 @@ const INTRINSIC_OPTIONS = [
     { value: 'qualifiedName', label: 'name : Metaclass' },
 ];
 
+type ExpressionSource = Extract<TextSource, { from: 'expression' }>;
+
+/** The source with `caption` replaced, or dropped when empty; the other keys spread, never rebuilt. */
+export const withCaption = (source: ExpressionSource, caption: string): ExpressionSource => {
+    if (caption !== '') return { ...source, caption };
+    const { caption: _dropped, ...rest } = source;
+    return rest;
+};
+
 /**
  * Editor for a TextSource: intrinsic property | feature path | literal text.
  * The `path` mode is where the PathBuilder (Fase A) enters — the only place a
@@ -80,6 +89,16 @@ export const TextSourceEditor: React.FC<TextSourceEditorProps> = ({
                     disabled={disabled}
                     placeholder="Slot feature name"
                     onChange={(e) => onChange({ ...source, slot: e.target.value })}
+                />
+            )}
+
+            {/* Caption of an expression source (P-2026-11-11-2140): optional, an emptied field drops the key. */}
+            {source.from === 'expression' && (
+                <Input
+                    value={source.caption ?? ''}
+                    disabled={disabled}
+                    placeholder="Caption (optional)"
+                    onChange={(e) => onChange(withCaption(source, e.target.value))}
                 />
             )}
 
