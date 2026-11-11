@@ -119,3 +119,48 @@ No live archive was modified or new financial benchmark performed. The temporary
 ## 6. Decision requested
 
 1. Approve the 12-file scope in section 3 and the bounded opt-in continuation contract in section 2, so implementation can follow this discovery.
+
+## 7. Implementation addendum — 2026-11-11
+
+Alfonso approved the exact scope with «si» and subsequently instructed «prosegui». Implemented in `746c5a996`; the scope remains the 12 files above. Governance, model routing, thresholds, product components and dependencies were not edited. The `codex/harness-objectives-continuation` branch was aligned with trunk `1f6829e18`; its only intervening change is another activity's prompt document. The frontend tree after alignment is identical to the tested implementation.
+
+### Delivered behavior and commands
+
+- `lane-run start` optionally attaches an explicit objective via `--objective <ID>` (or `Objective:` in the prompt header), with `--objective-kind discovery|implementation`. Existing lanes remain unlinked unless explicitly attached. Link/accept/reopen/show commands are also exposed through `lane-run objective` and the standalone module.
+- Objective events are append-only, versioned and serialized under `_objectives/events.jsonl` in the configured lane root. A lane cannot be relinked to another objective; parents must already belong to that objective, so immutable links cannot create cycles. Correction links require a reason and explicitly reopen an accepted objective. Neither `done` nor a commit creates acceptance.
+- `lane-usage --objective` returns lane/session membership, technical consumption, invocation runtime, acceptance evidence and coverage issues. Inputs must reconcile with final CLI counters. Missing data, duplicated sessions across lanes and unreadable events prevent a complete total. Architect accounting requires source provenance, a valid interval and nonnegative counters; overlapping intervals of the same chat are not summed into a complete total. The existing lane reader and board retain their legacy single-session behavior; new multi-session output/cost/Insights readers and their caches are updated.
+- The runner exports the lane log and the current invocation's byte offset. The ceiling hook reads only the matching session in that range and records session/run-bound evidence in `ceiling-stop.json`. New-session startup cannot inherit the old context. A plain resume above soft is refused.
+- `lane-run handoff <Prompt-ID>` validates the six sections and seals the handoff, diff, original prompt, authorization and worktree fingerprint. The fingerprint includes HEAD, staged/unstaged differences and untracked file contents. No patch is applied. Missing handoffs get an explicitly incomplete mechanical recovery note that cannot restart unattended.
+- `lane-run resume --fresh <Prompt-ID>` creates a different provider session from the original task plus the handoff, preserving effective model, tier, effort and automatic-lane restrictions. Old input and run records remain. Failed startup keeps the old pointer and a pending record, refuses plain resume and supports an explicit fresh retry after inspection. It never interprets a question or an unrelated hard stop as a context continuation.
+- `lane-run wait <Prompt-ID> --continue-on-ceiling` opts into at most one eligible fresh launch during that wait invocation. It holds a transition lock through launch and verifies the session observed by that caller. Two waiters cannot launch twice. Status/board polling never launches work. `wait` retains its existing bounded polling window; a timeout requires another explicit wait, not a persistent background daemon.
+
+Examples (placeholders below are illustrative; no live lane was launched during implementation):
+
+```sh
+node frontend/scripts/lane-run.mjs start <worktree> <prompt-file> --objective feature-example
+node frontend/scripts/lane-objective.mjs link feature-example <Prompt-ID> --kind discovery --by operator --evidence <report-reference>
+node frontend/scripts/lane-objective.mjs link feature-example <correction-Prompt-ID> --kind correction --parent <original-Prompt-ID> --reason <defect> --by operator --evidence <reproduction-reference>
+node frontend/scripts/lane-objective.mjs accept feature-example --by operator --evidence <acceptance-reference>
+node frontend/scripts/lane-usage.mjs --objective feature-example --json
+node frontend/scripts/lane-run.mjs handoff <Prompt-ID>
+node frontend/scripts/lane-run.mjs resume --fresh <Prompt-ID>
+node frontend/scripts/lane-run.mjs wait <Prompt-ID> --continue-on-ceiling --max 170
+```
+
+The acceptance command records supplied evidence; it does not independently certify it. The architect's existing `architect.json` is never generated from guessed consumption. Future complete architect totals additionally need `source` and `launch.at`/`close.at` (epoch milliseconds or parseable timestamps).
+
+For unattended continuation the handoff must declare `Continuation: context-ceiling`, meaning the remaining work needs no new approval. If no seal exists, automatic sealing additionally requires `Session: <current provider ID>`, `Head: <current commit>`, optional `Base: <diff base>` (defaults to HEAD), a matching `git diff --binary <base>` and no untracked files. Otherwise an operator must inspect and seal it explicitly. Stale seals, unknown mechanical placeholders, changed authorization and runs reaching the existing 90-minute limit stop the automatic path. These are checks on recorded evidence, not a substitute for the original task's authorization constraints.
+
+### Validation evidence
+
+- Main area: **307/307 tests** in `laneRun`, `laneBoard`, `laneUsage`, `contextCeiling`, `laneObjective`, with actual child processes and local API fixtures (exit 0).
+- Connected paths: **57/57 tests** in `laneRunRouting`, `laneRunDirect`, `laneBoardInsights` (exit 0).
+- Final incremental guard: **8/8 fresh-continuation tests** after adding the incomplete-mechanical-handoff refusal and ensuring fixture logs end with a newline (exit 0). Seven overlap the main run; one is additional. The tests include two actual concurrent wait processes, startup failure and retry, worktree/handoff drift, explicit approval stops, automatic sealing and the one-continuation limit.
+- Mutation bench: **3/3 deliberately broken variants detected**, each exiting 1 with its intended assertion failure: (1) output from only the last session; (2) context reader ignoring session identity; (3) repeated automatic continuations using the current session instead of the original observed session and the one-shot guard. Mutations ran in separate temporary copies and were never applied to the working tree.
+- `npm run typecheck`, `npm run typecheck:scripts`, `npm run check:scripts`, JavaScript syntax checks and `git diff --check`: exit 0.
+- `npm run check:docs` on the aligned tree and both documentation updates: **5/5, exit 0, 124 warnings**. The warnings are not presented as a zero-warning result.
+- `npm run build -- --configLoader runner`: exit 0, production build completed in 57.39 s with the chunk-size warning. The plain build attempt failed because Vite's bundled config loader writes through the shared node_modules symlink; the runner loader avoids that external write. No package/configuration change was required.
+- The first unrestricted area run identified three compatibility failures; they were fixed (legacy running subtotal and missing-session refusal wording) before the passing 307-test run. An earlier restricted run could not open local test servers and was interrupted, exit 130; it is not counted as a passing run. One subsequent authorization-review attempt did not execute because the review service hit a usage limit; after Alfonso's «prosegui» the full local-server run was approved and passed.
+- Product UI was not changed or visually smoke-tested. The dashboard's numeric paths were exercised through its real local API fixtures and rendering assertions; no live provider, live archive or subscription charge was used as a test fixture.
+
+AM-9/multi-slice `next`, inferred historical objective identity, automatic architect capture, permanent restart supervision and new financial savings estimates remain outside this delivery. This implements the approved two priorities without claiming that every historical B8a item is finished.
