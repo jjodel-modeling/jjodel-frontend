@@ -1,7 +1,7 @@
 import React from 'react';
 import { Select, Input, ColorPicker, ConditionalEditor, isConditionalValue, type PathBuilderFeatures } from '../../../ui';
 import { toRules } from '../../../ui/ConditionalEditor/conditional';
-import type { TextStyle, FontFamilyToken, FontWeightToken, Conditional } from '../ir/irTypes';
+import type { TextStyle, FontFamilyToken, FontWeightToken, TextTransformToken, Conditional } from '../ir/irTypes';
 
 const FAMILY_OPTIONS = [
     { value: 'sans', label: 'Sans' },
@@ -21,6 +21,12 @@ const STYLE_OPTIONS = [
 const UNDERLINE_OPTIONS = [
     { value: 'true', label: 'On' },
     { value: 'false', label: 'Off' },
+];
+/** `none` is an authored value (the text as written), distinct from the unset "Default" (the surface's CSS). */
+const CASE_OPTIONS = [
+    { value: 'uppercase', label: 'Uppercase' },
+    { value: 'lowercase', label: 'Lowercase' },
+    { value: 'none', label: 'None' },
 ];
 
 const COLOR_SEED = '#334155';
@@ -304,6 +310,41 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
+            {/* Scalar axes (R-VP-20): plain values in irTypes, not Conditional, so these rows have no ƒx. */}
+            <div className="jj-textstyle-row">
+                <div className="jj-textstyle-row__main">
+                    <span className="jj-textstyle-row__label" title="Letter spacing">Spacing</span>
+                    <div className="jj-textstyle-row__control">
+                        <div className="jj-textstyle-size">
+                            <Input
+                                type="number"
+                                step={0.01}
+                                placeholder="Default"
+                                value={value?.letterSpacing ?? ''}
+                                onChange={(e) => {
+                                    const t = e.target.value;
+                                    if (t === '') patch({ letterSpacing: undefined });
+                                    else if (Number.isFinite(Number(t))) patch({ letterSpacing: Number(t) });
+                                }}
+                            />
+                            <span className="jj-textstyle-size__suffix">em</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="jj-textstyle-row">
+                <div className="jj-textstyle-row__main">
+                    <span className="jj-textstyle-row__label">Case</span>
+                    <div className="jj-textstyle-row__control">
+                        <Select
+                            placeholder="Default"
+                            options={CASE_OPTIONS}
+                            value={value?.textTransform ?? ''}
+                            onChange={(e) => patch({ textTransform: e.target.value === '' ? undefined : (e.target.value as TextTransformToken) })}
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
