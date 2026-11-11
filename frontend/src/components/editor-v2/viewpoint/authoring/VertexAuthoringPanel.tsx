@@ -5,7 +5,7 @@ import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, C
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
-import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } from '../ir/irTypes';
+import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec, EntryMark, Conditional } from '../ir/irTypes';
 import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
@@ -85,7 +85,51 @@ const PADDING_OPTIONS = [
     { value: 'large', label: 'Large' },
 ];
 
+/** Entry mark (asse entry, R-VP-22): closed vocabulary of irTypes `EntryMark`. '' = no mark,
+ *  the key is removed from the IR, not persisted empty. */
+const ENTRY_OPTIONS = [
+    { value: '', label: 'None' },
+    { value: 'dot', label: 'Dot' },
+    { value: 'arrow', label: 'Arrow' },
+];
+
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
+
+// --- pure writers of the S1a keys (exported for unit tests) ---
+// Each replaces one key and spreads the rest; a reset removes the key (rest/spread, not
+// `undefined`), so a view whose key was set and reset round-trips byte-identical to one
+// that never carried it (R-IPC-7).
+
+/** The view after a new `visible`; `true` or `undefined` drops the key (absent = drawn). A Conditional is written as is. */
+export function withVertexVisible(ir: VertexViewIR, next: Conditional<boolean> | undefined): VertexViewIR {
+    if (next === undefined || next === true) {
+        const { visible: _dropped, ...rest } = ir;
+        return rest;
+    }
+    return { ...ir, visible: next };
+}
+
+/** The view after a new `shape.entry`; `undefined` drops the key (absent = no mark). */
+export function withShapeEntry(ir: VertexViewIR, next: EntryMark | undefined): VertexViewIR {
+    if (next === undefined) {
+        const { entry: _dropped, ...shape } = ir.shape;
+        return { ...ir, shape };
+    }
+    return { ...ir, shape: { ...ir.shape, entry: next } };
+}
+
+/**
+ * The view after an edit of the bar thickness field. An empty field drops the key (absent = the bar drawn
+ * as its box); anything else is written as the number typed, and a value that is not usable is refused by
+ * validateIR, which shows the error line, as for the default size.
+ */
+export function withBarThickness(ir: VertexViewIR, raw: string): VertexViewIR {
+    if (raw.trim() === '') {
+        const { barThickness: _dropped, ...shape } = ir.shape;
+        return { ...ir, shape };
+    }
+    return { ...ir, shape: { ...ir.shape, barThickness: Number(raw) } };
+}
 
 const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
@@ -719,6 +763,42 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                             : 'Rounds every vertex of the shape — rectangles, diamonds, hexagons, parallelograms alike. 0 keeps sharp corners.'}
                     </HelpText>
                 </div>
+
+                {/* Entry mark (R-VP-22): scalar like Padding, never Conditional, so a plain
+                    Select; None removes the key, like None for the marker. */}
+                <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                    <label className="jj-field-label">Entry mark</label>
+                    <Select
+                        options={ENTRY_OPTIONS}
+                        value={shape.entry ?? ''}
+                        onChange={(e) => {
+                            const v = e.target.value as EntryMark | '';
+                            patch(withShapeEntry(draft, v === '' ? undefined : v));
+                        }}
+                    />
+                    <HelpText icon={false}>Drawn outside the box, on its left: Dot is the initial pseudostate of a statechart, Arrow the start arrow of an automaton.</HelpText>
+                </div>
+
+                {/* Bar thickness (R-VP-57): read by the bar only, so the field shows on a bar,
+                    on a Conditional form (its branches may be a bar, as for the radius), and
+                    wherever a value is already written, so it can still be cleared. Empty =
+                    absent, the bar drawn as its box, as for the default size. */}
+                {(scalarForm === undefined || scalarForm === 'bar' || shape.barThickness !== undefined) && (
+                    <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                        <label className="jj-field-label">
+                            Bar thickness <span style={{ color: '#94a3b8' }}>· px</span>
+                        </label>
+                        <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            placeholder="box"
+                            value={shape.barThickness ?? ''}
+                            onChange={(e) => patch(withBarThickness(draft, e.target.value))}
+                        />
+                        <HelpText icon={false}>A bar with a thickness keeps a square box and turns towards its neighbours. Empty draws the bar as its box.</HelpText>
+                    </div>
+                )}
             </FormSection>
             </div>
 
@@ -931,6 +1011,24 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         </div>
                     </div>
                     <HelpText icon={false}>Size in px of every instance not resized by hand. Empty follows the content.</HelpText>
+                </div>
+            </FormSection>
+
+            {/* Visibility (P-2026-10-03-1304 Q7, R-VP-54): the graphVertex panel's control. On
+                drops the key (absent = drawn); a Conditional decides per object. */}
+            <FormSection title="Visibility" divider={false}>
+                <div className="jj-field" data-testid="vertex-visible">
+                    <ConditionalEditor<boolean>
+                        value={draft.visible}
+                        onChange={(next) => patch(withVertexVisible(draft, next))}
+                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="Drawn" size="xs" />}
+                        defaultValue={true}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                    />
+                    <HelpText icon={false}>Off hides the object on the canvas; it stays in the model and in the tree.</HelpText>
                 </div>
             </FormSection>
             </div>

@@ -41,11 +41,29 @@ export function classifyChildFilter(filter: Predicate | undefined): ChildFilterK
  * Only ever called from the Select onChange (a deliberate user action), never on
  * mount/re-render — so it never rewrites a source implicitly. Switching to
  * `children` starts with no filter; other fields (id, rowFormat, visible) are kept.
+ * A pick of `attributes` on a source that is already `attributes` keeps its `exclude`
+ * (R-VP-20); a switch to another source drops it, since the validator refuses it there.
  */
 export function withCompartmentSource(comp: FieldCompartmentSpec, from: string): FieldCompartmentSpec {
     if (from === 'children') return { ...comp, source: { from: 'children' } };
     if (from === 'references') return { ...comp, source: { from: 'references' } };
+    if (comp.source.from === 'attributes') return { ...comp, source: { ...comp.source, from: 'attributes' } };
     return { ...comp, source: { from: 'attributes' } };
+}
+
+/**
+ * Rebuild an `attributes` source's `exclude` (R-VP-20). An empty list or `undefined` drops the
+ * KEY (absent = every slot, which is what an empty list draws too), so a list emptied item by item
+ * round-trips byte-identical to a source authored without one. Any other source is returned as is:
+ * `exclude` belongs to the attributes source only.
+ */
+export function withSourceExclude(comp: FieldCompartmentSpec, exclude: string[] | undefined): FieldCompartmentSpec {
+    if (comp.source.from !== 'attributes') return comp;
+    if (exclude === undefined || exclude.length === 0) {
+        const { exclude: _dropped, ...source } = comp.source;
+        return { ...comp, source };
+    }
+    return { ...comp, source: { ...comp.source, exclude } };
 }
 
 /**
@@ -186,6 +204,11 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                 const isAdvancedFilter = childFilterKind === 'advanced';
                 const setChildFilter = (next: Predicate | undefined) => replace(index, withChildFilter(comp, next));
 
+                // --- excluded slots (attributes source only, R-VP-20) ---
+                const exclude = comp.source.from === 'attributes' ? (comp.source.exclude ?? []) : [];
+                const setExclude = (next: string[]) => replace(index, withSourceExclude(comp, next));
+                const attributeNames = (features?.attributes ?? []).map((a) => a.name);
+
                 return (
                     <>
                         <div className="jj-field">
@@ -236,6 +259,43 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                         )}
                                     </>
                                 )}
+                            </div>
+                        )}
+
+                        {comp.source.from === 'attributes' && (
+                            <div className="jj-field">
+                                <label className="jj-field-label">Excluded slots</label>
+                                <ListEditor<string>
+                                    items={exclude}
+                                    onRemove={(xi) => setExclude(exclude.filter((_, k) => k !== xi))}
+                                    onMove={(xi, delta) => {
+                                        const j = xi + delta;
+                                        if (j < 0 || j >= exclude.length) return;
+                                        const n = [...exclude];
+                                        [n[xi], n[j]] = [n[j], n[xi]];
+                                        setExclude(n);
+                                    }}
+                                    onAdd={() => setExclude([...exclude, attributeNames.find((n) => !exclude.includes(n)) ?? ''])}
+                                    addLabel="Add slot"
+                                    emptyHint="Every slot draws a row."
+                                    itemLabel={(name, xi) => name || `Slot #${xi + 1}`}
+                                    renderItem={(name, xi) => {
+                                        const setName = (v: string) => setExclude(exclude.map((x, k) => (k === xi ? v : x)));
+                                        // A name outside the metaclass (a renamed feature, no metaclass
+                                        // set) stays an option, so the Select never rewrites it.
+                                        const options = attributeNames.includes(name) ? attributeNames : [name, ...attributeNames];
+                                        return attributeNames.length > 0 ? (
+                                            <Select
+                                                options={options.map((n) => ({ value: n, label: n }))}
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                            />
+                                        ) : (
+                                            <Input value={name} placeholder="Feature name" onChange={(e) => setName(e.target.value)} />
+                                        );
+                                    }}
+                                />
+                                <HelpText icon={false}>Slots that draw no row on the symbol, such as the one the name label already shows. A form still lists every feature.</HelpText>
                             </div>
                         )}
 
