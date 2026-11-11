@@ -5,7 +5,7 @@ Chat: C-2026-11-11-1925
 Front: maintenance
 Lane: fast (missing controls listed by P-2026-11-11-1925, slice S1 of its report §6, R-IPC-11; UI only, `irValidate` already names every key; outside the critical zone)
 Depends: P-2026-11-11-2025
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane fast · f4c06dcc2 · gates green (typecheck 0, build, authoring 376/376, unit 16099 passed, 3 known import failures) · visual check skipped (no smoke scene opens a TextStyle popover) · log entry in docs/log-inbox/maintenance.md
 Request: https://claude.ai/code/session_01DQt9R2kJaz9XevLeJNUgpJ
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt states an exception).
