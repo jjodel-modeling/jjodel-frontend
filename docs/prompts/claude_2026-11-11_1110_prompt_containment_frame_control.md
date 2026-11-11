@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-11-1110
 Chat: C-2026-11-11-1056
 Front: graphvertex
 Lane: full (discovery with hard stop, then Phase 2 after GO; outside the critical zone: `viewpoint/authoring/` only)
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane graphvertex · 688331972 · verifica visiva passata 2026-11-11
 Request: https://claude.ai/code/session_01DQt9R5SCzZiKCPw8vWw73h
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
