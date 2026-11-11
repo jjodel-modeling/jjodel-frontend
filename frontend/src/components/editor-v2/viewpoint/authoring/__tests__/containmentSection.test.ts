@@ -59,11 +59,11 @@ function block(html: string, id: string): string {
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ').trim();
 
-const BASIC = ['gv-channel', 'gv-layout-mode', 'gv-edges'];
+const BASIC = ['gv-channel', 'gv-layout-mode', 'gv-frame', 'gv-edges'];
 const ADVANCED = ['gv-child-filter', 'gv-header', 'gv-padding', 'gv-membership', 'gv-collapsible'];
 
 describe('ContainmentSection — progressive disclosure', () => {
-    it('Basic shows the channel, the layout mode and the channel edges, and nothing else', () => {
+    it('Basic shows the channel, the layout mode, the frame and the channel edges, and nothing else', () => {
         const ids = testIds(render({ advanced: false }));
         for (const id of BASIC) expect(ids).toContain(id);
         for (const id of [...ADVANCED, 'gv-membership-create', 'gv-header-size', 'gv-layout-axis', 'gv-collapsed']) {
@@ -86,6 +86,38 @@ describe('ContainmentSection — progressive disclosure', () => {
         expect(ids).toContain('gv-collapsed');
         expect(ids).not.toContain('gv-membership-create');
         expect(ids).not.toContain('gv-header-size');
+        // Partitions are always their own frame (spec addendum §11): no Frame row.
+        expect(ids).not.toContain('gv-frame');
+    });
+});
+
+describe('ContainmentSection — the frame, free only (S2b, spec addendum §11)', () => {
+    const SEED: GraphVertexViewIR = { ...graphVertexSeedIR(), metaclasses: ['Lane'], label: 'Lane' };
+    const frameRow = (draft: GraphVertexViewIR) => block(render({ draft }), 'gv-frame');
+    const checked = (html: string) => [...html.matchAll(/aria-checked="true"[^>]*><span>([^<]+)<\/span>/g)].map(m => m[1]);
+
+    it('no layout: «Around children» checked, and the hull drawn around the node and its children', () => {
+        const row = frameRow(SEED);
+        expect(checked(row)).toEqual(['Around children']);
+        expect(text(row)).toContain('A frame is drawn around this node and its children.');
+    });
+
+    // The hull hint keys on the declared layout, the renderer's own test (IRContainmentHulls skips any container with
+    // one): a bare `{ mode: 'free' }` from outside the panel draws no hull either, though it has no band and no padding.
+    it('a band, a padding or a bare free layout without a frame: the node keeps its own size, no hull', () => {
+        for (const layout of [LEAF_LANE.containment.layout, { mode: 'free' as const, padding: 16 }, { mode: 'free' as const }]) {
+            const row = frameRow({ ...SEED, containment: { layout } });
+            expect(checked(row)).toEqual(['Around children']);
+            expect(text(row)).toContain('This node keeps its own size; no frame is drawn around its children.');
+            expect(text(row)).not.toContain('A frame is drawn around');
+        }
+    });
+
+    it('frame self: «This node» checked, the node is the container', () => {
+        const row = frameRow({ ...SEED, containment: { layout: { mode: 'free', frame: 'self', header: { side: 'n', size: 30 }, padding: 16 } } });
+        expect(checked(row)).toEqual(['This node']);
+        expect(text(row)).toContain('This node is the container: its children are drawn inside its box.');
+        expect(text(row)).not.toContain('keeps its own size');
     });
 });
 

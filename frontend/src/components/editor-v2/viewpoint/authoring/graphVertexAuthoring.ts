@@ -9,8 +9,8 @@
  * One idiom throughout, the one the vertex panel follows (`omitForm`, `withChildFilter`, the padding preset): a
  * default is the ABSENCE of the key, written by rest/spread, never as `key: undefined`; a group whose last key goes
  * away goes away with it. Two exceptions, both because the value is a choice the author sees and not a fallback: the
- * stacking axis is written when the mode becomes `partitions`, and `layout.mode` stays while the layout holds a band
- * or a padding (it is required there).
+ * stacking axis is written when the mode becomes `partitions`, and `layout.mode` stays while the layout holds a band,
+ * a padding or a frame (it is required there).
  *
  * The metamodel checks (whether the channel's last hop is containment, and which membership modes that admits) are
  * here too, as functions of a class lookup the panel builds from the project metamodels: `validateIR` has no
@@ -19,8 +19,8 @@
 
 import { parsePathExpr } from '../ir/pathExpr';
 import type {
-    BadgeSpec, ChannelEdges, ContainmentLayout, ContainmentLayoutMode, Conditional, GraphVertexViewIR, HeaderSide,
-    MembershipMode, PartitionAxis, Predicate, ShapeForm,
+    BadgeSpec, ChannelEdges, ContainerFrame, ContainmentLayout, ContainmentLayoutMode, Conditional, GraphVertexViewIR,
+    HeaderSide, MembershipMode, PartitionAxis, Predicate, ShapeForm,
 } from '../ir/irTypes';
 
 export type GraphVertexContainment = GraphVertexViewIR['containment'];
@@ -171,10 +171,11 @@ export function withChildFilter(ir: GraphVertexViewIR, next: Predicate | undefin
 
 // ── Layout (R-GV-5) ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/** The layout after an edit, or undefined when what is left is the default (`free`, no band, no padding). */
+/** The layout after an edit, or undefined when what is left is the default (`free`, no band, no padding, no frame). */
 function normalLayout(layout: ContainmentLayout): ContainmentLayout | undefined {
-    const { mode, axis, header, padding } = layout;
-    if (mode === 'free' && axis === undefined && header === undefined && padding === undefined) return undefined;
+    const { mode, axis, header, padding, frame, separator } = layout;
+    if (mode === 'free' && axis === undefined && header === undefined && padding === undefined
+        && frame === undefined && separator === undefined) return undefined;
     return layout;
 }
 
@@ -185,18 +186,29 @@ const withLayoutOf = (ir: GraphVertexViewIR, next: ContainmentLayout): GraphVert
 
 /**
  * The view after a new layout mode. `partitions` writes the stacking axis when none is declared (the select shows
- * it, so it is a choice and not a fallback); `free` drops the axis, which applies to partitions only.
+ * it, so it is a choice and not a fallback) and drops the frame, which applies to free only; `free` drops the axis
+ * and the separator, which apply to partitions only. `validateIR` refuses either key off its mode (S2b, spec
+ * addendum §11), so the switch removes it in the same write.
  */
 export function withLayoutMode(ir: GraphVertexViewIR, mode: ContainmentLayoutMode): GraphVertexViewIR {
     const { axis, ...rest } = layoutOf(ir);
-    return withLayoutOf(ir, mode === 'partitions'
-        ? { ...rest, mode, axis: axis ?? 'vertical' }
-        : { ...rest, mode });
+    if (mode === 'partitions') {
+        const { frame: _dropped, ...partitions } = rest;
+        return withLayoutOf(ir, { ...partitions, mode, axis: axis ?? 'vertical' });
+    }
+    const { separator: _dropped, ...free } = rest;
+    return withLayoutOf(ir, { ...free, mode });
 }
 
 /** The view after a new stacking axis (partitions only; the panel offers it there alone). */
 export function withLayoutAxis(ir: GraphVertexViewIR, axis: PartitionAxis): GraphVertexViewIR {
     return withLayoutOf(ir, { ...layoutOf(ir), axis });
+}
+
+/** The view after a new frame (free only; the panel offers it there alone); `hull` drops the key (absent = hull). */
+export function withLayoutFrame(ir: GraphVertexViewIR, frame: ContainerFrame): GraphVertexViewIR {
+    const { frame: _dropped, ...rest } = layoutOf(ir);
+    return withLayoutOf(ir, frame === 'self' ? { ...rest, frame: 'self' } : rest);
 }
 
 /** The view after a new band side; 'none' drops the band. A new band starts at DEFAULT_HEADER_SIZE. */
