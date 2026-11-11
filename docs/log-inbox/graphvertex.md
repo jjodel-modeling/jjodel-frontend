@@ -77,3 +77,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — Alfonso, localhost:3001 from ~/jjodel-w-gvframe, Advanced on, 2026-11-11 22:50 («View for Page»: one Page_0 box, title in the top band, no hull)
 **Notes**: normalLayout now counts frame: before, «This node» alone wrote nothing. The hull hint keys on the declared layout, as IRContainmentHulls does: a bare {mode:'free'} draws no hull, so it gets the own-size line. Bench 5/5 killed (normalLayout without frame, Partitions keeping frame, Free keeping separator, row on Partitions, hint on band/padding). Gates: typecheck 0 (before 0), vitest viewpoint+utils 2520/2520, build 0.
 **Prompt document name**: 2026-11-11 11:10
+
+## 2026-11-11 — merge: gv-frame-control into alfonso-frontend-jjtl (P-2026-11-11-2255)
+**Prompt**: `claude_2026-11-11_2255_prompt_merge_gv-frame-control.md`, a direct merge by `lane-run merge --direct`, no session: `gv-frame-control` at `ac4fb1dbb` into `alfonso-frontend-jjtl`, merge base `1f6829e18`, 3 commits on the branch side.
+**Files touched**: merge `1241b2db3`: 7 files from the branch side (`docs/discovery/discovery_2026-11-11_containment_frame_control.md`, `docs/log-inbox/graphvertex.md`, `docs/prompts/claude_2026-11-11_1110_prompt_containment_frame_control.md`, `frontend/src/components/editor-v2/viewpoint/authoring/ContainmentSection.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/containmentSection.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/graphVertexAuthoring.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/graphVertexAuthoring.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1241b2db3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16199 tests in 617 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. Alfonso visual GO passed at 22:50 on localhost:3001 (branch gv-frame-control): View for Page with Frame = This node, header Top, padding 16 shows one Page_0 box with Content_0 and Content_1 inside, no dashed frame, no second Page_0.
+**Notes**: Rollback tag `pre-gv-frame-control` on `8b796480f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2255/result.json`.
+**Prompt document name**: 2026-11-11 22:55

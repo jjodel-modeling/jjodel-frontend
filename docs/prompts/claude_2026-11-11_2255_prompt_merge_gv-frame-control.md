@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-11-2255
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane merge · 1241b2db3 · verifica visiva passata 2026-11-11 (Gates green on the merge tip. Alfonso visual GO passed at 22:50 on localhost:3001 (branch gv-frame-control): View for Page with Frame = This node, header Top, padding 16 shows one Page_0 box with Content_0 and Content_1 inside, no dashed frame, no second Page_0.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-11-2255 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
