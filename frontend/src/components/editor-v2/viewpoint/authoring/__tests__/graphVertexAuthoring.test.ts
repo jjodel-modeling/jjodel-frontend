@@ -18,8 +18,8 @@ import { applyLabelOrientation, applyLabelPositionValue } from '../LabelEntryEdi
 import {
     admittedMembershipModes, channelExpr, channelFacts, channelHops, wholeListHop, withBorderAxis, withChannel,
     withChannelEdges, withChannelStep, withChildFilter, withCollapsedForm, withCollapsedKey, withCollapsible,
-    withDefaultSizeAxis, withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutMode, withLayoutPadding,
-    withMembershipCreate, withMembershipMode, withShape, withVisible, withoutCornerRadius, withoutLastChannelStep,
+    withDefaultSizeAxis, withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutFrame, withLayoutMode,
+    withLayoutPadding, withMembershipCreate, withMembershipMode, withShape, withVisible, withoutCornerRadius, withoutLastChannelStep,
     type ChannelClass,
 } from '../graphVertexAuthoring';
 import type { GraphVertexViewIR, LabelSpec, Predicate, VertexViewIR } from '../../ir/irTypes';
@@ -284,6 +284,39 @@ describe('every default is the absence of its key', () => {
         const p = withLayoutPadding(seed(), 8);
         expect(p.containment.layout).toEqual({ mode: 'free', padding: 8 });
         expect('layout' in withLayoutPadding(p, 0).containment).toBe(false);
+    });
+
+    it('frame: «This node» writes self, «Around children» removes the key, and the layout with it when nothing is left', () => {
+        const self = withLayoutFrame(seed(), 'self');
+        expect(self.containment.layout).toEqual({ mode: 'free', frame: 'self' });
+        expect(validateIR('t-gv-frame-self', self).ok).toBe(true);
+        expect('layout' in withLayoutFrame(self, 'hull').containment).toBe(false);
+        const band = { side: 'n', size: 30 };
+        const framed = withLayoutFrame(withLayoutPadding(withHeaderSide(seed(), 'n'), 16), 'self');
+        expect(framed.containment.layout).toEqual({ mode: 'free', header: band, padding: 16, frame: 'self' });
+        expect(validateIR('t-gv-frame-banded', framed).ok).toBe(true);
+        const hull = withLayoutFrame(framed, 'hull').containment.layout;
+        expect(hull).toEqual({ mode: 'free', header: band, padding: 16 });
+        expect(hull && 'frame' in hull).toBe(false);
+        // A frame is a key of its own: clearing the band and the padding keeps it, and Free again leaves it alone.
+        expect(withLayoutPadding(withHeaderSide(framed, 'none'), 0).containment.layout).toEqual({ mode: 'free', frame: 'self' });
+        expect(withLayoutMode(framed, 'free').containment.layout).toEqual(framed.containment.layout);
+    });
+
+    it('frame leaves on the switch to Partitions, separator on the switch to Free, each in the same write, valid', () => {
+        const band = { side: 'n', size: 30 };
+        const p = withLayoutMode(withLayoutFrame(withHeaderSide(seed(), 'n'), 'self'), 'partitions');
+        expect(p.containment.layout).toEqual({ mode: 'partitions', axis: 'vertical', header: band });
+        expect(validateIR('t-gv-frame-to-partitions', p).ok).toBe(true);
+        const dashed: GraphVertexViewIR = {
+            ...seed(), containment: { layout: { mode: 'partitions', axis: 'vertical', header: { side: 'n', size: 30 }, separator: 'dashed' } },
+        };
+        expect(validateIR('t-gv-dashed', dashed).ok).toBe(true);
+        const f = withLayoutMode(dashed, 'free');
+        expect(f.containment.layout).toEqual({ mode: 'free', header: band });
+        expect(validateIR('t-gv-separator-to-free', f).ok).toBe(true);
+        const bare: GraphVertexViewIR = { ...seed(), containment: { layout: { mode: 'partitions', separator: 'dashed' } } };
+        expect('layout' in withLayoutMode(bare, 'free').containment).toBe(false);
     });
 
     it('membership: none drops it; create lives on reference only and goes with it', () => {

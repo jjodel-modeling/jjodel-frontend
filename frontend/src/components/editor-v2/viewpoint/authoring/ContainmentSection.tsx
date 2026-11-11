@@ -4,20 +4,21 @@ import {
     SegmentedControl, Select, Toggle, forPredicateKind, type PathBuilderFeatures,
 } from '../../../ui';
 import type {
-    BadgePosition, ChannelEdges, ContainmentLayoutMode, GraphVertexViewIR, HeaderSide, MembershipMode, PartitionAxis,
-    Predicate, ShapeForm,
+    BadgePosition, ChannelEdges, ContainerFrame, ContainmentLayoutMode, GraphVertexViewIR, HeaderSide, MembershipMode,
+    PartitionAxis, Predicate, ShapeForm,
 } from '../ir/irTypes';
 import {
     DEFAULT_COLLAPSED_BADGE, admittedMembershipModes, channelFacts, channelHops, hopExpr, wholeListHop,
     withChannel, withChannelEdges, withChildFilter, withCollapsedForm, withCollapsedKey, withCollapsible,
-    withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutMode, withLayoutPadding, withMembershipCreate,
-    withMembershipMode, withChannelStep, withoutLastChannelStep, type ChannelClass, type ChannelFacts, type ChannelHop,
+    withHeaderSide, withHeaderSize, withLayoutAxis, withLayoutFrame, withLayoutMode, withLayoutPadding,
+    withMembershipCreate, withMembershipMode, withChannelStep, withoutLastChannelStep, type ChannelClass,
+    type ChannelFacts, type ChannelHop,
 } from './graphVertexAuthoring';
 
 export interface ContainmentSectionProps {
     draft: GraphVertexViewIR;
     patch: (next: GraphVertexViewIR) => void;
-    /** Global disclosure mode: Basic shows the channel, the layout mode and the channel edges; Advanced the rest. */
+    /** Global disclosure mode: Basic shows the channel, the layout mode, the frame and the channel edges; Advanced the rest. */
     advanced: boolean;
     /** The view's metaclass as the metamodel checks read it; null for the wildcard or an unresolved name. */
     rootClass: ChannelClass | null;
@@ -40,6 +41,10 @@ const CHANNEL_ARRAY_ERROR = 'A step before the last cannot read the whole list (
 const LAYOUT_MODE_OPTIONS: { value: ContainmentLayoutMode; label: string }[] = [
     { value: 'free', label: 'Free' },
     { value: 'partitions', label: 'Partitions' },
+];
+const FRAME_OPTIONS: { value: ContainerFrame; label: string }[] = [
+    { value: 'hull', label: 'Around children' },
+    { value: 'self', label: 'This node' },
 ];
 const EDGES_OPTIONS: { value: ChannelEdges; label: string }[] = [
     { value: 'show', label: 'Show' },
@@ -121,6 +126,7 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
     const admitted = admittedMembershipModes(facts);
     const membershipMode: MembershipMode = c.membership?.mode ?? 'none';
     const layoutMode: ContainmentLayoutMode = c.layout?.mode ?? 'free';
+    const frame: ContainerFrame = c.layout?.frame ?? 'hull';
     const header = c.layout?.header;
     const pathMode = hops.length > 0 || pendingStep;
 
@@ -168,7 +174,7 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
 
     return (
         <FormSection title="Containment" divider={false}>
-            {/* ── Basic: channel, layout mode, channel edges ── */}
+            {/* ── Basic: channel, layout mode, frame, channel edges ── */}
             <div className="jj-field" data-testid="gv-channel">
                 <label className="jj-field-label">Children</label>
                 <Select
@@ -217,6 +223,25 @@ export const ContainmentSection: React.FC<ContainmentSectionProps> = ({
                     ? 'The children are stacked and fill the container, like the lanes of a pool.'
                     : 'The children keep the positions they have.'}</HelpText>
             </div>
+
+            {/* Free only (spec addendum §11). Absent is the hull, which a declared layout (a band, a padding) replaces
+                with the node's own box at its stored size: IRContainmentHulls skips every container with a layout. */}
+            {layoutMode === 'free' && (
+                <div className="jj-field" data-testid="gv-frame">
+                    <label className="jj-field-label">Frame</label>
+                    <SegmentedControl<ContainerFrame>
+                        ariaLabel="What frames the children"
+                        value={frame}
+                        options={FRAME_OPTIONS}
+                        onChange={(v) => patch(withLayoutFrame(draft, v))}
+                    />
+                    <HelpText icon={false}>{frame === 'self'
+                        ? 'This node is the container: its children are drawn inside its box.'
+                        : c.layout === undefined
+                            ? 'A frame is drawn around this node and its children.'
+                            : 'This node keeps its own size; no frame is drawn around its children.'}</HelpText>
+                </div>
+            )}
 
             <div className="jj-field" data-testid="gv-edges">
                 <label className="jj-field-label">Channel edges</label>

@@ -64,3 +64,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: The M1 palette does not offer the children a container holds by reference (a Task into a BPMN lane, whose lanes hold flowNodeRefs): deriveDroppableChildMetaclasses (irInteraction.ts:158) adds only targets of containment refs of drop containers, so the BPMN palette offers Collaboration, Process and LaneSet and no Task; a Task cannot be dropped into a lane either.
 **Priority**: medium
 **Found in**: P-2026-10-21-1950
+
+## 2026-11-11 — feat(editor-v2): a «Frame» control for containment.layout.frame, hull or self (P-2026-11-11-1110)
+**Prompt**: Phase 1 discovery with hard stop, then Phase 2 after GO: a «Frame» row after «Layout» in the Containment section, Free only, «Around children» drops the key, «This node» writes `frame: 'self'`, one hint per state; Partitions drops `frame` and Free drops `separator` in the same write; tests; log entry and Status flip.
+**Files touched**: `docs/discovery/discovery_2026-11-11_containment_frame_control.md` (a9b88ee4d); `frontend/src/components/editor-v2/viewpoint/authoring/graphVertexAuthoring.ts`, `ContainmentSection.tsx`, `__tests__/graphVertexAuthoring.test.ts`, `__tests__/containmentSection.test.ts` (688331972); `docs/log-inbox/graphvertex.md`, `docs/prompts/claude_2026-11-11_1110_prompt_containment_frame_control.md` (closure commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no — seven files, all declared: the five of the discovery's touch list, the report (Phase 1) and the prompt's Status (GO)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, localhost:3001 from ~/jjodel-w-gvframe, Advanced on, 2026-11-11 22:50 («View for Page»: one Page_0 box, title in the top band, no hull)
+**Notes**: normalLayout now counts frame: before, «This node» alone wrote nothing. The hull hint keys on the declared layout, as IRContainmentHulls does: a bare {mode:'free'} draws no hull, so it gets the own-size line. Bench 5/5 killed (normalLayout without frame, Partitions keeping frame, Free keeping separator, row on Partitions, hint on band/padding). Gates: typecheck 0 (before 0), vitest viewpoint+utils 2520/2520, build 0.
+**Prompt document name**: 2026-11-11 11:10
