@@ -1010,3 +1010,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Mounts mirror the vertex panel's (Padding Advanced only, compartments behind structureCapabilities). Resets drop the key by rest/spread, also the last badge or compartment removed (the vertex panel keeps [] and writes key: undefined there; not touched). graphVertexAuthoring.ts untouched. Negative control: reset writing key: undefined, 7 failed / 6 passed. Gates: typecheck 0, authoring 475/475, unit 16209 + 3 known import failures, build 0. No graphVertex smoke scene.
 **Prompt document name**: 2026-11-11 23:15
+
+## 2026-11-11 — merge: ir-panel-s4a into alfonso-frontend-jjtl (P-2026-11-11-2321)
+**Prompt**: `claude_2026-11-11_2321_prompt_merge_ir-panel-s4a.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s4a` at `a0567c6fc` into `alfonso-frontend-jjtl`, merge base `2d05fdcee`, 3 commits on the branch side.
+**Files touched**: merge `52a92fca1`: 5 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2315_prompt_ir_panel_s4a.md`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/irPanelS4a.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/panelSections.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `52a92fca1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16212 tests in 618 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No graphVertex panel scene in the smoke harness; covered by irPanelS4a tests with negative control. Alfonso visual GO owed on localhost:3000: graphVertex Appearance padding, marker with rules table, entry, bar thickness, text style, badges, field compartments.
+**Notes**: Rollback tag `pre-ir-panel-s4a` on `2d05fdcee` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2321/result.json`.
+**Prompt document name**: 2026-11-11 23:21
