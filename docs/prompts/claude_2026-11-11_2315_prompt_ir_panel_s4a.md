@@ -5,7 +5,7 @@ Chat: C-2026-11-11-1925
 Front: maintenance
 Lane: fast (missing controls listed by P-2026-11-11-1925, slice S4 of its report §6, R-IPC-11; UI only, `irValidate` already names every key; outside the critical zone)
 Depends: P-2026-11-11-2140, P-2026-11-11-1110
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane ir-panel-s4a · 719be490a · visual GO owed on localhost:3000 after the merge
 Request: https://claude.ai/code/session_01DQt9R2kJaz9XevLeJNUgpJ
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt states an exception).

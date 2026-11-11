@@ -997,3 +997,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by irPanelS3 and irS3Keys tests with negative control. validateIR runs only at authoring, so the new checks cannot take a saved view off the canvas. Alfonso visual GO owed on localhost:3000: edge view General section label, label placement select, Save the layout toggle, caption field on an expression text source.
 **Notes**: Rollback tag `pre-ir-panel-s3` on `99f62d9c8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2148/result.json`.
 **Prompt document name**: 2026-11-11 21:48
+
+## 2026-11-11 — feat: IR view panel S4a, graphVertex shape keys, badges, compartments (P-2026-11-11-2315)
+**Prompt**: `claude_2026-11-11_2315_prompt_ir_panel_s4a.md`, fast lane, slice S4 of the IR view panel coverage audit (R-IPC-11): graphVertex parity for `shape.padding`, `marker`, `entry`, `barThickness`, `text`, `badges` and `fieldCompartments` (G-19..G-24, G-33), UI only
+**Files touched**: `719be490a`: `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/__tests__/irPanelS4a.test.ts` (new), `authoring/__tests__/panelSections.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2315_prompt_ir_panel_s4a.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Mounts mirror the vertex panel's (Padding Advanced only, compartments behind structureCapabilities). Resets drop the key by rest/spread, also the last badge or compartment removed (the vertex panel keeps [] and writes key: undefined there; not touched). graphVertexAuthoring.ts untouched. Negative control: reset writing key: undefined, 7 failed / 6 passed. Gates: typecheck 0, authoring 475/475, unit 16209 + 3 known import failures, build 0. No graphVertex smoke scene.
+**Prompt document name**: 2026-11-11 23:15
