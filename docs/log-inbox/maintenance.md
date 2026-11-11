@@ -867,3 +867,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. Chat visual check not run: no graphVertex scene in the smoke harness and 3001 down; the change is covered by tests (literal style kept, conditional corner radius not overwritten, negative control fails on the old line). Alfonso visual GO owed on localhost:3000: graphVertex Appearance tab, conditional radius shows chip in Basic and rules in Advanced.
 **Notes**: Rollback tag `pre-ir-panel-s0` on `191a97892` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2028/result.json`.
 **Prompt document name**: 2026-11-11 20:28
+
+## 2026-11-11 — feat: IR view panel S1a, vertex visible, entry, bar thickness, exclude, literal style (P-2026-11-11-2035)
+**Prompt**: `claude_2026-11-11_2035_prompt_ir_panel_s1a.md`, fast lane, slice S1 of the IR view panel coverage audit (R-IPC-11): controls for audit rows V-12 vertex `visible`, V-21 `shape.entry`, V-22 `shape.barThickness`, V-48 compartment `source.exclude` (and `withCompartmentSource` keeping it), V-53 literal segment `style`; UI only
+**Files touched**: `043b9cc02`: `authoring/VertexAuthoringPanel.tsx`, `authoring/FieldCompartmentListEditor.tsx`, `authoring/FieldSegmentEditor.tsx`, `authoring/__tests__/irPanelS1a.test.ts` (new), `authoring/__tests__/panelSections.test.ts` (vertex snapshot gains Visibility); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2035_prompt_ir_panel_s1a.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (seven files across two commits, all in the declared scope)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates: typecheck 0, build, authoring 384/384, unit 16105 passed, 3 known import failures, 2 timing budgets red under load and green alone (126/126). Negative control: entry reset writing `undefined` fails 2 of 21. Bar thickness shows on a bar, a Conditional form, or a set value. Literal TextStyleField without features (no optional prop added to FieldSegmentEditorProps). No smoke scene for the vertex panel.
+**Prompt document name**: 2026-11-11 20:35
