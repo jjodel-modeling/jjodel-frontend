@@ -5,7 +5,7 @@ Chat: C-2026-11-11-1925
 Front: maintenance
 Lane: full (discovery only, hard stop at the end; no Phase 2 in this prompt; outside the critical zone, read-only)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-11-11 · lane full · 419b31657 · discovery only, hard stop · log entry in docs/log-inbox/maintenance.md
 Request: https://claude.ai/code/session_01DQt9R2kJaz9XevLeJNUgpJ
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt states an exception).

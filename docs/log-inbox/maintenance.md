@@ -826,3 +826,18 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile (no UI change by hand; build only)
 **Notes**: No R- id collision (only R-GEN-18 differs, trunk-only edit). Bench: staging's send() fails 4 of the 5 ported tests. No runtime caller of jjodel-ai-proxy left. npm ci (lockfile differs), no symlink. Detail in the report.
 **Prompt document name**: 2026-11-04 16:40
+
+## 2026-11-11 — discovery: IR coverage of the view properties panel (P-2026-11-11-1925)
+**Prompt**: `claude_2026-11-11_1925_prompt_ir_view_panel_coverage.md`, full lane, discovery only with hard stop, read-only on code: for every IR field a view can carry (vertex, graphVertex, edge, row), does the view properties panel read and write it, or only the Source tab; inventory, drift, orphans, totals, Phase 2 slices, questions
+**Files touched**: `419b31657`: `docs/discovery/discovery_2026-11-11_ir_view_panel_coverage.md` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_1925_prompt_ir_view_panel_coverage.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only, no code touched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 157 rows: 82 covered, 38 partial, 21 missing, 15 out of scope by decision, 1 in progress (gV frame, P-2026-11-11-1110). Ran over three sessions (two context-ceiling continuations). A zsh sweep with an unquoted multi-file variable failed silently in continuation 1 and was rerun with an array. v1.2 incorporates v1.1 by reference; the v1.1 base drift is in report §3. Ten questions in the report.
+**Prompt document name**: 2026-11-11 19:25
+
+**Ticket** (data loss, read at `bb7821a10`): `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx:64` rebuilds a literal segment as `{ kind: 'literal', text }` and drops a persisted `literal.style` on any edit of the text; the gV cornerRadius control overwrites a persisted Conditional on first edit (`GraphVertexAuthoringPanel.tsx:325-333`, `shapeRegistry.ts:467-468`). Slice S0 of the report.
