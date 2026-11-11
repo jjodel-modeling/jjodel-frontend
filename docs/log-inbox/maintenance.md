@@ -984,3 +984,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Step 1: validateIR is authoring-only (panels, creation seed); the render never calls it, so sibling severity (ok: false) takes no saved view off the canvas. View label drops the key when emptied (vertex keeps ''). Placement menu: above, below; Auto is the empty option. Negative control: persistWaypoints reset writing undefined, 1 failed / 20 passed. Gates: typecheck 0, unit 16191 passed + 3 known import failures, build. No smoke scene with an IR edge view.
 **Prompt document name**: 2026-11-11 21:40
+
+## 2026-11-11 — merge: ir-panel-s3 into alfonso-frontend-jjtl (P-2026-11-11-2148)
+**Prompt**: `claude_2026-11-11_2148_prompt_merge_ir-panel-s3.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s3` at `e21bb3d52` into `alfonso-frontend-jjtl`, merge base `99f62d9c8`, 3 commits on the branch side.
+**Files touched**: merge `7397be79f`: 8 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2140_prompt_ir_panel_s3.md`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/TextSourceEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/irPanelS3.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/panelSections.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irS3Keys.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irValidate.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7397be79f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16194 tests in 617 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by irPanelS3 and irS3Keys tests with negative control. validateIR runs only at authoring, so the new checks cannot take a saved view off the canvas. Alfonso visual GO owed on localhost:3000: edge view General section label, label placement select, Save the layout toggle, caption field on an expression text source.
+**Notes**: Rollback tag `pre-ir-panel-s3` on `99f62d9c8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2148/result.json`.
+**Prompt document name**: 2026-11-11 21:48
