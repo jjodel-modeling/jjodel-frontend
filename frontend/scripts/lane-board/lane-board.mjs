@@ -732,7 +732,7 @@ let ivMem = { at: 0, v: new Map() };
 const intervals = () => { if (Date.now() - ivMem.at > CACHE_MS) ivMem = { at: Date.now(), v: LU.allIntervals() }; return ivMem.v; };
 
 /** The numbers the board shows from one laneUsage() result. In: input, cache_read and cache_creation of the main calls;
- *  Out: the output of the last modelUsage, all models (the per-call output is the count at stream start); null throughout
+ *  Out: the final modelUsage of each distinct session, all models (per-call output is partial); null throughout
  *  when the lane has no main call. Sub: the four classes of the subagent calls, kept out of In. */
 export function tokensOf(u) {
     const sum = (block, out) => Object.values(block).reduce((a, c) => a + c.input + c.cacheRead + c.cacheCreation + (out ? c.output : 0), 0);
@@ -740,7 +740,8 @@ export function tokensOf(u) {
     const tokensIn = calls ? sum(u.main, false) : null;
     const tokensOut = calls && u.resultOutput ? Object.values(u.resultOutput).reduce((a, v) => a + (v || 0), 0) : null;
     return {
-        tokensIn, tokensOut, tokensTotal: calls ? tokensIn + (tokensOut || 0) : null, ctxMax: calls ? u.context.max : null,
+        // Preserve the legacy single-session running subtotal; a fresh session must not hide missing earlier output.
+        tokensIn, tokensOut, tokensTotal: calls && !(u.sessions?.length > 1 && tokensOut === null) ? tokensIn + (tokensOut || 0) : null, ctxMax: calls ? u.context.max : null,
         tokensSub: sum(u.subagents, true), at200k: u.context.atOrAbove200k, at250k: u.context.atOrAbove250k,
         sevenDayDelta: u.rateLimit.delta ? u.rateLimit.delta.sevenDay : null, tier: u.tier, model: u.model.first,
     };
@@ -770,7 +771,7 @@ function laneTokens(id) {
     if (!LU) return null;
     let st;
     try { st = statSync(join(ROOT, id, 'log.jsonl')); } catch { return null; }
-    const key = ['v1', st.size, st.mtimeMs].join('/');
+    const key = ['v2', st.size, st.mtimeMs].join('/');
     const hit = usCache[id];
     let v = hit && hit.key === key ? hit.v : null;
     if (!v) {
@@ -789,7 +790,7 @@ function saveTokens() {
 
 // ── cost (P-2026-10-18-1750) ────────────────────────────────────────────────
 // total_cost_usd of a `result` event is cumulative over the session and restored by a resume, so the lane's cost is the
-// largest and the spend of a turn is the increase over the previous event. The cost events of a log are cached beside the
+// final value per distinct session; the spend of a turn is its session's increase. The cost events of a log are cached beside the
 // token columns (usage-cache.json, key 'cost:<id>', by the size and mtime of log.jsonl); the days are worked out from them
 // and the lane's turns on every read, so a turn that moves does not outlive a stale cache.
 
@@ -807,15 +808,27 @@ export function costEvents(buf) {
         if (e && e.type === 'system' && e.subtype === 'init') out.sessions++;
     });
     let seen = 0;
-    eachLine(buf, '"type":"result"', (raw) => {
+    let current = null;
+    const costs = new Map();
+    eachLine(buf, '"type":', (raw) => {
         const e = parseLine(raw);
+        if (e?.type === 'system' && e.subtype === 'init') current = e.session_id || e.sessionId || null;
         if (!e || e.type !== 'result') return;
         const notTurn = (e.origin && e.origin.kind === 'task-notification') || (e.num_turns === 0 && !e.result); // as in results()
         const turn = notTurn ? Math.max(0, seen - 1) : seen;
         if (!notTurn) seen++;
-        if (typeof e.total_cost_usd !== 'number') return;
-        out.events.push({ usd: e.total_cost_usd, turn });
-        out.max = out.max === null ? e.total_cost_usd : Math.max(out.max, e.total_cost_usd);
+        if (!Number.isFinite(e.total_cost_usd) || e.total_cost_usd < 0) return;
+        const session = e.session_id || e.sessionId || current;
+        if (session) {
+            costs.set(session, e.total_cost_usd);
+            const usd = [...costs.values()].reduce((a, b) => a + b, 0);
+            out.events.push({ usd, turn });
+            out.max = usd;
+        } else {
+            // Legacy logs lack identity; preserve their historical display, without using it for objective totals.
+            out.events.push({ usd: e.total_cost_usd, turn });
+            out.max = out.max === null ? e.total_cost_usd : Math.max(out.max, e.total_cost_usd);
+        }
     });
     return out;
 }
@@ -841,7 +854,7 @@ export function spendByDay(events, turns) {
 function laneCost(id) {
     let st;
     try { st = statSync(join(ROOT, id, 'log.jsonl')); } catch { return null; }
-    const key = ['c1', st.size, st.mtimeMs].join('/');
+    const key = ['c2', st.size, st.mtimeMs].join('/');
     const hit = usCache['cost:' + id];
     let v = hit && hit.key === key ? hit.v : null;
     if (!v) {
@@ -891,9 +904,8 @@ function eachLine(buf, key, fn) {
 const parseLine = (raw) => { try { return JSON.parse(raw.toString('utf8')); } catch { return null; } };
 const ASSISTANT = Buffer.from('{"type":"assistant"');
 
-/** What the Insights tab reads from a lane's log. total_cost_usd and modelUsage are cumulative over the
- *  session (a resume restores them; 0 decreases in 196 consecutive pairs, 2026-10-10), so the largest is the lane's. */
-function logFacts(buf, res) {
+/** Insights sums final cumulative counters across identified sessions; anonymous legacy logs retain their old display. */
+export function logFacts(buf, res) {
     const f = { model: '', cli: '', runs: 0, costUSD: 0, outTokens: 0, subModels: {}, apiError: false, outcome: 'none',
         blockedRun: res.some((r) => r.outcome === 'blocked'), overTime: res.some((r) => r.ms > 90 * 60e3) };
     if (!buf) return f;
@@ -910,6 +922,16 @@ function logFacts(buf, res) {
         if (e.modelUsage) f.outTokens = Math.max(f.outTokens, Object.values(e.modelUsage).reduce((a, v) => a + ((v && v.outputTokens) || 0), 0));
         if (e.terminal_reason === 'api_error' || e.is_error) f.apiError = true;
     });
+    const accounting = [];
+    eachLine(buf, '"type":', raw => {
+        const e = parseLine(raw);
+        if (e && (e.type === 'result' || e.type === 'system')) accounting.push(e);
+    });
+    if (accounting.some(e => e.session_id || e.sessionId)) {
+        f.costUSD = costEvents(buf).max;
+        const output = LU?.resultOutput?.(accounting);
+        f.outTokens = output ? Object.values(output).reduce((a, b) => a + b, 0) : null;
+    }
     // Subagents: assistant events with a parent tool use; only their model is read.
     eachLine(buf, '"parent_tool_use_id":"', (raw) => {
         if (!raw.subarray(0, ASSISTANT.length).equals(ASSISTANT)) return;
@@ -971,7 +993,7 @@ function laneTimeline(id, now) {
     const names = readdirSync(dir);
     const inputs = names.map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
     // v6: the Insights facts (logFacts) and the class of each resume input ride the same cache.
-    const key = ['v6', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length, mtime(join(dir, 'request.md'))].join('/');
+    const key = ['v7', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length, mtime(join(dir, 'request.md'))].join('/');
     const hit = tlCache[id];
     if (hit && hit.key === key && exited) return hit.v;
     let buf = null;
@@ -1572,7 +1594,8 @@ function insightLane(id, dir, t, g, corr, own, now, draws = new Map()) {
         id, day: id.slice(2, 12), start, end: Math.round(end), kind: kindOf(h.lane, h.file),
         model: f.model || null, subagentModels: f.subModels || {}, tier, tierReason: tierLine.replace(/^[^:]*:\s*/, ''),
         drawn, cliVersion: f.cli || '',
-        runs, final, workMs: Math.round(runs.reduce((a, x) => a + Math.max(0, x.ms), 0)), costUSD: Math.round((f.costUSD || 0) * 100) / 100, outTokens: f.outTokens || 0,
+        runs, final, workMs: Math.round(runs.reduce((a, x) => a + Math.max(0, x.ms), 0)),
+        costUSD: f.costUSD === null ? null : Math.round((f.costUSD || 0) * 100) / 100, outTokens: f.outTokens === null ? null : f.outTokens || 0,
         commits: commits.map((c) => c.sha.slice(0, 9)), files: [...files], lines, primaryArea: byLines[0] || '', criticalZone: cz,
         sizeBand: total ? BANDS.find(([max]) => total <= max)[1] : null,
         signals, rework, failedRun,

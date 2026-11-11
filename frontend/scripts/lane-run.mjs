@@ -71,6 +71,15 @@
  *                session.txt or worktree.txt, and while a run is live. A lane
  *                started with --auto is resumed with the flags and environment
  *                of --auto (its auto.json), and without a go-ahead.
+ *   handoff <Prompt-ID>
+ *                validates the six handoff sections after a context stop and seals
+ *                them against the session, prompt, authorization and working files.
+ *   resume --fresh <Prompt-ID>
+ *                starts a new session from the sealed handoff, retaining the old
+ *                run, effective model, tier and effort. Refuses stale handoffs.
+ *   objective link|accept|reopen|show <objective> ...
+ *                explicit lineage and acceptance; see lane-objective.mjs for options.
+ *                start also accepts --objective <ID> [--objective-kind discovery|implementation].
  *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]
  *                resumes with the standard GO: `[<Prompt-ID>] GO.`, the smoke
  *                sentence, and step <n> of the prompt's COME (of its `### Steps`
@@ -129,6 +138,10 @@
  *                osascript `do shell script` drops the output of a non-zero
  *                exit). --max defaults to 170 and is refused above it: the chat's
  *                shell call ends near 180 s.
+ *                --continue-on-ceiling, with one lane, opts into at most one fresh
+ *                continuation. It requires a seal or an attributed current handoff
+ *                with a matching binary diff and no untracked files. A generic stop
+ *                or an incomplete handoff never launches work. status is unchanged.
  *   probe <worktree> <probe.ts> --port <n> [--config <vite config>] [--id <Prompt-ID>]
  *                refused on port 3001 and on a port in use (lsof). Starts
  *                `npx vite --config <cfg> --port <n> --strictPort` in
@@ -335,7 +348,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { randomInt } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import {
     accessSync, appendFileSync, closeSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
     readlinkSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync,
@@ -345,6 +358,8 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
+import { measureFile, thresholds } from './hooks/context-ceiling.mjs';
+import { laneObjective, linkLane, objectiveCommand, objectiveId, readObjective } from './lane-objective.mjs';
 import {
     FRONT_FROM, closeFrontMilestones, frontProblem, inFrontScope, isGoMessage, loadBoard, loadFronts, promptLink, promptWorktree, trackLane, trackingConfig, trackingDir,
     FRONTS_FILE, frontOfInbox, parseFrontLine, parseTicketBlocks, parseTicketPlan, ticketBlock, ticketKey, ticketProblem, trackTicket,
@@ -413,7 +428,7 @@ function refuse(message) {
     throw new Refusal(message);
 }
 
-const lanesRoot = () => join(homedir(), '.jjodel-lanes');
+const lanesRoot = () => process.env.JJODEL_LANES || join(homedir(), '.jjodel-lanes');
 
 function laneFiles(id) {
     const dir = join(lanesRoot(), id);
@@ -533,6 +548,9 @@ function launch(f, claude, cwd, input, args, goAhead = null, auto = null, extra 
     const stdin = closingInput(f, input, extra);
     keepInput(f, stdin);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
+    env.JJODEL_LANE_LOG = f.log;
+    env.JJODEL_LANE_LOG_FROM = String(existsSync(f.log) ? statSync(f.log).size : 0);
+    env.JJODEL_LANES_DIR = lanesRoot();
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
     // An automatic lane (RC-36) runs without GitHub credentials: the variables go, and gh finds no hosts.yml.
@@ -1040,7 +1058,7 @@ function completeRun(f) {
     const init = events(f.log, from).find((e) => e && e.type === 'system' && e.subtype === 'init' && typeof e.model === 'string');
     const line = lastOutcome(f.log, from);
     const m = line === null ? null : OUTCOME.exec(line);
-    run.session = run.session || readTrim(f.session) || null;
+    run.session = run.session || (run.kind === 'fresh' ? firstSessionId(f.log, from) : readTrim(f.session)) || null;
     run.effectiveModel = init ? init.model : null;
     run.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
     run.exit = readTrim(f.exit) || null;
@@ -1233,6 +1251,15 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     const request = requestOption(rest);
     // RC-43: a prompt names its request; the merge prompts lane-run renders are exempt (their Lane line, also on a launch by hand).
     const { header } = promptParts(text);
+    const objective = option(rest, '--objective') || (/^Objective:\s*(\S+)\s*$/m.exec(header) || [])[1] || null;
+    if (objective) objectiveId(objective);
+    const objectiveKind = option(rest, '--objective-kind') || (/^Lane:\s*discovery\b/m.test(header) ? 'discovery' : 'implementation');
+    if (objective && !['discovery', 'implementation'].includes(objectiveKind)) refuse('--objective-kind on start is discovery or implementation; use objective link for a continuation/correction');
+    if (objective) {
+        if (readObjective(lanesRoot(), objective).state === 'accepted') refuse('reopen the accepted objective before starting more work');
+        const held = laneObjective(lanesRoot(), id);
+        if (held && (held.objective !== objective || held.kind !== objectiveKind)) refuse('lane already has another objective link');
+    }
     const exempt = ctx.merge || /^Lane:\s*full \(merge\b/m.test(header);
     const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !exempt;
     // A prompt with a Request: line the board cannot follow back to its chat is refused; one without the line keeps the warning above.
@@ -1264,6 +1291,7 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     mkdirSync(f.dir, { recursive: true });
     writeFileSync(f.worktree, worktree + '\n');
     writeFileSync(f.prompt, promptFile + '\n');
+    if (objective) linkLane(lanesRoot(), { objective, lane: id, kind: objectiveKind, actor: 'lane-run start', evidence: promptFile });
     if (request) copyFileSync(request, f.request);
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
@@ -1336,7 +1364,13 @@ function writeMessage(f, text) {
     return path;
 }
 
-function resume(idArg, rest) {
+async function resume(idArg, rest) {
+    const id = checkId(idArg);
+    if (!existsSync(laneFiles(id).session)) refuse(id + ' has no session.txt: start the lane first');
+    return withLaneLock(laneFiles(id), () => resumeLocked(id, rest));
+}
+
+function resumeLocked(idArg, rest) {
     const id = checkId(idArg);
     const [messageArg] = rest;
     if (!messageArg) refuse('usage: lane-run resume <Prompt-ID> <message-file> | --text "<message>" | -');
@@ -1345,11 +1379,14 @@ function resume(idArg, rest) {
     else if (messageArg === '-') text = readFileSync(0, 'utf8');
     if (text !== null && text.trim() === '') refuse('the message is empty');
     const f = laneFiles(id);
+    if (existsSync(join(f.dir, 'fresh-pending.json'))) refuse('a fresh launch is pending; inspect it and retry resume --fresh, never the old session');
     const session = readTrim(f.session);
     if (!session) refuse(id + ' has no session.txt: start the lane first');
     const worktree = readTrim(f.worktree);
     if (!worktree) refuse(id + ' has no worktree.txt: the lane directory is incomplete');
     if (isRunning(f)) refuse(id + ' is still running: wait for its exit before resuming');
+    const context = measureFile(f.log, session);
+    if (context !== null && context >= thresholds(process.env).soft) refuse('session reached its context ceiling; use handoff ' + id + ' then resume --fresh ' + id);
     if (text === null && !existsSync(resolve(messageArg))) refuse('no message file: ' + resolve(messageArg));
     const effortOverride = effortOption(rest.slice(text === null || messageArg === '-' ? 1 : 2));
     const claude = findClaude();
@@ -1391,6 +1428,171 @@ function resume(idArg, rest) {
     console.log('session: ' + session);
     trackCard(id, { launched: true });
     return 0;
+}
+
+// Fresh continuation uses the same Prompt-ID, a different provider session, and append-only run history.
+// Commands: handoff <id> seals a completed six-section handoff; resume --fresh <id> consumes that seal.
+// wait <id> --continue-on-ceiling opts into at most one eligible continuation during that wait.
+async function withLaneLock(f, action) {
+    if (!existsSync(f.dir)) refuse('no lane ' + basename(f.dir));
+    const lock = join(f.dir, 'continuation.lock');
+    try { mkdirSync(lock); } catch (err) {
+        if (err.code === 'EEXIST') refuse('lane transition is busy; retry after the other caller exits');
+        throw err;
+    }
+    try { return await action(); } finally { rmdirSync(lock); }
+}
+
+const hash = value => createHash('sha256').update(value).digest('hex');
+const HANDOFF_SECTIONS = ['Task', 'Scope', 'Decisions taken', 'Evidence', 'Current diff', 'Remaining checks'];
+
+function handoffBody(f) {
+    const path = join(f.dir, 'handoff.md');
+    const text = readTrim(path);
+    if (!text || text.length > 32768 || /\bMECHANICAL-INCOMPLETE\b/.test(text)) refuse('handoff is missing, incomplete or above 32 KiB');
+    for (const name of HANDOFF_SECTIONS) {
+        const part = new RegExp('^## ' + name + '\\s*\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))', 'm').exec(text);
+        if (!part || !part[1].trim()) refuse('handoff needs a nonempty section: ' + name);
+    }
+    if (!existsSync(join(f.dir, 'handoff.diff'))) refuse('handoff.diff is missing');
+    return text;
+}
+
+function workState(tree) {
+    const head = git(tree, ['rev-parse', 'HEAD']).out.trim();
+    const h = createHash('sha256');
+    const add = value => { const b = Buffer.from(value); h.update(String(b.length) + ':'); h.update(b); };
+    add(head);
+    add(git(tree, ['status', '--porcelain=v1', '-z', '--untracked-files=all']).out);
+    add(git(tree, ['diff', '--binary', 'HEAD']).out);
+    add(git(tree, ['diff', '--cached', '--binary']).out);
+    for (const path of git(tree, ['ls-files', '--others', '--exclude-standard', '-z']).out.split('\0').filter(Boolean)) {
+        const file = join(tree, path);
+        const st = lstatSync(file);
+        if (!st.isFile() && !st.isSymbolicLink()) refuse('cannot fingerprint untracked path: ' + path);
+        add(path); add(st.isSymbolicLink() ? readlinkSync(file) : readFileSync(file));
+    }
+    return { head, fingerprint: h.digest('hex') };
+}
+
+function stoppedAtCeiling(f, session) {
+    const state = laneState(f, DEFAULT_LIMIT_MINUTES);
+    if (!state.exited || state.minutes >= DEFAULT_LIMIT_MINUTES || isRunning(f) || readTrim(f.exit) !== '0' || !/^Outcome:\s*hard-stop\b/.test(state.outcome || '')) return false;
+    let evidence;
+    try { evidence = JSON.parse(readFileSync(join(f.dir, 'ceiling-stop.json'), 'utf8')); } catch { return false; }
+    const from = latestRunFrom(f).log;
+    return evidence.schema === 1 && evidence.session === session && evidence.logFrom === from &&
+        Number.isFinite(evidence.context) && evidence.context >= thresholds(process.env).soft &&
+        Number.isFinite(Date.parse(evidence.at)) && Date.parse(evidence.at) >= Number(readTrim(f.started));
+}
+
+async function sealHandoff(idArg, automatic = false) {
+    const id = checkId(idArg);
+    const f = laneFiles(id);
+    const seal = () => {
+        const session = readTrim(f.session);
+        if (!stoppedAtCeiling(f, session)) refuse('handoff requires an exited context-ceiling hard stop for the current session');
+        const tree = readTrim(f.worktree);
+        const state = workState(tree);
+        const prompt = findLanePrompt(f, id);
+        if (!prompt) refuse('original prompt is missing');
+        if (!existsSync(join(f.dir, 'handoff.md'))) {
+            const sections = HANDOFF_SECTIONS.map(name => '## ' + name + '\n\n' + (name === 'Task' ? 'Original prompt: ' + prompt : name === 'Current diff' ? 'See handoff.diff; HEAD ' + state.head : 'Unknown: complete from verified evidence.'));
+            writeFileSync(join(f.dir, 'handoff.md'), '# MECHANICAL-INCOMPLETE\n\n' + sections.join('\n\n') + '\n');
+            writeFileSync(join(f.dir, 'handoff.diff'), git(tree, ['diff', '--binary', 'HEAD']).out);
+            refuse('mechanical handoff saved; complete its unknown sections, remove MECHANICAL-INCOMPLETE and run handoff again');
+        }
+        const text = handoffBody(f);
+        if (automatic) {
+            const field = name => (new RegExp('^' + name + ': ([^\\n]+)$', 'm').exec(text) || [])[1];
+            const base = field('Base') || state.head;
+            const evidence = JSON.parse(readFileSync(join(f.dir, 'ceiling-stop.json'), 'utf8'));
+            if (field('Session') !== session || field('Head') !== state.head || !/^[a-f0-9]{40,64}$/.test(base) ||
+                statSync(join(f.dir, 'handoff.md')).mtimeMs < Date.parse(evidence.at) ||
+                git(tree, ['ls-files', '--others', '--exclude-standard']).out.trim() ||
+                readFileSync(join(f.dir, 'handoff.diff'), 'utf8') !== git(tree, ['diff', '--binary', base]).out) {
+                refuse('automatic handoff needs current Session/Head, a matching binary diff and no untracked files; inspect and seal manually');
+            }
+        }
+        const seal = { schema: 1, session, logFrom: latestRunFrom(f).log, worktree: realpathSync(tree), ...state,
+            handoff: hash(text), diff: hash(readFileSync(join(f.dir, 'handoff.diff'))), prompt: hash(readFileSync(prompt)),
+            authorization: hash(readTrim(f.goahead) + '\n' + readTrim(f.auto)), at: new Date().toISOString() };
+        const path = join(f.dir, 'handoff-state.json');
+        writeFileSync(path + '.tmp', JSON.stringify(seal) + '\n');
+        renameSync(path + '.tmp', path);
+        console.log('handoff sealed for ' + session + ': ' + path);
+        return 0;
+    };
+    // The automatic caller already holds the transition lock through launch.
+    return automatic ? seal() : withLaneLock(f, seal);
+}
+
+async function freshResume(idArg, expected = null) {
+    const id = checkId(idArg);
+    const f = laneFiles(id);
+    return withLaneLock(f, async () => {
+        if (isRunning(f)) refuse(id + ' is still running');
+        const session = readTrim(f.session);
+        if (!session || (expected !== null && session !== expected)) refuse('session changed since this wait began');
+        const pendingPath = join(f.dir, 'fresh-pending.json');
+        const pending = existsSync(pendingPath) ? JSON.parse(readFileSync(pendingPath, 'utf8')) : null;
+        if (expected !== null && pending) refuse('automatic continuation will not retry a failed fresh launch');
+        if (!pending && !stoppedAtCeiling(f, session)) refuse('fresh continuation requires a context-ceiling hard stop, not a question or approval stop');
+        if (pending && pending.previousSession !== session) refuse('pending fresh launch belongs to another session');
+        const tree = readTrim(f.worktree);
+        if (expected !== null && !existsSync(join(f.dir, 'handoff-state.json'))) await sealHandoff(id, true);
+        const body = handoffBody(f);
+        if (expected !== null && !/^Continuation: context-ceiling\s*$/m.test(body)) refuse('automatic continuation requires an explicit context-ceiling handoff, not an approval stop');
+        if (expected !== null && /^Unknown: complete from verified evidence\.$/m.test(body)) refuse('mechanical handoff still has unknown sections; automatic continuation refused');
+        let seal;
+        try { seal = JSON.parse(readFileSync(join(f.dir, 'handoff-state.json'), 'utf8')); } catch { refuse('run handoff ' + id + ' to validate and seal the handoff first'); }
+        const state = workState(tree);
+        const prompt = findLanePrompt(f, id);
+        if (!prompt || seal.schema !== 1 || seal.session !== session || seal.worktree !== realpathSync(tree) ||
+            seal.logFrom !== (pending ? pending.sourceLogFrom : latestRunFrom(f).log) || seal.fingerprint !== state.fingerprint || seal.head !== state.head ||
+            seal.handoff !== hash(body) || seal.diff !== hash(readFileSync(join(f.dir, 'handoff.diff'))) || seal.prompt !== hash(readFileSync(prompt)) ||
+            seal.authorization !== hash(readTrim(f.goahead) + '\n' + readTrim(f.auto))) refuse('handoff seal is stale or belongs to another session/worktree; inspect and seal again');
+        const prior = completeRun(f);
+        const source = pending || prior;
+        const tier = readTrim(f.tier).split(' ')[0];
+        const model = source?.effectiveModel;
+        const effort = source?.effort;
+        if (!TIERS.includes(tier) || !model || !EFFORTS.includes(effort)) refuse('fresh continuation needs the recorded effective model, tier and effort');
+        const claude = findClaude();
+        const auto = readAuto(f);
+        const goahead = !auto && existsSync(f.goahead) ? readTrim(f.goahead) : null;
+        const link = laneObjective(lanesRoot(), id);
+        const from = existsSync(f.log) ? statSync(f.log).size : 0;
+        const errFrom = existsSync(f.err) ? statSync(f.err).size : 0;
+        const input = writeMessage(f, '[' + id + '] Continue only the same task after its context ceiling.\n\n' +
+            readFileSync(prompt, 'utf8') + '\n\n## Verified handoff\n\n' + body + '\n\nFull diff: ' + join(f.dir, 'handoff.diff') + '\n');
+        // The pending record prevents a failed new launch from silently resuming the old exhausted session.
+        writeFileSync(pendingPath, JSON.stringify({ previousSession: session, sourceLogFrom: seal.logFrom, effectiveModel: model, effort, tier }) + '\n');
+        if (existsSync(f.exit)) unlinkSync(f.exit);
+        appendRun(f, { at: ledgerTime(clock()), kind: 'fresh', session: null, previousSession: session, tier,
+            requestedModel: model, effort, reason: 'context-ceiling continuation', objective: link?.objective || null, logFrom: from, errFrom });
+        launch(f, claude, tree, input, ['-p', ...FLAGS, ...(auto ? AUTO_FLAGS : []), '--model', model, '--effort', effort], goahead, auto);
+        const end = Date.now() + START_WAIT_MS;
+        while (Date.now() < end) {
+            const next = events(f.log, from).find(e => e.type === 'system' && e.subtype === 'init' && typeof e.session_id === 'string')?.session_id;
+            if (next) {
+                if (next === session) refuse('provider reused the old session ID; pending launch retained for inspection');
+                writeFileSync(f.session + '.tmp', next + '\n');
+                renameSync(f.session + '.tmp', f.session);
+                unlinkSync(pendingPath);
+                console.log('fresh session: ' + next + ' (previous ' + session + ')');
+                trackCard(id, { launched: true });
+                return 0;
+            }
+            if (existsSync(f.exit)) {
+                console.error('fresh launch exited before reporting a session; old pointer and pending record retained');
+                return 1;
+            }
+            await sleep(POLL_MS);
+        }
+        console.error('fresh launch did not report a session in time; inspect the pending launch before retrying');
+        return 1;
+    });
 }
 
 /** The last line of the assistant text that starts with `Outcome:`, parsed or not; from a byte offset of the log on. */
@@ -1666,6 +1868,10 @@ async function waitLanes(rest) {
     }
     // An unknown lane never runs: status, below, refuses it at the first poll. A chain waits until it stops.
     ids.forEach((id) => (CHAIN_ID.test(id) ? readChain(id) : checkId(id)));
+    const continueOnCeiling = rest.includes('--continue-on-ceiling');
+    if (continueOnCeiling && (any !== null || ids.length !== 1 || CHAIN_ID.test(ids[0]))) refuse('--continue-on-ceiling takes one lane, not --any or a chain');
+    const originalSession = continueOnCeiling ? readTrim(laneFiles(ids[0]).session) : null;
+    let continued = false;
     const live = (id) => (CHAIN_ID.test(id) ? chainRunning(readChain(id)) : isRunning(laneFiles(id)));
     const maxArg = option(rest, '--max');
     const max = maxArg === null ? WAIT_MAX_S : Number(maxArg);
@@ -1677,6 +1883,12 @@ async function waitLanes(rest) {
     for (;;) {
         const ended = ids.filter((id) => !live(id));
         if (ended.length) {
+            if (continueOnCeiling && !continued && originalSession && stoppedAtCeiling(laneFiles(ids[0]), originalSession)) {
+                const code = await freshResume(ids[0], originalSession);
+                if (code !== 0) return code;
+                continued = true;
+                continue;
+            }
             ended.forEach((id, i) => {
                 if (i) console.log('');
                 status(id, []);
@@ -3575,7 +3787,16 @@ async function main(argv) {
     const [command, ...rest] = argv;
     if (command === 'monitor') return monitor(rest);
     if (command === 'start') return start(rest[0], rest[1], rest.slice(2));
+    if (command === 'resume' && rest[0] === '--fresh') {
+        if (rest.length !== 2) refuse('usage: lane-run resume --fresh <Prompt-ID>');
+        return freshResume(rest[1]);
+    }
     if (command === 'resume') return resume(rest[0], rest.slice(1));
+    if (command === 'handoff') {
+        if (rest.length !== 1) refuse('usage: lane-run handoff <Prompt-ID>');
+        return sealHandoff(rest[0]);
+    }
+    if (command === 'objective') { console.log(JSON.stringify(objectiveCommand(lanesRoot(), rest), null, 2)); return 0; }
     if (command === 'go') return go(rest[0], rest.slice(1));
     if (command === 'status') return status(rest[0], rest.slice(1));
     if (command === 'resolve') return resolve_(rest[0], rest.slice(1));

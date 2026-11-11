@@ -43,6 +43,8 @@ const FAKE_CLAUDE = `#!/bin/sh
   echo "ghtoken=\${GH_TOKEN-unset}"
   echo "githubtoken=\${GITHUB_TOKEN-unset}"
   echo "ghconfig=\${GH_CONFIG_DIR-unset}"
+  echo "lanelog=\${JJODEL_LANE_LOG-unset}"
+  echo "logfrom=\${JJODEL_LANE_LOG_FROM-unset}"
   for a in "$@"; do echo "arg=$a"; done
   echo "stdin=$(cat | tr '\\n' ' ')"
 } >> "$FAKE_STATE/calls.txt"
@@ -53,6 +55,7 @@ fi
 echo '{"type":"system","subtype":"commands_changed","session_id":"'"$FAKE_SESSION"'"}'
 echo '{"type":"system","subtype":"init","session_id":"'"$FAKE_SESSION"'"}'
 if [ -n "$FAKE_EVENTS" ]; then cat "$FAKE_EVENTS"; fi
+if [ -n "$FAKE_AFTER" ]; then "$FAKE_AFTER"; fi
 if [ -n "$FAKE_HOLD" ]; then
   n=0
   while [ ! -f "$FAKE_HOLD" ] && [ $n -lt 300 ]; do sleep 0.1; n=$((n+1)); done
@@ -127,6 +130,8 @@ function calls(l: Lab) {
                 ghtoken: one('ghtoken'),
                 githubtoken: one('githubtoken'),
                 ghconfig: one('ghconfig'),
+                lanelog: one('lanelog'),
+                logfrom: one('logfrom'),
             };
         });
 }
@@ -145,6 +150,197 @@ const laneDir = (l: Lab, id = ID) => join(l.lanes, id);
 function assistant(text: string) {
     return JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] }, session_id: SESSION });
 }
+
+describe('fresh continuation', () => {
+    const NEW_SESSION = 'fresh-session-2';
+    function stopped() {
+        const l = lab();
+        const git = (...args: string[]) => {
+            const r = spawnSync('git', args, { cwd: l.worktree, encoding: 'utf8' });
+            expect(r.status, r.stderr).toBe(0);
+        };
+        git('init'); git('config', 'user.name', 'Harness Test'); git('config', 'user.email', 'harness@example.test');
+        git('add', 'prompt.md'); git('commit', '-m', 'fixture');
+        const eventFile = join(l.state, 'events.jsonl');
+        writeFileSync(eventFile, [
+            { type: 'system', subtype: 'init', session_id: SESSION, model: 'fixture-model' },
+            { type: 'assistant', session_id: SESSION, message: { id: 'old-call', model: 'fixture-model', usage: { input_tokens: 250001 }, content: [{ type: 'text', text: 'Outcome: hard-stop' }] } },
+            { type: 'result', session_id: SESSION, result: 'Outcome: hard-stop', duration_ms: 100 },
+        ].map(e => JSON.stringify(e)).join('\n') + '\n');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--objective', 'test-objective', '--auto'], { env: { FAKE_EVENTS: eventFile } });
+        expect(r.status, r.stderr).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const hook = resolve(HERE, '..', 'context-ceiling.mjs');
+        const h = spawnSync(process.execPath, [hook], { encoding: 'utf8', input: JSON.stringify({ session_id: SESSION, cwd: l.worktree, tool_name: 'Bash', tool_input: { command: 'ls' } }),
+            env: { ...process.env, JJODEL_LANE_LOG: join(dir, 'log.jsonl'), JJODEL_LANE_LOG_FROM: '0', JJODEL_LANES_DIR: l.lanes, JJODEL_CONTEXT_SOFT: '', JJODEL_CONTEXT_HARD: '' } });
+        expect(h.status, h.stderr).toBe(0);
+        expect(JSON.parse(h.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
+        writeFileSync(join(dir, 'handoff.md'), 'Continuation: context-ceiling\n\n' + ['Task', 'Scope', 'Decisions taken', 'Evidence', 'Current diff', 'Remaining checks'].map(s => '## ' + s + '\n\nVerified ' + s + '.\n').join('\n'));
+        writeFileSync(join(dir, 'handoff.diff'), '');
+        const sealed = laneRun(l, ['handoff', ID]);
+        expect(sealed.status, sealed.stderr).toBe(0);
+        return l;
+    }
+    function newEvents(l: Lab, outcome = 'done') {
+        const file = join(l.state, 'new.jsonl');
+        writeFileSync(file, [
+            { type: 'system', subtype: 'init', session_id: NEW_SESSION, model: 'fixture-model' },
+            { type: 'assistant', session_id: NEW_SESSION, message: { content: [{ type: 'text', text: 'Outcome: ' + outcome }] } },
+            { type: 'result', session_id: NEW_SESSION, result: 'Outcome: ' + outcome },
+        ].map(e => JSON.stringify(e)).join('\n') + '\n');
+        return { FAKE_SESSION: NEW_SESSION, FAKE_EVENTS: file };
+    }
+
+    test('fresh launch drops --resume, retains model/effort/auto restrictions, links its objective and preserves history', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        const before = readFileSync(join(dir, 'log.jsonl'), 'utf8');
+        const r = laneRun(l, ['resume', '--fresh', ID], { env: newEvents(l) });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'session.txt'), 'utf8').trim()).toBe(NEW_SESSION);
+        const c = calls(l)[1];
+        expect(c.args).not.toContain('--resume');
+        expect(c.args).toContain('fixture-model');
+        expect(c.args).toContain('--strict-mcp-config');
+        expect(c.args).toContain('high');
+        expect(c.goahead).toBe('unset');
+        expect(c.ghtoken).toBe('unset');
+        expect(c.logfrom).toBe(String(Buffer.byteLength(before)));
+        expect(c.lanelog).toBe(join(dir, 'log.jsonl'));
+        expect(c.stdin).toContain('Verified Remaining checks');
+        expect(readFileSync(join(dir, 'log.jsonl'), 'utf8').startsWith(before)).toBe(true);
+        const runs = readFileSync(join(dir, 'runs.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+        expect(runs[0].session).toBe(SESSION);
+        expect(runs[1]).toMatchObject({ kind: 'fresh', previousSession: SESSION, requestedModel: 'fixture-model', objective: 'test-objective' });
+    });
+
+    test('plain resume refuses the exhausted session; changed handoff and changed worktree refuse fresh launch', () => {
+        const l = stopped();
+        expect(laneRun(l, ['resume', ID, '--text', 'continue']).stderr).toContain('context ceiling');
+        const file = join(laneDir(l), 'handoff.md');
+        const before = readFileSync(file, 'utf8');
+        writeFileSync(file, before + '\nChanged');
+        expect(laneRun(l, ['resume', '--fresh', ID]).stderr).toContain('seal is stale');
+        writeFileSync(file, before);
+        writeFileSync(join(l.worktree, 'untracked.txt'), 'external work');
+        expect(laneRun(l, ['resume', '--fresh', ID]).stderr).toContain('seal is stale');
+        expect(calls(l)).toHaveLength(1);
+    });
+
+    test('generic hard stops and questions do not continue; a missing section cannot be sealed', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        const md = join(dir, 'handoff.md');
+        const complete = readFileSync(md, 'utf8');
+        writeFileSync(md, complete.replace('Continuation: context-ceiling', 'Continuation: approval-required'));
+        expect(laneRun(l, ['handoff', ID]).status).toBe(0);
+        expect(laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0']).stderr).toContain('approval stop');
+        writeFileSync(join(dir, 'handoff.md'), '## Task\nOnly one section.');
+        expect(laneRun(l, ['handoff', ID]).stderr).toContain('section');
+        rmSync(join(dir, 'ceiling-stop.json'));
+        expect(laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0']).status).toBe(0);
+        expect(laneRun(l, ['resume', '--fresh', ID]).stderr).toContain('requires a context-ceiling');
+        expect(calls(l)).toHaveLength(1);
+    });
+
+    test('failed startup retains the old pointer, refuses plain resume, and permits an explicit fresh retry', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        const r = laneRun(l, ['resume', '--fresh', ID], { env: { FAKE_MODE: 'noid' } });
+        expect(r.status).toBe(1);
+        expect(readFileSync(join(dir, 'session.txt'), 'utf8').trim()).toBe(SESSION);
+        expect(existsSync(join(dir, 'fresh-pending.json'))).toBe(true);
+        expect(laneRun(l, ['resume', ID, '--text', 'retry']).stderr).toContain('pending');
+        const retry = laneRun(l, ['resume', '--fresh', ID], { env: newEvents(l) });
+        expect(retry.status, retry.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'session.txt'), 'utf8').trim()).toBe(NEW_SESSION);
+        expect(existsSync(join(dir, 'fresh-pending.json'))).toBe(false);
+    });
+
+    test('opt-in wait continues once; a held transition lock prevents a second launcher', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        const lock = join(dir, 'continuation.lock');
+        mkdirSync(lock);
+        expect(laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0']).stderr).toContain('busy');
+        expect(calls(l)).toHaveLength(1);
+        rmSync(lock, { recursive: true });
+        // The fresh process also reaches a ceiling and supplies a valid new seal. Removing the one-continuation
+        // guard would launch a third provider process, even though that fake would then reuse its session ID.
+        const after = join(l.state, 'after.mjs');
+        writeFileSync(after, '#!' + process.execPath + '\n' + `
+import {readFileSync,writeFileSync} from 'node:fs';
+import {dirname,join} from 'node:path';
+const dir=dirname(process.env.JJODEL_LANE_LOG);
+const end=Date.now()+5000;
+while(readFileSync(join(dir,'session.txt'),'utf8').trim()!==process.env.FAKE_SESSION && Date.now()<end) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,10);
+}
+const seal=JSON.parse(readFileSync(join(dir,'handoff-state.json'),'utf8'));
+seal.session=process.env.FAKE_SESSION; seal.logFrom=Number(process.env.JJODEL_LANE_LOG_FROM);
+writeFileSync(join(dir,'handoff-state.json'),JSON.stringify(seal));
+writeFileSync(join(dir,'ceiling-stop.json'),JSON.stringify({schema:1,session:seal.session,logFrom:seal.logFrom,context:250001,at:new Date().toISOString()}));
+`);
+        chmodSync(after, 0o755);
+        const r = laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '4'], { env: { ...newEvents(l, 'hard-stop'), FAKE_AFTER: after } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(calls(l)).toHaveLength(2);
+    });
+
+    test('an attributed current handoff can be sealed automatically, but external untracked work requires review', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        rmSync(join(dir, 'handoff-state.json'));
+        const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: l.worktree, encoding: 'utf8' }).stdout.trim();
+        const md = join(dir, 'handoff.md');
+        writeFileSync(md, 'Session: ' + SESSION + '\nHead: ' + head + '\nBase: ' + head + '\n\n' + readFileSync(md, 'utf8'));
+        writeFileSync(join(l.worktree, 'external.txt'), 'not in the handoff');
+        expect(laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0']).stderr).toContain('untracked');
+        expect(calls(l)).toHaveLength(1);
+        rmSync(join(l.worktree, 'external.txt'));
+        const r = laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0'], { env: newEvents(l) });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(calls(l)).toHaveLength(2);
+    });
+
+    test('two real concurrent waiters launch at most one fresh process', async () => {
+        const l = stopped();
+        const release = join(l.state, 'release');
+        const env = { ...l.env, ...newEvents(l), FAKE_HOLD: release };
+        const wait = () => new Promise<number | null>((resolve, reject) => {
+            const child = spawn(process.execPath, [SCRIPT, 'wait', ID, '--continue-on-ceiling', '--max', '1'], { cwd: l.home, env, stdio: 'ignore' });
+            child.on('error', reject); child.on('exit', resolve);
+        });
+        try {
+            const codes = await Promise.all([wait(), wait()]);
+            expect(codes.some(c => c === 0)).toBe(true);
+            expect(calls(l)).toHaveLength(2);
+        } finally {
+            writeFileSync(release, '');
+            expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        }
+    });
+
+    test('a missing handoff becomes an incomplete recovery note, never an unattended restart', () => {
+        const l = stopped();
+        const dir = laneDir(l);
+        const md = join(dir, 'handoff.md');
+        rmSync(md); rmSync(join(dir, 'handoff-state.json'));
+        const r = laneRun(l, ['handoff', ID]);
+        expect(r.status).toBe(2);
+        expect(readFileSync(md, 'utf8')).toContain('MECHANICAL-INCOMPLETE');
+        expect(laneRun(l, ['resume', '--fresh', ID]).stderr).toContain('incomplete');
+        writeFileSync(md, readFileSync(md, 'utf8').replace('# MECHANICAL-INCOMPLETE', 'Continuation: context-ceiling'));
+        expect(laneRun(l, ['handoff', ID]).status).toBe(0);
+        expect(laneRun(l, ['wait', ID, '--continue-on-ceiling', '--max', '0']).stderr).toContain('unknown sections');
+        expect(calls(l)).toHaveLength(1);
+    });
+});
 
 // ── start ────────────────────────────────────────────────────────────────────
 

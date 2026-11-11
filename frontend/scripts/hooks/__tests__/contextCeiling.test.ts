@@ -70,6 +70,31 @@ const allowed = (r: ReturnType<typeof run>) => r.status === 0 && r.decision === 
 const md = () => join(lane, 'handoff.md');
 const diff = () => join(lane, 'handoff.diff');
 
+describe('fresh session boundaries', () => {
+    test('old high context does not stop a new session before its first call or after a low first call', () => {
+        const log = join(lane, 'log.jsonl');
+        const old = ev({ total: HARD + 1, parent: null });
+        const init = JSON.stringify({ type: 'system', subtype: 'init', session_id: 'new-session' });
+        writeLog(log, [old, init]);
+        writeFileSync(join(lane, 'session.txt'), 'new-session');
+        const env = { JJODEL_LANE_LOG: log, JJODEL_LANE_LOG_FROM: String(Buffer.byteLength(old + '\n')) };
+        expect(allowed(run({ session: 'new-session', env }))).toBe(true);
+        writeLog(log, [old, init, ev({ total: 1000, parent: null }).replace(SESSION, 'new-session')]);
+        expect(allowed(run({ session: 'new-session', env }))).toBe(true);
+        expect(existsSync(join(lane, 'ceiling-stop.json'))).toBe(false);
+    });
+
+    test('current session denial records its identity and run offset; another session cannot supply the measure', () => {
+        const log = join(lane, 'log.jsonl');
+        const prefix = JSON.stringify({ type: 'system', subtype: 'init', session_id: 'old' }) + '\n';
+        writeFileSync(log, prefix + ev({ total: HARD + 5, parent: null }) + '\n');
+        const env = { JJODEL_LANE_LOG: log, JJODEL_LANE_LOG_FROM: String(Buffer.byteLength(prefix)) };
+        expect(run({ env }).decision).toBe('deny');
+        expect(JSON.parse(readFileSync(join(lane, 'ceiling-stop.json'), 'utf8'))).toMatchObject({ schema: 1, session: SESSION, context: HARD + 5, logFrom: Buffer.byteLength(prefix) });
+        expect(allowed(run({ session: 'unrelated', env }))).toBe(true);
+    });
+});
+
 describe('T-C1: the soft denial fires once, the hard stop allows only the handoff', () => {
     test('kills "soft compared with >": at exactly soft the first call is denied, naming the handoff and the Outcome line', () => {
         const r = run({ lines: [ev(1000), user(), ev(SOFT)] });

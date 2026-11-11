@@ -42,7 +42,7 @@
  * Run by: node "$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/context-ceiling.mjs"
  */
 
-import { closeSync, fstatSync, openSync, readdirSync, readFileSync, readSync, realpathSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -80,7 +80,20 @@ export function contextOf(line) {
 }
 
 /** The context of the latest qualifying line of a jsonl text, scanning from the end. */
-export function latestContext(text) {
+export function latestContext(text, sessionId = null) {
+    if (sessionId !== null) {
+        let active = null;
+        let latest = null;
+        for (const line of text.split('\n')) {
+            let e;
+            try { e = JSON.parse(line); } catch { continue; }
+            if (e.type === 'system' && e.subtype === 'init') active = e.session_id || e.sessionId || null;
+            if ((e.session_id || e.sessionId || active) !== sessionId) continue;
+            const value = contextOf(line);
+            if (value !== null) latest = value;
+        }
+        return latest;
+    }
     let end = text.length;
     while (end > 0) {
         const nl = text.lastIndexOf('\n', end - 1);
@@ -92,8 +105,8 @@ export function latestContext(text) {
     return null;
 }
 
-function readTail(fd, size, bytes) {
-    const start = Math.max(0, size - bytes);
+function readTail(fd, size, bytes, from = 0) {
+    const start = Math.max(from, size - bytes);
     const buf = Buffer.alloc(size - start);
     let off = 0;
     while (off < buf.length) {
@@ -102,15 +115,15 @@ function readTail(fd, size, bytes) {
         off += r;
     }
     let text = buf.toString('utf8', 0, off);
-    if (start > 0) {
+    if (start > from) {
         const nl = text.indexOf('\n');
         text = nl === -1 ? '' : text.slice(nl + 1); // the first line is cut
     }
-    return { text, whole: start === 0 };
+    return { text, whole: start === from };
 }
 
 /** The measured context of a jsonl file, or null (unreadable, no qualifying event). */
-export function measureFile(path) {
+export function measureFile(path, sessionId = null, from = 0) {
     let fd;
     try {
         fd = openSync(path, 'r');
@@ -119,10 +132,11 @@ export function measureFile(path) {
     }
     try {
         const size = fstatSync(fd).size;
-        const tail = readTail(fd, size, TAIL_BYTES);
-        const c = latestContext(tail.text);
+        if (!Number.isSafeInteger(from) || from < 0 || from > size) return null;
+        const tail = readTail(fd, size, TAIL_BYTES, from);
+        const c = latestContext(tail.text, sessionId);
         if (c !== null || tail.whole) return c;
-        return latestContext(readTail(fd, size, size).text);
+        return latestContext(readTail(fd, size, size, from).text, sessionId);
     } finally {
         closeSync(fd);
     }
@@ -214,14 +228,30 @@ export function isHandoffBash(lane, command, cwd) {
     return basename(target) === 'handoff.diff' && isHandoffPath(lane, target, cwd);
 }
 
-function handoffText(lane) {
+function handoffText(lane, session) {
     const md = join(lane, 'handoff.md');
     const diff = join(lane, 'handoff.diff');
     return (
         'Write ' + md + ' with the sections Task, Scope, Decisions taken, Evidence, Current diff, Remaining checks. ' +
         'Current diff is the output of `git diff --stat <cut sha>` plus the path of the full diff, written with ' +
-        '`git diff <cut sha> > ' + diff + '`. Then end your final message with the line `Outcome: hard-stop`.'
+        '`git diff <cut sha> > ' + diff + '`. Only if the remaining work needs no new approval, mark `Continuation: context-ceiling`. ' +
+        'For unattended continuation, include header lines `Session: ' + session +
+        '`, `Head: <current commit sha>` and `Base: <cut sha>`, and write the full diff with `git diff --binary <cut sha> > ' + diff +
+        '`. Then end your final message with the line `Outcome: hard-stop`.'
     );
+}
+
+/** Session/run-bound evidence. A generic Outcome: hard-stop never supplies this permission. */
+function recordCeiling(lane, session, context, env) {
+    if (!lane) return;
+    const path = join(lane, 'ceiling-stop.json');
+    const from = Number(env.JJODEL_LANE_LOG_FROM || 0);
+    if (!Number.isSafeInteger(from) || from < 0) return;
+    try {
+        const tmp = path + '.' + process.pid + '.tmp';
+        writeFileSync(tmp, JSON.stringify({ schema: 1, session, logFrom: from, context, at: new Date().toISOString() }) + '\n');
+        renameSync(tmp, path);
+    } catch { /* A missing record disables unattended continuation, not the ceiling denial. */ }
 }
 
 function main() {
@@ -232,7 +262,8 @@ function main() {
     const env = process.env;
     const source = sourceOf(env, input);
     if (source === null) return;
-    const context = measureFile(source);
+    const scoped = source === env.JJODEL_LANE_LOG && env.JJODEL_LANE_LOG_FROM !== undefined;
+    const context = measureFile(source, scoped ? sessionId : null, scoped ? Number(env.JJODEL_LANE_LOG_FROM) : 0);
     if (context === null) return;
     const { soft, hard } = thresholds(env);
     if (context < soft) return;
@@ -245,11 +276,12 @@ function main() {
         const ti = input.tool_input && typeof input.tool_input === 'object' ? input.tool_input : {};
         if ((tool === 'Read' || tool === 'Write' || tool === 'Edit') && isHandoffPath(lane, ti.file_path, input.cwd)) return;
         if (tool === 'Bash' && isHandoffBash(lane, ti.command, input.cwd)) return;
+        recordCeiling(lane, sessionId, context, env);
         decide(
             'deny',
             measured + ', at or above the hard ceiling of ' + hard + ' (AM-8). Every tool is denied except Read, Write or Edit of ' +
                 join(lane, 'handoff.md') + ' or ' + join(lane, 'handoff.diff') + ', and one `git status` or `git diff` with nothing chained. ' +
-                handoffText(lane),
+                handoffText(lane, sessionId),
         );
         return;
     }
@@ -263,10 +295,11 @@ function main() {
     }
 
     if (lane !== null) {
+        recordCeiling(lane, sessionId, context, env);
         decide(
             'deny',
             measured + ', at or above the soft ceiling of ' + soft + ' (AM-8; hard ceiling ' + hard + '). Start no new work. ' +
-                handoffText(lane) +
+                handoffText(lane, sessionId) +
                 ' This fires once per session: calls below ' + hard + ' tokens are allowed again; at ' + hard +
                 ' only the handoff writes and `git status`/`git diff` are.',
         );
