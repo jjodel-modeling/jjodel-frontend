@@ -34,6 +34,17 @@ export function applyValueEditable(
     return rest;
 }
 
+/**
+ * The literal segment after a text edit: only `text` changes. A persisted `style` (R-VP-20) and any
+ * other key keep their place; rebuilding the segment from scratch dropped them on the first keystroke.
+ */
+export function applyLiteralText(
+    segment: Extract<FieldSegment, { kind: 'literal' }>,
+    text: string,
+): Extract<FieldSegment, { kind: 'literal' }> {
+    return { ...segment, text };
+}
+
 export interface FieldSegmentEditorProps {
     segment: FieldSegment;
     onChange: (segment: FieldSegment) => void;
@@ -61,7 +72,7 @@ export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment,
             {segment.kind === 'literal' && (
                 <Input
                     value={segment.text}
-                    onChange={(e) => onChange({ kind: 'literal', text: e.target.value })}
+                    onChange={(e) => onChange(applyLiteralText(segment, e.target.value))}
                 />
             )}
 

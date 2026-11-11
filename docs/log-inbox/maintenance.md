@@ -841,3 +841,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Prompt document name**: 2026-11-11 19:25
 
 **Ticket** (data loss, read at `bb7821a10`): `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx:64` rebuilds a literal segment as `{ kind: 'literal', text }` and drops a persisted `literal.style` on any edit of the text; the gV cornerRadius control overwrites a persisted Conditional on first edit (`GraphVertexAuthoringPanel.tsx:325-333`, `shapeRegistry.ts:467-468`). Slice S0 of the report.
+
+## 2026-11-11 — fix: IR view panel S0, literal style and gV corner radius data loss (P-2026-11-11-2025)
+**Prompt**: `claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md`, fast lane, slice S0 of the IR view panel coverage audit (R-IPC-7): the literal segment text edit drops a persisted `style`; the graphVertex corner radius stepper reads a persisted Conditional as default and overwrites it
+**Files touched**: `999ea5d5a`: `authoring/FieldSegmentEditor.tsx`, `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/__tests__/fieldSegmentEditor.test.ts`, `authoring/__tests__/graphVertexCornerRadius.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 11:56
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Literal: `applyLiteralText` spreads the segment; forKind left as is (a kind switch resets by design). gV: the vertex panel's ConditionalEditor mount with rulesTable, writers unchanged, graphVertexAuthoring.ts untouched. Negative control: Input wiring test fails on the old line (1 failed, 14 passed). Node bench has no DOM: mount tests are SSR with spies on view.ir and the writers. Corregge: gV S4 (stepper); the literal loss dates from C2, P-2026-09-30-0150. No gV smoke scene.
+**Prompt document name**: 2026-11-11 20:25

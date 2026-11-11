@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, isConditionalValue, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { graphVertexSeedIR } from '../ir/irCreationSeed';
@@ -253,6 +253,8 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
     const form = shape.form;
     const labels = shape.labels ?? [];
     const cornerRadius = authoredCornerRadius(shape.cornerRadius);
+    // A rule-driven radius has no single number for the stepper: ConditionalEditor shows the rules instead.
+    const cornerRuleDriven = isConditionalValue(shape.cornerRadius);
     const scalarForm = typeof form === 'string' ? (form as ShapeForm) : undefined;
 
     // Every write goes through graphVertexAuthoring.ts, which the node bench imports: the test drives these.
@@ -320,18 +322,34 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                     </div>
                     <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
                         <label className="jj-field-label">Corner radius</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                            <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
-                                <NumberInput
-                                    value={cornerRadius ?? baseCornerRadius(scalarForm)}
-                                    min={0}
-                                    onChange={(r) => patchShape({ cornerRadius: r })}
-                                />
-                            </span>
-                            {cornerRadius === undefined
-                                ? <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
-                                : <Button variant="ghost" size="sm" onClick={resetCornerRadius}>Reset</Button>}
-                        </div>
+                        {/* The vertex panel's mount (S6, R-IRN-35): `shape.cornerRadius` is a Conditional<number>, so a
+                            persisted rule reads as a rule, never as «default», and the first edit cannot flatten it. */}
+                        <ConditionalEditor<number>
+                            value={shape.cornerRadius}
+                            onChange={(next) => (next === undefined ? resetCornerRadius() : patchShape({ cornerRadius: next }))}
+                            renderValue={(v, onCh) => cornerRuleDriven ? (
+                                <NumberInput value={v} min={0} onChange={(r) => onCh(r)} />
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                    <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
+                                        <NumberInput
+                                            value={cornerRadius ?? baseCornerRadius(scalarForm)}
+                                            min={0}
+                                            onChange={(r) => onCh(r)}
+                                        />
+                                    </span>
+                                    {cornerRadius === undefined
+                                        ? <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
+                                        : <Button variant="ghost" size="sm" onClick={resetCornerRadius}>Reset</Button>}
+                                </div>
+                            )}
+                            defaultValue={baseCornerRadius(scalarForm)}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            allowConditional={advanced}
+                            rulesTable={{ subjectName, valueNoun: 'corner radius' }}
+                        />
                     </div>
                 </FormSection>
 
