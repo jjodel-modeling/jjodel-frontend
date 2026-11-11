@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-11 — fix(#214): multiplicity clause written on create attribute and create parameter
+**Prompt**: issue #214 — `create attribute <name> in <Class> type <type> <multiplicity>` ignored the multiplicity, always [0..1]; user extended in chat: «fix also for createParameter»
+**Files touched**: `executor/commands/create.ts` (createAttribute, createParameter), new bench `executor/__tests__/createAttributeMultiplicity.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — jjscript suite 876 green, the one red file is the known monaco-import `context-binding`; typecheck 0 (the zero baseline); build 0, only the pre-existing chunk-size warning
+**Out-of-scope changes**: no — createParameter was explicitly named in chat
+**Layer Impact Report**: produced (D-layer bound writes on the freshly created element only; no L-layer writer, sync, canvas or persistence change)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers parser + executor
+**Notes**: root: both creators dropped the parsed `options.multiplicity`; the DStructuralFeature seeds [0..1] were all that got written. Mirrored createReference's block (create.ts:872-880), same '*' → -1. Bench 8 red → green, 3 controls (seeds, the reference source). Tickets: createAttribute still drops `default <value>` (create.ts has no defaultValue handling); eval.ts:502 multiValued still misses numeric upperBound > 1 (from #211).
+**Prompt document name**: 2026-11-11 10:05 (#214: multiplicity in create attribute / parameter)
+
 ## 2026-11-10 — feat(#211): multiple assignment in set on multi-valued attributes
 **Prompt**: issue #211 — the vector forms of `set` on an attribute with multiplicity (`= [a, b]`, `+= c`, `-= a`); plan with four ratified decisions, lane executed
 **Files touched**: `parser.ts` (`parseSetValue`), `types.ts` (`ArrayLiteral` widened), `parser/grammar.ts` (`literalValueToString`), `consumerProposalModel.ts` + `grammar.test.ts` (mandatory compile ripples), `executor/commands/instance.ts` (M1 attribute branch, `writeVector`), `executor/effectsPlanner.ts` (planner alignment), `SPEC.md` (was untracked, committed for the first time), `help.ts`, `__tests__/parser.test.ts`, new `executor/__tests__/m1AttributeVectors.test.ts`, the discovery report, this entry, the R-JS-13 amendment in `decisions.md`
