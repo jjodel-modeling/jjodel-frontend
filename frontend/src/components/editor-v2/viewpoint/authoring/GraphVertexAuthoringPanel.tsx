@@ -5,13 +5,18 @@ import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, C
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { graphVertexSeedIR } from '../ir/irCreationSeed';
-import type { GraphVertexViewIR, ShapeForm, VertexViewIR } from '../ir/irTypes';
+import type { EntryMark, GraphVertexViewIR, PaddingToken, ShapeForm, VertexViewIR } from '../ir/irTypes';
 import { authoredCornerRadius, baseCornerRadius } from '../ir/shapeRegistry';
+import { MARKER_REGISTRY } from '../ir/markerRegistry';
+import { structureCapabilities } from '../ir/structureCapabilities';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
 import { ContainmentSection } from './ContainmentSection';
+import { TextStyleField } from './TextStyleField';
+import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
+import { BadgeListEditor } from './BadgeListEditor';
 import {
     withBorderAxis, withDefaultSizeAxis, withShape, withVisible, withoutCornerRadius, type ChannelClass,
 } from './graphVertexAuthoring';
@@ -49,6 +54,21 @@ const BORDER_STYLE_OPTIONS = [
     { value: 'double', label: 'Double' },
 ];
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
+/** The vertex panel's three closed vocabularies (marker, padding, entry): '' and 'normal' are never persisted. */
+const MARKER_OPTIONS = [
+    { value: '', label: 'None' },
+    ...Object.values(MARKER_REGISTRY).map((m) => ({ value: m.id, label: m.label })),
+];
+const PADDING_OPTIONS = [
+    { value: 'small', label: 'Small' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'large', label: 'Large' },
+];
+const ENTRY_OPTIONS = [
+    { value: '', label: 'None' },
+    { value: 'dot', label: 'Dot' },
+    { value: 'arrow', label: 'Arrow' },
+];
 
 const COMMIT_DEBOUNCE_MS = 300;
 const FEATURES_HINT = 'Set a metaclass in the Applies to tab to enable feature paths';
@@ -75,8 +95,8 @@ const channelClassOf = (info: MetaclassInfo): ChannelClass => ({
  * commits, the flush on unmount. Fields this panel does not edit round-trip verbatim, because the whole cloned ir is
  * written back.
  *
- * Bodies: Applies to (identity, Matching), Structure (the Containment section), Appearance (Shape, Fill, Border,
- * Sizing, Visibility), Text (General, Labels with the header band), Source. MatchingSection is typed on the vertex
+ * Bodies: Applies to (identity, Matching), Structure (Containment, Field compartments), Appearance (Shape, Fill,
+ * Border, Padding, Marker, Sizing, Visibility, Badges), Text (General, Symbol text, Labels with the header band), Source. MatchingSection is typed on the vertex
  * draft and reads and writes only the matching keys both node kinds share, so the draft crosses it by a cast instead
  * of a change to its exported props (rule 11).
  */
@@ -256,9 +276,23 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
     // A rule-driven radius has no single number for the stepper: ConditionalEditor shows the rules instead.
     const cornerRuleDriven = isConditionalValue(shape.cornerRadius);
     const scalarForm = typeof form === 'string' ? (form as ShapeForm) : undefined;
+    // The vertex panel's gate: a Symbol with no room for rows offers no compartment; the data round-trips either way.
+    const showsFieldCompartments = structureCapabilities(scalarForm).showsFieldCompartments;
 
     // Every write goes through graphVertexAuthoring.ts, which the node bench imports: the test drives these.
     const patchShape = (partial: Partial<GraphVertexViewIR['shape']>) => patch(withShape(draft, partial));
+    /** One shape key through `withShape`; undefined drops it by rest/spread, so a reset leaves no `key: undefined`. */
+    const patchShapeKey = <K extends keyof GraphVertexViewIR['shape']>(key: K, value: GraphVertexViewIR['shape'][K] | undefined) => {
+        if (value !== undefined) return patchShape({ [key]: value } as Partial<GraphVertexViewIR['shape']>);
+        const { [key]: _dropped, ...rest } = draft.shape;
+        patch({ ...draft, shape: rest as GraphVertexViewIR['shape'] });
+    };
+    /** `fieldCompartments` by spreading the draft; the last one removed drops the key (absent, as before any edit). */
+    const patchFieldCompartments = (next: NonNullable<GraphVertexViewIR['fieldCompartments']>) => {
+        if (next.length > 0) return patch({ ...draft, fieldCompartments: next });
+        const { fieldCompartments: _dropped, ...rest } = draft;
+        patch(rest);
+    };
     const patchBorderAxis = (
         axis: 'color' | 'width' | 'style',
         next: NonNullable<GraphVertexViewIR['shape']['border']>['color' | 'width' | 'style'] | undefined,
@@ -302,6 +336,17 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                     classNames={classNames}
                     featuresHint={FEATURES_HINT}
                 />
+                {showsFieldCompartments && (
+                    <FormSection title="Field compartments" divider={false}>
+                        <FieldCompartmentListEditor
+                            compartments={draft.fieldCompartments ?? []}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            onChange={patchFieldCompartments}
+                        />
+                    </FormSection>
+                )}
             </div>
 
             {/* ─────────── Appearance ─────────── */}
@@ -351,6 +396,37 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                             rulesTable={{ subjectName, valueNoun: 'corner radius' }}
                         />
                     </div>
+                    {/* Entry mark (R-VP-22): scalar, so a plain Select; None removes the key. */}
+                    <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                        <label className="jj-field-label">Entry mark</label>
+                        <Select
+                            options={ENTRY_OPTIONS}
+                            value={shape.entry ?? ''}
+                            onChange={(e) => {
+                                const v = e.target.value as EntryMark | '';
+                                patchShapeKey('entry', v === '' ? undefined : v);
+                            }}
+                        />
+                        <HelpText icon={false}>Drawn outside the box, on its left: Dot is the initial pseudostate of a statechart, Arrow the start arrow of an automaton.</HelpText>
+                    </div>
+                    {/* Bar thickness (R-VP-57): shown where the vertex panel shows it, on a bar, on a Conditional form
+                        and wherever a value is already written, so it can still be cleared. Empty removes the key. */}
+                    {(scalarForm === undefined || scalarForm === 'bar' || shape.barThickness !== undefined) && (
+                        <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                            <label className="jj-field-label">
+                                Bar thickness <span style={{ color: '#94a3b8' }}>· px</span>
+                            </label>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                placeholder="box"
+                                value={shape.barThickness ?? ''}
+                                onChange={(e) => patchShapeKey('barThickness', e.target.value.trim() === '' ? undefined : Number(e.target.value))}
+                            />
+                            <HelpText icon={false}>A bar with a thickness keeps a square box and turns towards its neighbours. Empty draws the bar as its box.</HelpText>
+                        </div>
+                    )}
                 </FormSection>
 
                 <FormSection title="Fill" divider={false}>
@@ -418,6 +494,38 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                     </div>
                 </FormSection>
 
+                {/* Padding (Advanced only, as in the vertex panel): Normal removes the key. */}
+                {advanced && (
+                    <FormSection title="Padding" divider={false}>
+                        <div className="jj-field">
+                            <Select
+                                options={PADDING_OPTIONS}
+                                value={shape.padding ?? 'normal'}
+                                onChange={(e) => {
+                                    const v = e.target.value as PaddingToken | '';
+                                    patchShapeKey('padding', v === 'normal' || v === '' ? undefined : v);
+                                }}
+                            />
+                        </div>
+                    </FormSection>
+                )}
+
+                <FormSection title="Marker" divider={false}>
+                    <div className="jj-field">
+                        <ConditionalEditor
+                            value={shape.marker ?? ''}
+                            onChange={(next) => patchShapeKey('marker', next === '' ? undefined : next)}
+                            renderValue={(v, onCh) => <Select options={MARKER_OPTIONS} value={v} onChange={(e) => onCh(e.target.value)} />}
+                            defaultValue={''}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            allowConditional={advanced}
+                            rulesTable={{ noneValue: '', subjectName, valueNoun: 'marker' }}
+                        />
+                    </div>
+                </FormSection>
+
                 <FormSection title="Sizing" divider={false}>
                     <div className="jj-field">
                         <Toggle
@@ -463,6 +571,16 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                         <HelpText icon={false}>Off hides the container on the canvas; the object stays in the model and in the tree.</HelpText>
                     </div>
                 </FormSection>
+
+                <FormSection title="Badges" divider={false}>
+                    <BadgeListEditor
+                        badges={shape.badges ?? []}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        onChange={(next) => patchShapeKey('badges', next.length > 0 ? next : undefined)}
+                    />
+                </FormSection>
             </div>
 
             {/* ─────────── Text ─────────── */}
@@ -472,6 +590,18 @@ export const GraphVertexAuthoringPanel: React.FC<GraphVertexAuthoringPanelProps>
                         <label className="jj-field-label">Label</label>
                         <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
                     </div>
+                </FormSection>
+                {/* Symbol text, root of the typographic cascade, reachable in Basic as in the vertex panel. */}
+                <FormSection title="Symbol text" divider={false}>
+                    <TextStyleField
+                        value={shape.text}
+                        onChange={(next) => patchShapeKey('text', next)}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        hideUnderline
+                    />
+                    <HelpText icon={false}>Applies to every text of the symbol. A label's own style overrides it.</HelpText>
                 </FormSection>
                 <FormSection title="Labels" divider={false}>
                     <LabelListEditor
