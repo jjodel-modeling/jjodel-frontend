@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-11 — fix(#214): multiplicity clause written on create attribute and create parameter
+**Prompt**: issue #214 — `create attribute <name> in <Class> type <type> <multiplicity>` ignored the multiplicity, always [0..1]; user extended in chat: «fix also for createParameter»
+**Files touched**: `executor/commands/create.ts` (createAttribute, createParameter), new bench `executor/__tests__/createAttributeMultiplicity.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — jjscript suite 876 green, the one red file is the known monaco-import `context-binding`; typecheck 0 (the zero baseline); build 0, only the pre-existing chunk-size warning
+**Out-of-scope changes**: no — createParameter was explicitly named in chat
+**Layer Impact Report**: produced (D-layer bound writes on the freshly created element only; no L-layer writer, sync, canvas or persistence change)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers parser + executor
+**Notes**: root: both creators dropped the parsed `options.multiplicity`; the DStructuralFeature seeds [0..1] were all that got written. Mirrored createReference's block (create.ts:872-880), same '*' → -1. Bench 8 red → green, 3 controls (seeds, the reference source). Tickets: createAttribute still drops `default <value>` (create.ts has no defaultValue handling); eval.ts:502 multiValued still misses numeric upperBound > 1 (from #211).
+**Prompt document name**: 2026-11-11 10:05 (#214: multiplicity in create attribute / parameter)
+
+## 2026-11-10 — feat(#211): multiple assignment in set on multi-valued attributes
+**Prompt**: issue #211 — the vector forms of `set` on an attribute with multiplicity (`= [a, b]`, `+= c`, `-= a`); plan with four ratified decisions, lane executed
+**Files touched**: `parser.ts` (`parseSetValue`), `types.ts` (`ArrayLiteral` widened), `parser/grammar.ts` (`literalValueToString`), `consumerProposalModel.ts` + `grammar.test.ts` (mandatory compile ripples), `executor/commands/instance.ts` (M1 attribute branch, `writeVector`), `executor/effectsPlanner.ts` (planner alignment), `SPEC.md` (was untracked, committed for the first time), `help.ts`, `__tests__/parser.test.ts`, new `executor/__tests__/m1AttributeVectors.test.ts`, the discovery report, this entry, the R-JS-13 amendment in `decisions.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `m1Operators` 25/25 unchanged (reference semantics and the single-valued attribute refusal stand), full suite 12276 green; the 11 red files are the nine known monaco-import ones plus two Playwright-environmental (`irCollapsedRender`, `irSelectionRing`: Chromium binary missing)
+**Out-of-scope changes**: yes — `consumerProposalModel.ts` and `grammar.test.ts`: mandatory compile ripples of the `ArrayLiteral` widening (the plan's rule-11 exception); `SPEC.md` committed for the first time (untracked, no history)
+**Layer Impact Report**: produced (in chat before the diff: D-layer `values` writes + L-layer reads only, canvas/sync untouched)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers the parser + executor paths
+**Notes**: R-JS-13 amended (multi-valued carve-out, single-valued refusal retained), the four ratified decisions in the discovery §4; the `[1]`-as-MULTIPLICITY sharp edge documented in SPEC; candidate ticket: `eval.ts:502` `multiValued` misses numeric `upperBound > 1`. Detail: `docs/discovery/discovery_2026-11-10_211_set_attribute_vectors.md`
+**Prompt document name**: 2026-11-10 16:00 (#211: set vector forms on multi-valued attributes)
+
 **Incidenti — sanatoria batch L1–L4 (2026-09-02).** Tre commit del batch portano un
 contenuto che il loro messaggio non descrive. Nessun rewrite di history: e' stato un
 rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> contenuto reale».
@@ -445,32 +471,4 @@ Detail: `docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.
 **Smoke visivo**: non applicabile
 **Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
 **Prompt document name**: 2026-10-11 16:30
-
-## 2026-10-11 — merge: cain-data into alfonso-frontend-jjtl (P-2026-10-11-1719)
-**Prompt**: `claude_2026-10-11_1719_prompt_merge_cain-data.md`, a direct merge by `lane-run merge --direct`, no session: `cain-data` at `e34fccc1f` into `alfonso-frontend-jjtl`, merge base `154311f55`, 1 commit on the branch side.
-**Files touched**: merge `2dc0982bc`: 13 files from the branch side (`docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/data/autonomy_weekly.csv`, `docs/research/cain-2027/data/comparison.csv`, `docs/research/cain-2027/data/conformance_daily.csv`, `docs/research/cain-2027/data/conformance_failures.csv`, `docs/research/cain-2027/data/decisions.csv`, `docs/research/cain-2027/data/rc18_daily.csv`, `docs/research/cain-2027/data/rules.csv`, and 5 more); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `2dc0982bc` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8636 tests in 357 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: docs-only merge (research dataset), no visual change
-**Notes**: Rollback tag `pre-cain-data` on `dfea753d4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1719/result.json`.
-**Prompt document name**: 2026-10-11 17:19
-
-## 2026-10-11 — docs(decisions): ratify the provisional rows of the digest, amend R-SIM-120 and R-VP-29, fix headers (P-2026-10-11-1540)
-**Prompt**: `claude_2026-10-11_1540_prompt_ratify_provisional_rows.md`, lane fast, unattended: apply Alfonso's «ok alle raccomandazioni» to the digest of P-2026-10-11-1430, RC-38 excepted: ratify 74 rows, amend R-SIM-120 and R-VP-29 then ratify them, apply the §7 header rewrites, regenerate `docs/digest/`, write the digest's §10 Outcome.
-**Files touched**: `d7a251297`: `docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`; this entry, uncommitted (RC-17).
-**Outcome**: ⚠️ partial
-**Corregge**: —
-**Causa**: (a)
-**Regressions**: no. `docs:digest --all` parses 401 of 402 rows, RC-38's header the only failure, as before; check:docs 5/5.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Partial: `--write` exits 2 on RC-38 and writes nothing, so the 34-date backfill of `docs/digest/` waits for RC-38 (adopted unattended, RC-21: the gate is not bypassed). 1 header says provisional (RC-38), 76 say `ratified by Alfonso 2026-10-11`; 39 cited commits on HEAD. Subject shortened to 72 (bash-guard). 1b clauses dropped: the section intros name the chat. Not applied: the R-SIM-70 paragraph (§6), the R-JS intros' «Marker: provisional». Detail: digest §10.
-**Prompt document name**: 2026-10-11 15:40
-
-**Ticket** (P-2026-10-11-1540): `docs:digest --write` writes nothing when any header fails to parse, so one row waiting for Alfonso (RC-38) blocks the digest of every date. Writing every date but the failing row's would unblock the backfill; a script change, Alfonso's call.
 

@@ -5757,7 +5757,11 @@ listed once, and one undo puts it back in the slot. The refusal stays in the cod
 unbounded, below its upper bound, or an empty single-valued slot. A single-valued slot holding another element, and
 a bounded slot at its bound, refuse with `MULTIPLICITY_EXCEEDED` (the single-valued one names `=`); a single-valued
 slot already holding the target succeeds with no write. `=` is unchanged (#168 C1: single replaces, multi appends).
-`+=`/`-=` on an attribute: `OPERATOR_NOT_SUPPORTED`. Code `cb02e6a2b`.
+`+=`/`-=` on an attribute: `OPERATOR_NOT_SUPPORTED`. Code `cb02e6a2b`. **Amended 2026-11-10 by #211 (ratified in the
+lane):** `+=`/`-=` are enabled on **multi-valued** attributes (upper bound > 1 or `*`): `= [a, b]` replaces the whole
+vector, `= []` / `= null` clear it, `+=` appends while there is room and keeps duplicates, `-=` takes the element out
+by value, every copy, and refuses when absent (`NOT_SET`); elements must be primitive literals (a name, `null` or an
+enum literal is `TYPE_MISMATCH`). The refusal on **single-valued** attributes stands. Code `5cc22bb00`.
 
 **R-JS-14** (2026-10-07, provisional) — **A link is type-checked in the JjScript executor, not in the core.** `=`
 and `+=` write only an instance of the reference type or of a subclass (`isExtending`, the test of R-JS-9's

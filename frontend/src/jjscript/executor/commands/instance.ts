@@ -311,6 +311,56 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
 }
 
 /**
+ * #211 — write a whole vector into an attribute slot.
+ *
+ * The plain whole-array set the reducer replaces (`reducer.ts deepCopyButOnlyFollowingPath`):
+ * it grows and shrinks, so `= [a, b]`, `= []`, `= null` and a full `+=` all take this one form.
+ * The proxy's `slot.values = [...]` setter is deliberately not used: its shrink path issues the
+ * valueless `'-='` the reducer drops (model/AGENTS.md §9.3), so a shorter write would keep the
+ * excess. Primitives carry no containment and no `pointedBy`, `isPtr` is false.
+ */
+function writeVector(
+    lObject: any,
+    property: string,
+    values: (string | number | boolean | null)[],
+    message: string,
+    data: Record<string, any>
+): Promise<ExecutionResult> {
+    return new Promise((resolve) => {
+        try {
+            TRANSACTION('JjScript: Set instance attribute', () => {
+                const slot = (lObject as any)['$' + property];
+                if (!slot?.id) {
+                    resolve({
+                        success: false,
+                        command: 'set',
+                        message: `Feature proxy for '${property}' is not available on instance`,
+                        errors: [{ code: 'NO_FEATURE_PROXY', message: 'Internal: $-proxy missing' }]
+                    });
+                    return;
+                }
+                SetFieldAction.new(slot.id, 'values', values, '', false);
+                resolve({
+                    success: true,
+                    command: 'set',
+                    message,
+                    data,
+                    affectedElements: [lObject.id],
+                    undoable: true
+                });
+            });
+        } catch (error) {
+            resolve({
+                success: false,
+                command: 'set',
+                message: `Failed to set attribute: ${(error as Error).message}`,
+                errors: [{ code: 'SET_INSTANCE_ATTR_ERROR', message: (error as Error).message }]
+            });
+        }
+    });
+}
+
+/**
  * Let every write already queued reach the store before a reference slot is read.
  *
  * The app keeps a transaction block open and commits it every `U.UpdatingTimer` (300 ms,
@@ -971,10 +1021,16 @@ export async function executeSetInstance(
 
     const operator = args.operator ?? '=';
 
-    // Attribute branch — write a primitive
+    // Attribute branch — write a primitive, or, on a vector attribute, act on its elements (#211)
     if (kind === 'attribute') {
-        // #175: the branch writes the value as given, so `+= 1` would store 1. Refused instead.
-        if (operator !== '=') {
+        const metaclassAttrs: any[] = (metaclass as any).allAttributes ?? (metaclass as any).attributes ?? [];
+        const attrMeta = metaclassAttrs.find((a: any) => a?.name === args.property);
+        const many = isManyValued(attrMeta?.upperBound);
+        const label = `${instanceName}.${args.property}`;
+
+        // #175 / R-JS-13, amended by #211: `+=` and `-=` act on a vector; a single-valued
+        // attribute holds none, so the refusal stands there.
+        if (operator !== '=' && !many) {
             return {
                 success: false,
                 command: 'set',
@@ -996,7 +1052,170 @@ export async function executeSetInstance(
                 }]
             };
         }
-        const primitive = literalToPrimitive(args.value as LiteralValue);
+        const lit = args.value as LiteralValue;
+
+        // #211: `= [a, b]` replaces the whole vector, order as written; `= []` clears it.
+        if (lit.kind === 'array') {
+            if (operator !== '=') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${operator}' takes a single element of ${label}, not a list`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: `Write one element: set ${label} ${operator} <value>`
+                    }]
+                };
+            }
+            if (!many) {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${label}' holds at most one value`,
+                    errors: [{
+                        code: 'MULTIPLICITY_EXCEEDED',
+                        message: `${label} is single-valued and the list holds ${lit.values.length} element${lit.values.length === 1 ? '' : 's'}`,
+                        suggestion: `Write one value: set ${label} = <value>`
+                    }]
+                };
+            }
+            // Every refusal is decided before any write. A slot holds primitives: a name names
+            // nothing it can hold, `null` names nothing, and an enum literal is a pointer.
+            for (const v of lit.values) {
+                if (!isLiteralValue(v) || (v as LiteralValue).kind === 'null' || (v as LiteralValue).kind === 'enumLiteral') {
+                    const shown = isLiteralValue(v) ? literalValueToString(v as LiteralValue) : qualifiedNameToString(v as QualifiedName);
+                    return {
+                        success: false,
+                        command: 'set',
+                        message: `'${shown}' is not a value ${label} can hold`,
+                        errors: [{
+                            code: 'TYPE_MISMATCH',
+                            message: `${label} holds primitives; to clear it: set ${label} = null`
+                        }]
+                    };
+                }
+            }
+            const vector = lit.values.map((v) => literalToPrimitive(v as LiteralValue));
+            return writeVector(lObject, args.property, vector,
+                `Set ${label} = ${literalValueToString(lit)}`,
+                { id: lObject.id, instance: instanceName, property: args.property, newValue: vector, kind: 'attribute' });
+        }
+
+        // #211: `= null` on a vector clears it, as on a reference; single-valued keeps the
+        // committed single write below.
+        if (lit.kind === 'null' && many && operator === '=') {
+            return writeVector(lObject, args.property, [],
+                `Cleared ${label}`,
+                { id: lObject.id, instance: instanceName, property: args.property, cleared: true, kind: 'attribute' });
+        }
+
+        // #211: `+=` / `-=` on the vector (a single-valued attribute was refused above).
+        if (operator === '+=' || operator === '-=') {
+            if (lit.kind === 'null') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${operator}' needs a value`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: operator === '+='
+                            ? `Add an element: set ${label} += <value>`
+                            : `Take an element out: set ${label} -= <value>`
+                    }]
+                };
+            }
+            if (lit.kind === 'enumLiteral') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${label}' holds primitives, not enum literals`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: `${label} holds primitives; '${lit.literal}' is an enum literal`
+                    }]
+                };
+            }
+            const primitive = literalToPrimitive(lit);
+            // Read the slot only after the queued writes have landed, as the reference branch does.
+            await settlePendingWrites();
+            const slot = (lObject as any)['$' + args.property];
+            if (!slot?.id) {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `Feature proxy for '${args.property}' is not available on instance`,
+                    errors: [{ code: 'NO_FEATURE_PROXY', message: 'Internal: $-proxy missing' }]
+                };
+            }
+            const raw: any[] = slot.__raw?.values ?? [];
+            const current = raw.filter((v: any) => v != null && v !== '');
+            if (operator === '+=') {
+                const bound = attrMeta?.upperBound;
+                const capacity = bound === -1 || bound === '*' ? Infinity : (bound as number);
+                if (current.length >= capacity) {
+                    return {
+                        success: false,
+                        command: 'set',
+                        message: `'${label}' is full (at most ${capacity})`,
+                        errors: [{
+                            code: 'MULTIPLICITY_EXCEEDED',
+                            message: `${label} holds at most ${capacity} elements`
+                        }]
+                    };
+                }
+                // Duplicates are kept, as in the reference vectors (#175): the slot may hold the
+                // element more than once, and `+=` appends rather than checks.
+                const vector = [...current, primitive];
+                return writeVector(lObject, args.property, vector,
+                    `Added ${literalValueToString(lit)} to ${label}`,
+                    { id: lObject.id, instance: instanceName, property: args.property, newValue: vector, kind: 'attribute' });
+            }
+            if (!current.includes(primitive)) {
+                const shown = literalValueToString(lit);
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `${shown} is not in ${label}`,
+                    errors: [{
+                        code: 'NOT_SET',
+                        message: `Nothing to remove: ${label} does not hold ${shown}`
+                    }]
+                };
+            }
+            return new Promise((resolve) => {
+                try {
+                    TRANSACTION('JjScript: Remove from attribute', () => {
+                        // By value, every copy — the reducer's own removal, the one `removeLinked`
+                        // makes (R-DEL-4). A valueless `'-='` would be dropped by the reducer.
+                        SetFieldAction.new(slot.id, 'values', primitive, '-=', false);
+                        resolve({
+                            success: true,
+                            command: 'set',
+                            message: `Removed ${literalValueToString(lit)} from ${label}`,
+                            data: {
+                                id: lObject.id,
+                                instance: instanceName,
+                                property: args.property,
+                                removed: true,
+                                kind: 'attribute'
+                            },
+                            affectedElements: [lObject.id],
+                            undoable: true
+                        });
+                    });
+                } catch (error) {
+                    resolve({
+                        success: false,
+                        command: 'set',
+                        message: `Failed to remove from attribute: ${(error as Error).message}`,
+                        errors: [{ code: 'SET_INSTANCE_ATTR_ERROR', message: (error as Error).message }]
+                    });
+                }
+            });
+        }
+
+        // Single literal: the committed path, single-valued and vector alike.
+        const primitive = literalToPrimitive(lit);
 
         return new Promise((resolve) => {
             try {
@@ -1015,7 +1234,7 @@ export async function executeSetInstance(
                     resolve({
                         success: true,
                         command: 'set',
-                        message: `Set ${instanceName}.${args.property} = ${literalValueToString(args.value as LiteralValue)}`,
+                        message: `Set ${instanceName}.${args.property} = ${literalValueToString(lit)}`,
                         data: {
                             id: lObject.id,
                             instance: instanceName,
