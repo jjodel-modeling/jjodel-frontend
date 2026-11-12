@@ -54,8 +54,13 @@ function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                             onClick={() => {
                                 // console.log('[ContextMenu] clicked:', item.label, 'disabled:', item.disabled);
                                 if (item.disabled) return;
-                                item.onClick?.();
-                                onClose();
+                                // Close even when the action throws: the menu
+                                // must not outlive the selection (issue #216).
+                                try {
+                                    item.onClick?.();
+                                } finally {
+                                    onClose();
+                                }
                             }}
                         >
                             {item.icon && <i className={`bi ${item.icon}`} />}
