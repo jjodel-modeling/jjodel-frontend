@@ -4,6 +4,7 @@ Prompt-ID: P-2026-11-12-1015
 Chat: C-2026-11-12-1015
 Status: to run
 Lane: fast (UI layout fix, no critical-zone file)
+Front: codegen
 Depends: none
 Request: none (Alfonso's words kept locally: "the textual syntax area is too small, I must be able to widen it")
 
