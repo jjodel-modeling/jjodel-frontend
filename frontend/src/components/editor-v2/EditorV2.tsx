@@ -3173,10 +3173,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setContextMenu(null);
     }, []);
 
-    // Listen for child-element context menu events from ClassNode
+    // Listen for child-element context menu events from ClassNode.
+    // The event is global (window) and hidden dock tabs keep their EditorV2
+    // mounted, so every mounted editor would otherwise open a stacked copy of
+    // the same menu (issue #216): only the editor whose canvas owns the node
+    // may open it.
     useEffect(() => {
         const handler = (e: Event) => {
             const { childId, childKind, nodeId, x, y } = (e as CustomEvent).detail;
+            if (!nodeId || !getFlowNodes().some(n => n.id === nodeId)) return;
             setContextMenu({
                 x,
                 y,
@@ -3187,7 +3192,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         };
         window.addEventListener(JjodelEvents.CHILD_CONTEXT_MENU, handler);
         return () => window.removeEventListener(JjodelEvents.CHILD_CONTEXT_MENU, handler);
-    }, []);
+    }, [getFlowNodes]);
 
     // Shared helper: create a composition child on a parent node
     // Containment drop entry point (wiring cantiere 2026-07-20): upper-bound
