@@ -60,6 +60,7 @@ import {
     forgetPendingChild,
 } from '../handleRegistry';
 import { isManyValued, linkedIds, planLink, planUnlink, planAdd, planRemove } from '../referenceWrite';
+import { resolveInstanceAddress, elsewhereSuggestion } from '../instanceAddress';
 
 // ============================================
 // SHARED HELPERS
@@ -1327,29 +1328,104 @@ export async function executeSetInstance(
         targetInstanceName = (args.value as QualifiedName).raw;
     }
 
-    const resolvedTarget = resolveInstanceHandle(targetModel, targetInstanceName);
-    // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
-    // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
-    // nothing downstream would ever report that the target was chosen rather than named.
-    if (!resolvedTarget.ok && resolvedTarget.candidates) {
+    // #213: `<Model>::<instance>` addresses an instance of another M1 model of the project.
+    // The decision is pure (instanceAddress.ts); `consultRegistry` carries the registry-skip
+    // rule as data: a run-local handle is an instance of the ACTIVE model, and `Other::p`
+    // must never silently resolve to the run-local p. A qualifier naming the active model is
+    // not cross-model — the address keeps today's path exactly, the registry included.
+    const m1Models: LModel[] = (((project as any).models ?? []) as LModel[]).filter((m) => !m.isMetamodel);
+    const resolution = resolveInstanceAddress(
+        targetInstanceName,
+        { id: targetModel.id, name: (targetModel as any).name ?? '' },
+        m1Models.map((m) => ({ id: m.id, name: (m as any).name ?? '' })),
+    );
+
+    let targetInstance: any;
+    if (resolution.kind === 'model-absent') {
         return {
             success: false,
             command: 'set',
-            message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
-            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
-        };
-    }
-    const targetInstance = resolvedTarget.value;
-    if (!targetInstance) {
-        return {
-            success: false,
-            command: 'set',
-            message: `Target instance '${targetInstanceName}' not found in active model`,
+            message: `No model named '${resolution.qualifier}' in the project`,
             errors: [{
-                code: 'INSTANCE_NOT_FOUND',
-                message: `No instance named '${targetInstanceName}' to link to`
+                code: 'MODEL_NOT_FOUND',
+                message: `No model named '${resolution.qualifier}' to take the instance from`,
+                suggestion: `Models in the project: ${resolution.models.map((m) => `'${m.name}'`).join(', ')}`
             }]
         };
+    }
+    if (resolution.kind === 'model-ambiguous') {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot link to '${targetInstanceName}': the model name is ambiguous`,
+            errors: [{
+                code: 'AMBIGUOUS_MODEL',
+                message: `Ambiguous model name '${resolution.qualifier}': ${resolution.matches.length} candidates — ${resolution.matches.map((m) => m.id).join(', ')}. Rename one of the models.`
+            }]
+        };
+    }
+
+    if (resolution.kind === 'local') {
+        const resolvedTarget = resolveInstanceHandle(targetModel, resolution.name);
+        // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
+        // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
+        // nothing downstream would ever report that the target was chosen rather than named.
+        if (!resolvedTarget.ok && resolvedTarget.candidates) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
+            };
+        }
+        targetInstance = resolvedTarget.value;
+        if (!targetInstance) {
+            // #213: the name is not in the active model, but one or more other models of the
+            // project hold it. Bare names stay active-model-only (no fallback); the suggestion
+            // points at the qualified spelling.
+            const elsewhere = m1Models
+                .filter((m) => m.id !== targetModel.id && findInstanceByName(m, resolution.name).length > 0)
+                .map((m) => (m as any).name ?? '');
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in active model`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${targetInstanceName}' to link to`,
+                    ...(elsewhere.length > 0 ? { suggestion: elsewhereSuggestion(resolution.name, elsewhere) } : {})
+                }]
+            };
+        }
+    } else {
+        // Cross-model: the instance the model named holds, model-wide (roots and contained),
+        // through the same lookup as the local path. The run's handle registry is deliberately
+        // not consulted (consultRegistry is false above).
+        const otherModel = m1Models.find((m) => m.id === resolution.model.id);
+        const matches = otherModel ? findInstanceByName(otherModel, resolution.instance) : [];
+        if (matches.length > 1) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: describeAmbiguity(targetInstanceName, matches.map(toCandidate)) }]
+            };
+        }
+        targetInstance = matches[0];
+        if (!targetInstance) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in model '${resolution.model.name}'`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${resolution.instance}' in model '${resolution.model.name}'`
+                }]
+            };
+        }
+        // TODO(#213): the slot is written below as the canvas writes it (refProxy.values / the
+        // by-value removal); the composition policy for cross-model containment slots (father,
+        // orphaning on removal) is off-topic until decided.
     }
 
     // Read the slot only after the queued writes have landed.

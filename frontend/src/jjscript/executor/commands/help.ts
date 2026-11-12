@@ -239,6 +239,15 @@ PROPERTY ALIASES:
   default → defaultValueLiteral
   readonly → !changeable (inverted boolean)
 
+REFERENCE LINKS (M1):
+  The target is an instance of the active model, or an instance of another
+  M1 model of the project, addressed as <Model>::<instance>:
+    set <Instance>.<reference> = <OtherInstance>
+    set <Instance>.<reference> = <Model>::<OtherInstance>
+  A bare name always resolves in the active model only (if it lives in
+  another model, the refusal says so). Names with spaces are quoted:
+    set Alice.manager = "My Model::bob"
+
 EXAMPLES:
   set Person.abstract = true
   set Person.singleton = true
@@ -249,6 +258,10 @@ EXAMPLES:
   set Alice.tags = ["new", "urgent"]
   set Alice.tags += "billable"
   set Alice.tags -= "new"
+  set Alice.manager = bob
+  set Alice.manager = Other::bob
+  set Alice.manager = "My Model::bob"
+  remove Other::bob from Alice.manager
 `,
         add: `
 ADD Command
