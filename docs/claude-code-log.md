@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-12 — feat(#213): a cross-model link records the target model as a dependency of the caller model
+**Prompt**: user in chat (same lane as #213): «Add a little improvement: when a external reference is added, add the target model (if not already set) as dependency of the caller model»
+**Files touched**: `src/jjscript/executor/commands/instance.ts` (`ensureModelDependency`, the cross branch, both write transactions), `src/jjscript/executor/__tests__/crossModelLink.test.ts` (+7), `src/jjscript/executor/commands/help.ts`, the discovery report addendum (§7), this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — crossModelLink 25/25, m1Operators 25/25, m1AttributeVectors 25/25, m1Containment 28/28, instanceAddress 21/21; full suite 12341 green (12334 + 7), red the nine known monaco-import files; typecheck 0; build 0; check:docs 5/5
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; D-layer `DModel.dependencies` `'+='` append only, inside the link's own TRANSACTION; no critical-zone file)
+**Smoke visivo**: non applicabile — the user did the manual smoke (JjScript console + right-sidebar References); the recorded dependency is what the slot's select reads (report §7)
+**Notes**: the write is the same committed form as the Info panel («Depends from models», Info.tsx:533) and the delete cascade (Dummy.ts `case 'dependencies'`); effect: the target model's instances become visible through the caller's `cross*` getters (LModelElement.tsx:5155-5236) — the field's committed semantics; the sidebar select reads `allCrossSubObjects`, which merges `allDependencies` (LModelElement.tsx:8175). Detail: the report addendum.
+**Prompt document name**: — (user in chat, no prompt file)
+
 ## 2026-11-12 — feat(#213): M1 cross-model reference links in JjScript (Model::instance)
 **Prompt**: issue #213 — at M1 there was no way to link a type-compatible instance from another model to a reference field via `set <instance>.<reference-name>` (it works graphically); the fix plan ratified in the issue comment (2026-11-12 11:29), full lane
 **Files touched**: new `src/jjscript/executor/instanceAddress.ts` (pure decision core), `src/jjscript/executor/commands/instance.ts` (link branch), `src/jjscript/executor/elementWaiter.ts` (M1 branch), `src/jjscript/executor/commands/help.ts`, `src/jjscript/services/JjScriptService.ts`, new `src/jjscript/executor/__tests__/crossModelLink.test.ts` (18) and `instanceAddress.test.ts` (21), the discovery report, this entry
