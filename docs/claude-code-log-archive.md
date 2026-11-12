@@ -306,6 +306,32 @@ imprecise. It is recorded here and the paragraph is left as written.
 Rotazione del 2026-09-01 (P9, oltre le 40 entry): le 4 entry qui sotto, tutte del
 2026-08-30, sono state spostate dall'attivo senza modifiche. L'attivo torna a 40.
 
+## 2026-10-11 — merge: goal-tree into alfonso-frontend-jjtl (P-2026-10-11-1808)
+**Prompt**: `claude_2026-10-11_1808_prompt_merge_goal-tree.md`, a direct merge by `lane-run merge --direct`, no session: `goal-tree` at `041cd2d47` into `alfonso-frontend-jjtl`, merge base `f6e14efad`, 1 commit on the branch side.
+**Files touched**: merge `30e8e2b5e`: 7 files from the branch side (`docs/discovery/discovery_2026-10-11_goal_tree_hurts.md`, `docs/goals/README.md`, `docs/goals/conflicts.json`, `docs/goals/contributions.json`, `docs/goals/correlations.json`, `docs/goals/goal-tree.json`, `docs/goals/softgoals.json`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `30e8e2b5e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8692 tests in 359 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: data-only merge of docs/goals; Requirements tab checked on 4702 (12 softgoals, 13 conflicts, no em dash)
+**Notes**: Rollback tag `pre-goal-tree` on `58a407501` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1808/result.json`.
+**Prompt document name**: 2026-10-11 18:08
+
+## 2026-10-11 — docs(research): governance drift dataset for CAIN 2027 (P-2026-10-11-1630)
+**Prompt**: `claude_2026-10-11_1630_prompt_cain_governance_dataset_discovery.md`: read-only discovery, the governance-drift dataset for a CAIN 2027 short paper (register history, RC-26 crossings, grammar conformance, RC-18, autonomy, rule timeline, the enforced vs text-only comparison, anonymization, threats).
+**Files touched**: `docs/research/cain-2027/discovery_2026-10-11_governance_dataset.md`, `docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/scripts/governance-dataset.ts`, `docs/research/cain-2027/scripts/rules-enforcement.csv`, `docs/research/cain-2027/scripts/rc26-hand-check.json`, eight CSVs in `docs/research/cain-2027/data/` (report commit); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
+**Prompt document name**: 2026-10-11 16:30
+
 ## 2026-10-11 — merge: cain-data into alfonso-frontend-jjtl (P-2026-10-11-1719)
 **Prompt**: `claude_2026-10-11_1719_prompt_merge_cain-data.md`, a direct merge by `lane-run merge --direct`, no session: `cain-data` at `e34fccc1f` into `alfonso-frontend-jjtl`, merge base `154311f55`, 1 commit on the branch side.
 **Files touched**: merge `2dc0982bc`: 13 files from the branch side (`docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/data/autonomy_weekly.csv`, `docs/research/cain-2027/data/comparison.csv`, `docs/research/cain-2027/data/conformance_daily.csv`, `docs/research/cain-2027/data/conformance_failures.csv`, `docs/research/cain-2027/data/decisions.csv`, `docs/research/cain-2027/data/rc18_daily.csv`, `docs/research/cain-2027/data/rules.csv`, and 5 more); this commit: this entry and the Status of the prompt file.
