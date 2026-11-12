@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-12 — feat(#213): M1 cross-model reference links in JjScript (Model::instance)
+**Prompt**: issue #213 — at M1 there was no way to link a type-compatible instance from another model to a reference field via `set <instance>.<reference-name>` (it works graphically); the fix plan ratified in the issue comment (2026-11-12 11:29), full lane
+**Files touched**: new `src/jjscript/executor/instanceAddress.ts` (pure decision core), `src/jjscript/executor/commands/instance.ts` (link branch), `src/jjscript/executor/elementWaiter.ts` (M1 branch), `src/jjscript/executor/commands/help.ts`, `src/jjscript/services/JjScriptService.ts`, new `src/jjscript/executor/__tests__/crossModelLink.test.ts` (18) and `instanceAddress.test.ts` (21), the discovery report, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — m1Operators 25/25 and m1AttributeVectors 25/25 unchanged; full suite 12334 green, red the nine known monaco-import files; typecheck exit 0 (zero baseline); build exit 0, pre-existing chunk-size warning only
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; JjOM pointer-id writes only through the canvas-verified `refProxy.values`/`SetFieldAction` forms; no critical-zone file)
+**Smoke visivo**: non applicabile — needs a manual browser session (two-model project, console); the bench covers parser + executor
+**Notes**: mutation bench (a)–(d) all killed (registry leak, last-:: split, first case-insensitive match, bare-name fallback) — recorded in the commit message. Sharp edges carried (report §6): profile guard still active-model only (executor.ts:407), SPEC.md §5.2 not updated (not in the plan's file list), quoted `remove "…"` unparseable (pre-existing). Detail: `docs/discovery/discovery_2026-11-12_213_m1_cross_model_links.md`
+**Prompt document name**: 2026-11-12 11:29 (#213: set external references from jjscript)
+
 ## 2026-11-11 — fix(#214): multiplicity clause written on create attribute and create parameter
 **Prompt**: issue #214 — `create attribute <name> in <Class> type <type> <multiplicity>` ignored the multiplicity, always [0..1]; user extended in chat: «fix also for createParameter»
 **Files touched**: `executor/commands/create.ts` (createAttribute, createParameter), new bench `executor/__tests__/createAttributeMultiplicity.test.ts`, this entry
