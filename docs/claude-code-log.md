@@ -28,6 +28,19 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-11-12 — fix: attribute-row context menu — single owner, closes after selection (issue #216)
+**Prompt**: Juri in chat, no prompt file: «fetch issue #216 (right-click menu on a class attribute doesn't disappear after action selection; 5 canvas clicks needed to dismiss), checkout staging, plan first, then implement on fix/216-context-menu, commit, PR to staging».
+**Files touched**: commit `1a58397fc`: `frontend/src/components/editor-v2/EditorV2.tsx` (ownership guard on the CHILD_CONTEXT_MENU window listener: only the editor whose canvas owns the nodeId opens the row menu), `frontend/src/components/editor-v2/ContextMenu.tsx` (item close in a finally, so a throwing action cannot leave the menu open). This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — the guard narrows the row-menu openers to the owning editor only (each EditorV2 has its own ReactFlowProvider/node list); node/edge menus, sync and D/L layers unchanged; typecheck exit 0, build exit 0, vitest 12262 green + the 9 known red files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 sync file touched; canvas v2-flow menu wiring only)
+**Smoke visivo**: passato — user confirmation on a multi-tab project: right-click on an attribute row → one menu + one backdrop; item click closes the menu and runs the action once; one canvas click closes the menu.
+**Notes**: Root cause: ClassNode dispatches CHILD_CONTEXT_MENU on window (ClassNode.tsx:697/:759/:837); every mounted EditorV2 listened without an ownership check (EditorV2.tsx:3176); hidden dock tabs stay mounted (DockManager.tsx:123-125) → N open tabs = N stacked menus/backdrops: item click closed only the top copy, canvas click consumed one backdrop — the 5 clicks = 5 open tabs. Out-of-scope finding: U.tsx:260-263 always-truthy filter suppresses the classic-menu outside-click close within 300 ms.
+**Prompt document name**: — (Juri in chat, no prompt file)
+
 ## 2026-10-12 — merge: Alfonso's trunk into staging, his branch aligned by fast-forward (C-2026-10-12-1927)
 **Prompt**: Juri in chat, no prompt file: «Fai pull di tutti i branch e: 1) mergia alfonso-frontend-jjtl su staging e 2) staging su alfonso-frontend-jjtl». Run in the main tree on `staging`. No hard stop between the report and the merge: the request was the merge itself (P4 derogated, flagged here).
 **Files touched**: `2b61eeeb3`: `docs/discovery/discovery_2026-10-12_sync_alfonso_trunk.md`. `c2cf77016` (merge, 744 files of the other side; by hand: `docs/decisions.md`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/components/Jodie/__tests__/reservedIdentifierGate.test.ts`). This commit: this inbox. Refs, local only: `alfonso-frontend-jjtl`, `dotnet-backend-integration` and `master` fast-forwarded to their remotes before the merge; tag `pre-alfonso-frontend-jjtl-2026-10-12` on `2b61eeeb3`; `alfonso-frontend-jjtl` fast-forwarded to the tip of `staging` after this commit.
