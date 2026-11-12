@@ -309,3 +309,61 @@ describe('the handle registry stays a run-local affair (#213)', () => {
         expect(h.writes).toEqual([{ slot: 's0_lead', values: ['lp'] }]);
     });
 });
+
+// ── the model dependency (#213 follow-up) ─────────────────────────────────────────────────────────
+
+describe('a cross-model link records the target model as a dependency of the caller model (#213 follow-up)', () => {
+    /** The `dependencies` writes of the caller model, in order. */
+    const depWrites = () => h.actions.filter((a) => a.field === 'dependencies');
+    const DEP = { id: 'm1', field: 'dependencies', value: 'm2', op: '+=' };
+
+    it('`=` links and records the target model in the caller\'s dependencies (dies if the dependency write is missing)', async () => {
+        const r = await set('set Scenario_0.lead = Other::p');
+        expect(r.success).toBe(true);
+        expect(depWrites()).toEqual([DEP]);
+        expect(h.writes).toEqual([{ slot: 's0_lead', values: ['op'] }]);
+    });
+
+    it('`+=` records it too when it appends (dies if only `=` records it)', async () => {
+        const r = await set('set Scenario_0.lead += Other::p');
+        expect(r.success).toBe(true);
+        expect(depWrites()).toEqual([DEP]);
+    });
+
+    it('a target model already listed is not written twice (dies if the append is not checked against the current list)', async () => {
+        active.__raw.dependencies = ['m2'];
+        const r = await set('set Scenario_0.lead = Other::p');
+        expect(r.success).toBe(true);
+        expect(depWrites()).toEqual([]);
+        expect(h.writes).toEqual([{ slot: 's0_lead', values: ['op'] }]);
+    });
+
+    it('a local link records no dependency (dies if local links record one)', async () => {
+        const r = await set('set Scenario_0.lead = p1');
+        expect(r.success).toBe(true);
+        expect(depWrites()).toEqual([]);
+    });
+
+    it('a removal (`-=`) takes the link out and records no dependency (dies if removals record one)', async () => {
+        h.store.get('s0_lead').__raw.values = ['op'];
+        const r = await set('set Scenario_0.lead -= Other::p');
+        expect(r.success).toBe(true);
+        expect(removedFrom('s0_lead')).toEqual(['op']);
+        expect(depWrites()).toEqual([]);
+    });
+
+    it('a refused cross-model link records no dependency (dies if a refusal writes one)', async () => {
+        const r = await set('set Scenario_0.lead = Nope::p');
+        expect(codeOf(r)).toBe('MODEL_NOT_FOUND');
+        expect(depWrites()).toEqual([]);
+        expect(h.writes).toEqual([]);
+    });
+
+    it('a cross-metamodel target records the model the instance lives in, not its metamodel (dies if the metamodel is recorded)', async () => {
+        const pe = inst('pe', 'pe', PhaseExt, 'm2');
+        otherModel.objects.push(pe);
+        const r = await set('set Scenario_0.lead = Other::pe');
+        expect(r.success).toBe(true);
+        expect(depWrites()).toEqual([DEP]);
+    });
+});

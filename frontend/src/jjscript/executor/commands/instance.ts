@@ -412,6 +412,22 @@ function isListedAtRoot(model: LModel, id: string): boolean {
 }
 
 /**
+ * Record a cross-model link as a model dependency (#213 follow-up): the caller model lists the
+ * target model in its `dependencies` ("Include other models as prerequisite for this model",
+ * `LModelElement.tsx:5155-5159`), so it is set when a link to an instance of another model is
+ * written, if not already. The committed write forms of the field: the Info panel «Depends
+ * from models» (`Info.tsx:533`, whole-list `l.dependencies = [ids]`) and the delete cascade
+ * (`Dummy.ts`, `case 'dependencies'`, `'-='` by id) — a pointer-list field of DModel driven by
+ * `SetFieldAction` ops, the `'+='` the `pointedBy` writes use. Must run inside the caller's
+ * TRANSACTION, so the undo of the link takes the dependency with it.
+ */
+function ensureModelDependency(callerModel: LModel, targetModelId: string): void {
+    const deps: any[] = (callerModel as any).__raw?.dependencies ?? [];
+    if (deps.some((p: any) => (typeof p === 'string' ? p : p?.id) === targetModelId)) return;
+    SetFieldAction.new(callerModel.id, 'dependencies', targetModelId as any, '+=', true);
+}
+
+/**
  * The refusal of a link whose target is not an instance of the reference type or of one of its
  * subclasses, or `null` (#175). The same test `resolveContainerSlot` runs for `create … in`. The
  * target's class is read from the store, so the caller drains the queued writes first: a target
@@ -1341,6 +1357,9 @@ export async function executeSetInstance(
     );
 
     let targetInstance: any;
+    // #213 follow-up: the model of a cross-model target, so the write below can record it as a
+    // dependency of the caller model. Null for a local target (a model does not depend on itself).
+    let crossModel: LModel | null = null;
     if (resolution.kind === 'model-absent') {
         return {
             success: false,
@@ -1426,6 +1445,7 @@ export async function executeSetInstance(
         // TODO(#213): the slot is written below as the canvas writes it (refProxy.values / the
         // by-value removal); the composition policy for cross-model containment slots (father,
         // orphaning on removal) is off-topic until decided.
+        if (otherModel) crossModel = otherModel;
     }
 
     // Read the slot only after the queued writes have landed.
@@ -1438,7 +1458,7 @@ export async function executeSetInstance(
         if (mismatch) return mismatch;
     }
     if (operator !== '=') {
-        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel);
+        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel, crossModel);
     }
 
     return new Promise((resolve) => {
@@ -1459,6 +1479,10 @@ export async function executeSetInstance(
                 const plan = planLink(linkedIds(refProxy.__raw?.values), targetInstance.id, isManyValued(meta?.upperBound));
                 removeLinked(refProxy, plan.remove, !!meta?.containment, targetModel.id);
                 if (plan.write) refProxy.values = plan.write;
+                // #213 follow-up: a link that adds a cross-model target records the target model
+                // as a dependency of the caller model, if not already (same TRANSACTION: the undo
+                // takes it back with the link).
+                if (plan.write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',
@@ -1503,7 +1527,8 @@ function applyCollectionUpdate(
     instanceName: string,
     targetId: string,
     targetName: string,
-    targetModel: LModel
+    targetModel: LModel,
+    crossModel: LModel | null = null
 ): Promise<ExecutionResult> | ExecutionResult {
     const fail = (code: string, message: string, detail: string, suggestion?: string): ExecutionResult => ({
         success: false,
@@ -1564,6 +1589,10 @@ function applyCollectionUpdate(
             TRANSACTION(operator === '+=' ? 'JjScript: Add to reference' : 'JjScript: Remove from reference', () => {
                 removeLinked(refProxy, remove, containment, targetModel.id);
                 if (write) refProxy.values = write;
+                // #213 follow-up: an append that adds a cross-model target records the target
+                // model as a dependency of the caller model, if not already. A removal (`-=`)
+                // adds nothing: taking a link out is not an addition.
+                if (operator === '+=' && write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',

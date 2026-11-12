@@ -247,6 +247,9 @@ REFERENCE LINKS (M1):
   A bare name always resolves in the active model only (if it lives in
   another model, the refusal says so). Names with spaces are quoted:
     set Alice.manager = "My Model::bob"
+  A cross-model link also records the target model in the caller model's
+  dependencies, if not already listed (as the Info panel does), so the
+  target's instances appear in the reference's select.
 
 EXAMPLES:
   set Person.abstract = true
