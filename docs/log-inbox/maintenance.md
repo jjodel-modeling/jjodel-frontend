@@ -1036,3 +1036,25 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Basic row after Layout, like Frame (they never show together). Solid drops the key, Dashed writes it; the Free switch already dropped it (withLayoutMode, P-2026-11-11-1110), so no mode-switch change. Negative control: Solid writing separator: 'solid', 1 failed / 27 passed, restored. Gates: typecheck 0, unit 16200 passed + 3 known import failures, build 0. No smoke scene with a graphVertex view; visual GO follows the merge.
 **Prompt document name**: 2026-11-11 23:16
+
+## 2026-11-12 — ticket: JjTL trace: every := binding recorded as not invertible on the app parse path
+**Ticket**: On the app's parse path every `:=` binding of a JjTL rule is traced as not invertible, including a plain property copy such as `name := name`.
+
+Cause (read on `alfonso-frontend-jjtl` at `ea82026e1`): with source text the parser wraps each expression as `JjelExpression` (`jjtl/parser/parser.ts:907, 927`); `isExpressionInvertible` (`jjtl/executor/executor.ts:2170-2204`) has no case for that type and returns `false`. On the legacy parse path (no source text) the same run records the binding as invertible.
+
+Expected: a binding whose expression is a property reference is recorded invertible on both paths (the Jjodel book, `tab:jjtl-trace-example`, states "invertible: property reference").
+
+Observed in a run with the book fixture `author/tools/codegen-fixture/` of the book repository; details in `author/discovery/discovery_2026-11-12_review_l1_runs.md`, section 3.1. Alfonso decided on 2026-11-12 that the trunk is fixed and the book stays as it is.
+**Priority**: medium
+**Found in**: P-2026-11-12-2022
+
+## 2026-11-12 — ticket: JjTL: two creation blocks on one feature overwrite each other
+**Ticket**: Two creation blocks on the same target feature in one JjTL rule (two `-> cols` blocks) overwrite each other instead of adding up: only the columns of the second block remain.
+
+Case: `lst:jjtl-uml2rdbms` of the Jjodel book (UML to RDBMS). The first `-> cols` block creates the key column, the second the columns of the attributes; after the run the key column is lost entirely, not only missing from `pkey`. The program as printed is in `author/tools/codegen-fixture/uml2rdbms-as-printed.jjtl` of the book repository.
+
+Expected: several creation blocks on one multi-valued feature accumulate, in the order written.
+
+Observed in a run on `alfonso-frontend-jjtl` at `ea82026e1`; details in `author/discovery/discovery_2026-11-12_review_l1_runs.md` (JjTL section). Alfonso decided on 2026-11-12 that the trunk is fixed and the book stays as it is.
+**Priority**: medium
+**Found in**: P-2026-11-12-2022
