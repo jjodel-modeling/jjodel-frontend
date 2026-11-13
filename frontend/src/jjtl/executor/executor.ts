@@ -2199,6 +2199,25 @@ export class JjtlExecutor {
                 // Constant values are technically invertible (always same)
                 return true;
 
+            case 'JjelExpression':
+                // The app's parse path (source text) wraps every expression (#897)
+                return this.isJjelExpressionInvertible((expr as JjelExpressionWrapperAST).expression);
+
+            default:
+                return false;
+        }
+    }
+
+    /** The cases of isExpressionInvertible on the JjEL AST, one for one, so both parse paths agree. */
+    private isJjelExpressionInvertible(expr: JjelExpression): boolean {
+        switch (expr.type) {
+            case 'Identifier':
+            case 'MemberAccess':
+            case 'NullSafeMemberAccess':
+            case 'Literal':
+                return true;
+            case 'Binary':
+                return expr.operator === '+' && (expr.left.type === 'Literal' || expr.right.type === 'Literal');
             default:
                 return false;
         }
@@ -2211,9 +2230,13 @@ export class JjtlExecutor {
         const inverseExpr = mapping.expression ?? mapping.conversion?.expression;
 
         if (inverseExpr) {
+            // The JjEL wrapper of the app's parse path: its Binary has the same left/right/operator (#897)
+            const bin = inverseExpr.type === 'JjelExpression'
+                ? (inverseExpr as JjelExpressionWrapperAST).expression
+                : inverseExpr;
             // Handle name + '_suffix' -> strip suffix
-            if (inverseExpr.type === 'BinaryExpression') {
-                const binExpr = inverseExpr as BinaryExpressionAST;
+            if (bin.type === 'BinaryExpression' || bin.type === 'Binary') {
+                const binExpr = bin as unknown as BinaryExpressionAST;
                 if (binExpr.operator === '+' && binExpr.right.type === 'Literal') {
                     const suffix = (binExpr.right as LiteralAST).value;
                     if (typeof suffix === 'string') {
