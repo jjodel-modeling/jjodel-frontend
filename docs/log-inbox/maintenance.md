@@ -1058,3 +1058,14 @@ Expected: several creation blocks on one multi-valued feature accumulate, in the
 Observed in a run on `alfonso-frontend-jjtl` at `ea82026e1`; details in `author/discovery/discovery_2026-11-12_review_l1_runs.md` (JjTL section). Alfonso decided on 2026-11-12 that the trunk is fixed and the book stays as it is.
 **Priority**: medium
 **Found in**: P-2026-11-12-2022
+
+## 2026-11-13 — ticket: JjEL lexer: the hint for oclIsTypeOf suggests is, which includes subclasses
+**Ticket**: The JjEL lexer gives the same hint for the two OCL type tests: `frontend/src/jjel/lexer/lexer.ts:19-20` answers both `expr.oclIsTypeOf(Type)` and `expr.oclIsKindOf(Type)` with "JjEL uses 'expr is Type'", and `lexer-own-keys.test.ts:61-62` expects it.
+
+`is` has kind-of semantics (it includes subclasses), so the hint is exact for `oclIsKindOf` and wrong for `oclIsTypeOf`, which tests the exact class. The exact-class test in JjEL is `x.instanceOf.name == "T"` (`evaluator.ts:617` already tells users "use 'obj.instanceOf.name'"; `docs/jjtl-jjel-paper.tex:600` suggests `x.instanceOf == T`).
+
+Expected: a distinct hint for `oclIsTypeOf` that names the exact-class form.
+
+Found by an external review of the Jjodel book and confirmed on `alfonso-frontend-jjtl` at 7330df76d by lane P-2026-11-13-0056. The book now states the difference under its table of OCL forms.
+**Priority**: low
+**Found in**: P-2026-11-13-0056
