@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-13-1302
 Chat: C-2026-11-12-1346
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG (merge of jjtl-book-findings launched by chat C-2026-11-12-1346)
 Lane: full (merge; 1 conflict: `docs/log-inbox/maintenance.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-13 · lane merge · d20dc194e · verifica visiva passata 2026-11-13 (passato — chat, unattended: Gates green on the merge tip. No smoke scene loads a JjTL program with two creation blocks or a trace; covered by binding-invertibility.test.ts and creation-blocks-accumulate.test.ts with negative controls. Alfonso visual GO owed on localhost:3000: trace panel, invertible icon and Invertible figure on name := name; the generated Table keeps its _tid key column first in cols.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-13-1302 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

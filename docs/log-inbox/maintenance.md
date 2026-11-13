@@ -1119,3 +1119,16 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Priority**: low
 **Found in**: P-2026-11-13-1245
 **Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — merge: jjtl-book-findings into alfonso-frontend-jjtl (P-2026-11-13-1302)
+**Prompt**: `claude_2026-11-13_1302_prompt_merge_jjtl-book-findings.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-book-findings` at `6036d30b5` into `alfonso-frontend-jjtl`, merge base `d648c4a02`, 4 commits on the branch side.
+**Files touched**: merge `d20dc194e`: 6 files from the branch side (`docs/discovery/discovery_2026-11-13_jjtl_book_findings.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-13_1245_prompt_jjtl_book_findings.md`, `frontend/src/jjtl/executor/__tests__/binding-invertibility.test.ts`, `frontend/src/jjtl/executor/__tests__/creation-blocks-accumulate.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d20dc194e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16251 tests in 620 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. No smoke scene loads a JjTL program with two creation blocks or a trace; covered by binding-invertibility.test.ts and creation-blocks-accumulate.test.ts with negative controls. Alfonso visual GO owed on localhost:3000: trace panel, invertible icon and Invertible figure on name := name; the generated Table keeps its _tid key column first in cols.
+**Notes**: Rollback tag `pre-jjtl-book-findings` on `3df726197` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1302/result.json`.
+**Prompt document name**: 2026-11-13 13:02
