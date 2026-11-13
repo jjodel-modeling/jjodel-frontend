@@ -1156,3 +1156,16 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, "transcript_path wins over JJODEL_LANE_LOG: the lane log above soft fires over a transcript below", fails on `1aa3dba00` in a clean temporary worktree, with and without `JJODEL_LANE_LOG` in the environment (measured 2026-11-13 during P-2026-11-13-1246). An earlier run of the same file on the same tip passed, so the test depends on something outside its fixture (time, or a file it reads from the real lane directory). Not touched by the lane.
 **Priority**: medium
 **Found in**: P-2026-11-13-1246
+
+## 2026-11-13 — merge: jjel-and-or into alfonso-frontend-jjtl (P-2026-11-13-1310)
+**Prompt**: `claude_2026-11-13_1310_prompt_merge_jjel-and-or.md`, a direct merge by `lane-run merge --direct`, no session: `jjel-and-or` at `78966fafc` into `alfonso-frontend-jjtl`, merge base `d648c4a02`, 4 commits on the branch side.
+**Files touched**: merge `6ac8a1bfd`: 21 files from the branch side (`docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md`, `docs/help/simulation/simulation-guide.md`, `docs/help/simulation/simulation-semantics.md`, `docs/jjtl-jjel-paper.tex`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-13_1246_prompt_jjel_and_or_hint.md`, `frontend/scripts/probe/codegen-runner.ts`, `frontend/src/codegen/engine/__tests__/textMode.test.ts`, and 13 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ac8a1bfd` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16263 tests in 621 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile — chat, unattended: Gates green on the merge tip. No visual change: evaluator, generated JavaScript and subset checker of JjEL and/or, one lexer message, documents.
+**Notes**: Rollback tag `pre-jjel-and-or` on `6820fd573` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1310/result.json`.
+**Prompt document name**: 2026-11-13 13:10
