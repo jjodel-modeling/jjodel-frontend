@@ -1169,3 +1169,28 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Smoke visivo**: passato — chat, unattended: non applicabile — chat, unattended: Gates green on the merge tip. No visual change: evaluator, generated JavaScript and subset checker of JjEL and/or, one lexer message, documents.
 **Notes**: Rollback tag `pre-jjel-and-or` on `6820fd573` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1310/result.json`.
 **Prompt document name**: 2026-11-13 13:10
+
+## 2026-11-13 — fix: JjEL is is kind-of on model instances (P-2026-11-13-1305)
+**Prompt**: `claude_2026-11-13_1305_prompt_jjel_is_on_instances_discovery.md`, Phase 2 after the GO of 2026-11-13 13:31 (jjodel-lanes#912): `x is T` on a model instance walks its class and the transitive supertypes by name; W-IS retired; JjTL `is` stays exact; `x is Null` gets a SPEC note and a ticket.
+**Files touched**: `b55bd43aa` discovery report; `a065ce9c0` `frontend/src/jjel/evaluator/context.ts`, `frontend/src/model/simulation/subsetChecker.ts`, `frontend/src/jjel/__tests__/is-kind-of.test.ts` (new), `guardEvaluator.test.ts`, `subsetChecker.test.ts`, `codegen/target/js/__tests__/printer.test.ts`; `992bfeb4d` `frontend/src/jjel/SPEC.md`; `ad6a7545a` `docs/help/simulation/simulation-semantics.md`; this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on a065ce9c0 (typecheck 0, build 0, vitest same four known files as the base), is-kind-of.test.ts red before and green after, mutation bench M1..M5 caught. The app was not driven. Alfonso check owed on localhost:3000, Console in JjEL mode with a state selected: self is State and self is NamedElement both true.
+**Notes**: Nine files over four commits, all named in the GO (RC-11). Tests first: 5 red on the unfixed code. Mutation bench in the body of `a065ce9c0`: M1-M5 killed, M6 survives as declared intent. Gates: typecheck 0, build 0, test 4 red files / 618 passed, the baseline set (3 known window files plus contextCeiling.test.ts, already ticketed). SPEC and help split in two commits: the guard reads `frontend/src/jjel/SPEC.md` as code. Console check in the app not run: this lane did not drive the app.
+**Prompt document name**: 2026-11-13 13:05
+
+## 2026-11-13 — ticket: JjTL is on source elements stays exact-class
+**Ticket**: After P-2026-11-13-1305, JjEL `is` is kind-of on model instances, but the objects a JjTL rule matches still answer `is` by exact class, so a JjTL `where` clause or binding reads `x is Base` as false on an instance of `Sub`. SPEC §2 and §5.8 state the limit. Aligning it touches JjTL matching, which the prompt kept out of scope.
+**Priority**: medium
+**Found in**: P-2026-11-13-1305
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md
+
+## 2026-11-13 — ticket: JjEL x is Null does not parse
+**Ticket**: SPEC §2 lists `Null` among the types of the `is` operator, but `x is Null` does not parse (measured during P-2026-11-13-1305). SPEC now says to write `x == null`. Either the parser accepts `Null` after `is` or the type leaves the list; a grammar change, out of the lane's scope.
+**Priority**: low
+**Found in**: P-2026-11-13-1305
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md
