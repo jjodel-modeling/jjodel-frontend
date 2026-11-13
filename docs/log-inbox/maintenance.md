@@ -1069,3 +1069,40 @@ Expected: a distinct hint for `oclIsTypeOf` that names the exact-class form.
 Found by an external review of the Jjodel book and confirmed on `alfonso-frontend-jjtl` at 7330df76d by lane P-2026-11-13-0056. The book now states the difference under its table of OCL forms.
 **Priority**: low
 **Found in**: P-2026-11-13-0056
+
+## 2026-11-13 — fix: JjTL bindings invertible on the app path, creation blocks accumulate (#897, #898)
+**Prompt**: P-2026-11-13-1245 Phase 2, after the chat's GO: fix jjodel-lanes #897 (every `:=` binding traced as not invertible on the app parse path) and #898 (two creation blocks on one feature overwrite each other), tests first, one code commit per defect.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (92f0d90d3, b895ab900); `frontend/src/jjtl/executor/__tests__/binding-invertibility.test.ts` (92f0d90d3, new); `frontend/src/jjtl/executor/__tests__/creation-blocks-accumulate.test.ts` (b895ab900, new); this inbox and the prompt's Status (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on b895ab900 (typecheck 0, build 0, vitest same four known files as the base). No smoke scene loads the SimpleUML/SimpleRDBMS program of the book; covered by binding-invertibility.test.ts (9) and creation-blocks-accumulate.test.ts (26), both with a negative control. Alfonso visual GO owed on localhost:3000: the trace panel shows the invertible icon and a non-zero Invertible figure for name := name; the generated Table has its _tid key column first in cols.
+**Notes**: Negative controls: #897 4 failed / 5 passed, #898 18 failed / 8 passed, both restored. Gates on b895ab900: typecheck 0; vitest 4 files / 1 test red, the baseline set of e0f9adcae (3 window-import files + contextCeiling.test.ts, red also with JJODEL_LANE_LOG unset, cause not established); build 0. Deviation from the GO: the printed lst:jjtl-uml2rdbms never binds pkey, so its test asserts the key column in cols and pkey unset. Report: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md.
+**Prompt document name**: 2026-11-13 12:45
+
+## 2026-11-13 — ticket: JjTL: inverse of name := name is undefined, SPEC promises one
+**Ticket**: `computeInverseExpression` (`frontend/src/jjtl/executor/executor.ts`) gives `inverseExpression: undefined` for a property-reference binding such as `name := name`, on both parse paths; `frontend/src/jjtl/SPEC.md:808` promises the inverse "`name := label`". Kept as is by the GO of P-2026-11-13-1245 (answer 2).
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL: Literal bindings invertible in code, not invertible in SPEC
+**Ticket**: `isExpressionInvertible` returns `true` for a `Literal` ("Constant values are technically invertible"), now on both parse paths; `frontend/src/jjtl/SPEC.md:813` lists "`Literal` expression | No". One of the two has to change. The code's answer was kept by the GO of P-2026-11-13-1245 (answer 1).
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL analyzer bidirectionality.ts lacks JjelExpression and has no caller
+**Ticket**: `frontend/src/jjtl/analyzer/bidirectionality.ts` has no `'JjelExpression'` case (`:382-391`), so on the app parse path it would answer as the executor did before #897; it also has no caller in the tree. Either align it with `isJjelExpressionInvertible` or retire it.
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL trace: := bindings recorded with expression undefined
+**Ticket**: The trace records every `:=` binding with `expression: undefined`: `executor.ts` computes `expressionSource` only for `conversion.expression` (about `:2055`), not for `mapping.expression`. Observed on both parse paths by the probe of P-2026-11-13-1245. The trace panel cannot show the source of a `:=` binding.
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
