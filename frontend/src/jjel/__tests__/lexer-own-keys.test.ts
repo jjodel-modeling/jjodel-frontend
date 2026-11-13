@@ -58,7 +58,7 @@ describe('Inherited names lex as identifiers', () => {
 
 describe('Own-key entries still fire', () => {
     const OCL_MESSAGES: Record<string, string> = {
-        oclIsTypeOf: "'expr is Type'",
+        oclIsTypeOf: "'expr.instanceOf.name == \"Type\"'",
         oclIsKindOf: "'expr is Type'",
         oclIsUndefined: "'expr == null'",
         oclAsType: 'explicit type casts',
