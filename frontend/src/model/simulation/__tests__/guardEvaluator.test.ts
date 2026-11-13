@@ -101,10 +101,16 @@ describe('subset checker at compile time', () => {
         expect(out.kind === 'defect' && out.detail).toMatch(/^E-NODE: /);
     });
 
+    it('`is` on the transition is kind-of and raises no diagnostic (P-2026-11-13-1305)', () => {
+        expect(compileGuard('self is Transition').diagnostics).toEqual([]);
+        expect(run('self is Transition')).toEqual({ kind: 'true' });
+        expect(run('self is Door')).toEqual({ kind: 'false' });
+    });
+
     it('warnings and not-verifiable diagnostics do not block: the guard runs', () => {
-        const isGuard = compileGuard('self is Transition');
-        expect(isGuard.diagnostics.map(d => d.code)).toEqual(['W-IS']);
-        expect(run('self is Transition')).toEqual({ kind: 'false' });
+        const nullCmp = compileGuard('self.requires?.count < 5');
+        expect(nullCmp.diagnostics.map(d => d.code)).toEqual(['W-NULLCMP']);
+        expect(run('self.requires?.count < 5')).toEqual({ kind: 'true' });
         const div = compileGuard('self.count / 2 == 1');
         expect(div.diagnostics.map(d => d.code)).toEqual(['T-DIV']);
         expect(run('self.count / 2 == 1')).toEqual({ kind: 'true' });

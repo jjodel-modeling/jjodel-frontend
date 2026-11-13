@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-13-1305
 Chat: C-2026-11-12-1346
 Front: maintenance
 Lane: full (Phase 1 read-only discovery, hard stop, Phase 2 only after the chat's GO in a resume message)
-Status: da eseguire
+Status: eseguito 2026-11-13 · lane full · a065ce9c0 · verifica visiva passata 2026-11-13
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG Alfonso, chat of 2026-11-13 12:21, on the trunk defects found by the review of the Jjodel book: "fixa"; this defect was found by lane P-2026-11-13-1246 while it worked on that mandate
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).

@@ -133,11 +133,8 @@ describe('warnings', () => {
         expect(codes('self.ok and true')).toEqual([]);
     });
 
-    it('W-IS: `is` on instances', () => {
-        const d = check('self is Transition');
-        expect(d.map(x => x.code)).toEqual(['W-IS']);
-        expect(d[0].severity).toBe('warning');
-        expect(d[0].message).toContain('self.instanceOf == Transition');
+    it('`is` raises no diagnostic: it is kind-of on instances (P-2026-11-13-1305)', () => {
+        expect(check('self is Transition')).toEqual([]);
     });
 });
 
@@ -174,11 +171,11 @@ describe('not verifiable', () => {
 
 describe('severity and location', () => {
     it('one diagnostic of each severity, with the location of the node', () => {
-        const d = check('self is T and node == null and self.count > 1.5');
+        const d = check('self.requires?.level < 5 and node == null and self.count > 1.5');
         const bySeverity = Object.fromEntries(d.map(x => [x.severity, x.code]));
-        expect(bySeverity).toEqual({ warning: 'W-IS', error: 'E-NODE', 'not-verifiable': 'T-DECIMAL' });
+        expect(bySeverity).toEqual({ warning: 'W-NULLCMP', error: 'E-NODE', 'not-verifiable': 'T-DECIMAL' });
         const node = d.find(x => x.code === 'E-NODE')!;
-        expect(node.location?.start.offset).toBe('self is T and '.length);
+        expect(node.location?.start.offset).toBe('self.requires?.level < 5 and '.length);
     });
 });
 

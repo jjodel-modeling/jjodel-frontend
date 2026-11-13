@@ -39,6 +39,7 @@ import { literalArgument } from './stateAttributesCodec';
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
 // TODO: cleanup -- 'E-EAGER' stays in the union for callers; it is no longer raised (P-2026-11-13-1246).
+// TODO: cleanup -- 'W-IS' stays in the union for callers; it is no longer raised: `is` is kind-of (P-2026-11-13-1305).
 export type SubsetCode =
     | 'E-NODE' | 'E-DATA' | 'E-SHADOW' | 'E-EAGER' | 'E-NOELSE' | 'E-FORALL' | 'E-VALUE' | 'E-WITH' | 'E-CALL'
     | 'W-NULLCMP' | 'W-TRUTHY' | 'W-IS'
@@ -280,7 +281,6 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             plain(e.right);
             return;
         case 'IsType':
-            report(w, 'W-IS', '`is` is false on model instances: write `self.instanceOf == ' + e.targetType + '`.', e);
             plain(e.expression);
             return;
         case 'Implies':

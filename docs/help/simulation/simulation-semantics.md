@@ -189,7 +189,7 @@ The engine checks every guard before the run and rejects these constructs as def
 | `E-VALUE` | a lambda outside a method argument, or an object literal |
 | `E-WITH` | `with … do` |
 
-The null guards `x != null and x.p` and `x == null or x.p` are accepted: `and` and `or` short-circuit. The checker also emits warnings (`W-NULLCMP`, `W-TRUTHY`, `W-IS`) and marks constructs a future model checker could not translate (`T-…`); neither stops the guard.
+The null guards `x != null and x.p` and `x == null or x.p` are accepted: `and` and `or` short-circuit. The checker also emits warnings (`W-NULLCMP`, `W-TRUTHY`) and marks constructs a future model checker could not translate (`T-…`); neither stops the guard.
 
 ### Reset checks
 

@@ -67,6 +67,7 @@ The `is` operator checks type membership including supertypes:
 - `Object`, `Null`
 - `BitVector` (not an `Object`)
 - JjOM types: `DClass`, `DPackage`, `DEnumerator`, etc.
+- Model classes: a model instance is a `T` when its class (`instanceOf`), or a class it inherits from transitively (`superTypes`, or `extends` on an L proxy), is named `T`. Source elements matched by a JjTL rule are still checked by exact class for now. `x is Null` does not parse: write `x == null`.
 
 ---
 
@@ -418,7 +419,7 @@ element?.container?.package?.name ?? "default"
 <expression> is <TypeName>
 ```
 
-Checks whether the value is an instance of the given type, including subtypes (kind-of semantics).
+Checks whether the value is an instance of the given type, including subtypes (kind-of semantics). On a model instance the check walks `instanceOf` and then its supertypes by name, so an instance of a subclass satisfies `is`; JjTL source elements are still exact, and `x is Null` does not parse (§2).
 
 **Examples:**
 ```
