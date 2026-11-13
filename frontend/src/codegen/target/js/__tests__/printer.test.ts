@@ -95,16 +95,24 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(printed('T1 == event')).toContain('$E("t1")');
     });
 
-    it('Binary `and` evaluates both operands: a throwing right side throws (mutant: short-circuit `&&`)', () => {
-        const { jjel, js } = both('model.[b] > 0 and model.[zzz] > 0');
-        expect(jjel.kind).toBe('throw');
-        expect(js.kind).toBe('throw');
+    it('Binary `and` short-circuits: a false left side skips a throwing right side (mutant: eager `$and`)', () => {
+        expect(agreed('model.[b] > 0 and model.[zzz] > 0')).toBe(false);
     });
 
-    it('Binary `or` evaluates both operands: a throwing right side throws (mutant: short-circuit `||`)', () => {
-        const { jjel, js } = both('model.[a] > 0 or model.[zzz] > 0');
-        expect(jjel.kind).toBe('throw');
-        expect(js.kind).toBe('throw');
+    it('Binary `or` short-circuits: a true left side skips a throwing right side (mutant: eager `$or`)', () => {
+        expect(agreed('model.[a] > 0 or model.[zzz] > 0')).toBe(true);
+    });
+
+    it('Binary `and`/`or`: a left side that does not decide reaches the throwing right side (mutant: right side never run)', () => {
+        for (const source of ['model.[a] > 0 and model.[zzz] > 0', 'model.[b] > 0 or model.[zzz] > 0']) {
+            const { jjel, js } = both(source);
+            expect([jjel.kind, js.kind], source).toEqual(['throw', 'throw']);
+        }
+    });
+
+    it('Binary `and`/`or`: the null guard on a transition with nothing required (mutant: eager `$and`/`$or`)', () => {
+        expect(agreed('self.requires != null and self.requires.count > model.[a]')).toBe(false);
+        expect(agreed('self.requires == null or self.requires.count > model.[a]')).toBe(true);
     });
 
     it('Binary `and`/`or` answer by truthiness, not by type', () => {
@@ -227,7 +235,9 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(agreed('exists c in self.children | c.[k] > 1')).toBe(true);
         expect(agreed('exists c in self.children | c.[k] > 5')).toBe(false);
         expect(agreed('exists c in T2.children | c.[k] > 5')).toBe(false);
-        expect(agreed('exists c in self.children | c.[k] > 0 or c.[zzz]')).toEqual({ throws: true });
+        // or short-circuits (P-2026-11-13-1246): the unknown attribute is read only when the left side is false.
+        expect(agreed('exists c in self.children | c.[k] > 0 or c.[zzz]')).toBe(true);
+        expect(agreed('exists c in self.children | c.[k] > 5 or c.[zzz]')).toEqual({ throws: true });
     });
 
     it('ForAll and Lambda over M fold whole', () => {
@@ -279,7 +289,6 @@ describe('refusals, with their code', () => {
         ['node.[x] > 0', 'E-NODE'],
         ['data.count > model.[a]', 'E-DATA'],
         ['self.children.any(self => self.[k] > 0)', 'E-SHADOW'],
-        ['self.requires != null and self.requires.count > model.[a]', 'E-EAGER'],
         ['if model.[f] then true', 'E-NOELSE'],
         ['forall c in self.children such that c.[k] > 0', 'E-FORALL'],
         ['{a: model.[a]} == null', 'E-VALUE'],
@@ -502,7 +511,7 @@ describe('the id table in the context (R-GEN-17, P-2026-10-11-1052)', () => {
     });
 
     it('tokens and marked read a place through the table', () => {
-        expect(printedNamed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, $ID.P), 0), $marked(state, $ID.Q))');
+        expect(printedNamed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, $ID.P), 0), () => $marked(state, $ID.Q))');
     });
 
     it('the actions write their targets through the table', () => {
@@ -532,7 +541,7 @@ describe('the id table in the context (R-GEN-17, P-2026-10-11-1052)', () => {
     it('without the table the printer prints what it printed before (mutant: an absent table read as an empty one)', () => {
         expect(printed('model.[a] > 0')).toBe('$gt($read(state, "M", "a"), 0)');
         expect(printed('T1 == event')).toBe('$eq($E("t1"), $E(event))');
-        expect(printed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, "P"), 0), $marked(state, "Q"))');
+        expect(printed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, "P"), 0), () => $marked(state, "Q"))');
         const out = printedActions(['model.[a] := 1']);
         expect(out.ok && out.code).toBe('const $v0 = $value(1);\nreturn $apply(state, [["M", "a", $v0]]);');
     });

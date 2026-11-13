@@ -187,7 +187,7 @@ describe('the tri-state matches validation on the same text and bindings (R-SIM-
         ['self.nope == 1', 'defect:absent-identifier'],
         ['unknownX == 1', 'defect:absent-identifier'],
         ['unknownX', 'defect:absent-identifier'],
-        ['false and unknownX', 'defect:absent-identifier'],
+        ['false and unknownX', 'false'],
         ['self.count + 1', 'defect:non-boolean'],
         ['dup == 1', 'false'],
         ['x?.p == true', 'false'],
@@ -210,32 +210,28 @@ describe('the tri-state matches validation on the same text and bindings (R-SIM-
     });
 });
 
-describe('the rewrites the checker suggests for the eager idiom (ruling 1)', () => {
-    function suggestion(src: string): string {
-        const d = compileGuard(src).diagnostics.find(x => x.code === 'E-EAGER');
-        expect(d).toBeDefined();
-        return d!.message.split('Write: ')[1];
-    }
-
-    it('and-form: the rewrite is false without a door and true with a locked one, and passes the checker', () => {
+describe('the null-guard idioms evaluate directly: and/or short-circuit (P-2026-11-13-1246)', () => {
+    it('and-form: false without a door, true with a locked one, and passes the checker', () => {
         const idiom = 'self.requires != null and self.requires.locked';
-        const rewrite = suggestion(idiom);
-        expect(rewrite).toBe('if self.requires != null then self.requires.locked else false');
-        expect(compileGuard(rewrite).diagnostics).toEqual([]);
-        expect(run(rewrite, 'o_t1')).toEqual({ kind: 'false' });
-        expect(run(rewrite, 'o_t2')).toEqual({ kind: 'true' });
+        expect(compileGuard(idiom).diagnostics).toEqual([]);
+        expect(run(idiom, 'o_t1')).toEqual({ kind: 'false' });
+        expect(run(idiom, 'o_t2')).toEqual({ kind: 'true' });
     });
 
-    it('control: the implies form is not the rewrite of the and-form (true without a door)', () => {
+    it('control: the implies form is not the and-form (true without a door)', () => {
         expect(run('self.requires != null implies self.requires.locked', 'o_t1')).toEqual({ kind: 'true' });
     });
 
-    it('or-form: the rewrite is true without a door, and passes the checker', () => {
-        const rewrite = suggestion('self.requires == null or self.requires.locked');
-        expect(rewrite).toBe('self.requires != null implies self.requires.locked');
-        expect(compileGuard(rewrite).diagnostics).toEqual([]);
-        expect(run(rewrite, 'o_t1')).toEqual({ kind: 'true' });
-        expect(run(rewrite, 'o_t2')).toEqual({ kind: 'true' });
+    it('or-form: true without a door, true with a locked one', () => {
+        const idiom = 'self.requires == null or self.requires.locked';
+        expect(compileGuard(idiom).diagnostics).toEqual([]);
+        expect(run(idiom, 'o_t1')).toEqual({ kind: 'true' });
+        expect(run(idiom, 'o_t2')).toEqual({ kind: 'true' });
+    });
+
+    it('the event guard, with no event: the and-form is false, the or-form is true', () => {
+        expect(run('event != null and event.name == "e"')).toEqual({ kind: 'false' });
+        expect(run('event == null or event.name == "e"')).toEqual({ kind: 'true' });
     });
 });
 
