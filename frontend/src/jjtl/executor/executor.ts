@@ -615,6 +615,8 @@ interface TargetFeatureInfo {
     /** Name of the referenced class; references only. */
     typeName?: string;
     composition?: boolean;
+    /** From `upperBound` (-1 or above 1); undefined when the metamodel does not say. References only. */
+    many?: boolean;
 }
 
 /** The feature a binding's value is reached through, and its declared type when known. */
@@ -947,6 +949,7 @@ export class JjtlExecutor {
                     isReference: true,
                     typeName: nameOf(r.type),
                     composition: !!(r.composition || r.containment),
+                    many: typeof r.upperBound === 'number' ? (r.upperBound === -1 || r.upperBound > 1) : undefined,
                 });
             }
             const supers: any[] = el.allSuperClasses || el.superclasses || el.extends || [];
@@ -2199,6 +2202,25 @@ export class JjtlExecutor {
                 // Constant values are technically invertible (always same)
                 return true;
 
+            case 'JjelExpression':
+                // The app's parse path (source text) wraps every expression (#897)
+                return this.isJjelExpressionInvertible((expr as JjelExpressionWrapperAST).expression);
+
+            default:
+                return false;
+        }
+    }
+
+    /** The cases of isExpressionInvertible on the JjEL AST, one for one, so both parse paths agree. */
+    private isJjelExpressionInvertible(expr: JjelExpression): boolean {
+        switch (expr.type) {
+            case 'Identifier':
+            case 'MemberAccess':
+            case 'NullSafeMemberAccess':
+            case 'Literal':
+                return true;
+            case 'Binary':
+                return expr.operator === '+' && (expr.left.type === 'Literal' || expr.right.type === 'Literal');
             default:
                 return false;
         }
@@ -2211,9 +2233,13 @@ export class JjtlExecutor {
         const inverseExpr = mapping.expression ?? mapping.conversion?.expression;
 
         if (inverseExpr) {
+            // The JjEL wrapper of the app's parse path: its Binary has the same left/right/operator (#897)
+            const bin = inverseExpr.type === 'JjelExpression'
+                ? (inverseExpr as JjelExpressionWrapperAST).expression
+                : inverseExpr;
             // Handle name + '_suffix' -> strip suffix
-            if (inverseExpr.type === 'BinaryExpression') {
-                const binExpr = inverseExpr as BinaryExpressionAST;
+            if (bin.type === 'BinaryExpression' || bin.type === 'Binary') {
+                const binExpr = bin as unknown as BinaryExpressionAST;
                 if (binExpr.operator === '+' && binExpr.right.type === 'Literal') {
                     const suffix = (binExpr.right as LiteralAST).value;
                     if (typeof suffix === 'string') {
@@ -3926,19 +3952,29 @@ export class JjtlExecutor {
     }
 
     /**
-     * Objects created into `owner.feature` by `-> feature { ... }`, after the rule targets
-     * that an earlier binding placed there. Without placed targets the value is `created`,
-     * as before: the feature is overwritten.
+     * Objects created into `owner.feature` by `-> feature { ... }`, after what the feature
+     * already holds: the rule targets an earlier binding placed there, and the objects an
+     * earlier creation block made (`__nested`), in their order (#898). On a feature known
+     * single-valued the objects of an earlier block are replaced, with a warning. With
+     * nothing kept the value is `created`, as before.
      */
     private afterPlacedTargets(owner: any, feature: string, created: any): any {
         const prior = owner[feature];
         const priorItems: any[] = Array.isArray(prior) ? prior : prior != null ? [prior] : [];
-        const placed = priorItems.filter(el => {
+        const className = owner?.__type || owner?.className || '';
+        const single = this.resolveTargetFeature(className, feature)?.many === false;
+        const kept = priorItems.filter(el => {
             const claim = this.containerOf.get(el);
-            return !!claim && claim.container === owner && claim.feature === feature;
+            if (claim && claim.container === owner && claim.feature === feature) return true;
+            return !single && !!el && typeof el === 'object' && !!el.__nested;
         });
-        if (placed.length === 0) return created;
-        return [...placed, ...(Array.isArray(created) ? created : [created])];
+        if (single && priorItems.some(el => el && typeof el === 'object' && el.__nested)) {
+            const msg = `Feature '${feature}' of '${className}' holds one object: a second '-> ${feature} { ... }' ` +
+                `replaced the object created by an earlier block.`;
+            if (!this.warnings.includes(msg)) this.warnings.push(msg);
+        }
+        if (kept.length === 0) return created;
+        return [...kept, ...(Array.isArray(created) ? created : [created])];
     }
 
     /** `Class 'name'` for a target-side object, by its bound name or its source id. */
