@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-12 — feat(#213): a cross-model link records the target model as a dependency of the caller model
+**Prompt**: user in chat (same lane as #213): «Add a little improvement: when a external reference is added, add the target model (if not already set) as dependency of the caller model»
+**Files touched**: `src/jjscript/executor/commands/instance.ts` (`ensureModelDependency`, the cross branch, both write transactions), `src/jjscript/executor/__tests__/crossModelLink.test.ts` (+7), `src/jjscript/executor/commands/help.ts`, the discovery report addendum (§7), this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — crossModelLink 25/25, m1Operators 25/25, m1AttributeVectors 25/25, m1Containment 28/28, instanceAddress 21/21; full suite 12341 green (12334 + 7), red the nine known monaco-import files; typecheck 0; build 0; check:docs 5/5
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; D-layer `DModel.dependencies` `'+='` append only, inside the link's own TRANSACTION; no critical-zone file)
+**Smoke visivo**: non applicabile — the user did the manual smoke (JjScript console + right-sidebar References); the recorded dependency is what the slot's select reads (report §7)
+**Notes**: the write is the same committed form as the Info panel («Depends from models», Info.tsx:533) and the delete cascade (Dummy.ts `case 'dependencies'`); effect: the target model's instances become visible through the caller's `cross*` getters (LModelElement.tsx:5155-5236) — the field's committed semantics; the sidebar select reads `allCrossSubObjects`, which merges `allDependencies` (LModelElement.tsx:8175). Detail: the report addendum.
+**Prompt document name**: — (user in chat, no prompt file)
+
+## 2026-11-12 — feat(#213): M1 cross-model reference links in JjScript (Model::instance)
+**Prompt**: issue #213 — at M1 there was no way to link a type-compatible instance from another model to a reference field via `set <instance>.<reference-name>` (it works graphically); the fix plan ratified in the issue comment (2026-11-12 11:29), full lane
+**Files touched**: new `src/jjscript/executor/instanceAddress.ts` (pure decision core), `src/jjscript/executor/commands/instance.ts` (link branch), `src/jjscript/executor/elementWaiter.ts` (M1 branch), `src/jjscript/executor/commands/help.ts`, `src/jjscript/services/JjScriptService.ts`, new `src/jjscript/executor/__tests__/crossModelLink.test.ts` (18) and `instanceAddress.test.ts` (21), the discovery report, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — m1Operators 25/25 and m1AttributeVectors 25/25 unchanged; full suite 12334 green, red the nine known monaco-import files; typecheck exit 0 (zero baseline); build exit 0, pre-existing chunk-size warning only
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; JjOM pointer-id writes only through the canvas-verified `refProxy.values`/`SetFieldAction` forms; no critical-zone file)
+**Smoke visivo**: non applicabile — needs a manual browser session (two-model project, console); the bench covers parser + executor
+**Notes**: mutation bench (a)–(d) all killed (registry leak, last-:: split, first case-insensitive match, bare-name fallback) — recorded in the commit message. Sharp edges carried (report §6): profile guard still active-model only (executor.ts:407), SPEC.md §5.2 not updated (not in the plan's file list), quoted `remove "…"` unparseable (pre-existing). Detail: `docs/discovery/discovery_2026-11-12_213_m1_cross_model_links.md`
+**Prompt document name**: 2026-11-12 11:29 (#213: set external references from jjscript)
+
 ## 2026-11-11 — fix(#214): multiplicity clause written on create attribute and create parameter
 **Prompt**: issue #214 — `create attribute <name> in <Class> type <type> <multiplicity>` ignored the multiplicity, always [0..1]; user extended in chat: «fix also for createParameter»
 **Files touched**: `executor/commands/create.ts` (createAttribute, createParameter), new bench `executor/__tests__/createAttributeMultiplicity.test.ts`, this entry
@@ -443,45 +469,4 @@ Detail: `docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.
 **Smoke visivo**: non applicabile
 **Notes**: Hard stop of Phase 1. 20 probe sessions and 3 scripted guard sessions on 2.1.296 with the flags lane-run uses. A loaded mod overrides the deny list at tool.check (git stash list ran), skips both PreToolUse hooks by answering a call, and runs host commands via $.process.run; sec-default is not seated here, so its arm was not run. A mod fails open by default, closed with .catch. 20 files in the report commit, above five: DOVE names them (rule 19).
 **Prompt document name**: 2026-10-11 17:45
-
-## 2026-10-11 — docs(goals): goal tree, new softgoals, correlations and hurts (P-2026-10-11-1650)
-**Prompt**: `claude_2026-10-11_1650_prompt_goal_tree_hurts.md`, lane full (data and docs only), unattended: SG-8..SG-12 under five macro goals in `goal-tree.json`, contributions for the new softgoals, the cost pass for hurts over every positive row, `correlations.json`, RC-27 on every added entry and on a 40-entry sample of the first draft, README, report, board on 4702.
-**Files touched**: `041cd2d47`: `docs/goals/softgoals.json`, `docs/goals/contributions.json`, `docs/goals/conflicts.json`, `docs/goals/goal-tree.json` (new), `docs/goals/correlations.json` (new), `docs/goals/README.md`, `docs/discovery/discovery_2026-10-11_goal_tree_hurts.md` (new); this entry, uncommitted (RC-17).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Step 9 gate exit 0 (negative control exit 1, 5 of 5 faults caught); `req-trace --no-cache` exit 0; reqTrace and laneBoardRequirements 41/41; check:docs 5/5.
-**Out-of-scope changes**: no: seven files in one commit, above five (RC-11), each named in the prompt; step 10 says four JSON files, they are five because `conflicts.json` (step 4) changed too.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile in this lane (data and docs); the chat's RC-23 check of the Requirements tab on 4702 passed on 2026-10-11 (12 softgoals in the filter, 13 conflicts, no em dash, render about 130 ms; 2.6 MB of pair tables, addressed by P-2026-10-11-1735).
-**Notes**: SG-8..SG-12 all kept (35 to 183 rows). Negative share 8% to 19%, first 12 hurt. RC-27, 677 items: contributions 515/35/21, correlations 25/28/11, conflicts 2/0/0, sample 32/5/3 (80% as written; the 3 rejected are SG-3 «scenes unchanged»). 27 negatives not recordable, one entry per pair (report §4). req-trace opposing pairs 612 to 6569 (Q1). Cache /tmp/lane-board-4702-timeline-cache.json; scratch /tmp/gt1650/.
-**Prompt document name**: 2026-10-11 16:50
-
-**Ticket** (P-2026-10-11-1650): `parseRegister` in `req-trace.mjs` does not parse R-D, R-2/3.6 and R-B12, which the goal-model parser and the contract check accept, so 7 entries of `contributions.json` never reach the Requirements tab (998 in the file, 991 on rows).
-
-## 2026-10-11 — merge: goal-tree into alfonso-frontend-jjtl (P-2026-10-11-1808)
-**Prompt**: `claude_2026-10-11_1808_prompt_merge_goal-tree.md`, a direct merge by `lane-run merge --direct`, no session: `goal-tree` at `041cd2d47` into `alfonso-frontend-jjtl`, merge base `f6e14efad`, 1 commit on the branch side.
-**Files touched**: merge `30e8e2b5e`: 7 files from the branch side (`docs/discovery/discovery_2026-10-11_goal_tree_hurts.md`, `docs/goals/README.md`, `docs/goals/conflicts.json`, `docs/goals/contributions.json`, `docs/goals/correlations.json`, `docs/goals/goal-tree.json`, `docs/goals/softgoals.json`); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `30e8e2b5e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8692 tests in 359 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: data-only merge of docs/goals; Requirements tab checked on 4702 (12 softgoals, 13 conflicts, no em dash)
-**Notes**: Rollback tag `pre-goal-tree` on `58a407501` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1808/result.json`.
-**Prompt document name**: 2026-10-11 18:08
-
-## 2026-10-11 — docs(research): governance drift dataset for CAIN 2027 (P-2026-10-11-1630)
-**Prompt**: `claude_2026-10-11_1630_prompt_cain_governance_dataset_discovery.md`: read-only discovery, the governance-drift dataset for a CAIN 2027 short paper (register history, RC-26 crossings, grammar conformance, RC-18, autonomy, rule timeline, the enforced vs text-only comparison, anonymization, threats).
-**Files touched**: `docs/research/cain-2027/discovery_2026-10-11_governance_dataset.md`, `docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/scripts/governance-dataset.ts`, `docs/research/cain-2027/scripts/rules-enforcement.csv`, `docs/research/cain-2027/scripts/rc26-hand-check.json`, eight CSVs in `docs/research/cain-2027/data/` (report commit); this entry, uncommitted (RC-17).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
-**Prompt document name**: 2026-10-11 16:30
 

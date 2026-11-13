@@ -8,6 +8,7 @@ import { resolveElementInMetamodel, resolveElement } from './resolvers';
 import { getProject, getTargetMetamodel } from './utils';
 import { ElementDependency } from './dependencies';
 import { hasReadyInstance, resolveTargetModel } from './commands/instance';
+import { resolveInstanceAddress } from './instanceAddress';
 import { LModel, LProject } from '../../joiner';
 import { isRetryPass } from './runPasses';
 
@@ -121,6 +122,21 @@ function findUnresolved(
         // derivation of the instance name.
         if (m1Model) {
             const instanceName = dep.name.segments.join('::') || dep.name.raw;
+            // #213: a `<Model>::<instance>` value addresses another M1 model of the project. A
+            // script cannot create instances outside the active model, so a cross-model target
+            // — and an absent or ambiguous model — is decided the moment the handler runs: the
+            // wait ends at the first poll instead of burning MAX_WAIT_MS and the executor's
+            // warning on each pass. A qualifier that names the active model keeps the local
+            // wait below: that instance a later line may still create.
+            const m1Models = ((project as any).models ?? [])
+                .filter((m: any) => !m.isMetamodel)
+                .map((m: any) => ({ id: m.id, name: (m as any).name ?? '' }));
+            const resolution = resolveInstanceAddress(
+                instanceName,
+                { id: m1Model.id, name: (m1Model as any).name ?? '' },
+                m1Models,
+            );
+            if (resolution.kind !== 'local') return false; // the handler decides; waiting changes nothing
             // `hasReadyInstance` (R-JS-11): an instance of the model, roots or contained, or the
             // handle this run created once its metaclass is in the store. A bare handle hit is
             // not enough: before its metaclass lands the handler answers NO_METACLASS. Inside,
@@ -130,7 +146,7 @@ function findUnresolved(
             // Ambiguity is deliberately NOT a refusal here: this is a wait, not a write.
             // Two instances carrying the name means the thing being waited for has arrived;
             // WHICH of them was meant is the question the command handler refuses on.
-            if (hasReadyInstance(m1Model, instanceName)) return false; // resolved
+            if (hasReadyInstance(m1Model, resolution.name)) return false; // resolved
         }
         // Try scoped resolution first (matching what the command handlers do)
         if (targetMetamodel) {
