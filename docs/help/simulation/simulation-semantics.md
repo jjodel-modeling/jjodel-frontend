@@ -184,13 +184,12 @@ The engine checks every guard before the run and rejects these constructs as def
 | `E-DATA` | `data` as a root; use `self` |
 | `E-CALL` | a function call; guards have no builtins such as `now()` |
 | `E-SHADOW` | a local variable named after a root |
-| `E-EAGER` | `x != null and x.p` or `x == null or x.p`: JjEL's `and` and `or` evaluate both sides, so the idiom throws on null |
 | `E-NOELSE` | `if` without `else` |
 | `E-FORALL` | `forall` used as a verdict; it builds a collection |
 | `E-VALUE` | a lambda outside a method argument, or an object literal |
 | `E-WITH` | `with … do` |
 
-For `E-EAGER`, write `if x != null then x.p else false` instead of the `and` form, and `x == null implies x.p` instead of the `or` form. The checker also emits warnings (`W-NULLCMP`, `W-TRUTHY`, `W-IS`) and marks constructs a future model checker could not translate (`T-…`); neither stops the guard.
+The null guards `x != null and x.p` and `x == null or x.p` are accepted: `and` and `or` short-circuit. The checker also emits warnings (`W-NULLCMP`, `W-TRUTHY`, `W-IS`) and marks constructs a future model checker could not translate (`T-…`); neither stops the guard.
 
 ### Reset checks
 

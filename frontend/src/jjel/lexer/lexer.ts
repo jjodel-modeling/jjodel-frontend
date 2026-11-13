@@ -16,7 +16,7 @@ import {
 // reflex. We surface targeted parse errors instead of generic ones, in the
 // same lexer-level pattern already used for `?:`, `===`, single `!`.
 const OCL_METHOD_MESSAGES: Record<string, string> = {
-    oclIsTypeOf:    "JjEL uses 'expr is Type', not 'expr.oclIsTypeOf(Type)' (which is OCL syntax).",
+    oclIsTypeOf:    "JjEL tests the exact class with 'expr.instanceOf.name == \"Type\"', not 'expr.oclIsTypeOf(Type)' (which is OCL syntax).",
     oclIsKindOf:    "JjEL uses 'expr is Type', not 'expr.oclIsKindOf(Type)' (which is OCL syntax).",
     oclIsUndefined: "JjEL uses 'expr == null' to test for null, not 'oclIsUndefined()' (which is OCL syntax).",
     oclAsType:      "JjEL does not have explicit type casts. Type checks via 'is' are sufficient.",

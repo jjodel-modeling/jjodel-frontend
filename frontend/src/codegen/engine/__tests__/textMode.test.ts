@@ -3,7 +3,8 @@
  *
  * Every template saved before the `mode` field keeps its bytes (T1), its parse (T3) and its output (T2): the golden
  * hashes are the `code` of `generate(…, 'main')` on both gallery examples, measured on the base `26a267f18` (the code of `84b057765`) before any
- * change of this slice. Then a text body generates, and its literal origins are in body coordinates.
+ * change of this slice, re-measured in P-2026-11-13-1246 where only the embedded `$and`/`$or` runtime changed
+ * (short-circuit). Then a text body generates, and its literal origins are in body coordinates.
  * Mutations each test kills are in its name.
  */
 import { describe, it, expect } from 'vitest';
@@ -16,8 +17,8 @@ import type { TemplateRecord } from '../templates';
 import { EXAMPLES, loadExample, recordOf } from '../../oracle/__tests__/exampleFixture';
 
 const GOLDEN: Record<(typeof EXAMPLES)[number], { length: number; sha256: string }> = {
-    turnstile: { length: 26326, sha256: 'c8b904a0ececd96c4a8b2674ac3d21a46fe0d7d833ad002c1957e15b207896a3' },
-    'petri-producer-consumer': { length: 25829, sha256: '25b4b5c6e6214dee74b49cf9f4b052e2608dcc711cd375fac1b6aebafdc8e6aa' },
+    turnstile: { length: 26460, sha256: 'e063cf856b11b213ee8f708921ae75b7a9d1c15fb0e4c62baf8c267024596dbc' },
+    'petri-producer-consumer': { length: 25963, sha256: '73cf31ebf0cc4f756051698fe9ef28d7897580d4fac191cda49878305b8c56a7' },
 };
 
 const stored = (name: (typeof EXAMPLES)[number]) => {

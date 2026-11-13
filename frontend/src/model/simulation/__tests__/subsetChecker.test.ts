@@ -3,7 +3,8 @@
  *
  * Executes `checkGuardSubset` (P11) on parsed guards: every diagnostic code has
  * a test that produces it and, beside it, the nearest guard that must not
- * (P12). The rewrites of E-EAGER are executed in guardEvaluator.test.ts.
+ * (P12). The null-guard idioms that E-EAGER refused are executed in
+ * guardEvaluator.test.ts.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -63,33 +64,17 @@ describe('errors', () => {
         expect(codes('exists data in xs | data == 1')).toEqual([]);
     });
 
-    it('E-EAGER, and-form: the rewrite quotes the author text', () => {
-        const d = check('self.requires != null and self.requires.locked');
-        expect(d.map(x => x.code)).toEqual(['E-EAGER']);
-        expect(d[0].severity).toBe('error');
-        expect(d[0].message).toContain('Write: if self.requires != null then self.requires.locked else false');
-    });
-
-    it('E-EAGER, or-form: the rewrite is implies', () => {
-        const d = check('self.requires == null or self.requires.locked');
-        expect(d.map(x => x.code)).toEqual(['E-EAGER']);
-        expect(d[0].message).toContain('Write: self.requires != null implies self.requires.locked');
-    });
-
-    it('E-EAGER: null on the left, a method call, a longer conjunction, a longer disjunction', () => {
-        expect(codes('null != x and x.size() > 0')).toEqual(['E-EAGER']);
-        expect(codes('self.requires != null and self.count > 0 and self.requires.locked')).toEqual(['E-EAGER']);
-        const d = check('x == null or y == null or x.p');
-        expect(d.map(z => z.code)).toEqual(['E-EAGER']);
-        expect(d[0].message).toContain('Write: not (x == null or y == null) implies x.p');
-    });
-
-    it('E-EAGER: not raised when the right side does not navigate the tested path with `.`', () => {
-        expect(codes('x != null and x?.p')).toEqual([]);
-        expect(codes('x != null and x[0] == 1')).toEqual([]);
-        expect(codes('x != null and y.p')).toEqual([]);
-        expect(codes('x == null and x.p')).toEqual([]);
-        expect(codes('x != null and xs.all(x => x.p)')).toEqual([]);
+    it('the null-guard idioms raise nothing: and/or short-circuit (P-2026-11-13-1246)', () => {
+        const idioms = [
+            'self.requires != null and self.requires.locked',
+            'self.requires == null or self.requires.locked',
+            'event != null and event.name == "e"',
+            'event == null or event.name == "e"',
+            'null != x and x.size() > 0',
+            'self.requires != null and self.count > 0 and self.requires.locked',
+            'x == null or y == null or x.p',
+        ];
+        for (const src of idioms) expect(codes(src)).toEqual([]);
     });
 
     it('E-NOELSE: an if without else, anywhere in the guard', () => {

@@ -453,6 +453,14 @@ export class JjelEvaluator {
             );
         }
 
+        // `and`/`or` short-circuit (SPEC §Operators): a non-bit-vector left operand that decides
+        // the result leaves the right one unevaluated; otherwise both reach the usual path.
+        if (expr.operator === 'and' || expr.operator === 'or') {
+            const left = this.evaluate(expr.left, ctx);
+            if (!isBitVector(left) && this.isTruthy(left) === (expr.operator === 'or')) return expr.operator === 'or';
+            return this.applyBinaryOperator(expr.operator, left, this.evaluate(expr.right, ctx));
+        }
+
         const left = this.evaluate(expr.left, ctx);
         const right = this.evaluate(expr.right, ctx);
 

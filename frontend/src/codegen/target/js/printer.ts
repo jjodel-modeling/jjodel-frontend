@@ -35,8 +35,8 @@
  *
  * ── The semantics the printed code keeps ─────────────────────────────────────
  *
- * - `and` and `or` evaluate both operands (`evaluator.ts`, `evaluateBinary`):
- *   they print as calls, whose arguments JavaScript evaluates in full.
+ * - `and` and `or` short-circuit (`evaluator.ts`, `evaluateBinary`): the right
+ *   operand prints as a thunk, called only when the left one does not decide.
  * - `/` and `%` by zero are null; `+` concatenates when either side is a
  *   string; `==` is structural; ordering puts null first.
  * - `if`, `??`, `implies`, `exists` and `all`/`any` evaluate what the evaluator
@@ -446,9 +446,9 @@ function $neg(v) {
   return null;
 }
 function $not(v) { return !$truthy(v); }
-/** Both operands arrive evaluated: JjEL's and/or never short-circuit. */
-function $and(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('and', a, b) : $truthy(a) && $truthy(b); }
-function $or(a, b) { return $isBV(a) || $isBV(b) ? $bvOp('or', a, b) : $truthy(a) || $truthy(b); }
+/** The right operand is a thunk: JjEL's and/or short-circuit on a left operand that decides, as the evaluator does. */
+function $and(a, b) { if (!$isBV(a) && !$truthy(a)) return false; const r = b(); return $isBV(a) || $isBV(r) ? $bvOp('and', a, r) : $truthy(r); }
+function $or(a, b) { if (!$isBV(a) && $truthy(a)) return true; const r = b(); return $isBV(a) || $isBV(r) ? $bvOp('or', a, r) : $truthy(r); }
 /** x.[a]: the stored value, then the derived one; neither throws, never a silent null. */
 function $read(s, id, a) {
   const own = $own(s.attrs, id) ? s.attrs[id] : undefined;
@@ -720,6 +720,8 @@ function print(w: Walk, e: JjelExpression, scope: EvaluationContext): string {
             // The one name that depends on the step: the event, as an element.
             return '$E(event)';
         case 'Binary':
+            // and/or take the right operand as a thunk: it runs only when the left one does not decide.
+            if (e.operator === 'and' || e.operator === 'or') return `${BINARY[e.operator]}(${p(e.left)}, () => ${p(e.right)})`;
             return `${BINARY[e.operator]}(${p(e.left)}, ${p(e.right)})`;
         case 'Unary':
             return e.operator === 'not' ? `$not(${p(e.operand)})` : `$neg(${p(e.operand)})`;
