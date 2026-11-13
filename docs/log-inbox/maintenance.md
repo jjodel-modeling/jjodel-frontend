@@ -1069,3 +1069,16 @@ Expected: a distinct hint for `oclIsTypeOf` that names the exact-class form.
 Found by an external review of the Jjodel book and confirmed on `alfonso-frontend-jjtl` at 7330df76d by lane P-2026-11-13-0056. The book now states the difference under its table of OCL forms.
 **Priority**: low
 **Found in**: P-2026-11-13-0056
+
+## 2026-11-13 — ticket: JjEL: is answers false on model instances (SPEC and the book say kind-of)
+**Ticket**: `x is T` answers `false` for every model instance, including an instance of `T` itself, in every context where a modeller writes JjEL except JjTL: validation rules, JjScript `eval`/`let`/`such that`, JjGen holes, guards and actions of a semantic type class, the generated JavaScript, and the Console's JjEL mode. In a JjTL `where` clause and binding it is `true` for the instance's own class and `false` for a superclass.
+
+SPEC and the Jjodel book give `is` kind-of semantics ("an instance of a subclass satisfies `is`"), and the lexer's hints send OCL users to `expr is Type`.
+
+Cause (read and measured on `alfonso-frontend-jjtl` at `145921db6` by lane P-2026-11-13-1305): `TypeRegistry.isInstance` (`frontend/src/jjel/context.ts:95-154`) compares `__type` and `className` exactly and never reads `instanceOf`; no production code fills the registry, so its `superTypes` lookup never runs. The subset checker already warns about it (`subsetChecker.ts:354`, `W-IS`).
+
+Proposed fix, report `docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md` (branch `jjel-is-instances`, commit `8828c7a19`), section 6: in `TypeRegistry.isInstance`, for an instance record or an L proxy, walk `instanceOf` and then `superTypes`, transitively and cycle-safe; drop `W-IS`; tests first; no critical-zone file, no exported interface. JjTL stays exact until its source records carry the hierarchy. `x is Null` does not parse (the lexer turns `Null` into the keyword): separate note.
+
+Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of `jjel-and-or`, which moves the same three test files. The book marks its sentences on `is` with `%% DEPENDS (trunk fix)` until then.
+**Priority**: high
+**Found in**: P-2026-11-13-1246
