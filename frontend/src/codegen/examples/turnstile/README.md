@@ -79,7 +79,7 @@ table with `target.ids` and an element with `target.ref(element)`; `initial()` r
 `{ marking: { [$ID.locked]: 1 }, attrs: { [$ID.demoESM]: { coins: 0 } }, … }`.
 
 Guards, actions and derived values are not translated by the templates. They are printed by the **JavaScript target
-profile**, `target` in a template, and run with the simulator's semantics: `and` and `or` evaluate both sides,
+profile**, `target` in a template, and run with the simulator's semantics: `and` and `or` short-circuit,
 division by zero gives `null`, and actions are parallel. For example, the guard of `tp`, `model.[paid]`, becomes
 `$guard(() => ($read(state, $ID.demoESM, "paid")))`. A guard or an action the printer cannot translate is a
 generation error, and «Run» is off until it is fixed.

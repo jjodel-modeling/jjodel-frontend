@@ -1069,3 +1069,27 @@ Expected: a distinct hint for `oclIsTypeOf` that names the exact-class form.
 Found by an external review of the Jjodel book and confirmed on `alfonso-frontend-jjtl` at 7330df76d by lane P-2026-11-13-0056. The book now states the difference under its table of OCL forms.
 **Priority**: low
 **Found in**: P-2026-11-13-0056
+
+## 2026-11-13 — fix(jjel): and/or short-circuit as SPEC says, and the oclIsTypeOf hint (P-2026-11-13-1246)
+**Prompt**: `claude_2026-11-13_1246_prompt_jjel_and_or_hint.md`, full lane, Phase 2 after the chat's GO (Q1, Q2, Q4, Q5, Q6 yes; Q3 no), resumed after a context ceiling: `and`/`or` decided by a non-bit-vector left operand leave the right one unevaluated (evaluator, JS target, subset checker together), every input that had a value keeps it; the `oclIsTypeOf` hint names the exact-class test; documents aligned.
+**Files touched**: `1aa3dba00`: `docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md`. `1daf90c86`: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/codegen/target/js/printer.ts`, `frontend/src/model/simulation/subsetChecker.ts`, `frontend/scripts/probe/codegen-runner.ts`, tests `jjel/__tests__/and-or-short-circuit.test.ts` (new), `jjel/__tests__/bitvector.test.ts`, `codegen/target/js/__tests__/printer.test.ts`, `model/simulation/__tests__/subsetChecker.test.ts`, `model/simulation/__tests__/guardEvaluator.test.ts`, `codegen/engine/__tests__/textMode.test.ts`. `971e866df`: `frontend/src/jjel/lexer/lexer.ts`, `jjel/__tests__/lexer-own-keys.test.ts`, `jjel/__tests__/parser.test.ts`. This commit: `frontend/src/jjel/SPEC.md`, `docs/help/simulation/simulation-guide.md`, `docs/help/simulation/simulation-semantics.md`, `frontend/src/codegen/examples/turnstile/README.md`, `docs/jjtl-jjel-paper.tex`, this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: More than 5 files, approved by the GO. Out of the declared list: `textMode.test.ts` (goldens hash the embedded `$and`/`$or` runtime; base hashes reproduced, then re-measured) and `parser.test.ts:536` (pinned the old hint). Gates: typecheck exit 0, build green, check:scripts PASS, vitest: 3 known import failures plus `contextCeiling.test.ts`, red on the clean tip too (ticket below). `unknown`: the worker probe was updated, not run (needs a dev server).
+**Prompt document name**: 2026-11-13 12:46
+
+## 2026-11-13 — ticket: JjEL: and/or on a bit-vector stay a defect; bitwise is x.and(y)
+**Ticket**: After P-2026-11-13-1246, `and`/`or` with a bit-vector operand that is reached remain a defect, on the evaluator and on the JS target alike (`'and' needs booleans ... a bit-vector has no truth value`); `false and x` and `true or x` with a vector `x` are now `false` and `true`, by short-circuit. Bitwise conjunction and disjunction are the methods `x.and(y)` and `x.or(y)`. The book and any text that shows `bits(...) and bits(...)` as bitwise should say so.
+**Priority**: low
+**Found in**: P-2026-11-13-1246
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md
+
+## 2026-11-13 — ticket: contextCeiling.test.ts fails on the clean tip
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, "transcript_path wins over JJODEL_LANE_LOG: the lane log above soft fires over a transcript below", fails on `1aa3dba00` in a clean temporary worktree, with and without `JJODEL_LANE_LOG` in the environment (measured 2026-11-13 during P-2026-11-13-1246). An earlier run of the same file on the same tip passed, so the test depends on something outside its fixture (time, or a file it reads from the real lane directory). Not touched by the lane.
+**Priority**: medium
+**Found in**: P-2026-11-13-1246

@@ -568,7 +568,7 @@ Zero-argument methods and properties (\texttt{size}, \texttt{first}, \texttt{toU
 
 \subsubsection{Short-Circuit Evaluation}
 
-\kw{and} and \kw{or} are specified with \textbf{short-circuit} semantics: the right operand should not be evaluated if the result is determined by the left operand alone. This enables guard-like expressions:\footnote{The current implementation (v0.x) evaluates both operands eagerly due to the structure of the binary expression evaluator. Short-circuit evaluation is specified as a target for a future release. In the meantime, null safety in guard expressions is best achieved via the \texttt{?.}\ operator.}
+\kw{and} and \kw{or} are specified with \textbf{short-circuit} semantics: the right operand should not be evaluated if the result is determined by the left operand alone. This enables guard-like expressions:
 
 \begin{lstlisting}[style=jjel,numbers=none]
 parent != null and parent?.name.isNotEmpty   -- null-safe via ?. operator
