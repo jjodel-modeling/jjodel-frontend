@@ -223,8 +223,8 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(agreed('model.[b] implies model.[zzz]')).toBe(true);
     });
 
-    it('IsType on M folds (W-IS stays a warning)', () => {
-        expect(agreed('(self is Transition) == model.[f]')).toBe(false);
+    it('IsType on M folds to the evaluator\'s answer, kind-of on instances (P-2026-11-13-1305)', () => {
+        expect(agreed('(self is Transition) == model.[f]')).toBe(true);
     });
 
     it('ArrayLiteral of state reads keeps its order and its elements', () => {
@@ -327,7 +327,7 @@ describe('refusals, with their code', () => {
         }
     });
 
-    it('a warning of the subset checker is not a refusal: W-TRUTHY, W-NULLCMP, W-IS are printed', () => {
+    it('a warning of the subset checker is not a refusal: W-TRUTHY, W-NULLCMP are printed, and `is`', () => {
         expect(guardRefusals('model.[a] and model.[f]')).toEqual([]);
         expect(guardRefusals('self.requires?.count < model.[a]')).toEqual([]);
         expect(guardRefusals('(self is Transition) == model.[f]')).toEqual([]);

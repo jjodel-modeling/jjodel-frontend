@@ -83,6 +83,24 @@ export interface TypeInfo {
 }
 
 /**
+ * True when `cls`, or a class it inherits from transitively, is named `typeName`. Parents are the
+ * class shell's `superTypes` (buildEvalContext) or the L class's `extends`; read only, cycle-safe.
+ */
+function classChainNamed(cls: unknown, typeName: string): boolean {
+    const seen = new Set<unknown>();
+    const queue: unknown[] = [cls];
+    while (queue.length > 0) {
+        const c: any = queue.shift();
+        if (!c || typeof c !== 'object' || seen.has(c)) continue;
+        seen.add(c);
+        if (c.name === typeName) return true;
+        const parents = Array.isArray(c.superTypes) ? c.superTypes : c.extends;
+        if (Array.isArray(parents)) queue.push(...parents);
+    }
+    return false;
+}
+
+/**
  * Registry for type checking with 'is' operator
  */
 export class TypeRegistry {
@@ -118,6 +136,13 @@ export class TypeRegistry {
             // Check supertypes
             const objTypeInfo = this.types.get(className);
             if (objTypeInfo?.superTypes?.includes(typeName)) return true;
+        }
+
+        // A model instance (record of buildEvalContext, or L proxy) is a T when its class or a
+        // supertype of it is named T: kind-of, SPEC §5.8. Class shells are not instances.
+        if (isJjelObject(value) && (value.__type === 'Object' || value.className === 'DObject')
+            && classChainNamed((value as any).instanceof ?? (value as any).instanceOf, typeName)) {
+            return true;
         }
 
         // Primitive type checks
