@@ -1233,3 +1233,17 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. Two user-visible strings. Alfonso check owed on localhost:3000: Dependencies section of the properties panel reads Depends on models.
 **Notes**: Rollback tag `pre-book-review-checks` on `8252a8aa4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1309/result.json`.
 **Prompt document name**: 2026-11-14 13:09
+
+## 2026-11-14 — ticket: JjTL: a binding stores a value of another primitive type unconverted, with no warning
+**Ticket**: A JjTL binding stores the value its expression computes without converting it to the primitive type of the target feature, and says nothing: no refusal, no warning, on both parse paths (17 cases probed by lane P-2026-11-14-1235, report `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, question 3). The value is converted only when the model reads it back, and some readings surprise: `"abc"` in an EInt feature reads as 0, `true` in an EInt reads as NaN, `0` or `false` in an EString read as `""`.
+
+Expected, at the least: a warning in the transformation's diagnostics when the primitive type of a binding's value differs from the type of the target feature. Whether the executor should convert, or refuse, is a design decision.
+
+Found while checking a question of the second external review of the Jjodel book. The book now states the present behaviour in its chapter on JjTL and names the explicit helper as the way to convert.
+**Priority**: medium
+**Found in**: P-2026-11-14-1235
+
+## 2026-11-14 — ticket: JjEL SPEC: the forall forms are labelled Set, the evaluator returns an ordered collection
+**Ticket**: `frontend/src/jjel/SPEC.md:221-223` labels the result of the `forall` forms `Set`. The evaluator returns an ordered collection that keeps repetitions (`evaluator.ts:1178-1194`; probe of lane P-2026-11-14-1235, report `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, question 1), in JjEL and in a hole of JjGen alike. The label is misleading; the wording of SPEC should say ordered collection, or the name should be explained.
+**Priority**: low
+**Found in**: P-2026-11-14-1235
