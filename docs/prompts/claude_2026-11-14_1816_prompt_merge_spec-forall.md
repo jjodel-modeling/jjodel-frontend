@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-14-1816
 Chat: C-2026-11-12-1346
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG (merge of spec-forall launched by chat C-2026-11-12-1346)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-14 · lane merge · 4bcd96b88 · verifica visiva passata 2026-11-14 (passato, chat unattended: gates green on 4bcd96b88 (typecheck 0, build 0, vitest with the three known import failures). Wording only: SPEC.md 5.1 and one word of the hint in the validation rules dialog (set becomes collection), no identifier, no behaviour. Alfonso check owed on localhost:3000: the hint under a rule in the Validation Rules dialog reads returns a collection and produces no verdict.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-14-1816 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
