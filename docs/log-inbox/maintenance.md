@@ -1286,3 +1286,30 @@ Found while checking a question of the second external review of the Jjodel book
 **Smoke visivo**: passato — chat, unattended: passato, chat unattended: docs only, the Status flip of P-2026-11-14-1815; gates green on 3a49e0db8.
 **Notes**: Rollback tag `pre-spec-forall-P-2026-11-14-1828` on `599b43fe0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1828/result.json`.
 **Prompt document name**: 2026-11-14 18:28
+
+## 2026-11-14 — ticket: JjEL SPEC: the do form of forall is labelled JjTL only, it runs only in JjScript
+**Ticket**: `frontend/src/jjel/SPEC.md` says the `do` form of `forall` is "JjTL only" (lines 214, 224, 234, 255-256, 785 as read on `c32e79c98`). On the trunk `forall x in S do ...` runs only in JjScript; the JjEL parser and JjTL reject it everywhere (probes of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository). `frontend/src/jjtl/SPEC.md` lists `do {}` blocks under Phase 4, which agrees with the code.
+
+Expected: the JjEL SPEC says that the `do` form belongs to JjScript, and that JjTL creates per element with `forall ... -> Class`. Wording only.
+
+Found while verifying the third part of the second external review of the Jjodel book. Chapter 7 of the book said the same wrong thing in four places and is corrected.
+**Priority**: low
+**Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjTL SPEC: a literal binding is listed as not invertible, the analysis and its test say invertible
+**Ticket**: `frontend/src/jjtl/SPEC.md:813` says a `Literal` expression in a binding is not invertible ("No source to reverse"). The invertibility analysis returns invertible for a bare literal, and `binding-invertibility.test.ts` pins that answer, noting that the SPEC table says no (probe of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository). The same analysis marks `a + 1` invertible.
+
+Expected: SPEC and code agree. Which one changes is a design decision: the book now states what the code does (Section 11.6, Appendix C, Table C.6) and explains the literal as the case with nothing of the source to recover.
+
+Found while verifying the third part of the second external review of the Jjodel book.
+**Priority**: low
+**Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjScript: create instance does not check the name, a script can create instances it cannot address
+**Ticket**: The canvas refuses two instances with the same name in one container. `create instance` in a JjScript script does not check the name against the model, while `rename instance` checks the whole model, and the resolver of instance names searches all the instances of the model and refuses a shared name with `AMBIGUOUS_INSTANCE`. A script can therefore create two instances with one name that no later command (`set`, `delete instance`, `rename instance`) can address by name (probe of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository).
+
+Expected, at the least: `create instance` applies a name check and refuses or warns. Which scope the check has (the container, as on the canvas, or the whole model, as `rename instance`) is a design decision.
+
+Found while verifying the third part of the second external review of the Jjodel book. The book now lists the present behaviour among the limitations of JjScript (Appendix B).
+**Priority**: medium
+**Found in**: P-2026-11-14-2100
