@@ -1383,3 +1383,16 @@ Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_
 **Smoke visivo**: passato — chat, unattended: gates green on b240b96b3 (typecheck 0, build 0, JjScript and Jodie tests green, the known import failure aside). Alfonso check owed on localhost:3000: in the Console of an M1 model with an instance idle of State, create instance of State "idle" answers An instance named idle already exists: State (id) and nothing appears on the canvas; the same line in the script panel of Jodie is marked in the preview and refused by Apply.
 **Notes**: The check runs after the same-run HANDLE_IN_USE check, so a duplicate within one script keeps that code; the holder is named Class (id), as describeAmbiguity does. Mutation bench: disabling the executor check, the planner check and the subject fallback kills 4 tests. No in-repo JjScript SPEC exists; the book appendix is the reference. The ticket #945 block went in its own docs commit before this closure, a second docs commit of the lane.
 **Prompt document name**: 2026-11-14 21:46
+
+## 2026-11-14 — merge: create-instance-name into alfonso-frontend-jjtl (P-2026-11-14-2215)
+**Prompt**: `claude_2026-11-14_2215_prompt_merge_create-instance-name.md`, a direct merge by `lane-run merge --direct`, no session: `create-instance-name` at `a5220748e` into `alfonso-frontend-jjtl`, merge base `22cf59a25`, 4 commits on the branch side.
+**Files touched**: merge `aea148e92`: 10 files from the branch side (`docs/discovery/discovery_2026-11-14_create_instance_name_check.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-14_2146_prompt_jjscript_create_instance_name_check.md`, `frontend/src/components/Jodie/__tests__/consumerProposal.test.ts`, `frontend/src/components/Jodie/consumerProposalModel.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `aea148e92` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16281 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: gates green on aea148e92. Alfonso check owed on localhost:3000: create instance of State "idle" in the Console of a model that has idle is refused with An instance named idle already exists.
+**Notes**: Rollback tag `pre-create-instance-name-P-2026-11-14-2215` on `0e5f64b04` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-2215/result.json`.
+**Prompt document name**: 2026-11-14 22:15
