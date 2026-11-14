@@ -1313,3 +1313,13 @@ Expected, at the least: `create instance` applies a name check and refuses or wa
 Found while verifying the third part of the second external review of the Jjodel book. The book now lists the present behaviour among the limitations of JjScript (Appendix B).
 **Priority**: medium
 **Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjScript: set x.name writes an instance name with no name check, a script can still create unaddressable twins
+**Ticket**: `set x.name = "..."` writes the name of an M1 instance with no name check, so a script can still give two instances one name after #938 closed the `create instance` path. `create instance` and `rename instance` refuse a name another instance of the model holds (`NAME_CONFLICT`, `commands/instance.ts`), but the `HANDLE_IN_USE` text at `commands/instance.ts:700` says outright that "the 'name' attribute can still be set to any (even duplicate) value afterwards". The handle of the run keeps pointing at the renamed instance, so a later `create instance ... "y"` in the same run can also slip past the model lookup while the store has not committed the write.
+
+Expected: `set <inst>.name = ...` either routes through the same model-wide check as `rename instance` or is refused in favour of `rename instance`. Which one is a design decision.
+
+Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`, section Dependencies and risks).
+**Priority**: low
+**Found in**: P-2026-11-14-2146
+**Detail**: docs/discovery/discovery_2026-11-14_create_instance_name_check.md
