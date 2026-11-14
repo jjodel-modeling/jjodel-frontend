@@ -1247,3 +1247,16 @@ Found while checking a question of the second external review of the Jjodel book
 **Ticket**: `frontend/src/jjel/SPEC.md:221-223` labels the result of the `forall` forms `Set`. The evaluator returns an ordered collection that keeps repetitions (`evaluator.ts:1178-1194`; probe of lane P-2026-11-14-1235, report `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, question 1), in JjEL and in a hole of JjGen alike. The label is misleading; the wording of SPEC should say ordered collection, or the name should be explained.
 **Priority**: low
 **Found in**: P-2026-11-14-1235
+
+## 2026-11-14 — docs: forall returns a collection in the JjEL SPEC and in the rules dialog hint
+**Prompt**: P-2026-11-14-1815, closes ticket #932: SPEC 5.1 labels the forall forms Set; the evaluator returns an ordered collection with repetitions. Correct the wording, no behaviour change.
+**Files touched**: `frontend/src/jjel/SPEC.md` (Returns column Set and Set + Map to Collection; one sentence under the table on order, repetitions and `distinct()`), `frontend/src/components/validation/ValidationRulesModal.tsx` (hint: returns a collection), commit `f79f13bc1`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0, build exit 0 (chunk-size warning only). No test: nothing behaves differently.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — one user-visible word in a hint; the visual line is closed by the chat
+**Notes**: Commit subject shortened from the prompt's 79 characters to fit the 72 of §6.2 (bash-guard refused it). Other texts that say forall returns a set, not edited and listed for the chat: `frontend/src/jjel/types/ast.ts:259`, `docs/jjtl-jjel-paper.tex:297,376,436`; SPEC line 19 says "selects sets", kept with line 35.
+**Prompt document name**: 2026-11-14 18:15
