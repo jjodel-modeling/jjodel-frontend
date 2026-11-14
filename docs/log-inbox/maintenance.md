@@ -1220,3 +1220,16 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Smoke visivo**: passato — chat, unattended: gates green on c3b2d06df (typecheck 0, build 0, vitest with the three known import failures). Two user-visible strings changed, no identifier. Alfonso check owed on localhost:3000: the Dependencies section of the properties panel of a model with a dependency reads Depends on models.
 **Notes**: Findings: Q17 forall keeps order and repetitions in JjEL and in a JjGen hole (no set; SPEC.md:221-223 labels it Set); Q18 the string is the object's name plus a run handle, no `name` slot write, no check for a missing `name` attribute; Q19 bindings stored unconverted, no warning, both parse paths. No test asserted the label. Probes deleted, logs in `.agent-logs/q1{7,8,9}-*`.
 **Prompt document name**: 2026-11-14 12:35
+
+## 2026-11-14 — merge: book-review-checks into alfonso-frontend-jjtl (P-2026-11-14-1309)
+**Prompt**: `claude_2026-11-14_1309_prompt_merge_book-review-checks.md`, a direct merge by `lane-run merge --direct`, no session: `book-review-checks` at `8b1ee3cb9` into `alfonso-frontend-jjtl`, merge base `8252a8aa4`, 3 commits on the branch side.
+**Files touched**: merge `0b52cf6c7`: 5 files from the branch side (`docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-14_1235_prompt_book_review_trunk_checks.md`, `frontend/src/components/editors/Info.tsx`, `frontend/src/view/viewElement/view.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0b52cf6c7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. Two user-visible strings. Alfonso check owed on localhost:3000: Dependencies section of the properties panel reads Depends on models.
+**Notes**: Rollback tag `pre-book-review-checks` on `8252a8aa4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1309/result.json`.
+**Prompt document name**: 2026-11-14 13:09
