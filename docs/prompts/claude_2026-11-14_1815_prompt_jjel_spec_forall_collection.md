@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-14-1815
 Chat: C-2026-11-12-1346
 Front: maintenance
 Lane: fast (wording only: one table and one sentence of `frontend/src/jjel/SPEC.md`, one user-visible string; no behaviour change; the visual line is closed by the chat)
-Status: da eseguire
+Status: eseguito 2026-11-14 · lane fast · f79f13bc1 · verifica visiva passata 2026-11-14 (chat unattended: wording only, merged by P-2026-11-14-1816 at 4bcd96b88 with gates green. Alfonso check owed on localhost:3000: the hint in the Validation Rules dialog reads returns a collection and produces no verdict.)
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG Alfonso, chat of 2026-11-14 17:40: between "the trunk is right and the word set is imprecise" and "forall should return a set", he chose the first; the book now says collection (book lane P-2026-11-14-1745), and the SPEC must say the same (ticket #932)
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
