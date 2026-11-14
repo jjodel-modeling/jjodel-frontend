@@ -1323,3 +1323,16 @@ Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_
 **Priority**: low
 **Found in**: P-2026-11-14-2146
 **Detail**: docs/discovery/discovery_2026-11-14_create_instance_name_check.md
+
+## 2026-11-14 — fix(jjscript): create instance refuses a name the model holds (P-2026-11-14-2146)
+**Prompt**: `claude_2026-11-14_2146_prompt_jjscript_create_instance_name_check.md`, full lane, two phases: Phase 1 read-only discovery of how `create instance` names an instance and what `rename instance` and the canvas check; Phase 2, after the chat's GO, `create instance` refuses a name another instance of the model holds, with `NAME_CONFLICT`, in the executor and in the effects planner. Closes ticket #938.
+**Files touched**: `e1e4aa3f9` `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`; `b240b96b3` `frontend/src/jjscript/executor/commands/instance.ts`, `frontend/src/jjscript/executor/effectsPlanner.ts`, `frontend/src/components/Jodie/consumerProposalModel.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, `frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts`, `frontend/src/components/Jodie/__tests__/consumerProposal.test.ts`; `c4c9095f3` ticket #945 in this inbox; this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; build exit 0; `npx vitest run src/jjscript src/components/Jodie` 1104 tests passed, 1 failed file, `context-binding.test.ts` at import (`window is not defined`, §17); `check:docs` exit 0.
+**Out-of-scope changes**: yes — seven files, above five (rule 19), all listed in the report and confirmed by the chat's GO; `consumerProposalModel.ts` is a Jodie UI file outside the named layers (rule 20), included by the GO's answer 4.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — chat, unattended: gates green on b240b96b3 (typecheck 0, build 0, JjScript and Jodie tests green, the known import failure aside). Alfonso check owed on localhost:3000: in the Console of an M1 model with an instance idle of State, create instance of State "idle" answers An instance named idle already exists: State (id) and nothing appears on the canvas; the same line in the script panel of Jodie is marked in the preview and refused by Apply.
+**Notes**: The check runs after the same-run HANDLE_IN_USE check, so a duplicate within one script keeps that code; the holder is named Class (id), as describeAmbiguity does. Mutation bench: disabling the executor check, the planner check and the subject fallback kills 4 tests. No in-repo JjScript SPEC exists; the book appendix is the reference. The ticket #945 block went in its own docs commit before this closure, a second docs commit of the lane.
+**Prompt document name**: 2026-11-14 21:46
