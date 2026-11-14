@@ -1273,3 +1273,16 @@ Found while checking a question of the second external review of the Jjodel book
 **Smoke visivo**: passato — chat, unattended: passato, chat unattended: gates green on 4bcd96b88 (typecheck 0, build 0, vitest with the three known import failures). Wording only: SPEC.md 5.1 and one word of the hint in the validation rules dialog (set becomes collection), no identifier, no behaviour. Alfonso check owed on localhost:3000: the hint under a rule in the Validation Rules dialog reads returns a collection and produces no verdict.
 **Notes**: Rollback tag `pre-spec-forall-P-2026-11-14-1816` on `253d60d07` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1816/result.json`.
 **Prompt document name**: 2026-11-14 18:16
+
+## 2026-11-14 — merge: spec-forall into alfonso-frontend-jjtl (P-2026-11-14-1828)
+**Prompt**: `claude_2026-11-14_1828_prompt_merge_spec-forall.md`, a direct merge by `lane-run merge --direct`, no session: `spec-forall` at `4d69ba32d` into `alfonso-frontend-jjtl`, merge base `3d8b3ff7b`, 1 commit on the branch side.
+**Files touched**: merge `3a49e0db8`: 1 files from the branch side (`docs/prompts/claude_2026-11-14_1815_prompt_jjel_spec_forall_collection.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3a49e0db8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: docs only, the Status flip of P-2026-11-14-1815; gates green on 3a49e0db8.
+**Notes**: Rollback tag `pre-spec-forall-P-2026-11-14-1828` on `599b43fe0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1828/result.json`.
+**Prompt document name**: 2026-11-14 18:28
