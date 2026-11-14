@@ -1207,3 +1207,16 @@ Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of 
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. No smoke scene evaluates is in the Console; covered by is-kind-of.test.ts and the mutation bench of a065ce9c0. Alfonso check owed on localhost:3000, Console in JjEL mode with a state selected: self is State and self is NamedElement both true.
 **Notes**: Rollback tag `pre-jjel-is-instances` on `171d8d079` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1616/result.json`.
 **Prompt document name**: 2026-11-13 16:16
+
+## 2026-11-14 — fix(ui): «Depends on models», three book-review checks (P-2026-11-14-1235)
+**Prompt**: `claude_2026-11-14_1235_prompt_book_review_trunk_checks.md`, full lane: Part 1 read-only, three questions of the book review (Q17 JjGen `forall`, Q18 JjScript `create instance ... "red"`, Q19 JjTL `:=` coercion) answered from the code and by probes; Part 2 the label «Depends from models» becomes «Depends on models», wording only.
+**Files touched**: `e07d6b0f0` `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`; `c3b2d06df` `frontend/src/components/editors/Info.tsx` (line 554), `frontend/src/view/viewElement/view.tsx` (line 1486, info text of `storeSize`); this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; build exit 0; `npx vitest run` 3 failed files, the three `window is not defined` of §17, 619 passed, 16271 tests passed.
+**Out-of-scope changes**: no — `view.tsx` is the one other user-visible «depends from», which the prompt's search includes; the comment at `info-improvements.scss:861` quoting the old label is left as is (not shown, not asserted).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on c3b2d06df (typecheck 0, build 0, vitest with the three known import failures). Two user-visible strings changed, no identifier. Alfonso check owed on localhost:3000: the Dependencies section of the properties panel of a model with a dependency reads Depends on models.
+**Notes**: Findings: Q17 forall keeps order and repetitions in JjEL and in a JjGen hole (no set; SPEC.md:221-223 labels it Set); Q18 the string is the object's name plus a run handle, no `name` slot write, no check for a missing `name` attribute; Q19 bindings stored unconverted, no warning, both parse paths. No test asserted the label. Probes deleted, logs in `.agent-logs/q1{7,8,9}-*`.
+**Prompt document name**: 2026-11-14 12:35

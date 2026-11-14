@@ -551,7 +551,7 @@ class builder {
 
             <CollapsibleSection title="Dependencies">
                 <label className={'input-container'}>
-                    <b className={'info-field-label'}>Depends from models</b>
+                    <b className={'info-field-label'}>Depends on models</b>
                     <JjSelect
                         isMulti={true}
                         options={multiselectOptions as any}

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-14-1235
 Chat: C-2026-11-12-1346
 Front: maintenance
 Lane: full (three read-only checks with a report; one label rename, scoped; no visual hard stop inside the lane, the visual line is closed by the chat)
-Status: da eseguire
+Status: eseguito 2026-11-14 · lane full · c3b2d06df · verifica visiva passata 2026-11-14 (passato — chat, unattended: gates green on c3b2d06df (typecheck 0, build 0, vitest with the three known import failures). Two user-visible strings changed, no identifier. Alfonso check owed on localhost:3000: the Dependencies section of the properties panel of a model with a dependency reads Depends on models.)
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG Alfonso, chat of 2026-11-14 12:10: yes to renaming the label of the properties panel before the book quotes it; the three checks are asked by the verification of the second external review of the Jjodel book (questions Q17, Q18, Q19)
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
