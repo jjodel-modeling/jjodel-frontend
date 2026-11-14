@@ -433,7 +433,7 @@ function RuleEditor({ ruleId, className, name, body, message, enabled, onDelete 
 
             <div className="validation-rules__hint">
                 The body must return a boolean. <code>coll.all(x =&gt; pred)</code> does;
-                {' '}<code>forall x in coll: pred</code> returns a set and produces no verdict.
+                {' '}<code>forall x in coll: pred</code> returns a collection and produces no verdict.
             </div>
         </div>
     );

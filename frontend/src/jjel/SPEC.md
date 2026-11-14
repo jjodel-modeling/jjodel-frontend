@@ -218,10 +218,12 @@ forall <var> in <collection> [such that <condition>] [: <projection>] [do <actio
 
 | Form | Returns | Description |
 |------|---------|-------------|
-| `forall x in S such that P` | Set | Filter: elements where P is true |
-| `forall x in S: expr` | Set | Map: transform each element |
-| `forall x in S such that P: expr` | Set + Map | Filter then transform |
+| `forall x in S such that P` | Collection | Filter: elements where P is true |
+| `forall x in S: expr` | Collection | Map: transform each element |
+| `forall x in S such that P: expr` | Collection | Filter then transform |
 | `forall x in S do action` | — | Imperative: execute action per element (JjTL only) |
+
+The set comprehension is how a `forall` is read; its value is a collection in the order of the collection it ranges over, repetitions kept (`forall s in State.instances : s.isFinal` on three non-final states is `[false, false, false]`). `distinct()` gives the set when a set is wanted.
 
 **The separator roles:**
 
