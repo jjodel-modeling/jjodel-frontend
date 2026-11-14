@@ -339,7 +339,7 @@ export function failureText(step: ProposalStep, result: ProposalResult, world: P
         case 'ABSTRACT_CLASS': return `"${step.className}" is too general to create: choose a more specific kind.`;
         case 'SINGLETON_CLASS': return `There can be only one ${step.className}, and it already exists.`;
         case 'SINGLETON_INSTANCE': return `${step.subject} can't be deleted: there must always be one.`;
-        case 'NAME_CONFLICT': return `Another element is already called "${step.newName}".`;
+        case 'NAME_CONFLICT': return `Another element is already called "${step.newName ?? step.subject}".`;
         case 'HANDLE_IN_USE': return `This proposal creates two elements called "${step.subject}".`;
         default: return GENERIC_FAILURE_TEXT;
     }

@@ -702,6 +702,23 @@ export async function executeCreateInstance(
         };
     }
 
+    // Name conflict check (#938): the scope and code of `rename instance`, the whole model.
+    // A script addresses an instance by its bare name over the model, so a name another
+    // instance holds would leave both unaddressable (AMBIGUOUS_INSTANCE). An instance this
+    // run created is not in the model yet; the handle check above covers it. Never fires on
+    // a generated name, which is chosen free of the model.
+    const holders = findInstanceByName(targetModel, instanceName);
+    if (holders.length > 0) {
+        const holder = toCandidate(holders[0]);
+        return {
+            success: false,
+            command: 'create',
+            message: `An instance named '${instanceName}' already exists: `
+                + (holder.className ? `${holder.className} (${holder.id})` : holder.id),
+            errors: [{ code: 'NAME_CONFLICT', message: `Pick a different name` }]
+        };
+    }
+
     try {
         // DObject.new(instanceof, father, fatherType, name, persist)
         // Pattern source: canvasToJjom.ts:1097 — do NOT wrap in outer TRANSACTION.

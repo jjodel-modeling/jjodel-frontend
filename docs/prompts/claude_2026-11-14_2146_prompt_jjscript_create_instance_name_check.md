@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-14-2146
 Chat: C-2026-11-12-1346
 Front: maintenance
 Lane: full, two phases (Phase 1 discovery read-only with a saved report and a hard stop; Phase 2 the fix, after the chat's GO)
-Status: da eseguire
+Status: eseguito 2026-11-14 · lane full · b240b96b3 · verifica visiva passata 2026-11-14 (passato — chat, unattended: gates green on b240b96b3 (typecheck 0, build 0, JjScript and Jodie tests green, the known import failure aside). Alfonso check owed on localhost:3000: in the Console of an M1 model with an instance idle of State, create instance of State "idle" answers An instance named idle already exists: State (id) and nothing appears on the canvas; the same line in the script panel of Jodie is marked in the preview and refused by Apply.)
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG Alfonso, chat of 2026-11-14 21:35: "fixa il problema" on ticket #938, found by the third part of the external review of the Jjodel book
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

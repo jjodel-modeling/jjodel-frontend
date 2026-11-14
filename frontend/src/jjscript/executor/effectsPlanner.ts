@@ -447,6 +447,11 @@ function planCreate(sim: Simulation, args: CreateArgs, line: number): LineResult
 
     const name = explicitName ?? generateName(sim, className);                                                       // :583
     if (sim.handles.has(name)) return fail('HANDLE_IN_USE', `Handle '${name}' already used in this script`);         // :588-598
+    const holder = sim.live().find((e) => e.name === name);                                                           // #938 name conflict
+    if (holder) {
+        return fail('NAME_CONFLICT', `An instance named '${name}' already exists: `
+            + (holder.className ? `${holder.className} (${holder.id})` : holder.id));
+    }
 
     const id = sim.nextId();
     sim.elements.push({

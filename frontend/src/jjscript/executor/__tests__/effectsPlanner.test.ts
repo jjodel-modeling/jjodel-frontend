@@ -104,6 +104,15 @@ describe('create instance', () => {
         expect(codes(plan.errors)).toEqual(['ABSTRACT_CLASS', 'SINGLETON_CLASS', 'HANDLE_IN_USE']);
         expect(plan.created.map((c) => c.name)).toEqual(['S']);
     });
+
+    it('refuses a name a root or a contained instance holds (NAME_CONFLICT, #938), naming the holder', async () => {
+        const plan = await planEffects('create instance of State "M"\ncreate instance of State "A" in M.states', world());
+        expect(plan.created).toEqual([]);
+        expect(plan.errors).toMatchObject([
+            { line: 1, code: 'NAME_CONFLICT', message: "An instance named 'M' already exists: Machine (m)" },
+            { line: 2, code: 'NAME_CONFLICT', message: "An instance named 'A' already exists: State (a)" },
+        ]);
+    });
 });
 
 describe('set an attribute', () => {

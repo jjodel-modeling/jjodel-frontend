@@ -1360,3 +1360,26 @@ Expected: both texts corrected. `CLAUDE.md` is normative: the change needs Alfon
 **Smoke visivo**: passato — chat, unattended: passato, chat unattended: wording of two SPEC files, gates green on b153c8027. Nothing to see in the app.
 **Notes**: Rollback tag `pre-spec-do-literal` on `065f14bd5` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-2159/result.json`.
 **Prompt document name**: 2026-11-14 21:59
+
+## 2026-11-14 — ticket: JjScript: set x.name writes an instance name with no name check, a script can still create unaddressable twins
+**Ticket**: `set x.name = "..."` writes the name of an M1 instance with no name check, so a script can still give two instances one name after #938 closed the `create instance` path. `create instance` and `rename instance` refuse a name another instance of the model holds (`NAME_CONFLICT`, `commands/instance.ts`), but the `HANDLE_IN_USE` text at `commands/instance.ts:700` says outright that "the 'name' attribute can still be set to any (even duplicate) value afterwards". The handle of the run keeps pointing at the renamed instance, so a later `create instance ... "y"` in the same run can also slip past the model lookup while the store has not committed the write.
+
+Expected: `set <inst>.name = ...` either routes through the same model-wide check as `rename instance` or is refused in favour of `rename instance`. Which one is a design decision.
+
+Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`, section Dependencies and risks).
+**Priority**: low
+**Found in**: P-2026-11-14-2146
+**Detail**: docs/discovery/discovery_2026-11-14_create_instance_name_check.md
+
+## 2026-11-14 — fix(jjscript): create instance refuses a name the model holds (P-2026-11-14-2146)
+**Prompt**: `claude_2026-11-14_2146_prompt_jjscript_create_instance_name_check.md`, full lane, two phases: Phase 1 read-only discovery of how `create instance` names an instance and what `rename instance` and the canvas check; Phase 2, after the chat's GO, `create instance` refuses a name another instance of the model holds, with `NAME_CONFLICT`, in the executor and in the effects planner. Closes ticket #938.
+**Files touched**: `e1e4aa3f9` `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`; `b240b96b3` `frontend/src/jjscript/executor/commands/instance.ts`, `frontend/src/jjscript/executor/effectsPlanner.ts`, `frontend/src/components/Jodie/consumerProposalModel.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, `frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts`, `frontend/src/components/Jodie/__tests__/consumerProposal.test.ts`; `c4c9095f3` ticket #945 in this inbox; this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; build exit 0; `npx vitest run src/jjscript src/components/Jodie` 1104 tests passed, 1 failed file, `context-binding.test.ts` at import (`window is not defined`, §17); `check:docs` exit 0.
+**Out-of-scope changes**: yes — seven files, above five (rule 19), all listed in the report and confirmed by the chat's GO; `consumerProposalModel.ts` is a Jodie UI file outside the named layers (rule 20), included by the GO's answer 4.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — chat, unattended: gates green on b240b96b3 (typecheck 0, build 0, JjScript and Jodie tests green, the known import failure aside). Alfonso check owed on localhost:3000: in the Console of an M1 model with an instance idle of State, create instance of State "idle" answers An instance named idle already exists: State (id) and nothing appears on the canvas; the same line in the script panel of Jodie is marked in the preview and refused by Apply.
+**Notes**: The check runs after the same-run HANDLE_IN_USE check, so a duplicate within one script keeps that code; the holder is named Class (id), as describeAmbiguity does. Mutation bench: disabling the executor check, the planner check and the subject fallback kills 4 tests. No in-repo JjScript SPEC exists; the book appendix is the reference. The ticket #945 block went in its own docs commit before this closure, a second docs commit of the lane.
+**Prompt document name**: 2026-11-14 21:46

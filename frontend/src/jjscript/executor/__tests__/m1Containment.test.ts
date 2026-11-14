@@ -326,6 +326,60 @@ describe('findInstanceByName — roots and contained instances (R-JS-10)', () =>
     });
 });
 
+// ── #938: create instance refuses a name another instance of the model holds ────────────────────
+
+describe('create instance — the name is checked against the whole model (#938)', () => {
+    it('a root already holds the name: NAME_CONFLICT naming it, nothing created', async () => {
+        const r = await create('create instance of State "idle"');
+        expect(r.success).toBe(false);
+        expect(codeOf(r)).toBe('NAME_CONFLICT');
+        expect(r.message).toBe("An instance named 'idle' already exists: Initial (idle)");
+        expect(h.created).toHaveLength(0);
+        expect(getHandleId('idle')).toBeUndefined();
+    });
+
+    it('a contained instance holds it: refused in another container, in the same slot and at the root', async () => {
+        model.objects[0].subObjects = [inst('tIdle', 't', Transition, { nextState: [] })];
+        for (const line of [
+            'create instance of Transition "t" in cooking.transitions',
+            'create instance of Transition "t" in idle.transitions',
+            'create instance of Transition "t"',
+        ]) {
+            const r = await create(line);
+            expect(codeOf(r)).toBe('NAME_CONFLICT');
+            expect(r.message).toBe("An instance named 't' already exists: Transition (tIdle)");
+        }
+        expect(h.created).toHaveLength(0);
+    });
+
+    it('one script, the same name twice: the second is refused as HANDLE_IN_USE', async () => {
+        expect((await create('create instance of Transition "s"')).success).toBe(true);
+        expect(codeOf(await create('create instance of Transition "s"'))).toBe('HANDLE_IN_USE');
+        expect(h.created).toHaveLength(1);
+    });
+
+    it('two different names both pass', async () => {
+        expect((await create('create instance of Transition "a"')).success).toBe(true);
+        expect((await create('create instance of Transition "b"')).success).toBe(true);
+        expect(h.created.map((c) => c.name)).toEqual(['a', 'b']);
+    });
+
+    it('a generated name never collides: it skips the names the model holds', async () => {
+        setModel([inst('s1', 'State', State), inst('s2', 'State2', State)]);
+        const r = await create('create instance of State');
+        expect(r.success).toBe(true);
+        expect(h.created[0].name).toBe('State3');
+    });
+
+    it('rename instance is unchanged: a name held in another container is NAME_CONFLICT', async () => {
+        model.objects[0].subObjects = [inst('ta', 'ta', Transition)];
+        model.objects[1].subObjects = [inst('tb', 'tb', Transition)];
+        const r = await executeRenameInstance(argsOf('rename instance ta to "tb"'), context, h.project);
+        expect(codeOf(r)).toBe('NAME_CONFLICT');
+        expect(r.message).toBe("An instance named 'tb' already exists");
+    });
+});
+
 // ── R-JS-11: the parent is a required dependency, and the M1 wait waits for readiness ───────────
 
 describe('the M1 wait (R-JS-11)', () => {
