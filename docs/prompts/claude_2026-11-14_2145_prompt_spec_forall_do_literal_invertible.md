@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-14-2145
 Chat: C-2026-11-12-1346
 Front: maintenance
 Lane: fast (wording of two SPEC files, after one read-only probe; no behaviour change)
-Status: da eseguire
+Status: eseguito 2026-11-14 · lane fast · 7fa09dfe3 · verifica visiva passata 2026-11-14 (chat unattended: wording of two SPEC files only, no behaviour change; check:docs and typecheck exit 0 on 7fa09dfe3. Nothing to see in the app.)
 Request: https://claude.ai/code/session_01DQt9R4bYnjEzX4r18SudeG Alfonso, chat of 2026-11-14 21:35: yes to correcting the two SPEC lines found by the book review (tickets #936 and #937), and "decidi tu" on whether the code or the SPEC is right about a literal binding; the chat decided for the code
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
