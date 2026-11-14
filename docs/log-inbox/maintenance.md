@@ -1313,3 +1313,24 @@ Expected, at the least: `create instance` applies a name check and refuses or wa
 Found while verifying the third part of the second external review of the Jjodel book. The book now lists the present behaviour among the limitations of JjScript (Appendix B).
 **Priority**: medium
 **Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjTL: forall ... do at rule level is dropped silently, no error and nothing created
+**Ticket**: In a JjTL transformation, `forall c in classes do createTable(c)` written at rule level gives no error and no warning: the parse produces `mappings: []`, the run reports `success: true`, and nothing is created (probe of lane P-2026-11-14-2145). Inside a rule body the same form is refused with `Expected '->' for object creation in forall`.
+
+Expected: the rule-level form is refused with a diagnostic, as in a rule body, until `do {}` blocks exist (Phase 4 of the JjTL SPEC).
+**Priority**: medium
+**Found in**: P-2026-11-14-2145
+
+## 2026-11-14 — ticket: JjTL invertibility: any + with a literal is invertible, no inverse for numbers, other operand unchecked
+**Ticket**: The invertibility analysis of a JjTL binding (`executor.ts:2186-2192`, `:2223`) marks any `+` with one literal operand invertible. Two consequences, from the probe of lane P-2026-11-14-2145: for a numeric literal (`b := a + 1`, `b := 1 + a`) the verdict is invertible but no `inverseExpression` is recorded; and, read in the code and not probed, the other operand is not inspected, so `name.toUpper() + "x"` would be marked invertible although `toUpper` loses information.
+
+Expected: the verdict and the recorded inverse agree (an inverse for the numeric case, or a verdict of not invertible), and the other operand of `+` is itself required to be invertible. A design decision before a fix. There is no backward executor today, so nothing misbehaves at run time: the verdict is shown in the mapping panel and the book quotes it.
+**Priority**: low
+**Found in**: P-2026-11-14-2145
+
+## 2026-11-14 — ticket: Wording: CLAUDE.md 12.6 on do, JjTL SPEC line 11 on running in either direction
+**Ticket**: Two texts contradict what the code does (lane P-2026-11-14-2145): the root `CLAUDE.md` §12.6 says "`do` — only in JjEL `with...do`. Nowhere else.", while `forall ... do` is a JjScript command; `frontend/src/jjtl/SPEC.md:11` says the engine "can execute transformations in either direction", while JjTL has no backward executor (`inverseExpression` is stored in the trace "for future reverse execution", `traceModel.ts:53`, and nothing reads it; SPEC §6.3 says so).
+
+Expected: both texts corrected. `CLAUDE.md` is normative: the change needs Alfonso's word.
+**Priority**: low
+**Found in**: P-2026-11-14-2145
