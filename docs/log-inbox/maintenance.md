@@ -1313,3 +1313,16 @@ Expected, at the least: `create instance` applies a name check and refuses or wa
 Found while verifying the third part of the second external review of the Jjodel book. The book now lists the present behaviour among the limitations of JjScript (Appendix B).
 **Priority**: medium
 **Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — docs: forall do is JjScript's; a literal binding is invertible (SPEC)
+**Prompt**: P-2026-11-14-2145. Correct the JjEL SPEC on the `do` form of `forall` (ticket #936) and the JjTL SPEC §5.4 on a literal binding (ticket #937), after probes of the three parsers and of the trace on four bindings. Closes #936 and #937.
+**Files touched**: `frontend/src/jjel/SPEC.md`, `frontend/src/jjtl/SPEC.md` (`7fa09dfe3`); `docs/log-inbox/maintenance.md` (this entry)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probes in gitignored `frontend/scripts/smoke/_tmp_*`, deleted. JjEL rejects `forall ... do`; JjScript parses it as the `forall` command; JjTL rejects it in a rule body and drops it at rule level with no error. All four bindings trace invertible; only `a + "suffix"` records an inverse. No backward run exists (§6.3). Gates: check:docs and typecheck exit 0.
+**Prompt document name**: 2026-11-14 21:45
