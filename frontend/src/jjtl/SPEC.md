@@ -810,9 +810,11 @@ Each binding is classified at runtime:
 | Value mapping (duplicate targets) | No | — |
 | `Identifier` expression | Yes | Direct reference |
 | `MemberAccess` expression | Yes | Property path |
-| `Literal` expression | No | No source to reverse |
-| `BinaryExpression` `+` with one literal | Conditional | `substring` inverse |
+| `Literal` expression | Yes | None recorded: the value does not depend on the source, so a backward run has nothing to recover |
+| `BinaryExpression` `+` with one literal operand | Yes, whatever the other operand | `substring` inverse when the literal is a string (`b := a + "suffix"` records `b.substring(0, b.length - 6)`); none recorded when it is a number (`a + 1`, `1 + a`) |
 | Other expressions | No | — |
+
+The column on the right is what the trace records in `inverseExpression`. No backward run exists today (§6.3): for no row is a value written back to the source. A literal counts as invertible because it asks nothing of a backward run; calling it not invertible would make every rule with a constant unidirectional.
 
 ---
 

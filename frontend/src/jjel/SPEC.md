@@ -211,7 +211,7 @@ action         = postfix ':=' expression      -- parseAction only (§5.10)
 
 **Syntax:**
 ```
-forall <var> in <collection> [such that <condition>] [: <projection>] [do <action>]
+forall <var> in <collection> [such that <condition>] [: <projection>]
 ```
 
 **Forms:**
@@ -221,7 +221,9 @@ forall <var> in <collection> [such that <condition>] [: <projection>] [do <actio
 | `forall x in S such that P` | Collection | Filter: elements where P is true |
 | `forall x in S: expr` | Collection | Map: transform each element |
 | `forall x in S such that P: expr` | Collection | Filter then transform |
-| `forall x in S do action` | — | Imperative: execute action per element (JjTL only) |
+| `forall x in S do action` | — | Not JjEL: a JjScript command, run once per element (JjScript only) |
+
+The `do` form is JjScript's. The JjEL parser rejects it (`forall requires 'such that' / '|' clause, ':' projection, or both`), and JjTL does not run it: in a rule body its parser rejects it (`Expected '->' for object creation in forall`), and JjTL creates per element with `forall x in S -> Class { ... }` instead.
 
 The set comprehension is how a `forall` is read; its value is a collection in the order of the collection it ranges over, repetitions kept (`forall s in State.instances : s.isFinal` on three non-final states is `[false, false, false]`). `distinct()` gives the set when a set is wanted.
 
@@ -231,7 +233,7 @@ The set comprehension is how a `forall` is read; its value is a collection in th
 |-----------|------|-----------|
 | `such that` | Filter | A boolean condition |
 | `:` | Projection | A value expression |
-| `do` | Action | An imperative command (JjTL context) |
+| `do` | Action | A JjScript command run per element (JjScript only) |
 
 Note: `such that` and `:` are **not** synonyms. They have distinct roles.
 
@@ -252,8 +254,11 @@ forall a in attributes: a.name + " " + a.type.toUpper()
 -- filter + map + chaining
 (forall a in attributes such that a.isPublic: a.salary).sum()
 
--- imperative (in JjTL context only)
-forall a in attributes do createColumn(a)
+-- not JjEL: the do form is a JjScript command
+forall c in classes do set c.abstract = true
+
+-- not JjEL: JjTL creates per element with ->
+forall a in attributes -> Column { name := a.name }
 ```
 
 #### 5.1.1 Several variables
@@ -782,4 +787,4 @@ forall a in (forall p in packages: p.attributes) such that a.isPublic: a.name
 | `filter()` / `map()` | Collection methods | **Replaced by `forall`** |
 | `:` role | Lambda parameter separator | Projection in `forall`, predicate in `exists` |
 | `such that` | — | Filter condition in `forall` |
-| `do` | — | Imperative action in `forall`, body in `with` |
+| `do` | — | Body in `with`; the `forall ... do` command is JjScript's |
