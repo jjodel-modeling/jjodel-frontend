@@ -6228,6 +6228,12 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   with the panel reduced to a launcher and two-way provenance, G4 the left-bar section.** Each slice is its own lane
   in one chain.
 
+- **R-GEN-44** (2026-11-15, ratified by Alfonso 2026-11-15 18:53 «ok alle raccomandazioni», registered by P-2026-11-15-1730, evidence: read, verified: none, reversible: trunk). Amends R-GEN-2.
+  **With the build flag on, textual notation and code generation are available in Advanced mode by default.** In Basic
+  mode they stay hidden, the Code pill included. Settings → Advanced keeps an opt-out switch (group «Code generation»,
+  checkbox «Textual notation and code generation»), no longer labelled Experimental: only a stored `'false'` turns it
+  off, no storage reads as on, a storage that throws reads as off. With the flag off no module of the generator loads,
+  as R-GEN-2 required; that half of R-GEN-2 stands. Discovery: `docs/discovery/discovery_2026-11-15_advanced_default_text_codegen.md`.
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 
 Source: `docs/discovery/discovery_2026-10-10_graphvertex_bpmn_lanes.md` (P-2026-10-10-0105 Phase 1, §H and §I), spec
