@@ -19,6 +19,12 @@
  * NOTE: Attribute values OVERRIDE existing context entries (e.g., DObject's
  * identity `name` is overridden by the metamodel attribute `name` value,
  * since that's what transformation expressions expect).
+ *
+ * The declared multiplicity decides the shape, never the number of values: a
+ * feature declared multi-valued gives the array of its values (empty when it
+ * holds none), a single-valued one its value, or null when it holds none and
+ * the name is not already bound. Same rule as `fillInstanceSlots` for the pool
+ * handles (P-2026-10-12-0120).
  */
 export function extractAttributeValues(proxy: any, context: Record<string, any>): void {
     if (proxy == null || typeof proxy !== 'object') return;
@@ -48,10 +54,12 @@ export function extractAttributeValues(proxy: any, context: Record<string, any>)
             // console.log(`  extractAttributeValues: ${key} ->`, typeof attrProxy, attrProxy != null ? ('value' in attrProxy ? `has .value = ${attrProxy.value}` : 'NO .value') : 'null/undefined');
             // === END DEBUG ===
             if (attrProxy != null && typeof attrProxy === 'object' && 'value' in attrProxy) {
-                const val = attrProxy.value;
+                const val = readSlot(attrProxy);
                 // Only override if the attribute actually has a value set
                 if (val !== undefined) {
                     context[attrName] = val;
+                } else if (!(attrName in context)) {
+                    context[attrName] = null;
                 }
             }
         } catch {
@@ -70,9 +78,11 @@ export function extractAttributeValues(proxy: any, context: Record<string, any>)
             try {
                 const dollarProp = proxy['$' + fname];
                 if (dollarProp != null && typeof dollarProp === 'object' && 'value' in dollarProp) {
-                    const val = dollarProp.value;
+                    const val = readSlot(dollarProp);
                     if (val !== undefined) {
                         context[fname] = val;
+                    } else if (!(fname in context)) {
+                        context[fname] = null;
                     }
                 }
             } catch {
@@ -80,4 +90,18 @@ export function extractAttributeValues(proxy: any, context: Record<string, any>)
             }
         }
     }
+}
+
+/** Upper bound -1, '*' or above 1, read off the slot's M2 feature (`fillInstanceSlots`'s test). */
+function isMultiValued(slot: any): boolean {
+    let ub: any;
+    try { ub = slot.instanceof?.upperBound; } catch { ub = undefined; }
+    return ub === -1 || ub === '*' || (typeof ub === 'number' && ub > 1);
+}
+
+/** The slot's value by its declared multiplicity: all values in slot order, or the first. */
+function readSlot(slot: any): any {
+    if (!isMultiValued(slot)) return slot.value;
+    const vv = slot.values;
+    return Array.isArray(vv) ? vv : (vv == null ? [] : [vv]);
 }
