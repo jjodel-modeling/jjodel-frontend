@@ -3411,3 +3411,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat C-2026-11-15-1901, built-in browser on localhost:3087, clean localStorage, StateMachine template clone; menu entries read from the DOM.
 **Notes**: The lane entry was committed on its own in `ee13eb679`, before the GO, not held for the closure commit as P13 asks; the log is add-only, so its `Smoke visivo: non applicabile` and `Regressions: unknown` stand and this entry records the outcome. The R-GEN-2 amendment row is the chat's.
 **Prompt document name**: 2026-11-15 17:30
+
+## 2026-11-16 — merge: advanced-default-text-codegen into alfonso-frontend-jjtl (P-2026-11-15-2342)
+**Prompt**: merge `advanced-default-text-codegen` at `67abe1d52` into the trunk with one `--no-ff` merge commit (RC-14), gates, smoke on 3001, closure.
+**Files touched**: merge `9b04cdc53` (the 13 branch-side files of P-2026-11-15-1730); this closure: `docs/prompts/claude_2026-11-15_2342_prompt_merge_advanced-default-text-codegen.md` (Status line), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Zero conflicts, tree `6124855e4` equal to the measured merge-tree; 9 probes as expected. Gates on `9b04cdc53`: typecheck and typecheck:scripts exit 0; vitest 16302 passed, 3 skipped, the 3 files of §17 red at import (trunk 16298 + 4 of the branch); hooks 985/22; build exit 0; check:docs 5/5, check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat C-2026-11-15-1901, built-in browser on localhost:3001 at `9b04cdc53`, 2026-11-16 00:01, no codegen key in localStorage: Advanced shows GENERATORS, the textual entry and the Code pill; Basic neither entry nor pill; read from the DOM.
+**Notes**: The trunk tip moved from `da37b5548` to `a35346193` (docs-only prompt re-render), accepted. check:docs now runs 5 checks (E added), not the 4 the prompt expected. 3001 was down at the hard stop and was started by the chat.
+**Prompt document name**: 2026-11-15 23:42
