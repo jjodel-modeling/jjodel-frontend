@@ -2,12 +2,14 @@
  * codegen-examples probe (P-2026-10-11-1415, slice S8): the two lecture examples imported as a student imports them,
  * from the project files frontend/public/examples/codegen/<name>.jjodel (scripts/examples/build-codegen-examples.ts).
  *
- * Fresh context, Advanced mode, the code generation setting off. For each example:
+ * Fresh context, Advanced mode, the code generation setting turned off (from 3.2 it is on by default in Advanced mode,
+ * P-2026-11-15-1730, so the context writes `'false'` once before the first load). For each example:
  *   - the file is served by the dev server at /examples/codegen/<name>.jjodel, byte-identical to the repo's;
  *   - on the dashboard, File → «Import Project», and the file chosen in the file chooser it opens (the menu's own
  *     input, `ProjectsApi.import`; no store call): one project more, named `<project> copy` (crop
  *     import_dashboard.png, turnstile);
- *   - the project opens, the fixture's model opens; the first time, Settings (Ctrl+,) → Advanced → «Code generation»;
+ *   - the project opens, the fixture's model opens; the first time, Settings (Ctrl+,) → Advanced → «Textual notation
+ *     and code generation»;
  *   - the Code pill, Output, «Generate» with no error, «Run» at the default timeout with no runtime error, the stored
  *     scenario the only one in the select, «Check»: `Agrees with the simulator on <n> steps · <scenario>`, n = 7 for
  *     the turnstile and 8 for the Petri net (crops turnstile_check.png, petri_check.png);
@@ -202,7 +204,7 @@ async function generateRunCheck(page: Page, name: string, which: string, pid: st
         await poll(page, `!!document.querySelector('.unified-settings-modal.visible')`, 10000);
         await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-nav-item')].find((b) => b.textContent.trim() === 'Advanced')`));
         await wait(page, 600);
-        await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Code generation')).querySelector('input')`));
+        await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Textual notation and code generation')).querySelector('input')`));
         await wait(page, 300);
         check(`${name} ${which}: Settings → Advanced → Code generation turns the setting on`, await page.evaluate(`localStorage.getItem('jjodel.experimental.codegen')`) === 'true', '');
         await page.evaluate(CLICK(`document.querySelector('.unified-settings-close')`));
@@ -295,6 +297,8 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
 await seed(ctx, true);
+// Off at start, once per tab so the Settings click of the first example survives the next loads (P-2026-11-15-1730).
+await ctx.addInitScript(() => { if (!sessionStorage.getItem('cge.started')) { sessionStorage.setItem('cge.started', '1'); localStorage.setItem('jjodel.experimental.codegen', 'false'); } });
 const page = await ctx.newPage();
 const errors: string[] = [];
 page.on('pageerror', (e: Error) => errors.push('pageerror: ' + e.message));

@@ -24,7 +24,7 @@ import {
     textualLanguageNameOf,
     textualOptionLabel,
 } from './dataManagerOption';
-import { useCodegenEnabled } from '../../codegen/setting';
+import { codegenAvailable, useCodegenEnabled } from '../../codegen/setting';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { saveViewpointPreference } from '../abstract/tabs/EditorSwitch';
@@ -347,8 +347,10 @@ function Toolbar({
     // through, and value={null} would turn the controlled <select> into an uncontrolled one — React
     // warns and the selection stops tracking the store. Coerced here and nowhere upstream.
     const shownViewpointId = isMetamodel ? '' : (activeViewpointId || '');
-    // The textual entry shows only when both the setting and the build flag are on (R-GEN-2).
-    const codegenEnabled = useCodegenEnabled() && CODEGEN_BUILD;
+    // The textual entry shows only when the setting and the build flag are on (R-GEN-2), in Advanced mode (3.2,
+    // P-2026-11-15-1730): Redux `advanced`, reactive in this tab.
+    const codegenAdvanced = useSelector((state: any) => !!state.advanced) as boolean;
+    const codegenEnabled = codegenAvailable(useCodegenEnabled(), codegenAdvanced) && CODEGEN_BUILD;
     const metamodelName = useSelector((state: any) => metamodelNameOf(state.idlookup, modelId)) as string;
     // The language's name, when the metamodel's syntax annotations set one (R-TXT-25 (12)): the entry's label then.
     const languageName = useSelector((state: any) => textualLanguageNameOf(state.idlookup, modelId)) as string | null;

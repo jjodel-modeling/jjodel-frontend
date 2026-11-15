@@ -9,8 +9,9 @@
  * toggled in Settings that mounts the pill without a reload, is the probe's (scripts/probe/codegen-panel.ts).
  * Mutations each test kills are in its name; the bench is in the commit body.
  *
- * The build flag (P-2026-10-12-0012): every test but the last describe runs a build that carries it,
- * `vi.stubEnv('VITE_CODEGEN', 'true')`; the last runs one that does not, as 3.1 and vitest do by default.
+ * The build flag (P-2026-10-12-0012): every test but the last two describes runs a build that carries it,
+ * `vi.stubEnv('VITE_CODEGEN', 'true')`; the flag-off cases run one that does not, as 3.1 and vitest do by default.
+ * From 3.2 (P-2026-11-15-1730) the setting is on unless the key holds `'false'`, and available in Advanced mode only.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,8 +19,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JjodelEvents } from '../../events/registry';
 import {
-    CODEGEN_SETTING_KEY, codePillVisible, generatorEntries, getCodegenEnabled, setCodegenEnabled, subscribeCodegenEnabled,
-    useCodegenEnabled,
+    CODEGEN_SETTING_KEY, codegenAvailable, codePillVisible, generatorEntries, getCodegenEnabled, setCodegenEnabled,
+    subscribeCodegenEnabled, useCodegenEnabled,
 } from '../setting';
 import { DEFAULT_GENERATOR_ID, DEFAULT_GENERATOR_NAME, decodeGenerators } from '../engine/generatorCodec';
 
@@ -54,28 +55,28 @@ afterEach(() => {
     vi.resetModules();
 });
 
-describe('getCodegenEnabled (kills: default on; any value but "true" read as on)', () => {
-    it('is off with no key, and with every value but "true"', () => {
-        expect(getCodegenEnabled()).toBe(false);
-        for (const v of ['false', '', '1', 'TRUE', 'yes']) {
-            localStorage.setItem(CODEGEN_SETTING_KEY, v);
-            expect(getCodegenEnabled()).toBe(false);
-        }
-        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+describe('getCodegenEnabled (kills: default off; a value but "false" read as off)', () => {
+    it('is on with no key, and with every value but "false"', () => {
         expect(getCodegenEnabled()).toBe(true);
+        for (const v of ['true', '', '1', 'TRUE', 'yes', 'FALSE']) {
+            localStorage.setItem(CODEGEN_SETTING_KEY, v);
+            expect(getCodegenEnabled()).toBe(true);
+        }
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(getCodegenEnabled()).toBe(false);
     });
 
-    it('is off with no storage at all, and with a storage that throws', () => {
+    it('is on with no storage at all, off with a storage that throws (kills: no storage read as off; catch dropped)', () => {
         vi.stubGlobal('localStorage', undefined);
-        expect(getCodegenEnabled()).toBe(false);
+        expect(getCodegenEnabled()).toBe(true);
         vi.stubGlobal('localStorage', { getItem: () => { throw new Error('denied'); } });
         expect(getCodegenEnabled()).toBe(false);
     });
 
     it('reads the key jjodel.experimental.codegen (kills: another key)', () => {
         expect(CODEGEN_SETTING_KEY).toBe('jjodel.experimental.codegen');
-        localStorage.setItem('jjodel.experimental.codegen', 'true');
-        expect(getCodegenEnabled()).toBe(true);
+        localStorage.setItem('jjodel.experimental.codegen', 'false');
+        expect(getCodegenEnabled()).toBe(false);
     });
 });
 
@@ -121,9 +122,9 @@ describe('useCodegenEnabled', () => {
     const Probe = () => React.createElement('span', null, String(useCodegenEnabled()));
 
     it('renders the stored setting (kills: hook reading a constant)', () => {
-        expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>false</span>');
-        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
         expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>true</span>');
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>false</span>');
     });
 
     it('hands React a subscription that fires on the change and a snapshot that reads it (kills: hook not subscribed)', async () => {
@@ -142,17 +143,17 @@ describe('useCodegenEnabled', () => {
         });
         vi.resetModules();
         const fresh = await import('../setting');
-        expect(fresh.useCodegenEnabled()).toBe(false);
+        expect(fresh.useCodegenEnabled()).toBe(true);
         expect(subscribe).not.toBeNull();
         const onChange = vi.fn();
         const off = subscribe!(onChange);
-        fresh.setCodegenEnabled(true);
-        expect(onChange).toHaveBeenCalledTimes(1);
-        expect(snapshot!()).toBe(true);
-        off();
         fresh.setCodegenEnabled(false);
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(snapshot!()).toBe(false);
+        off();
+        fresh.setCodegenEnabled(true);
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(snapshot!()).toBe(true);
     });
 });
 
@@ -274,5 +275,44 @@ describe('a build without the flag (kills: flag ignored; flag read once at impor
         }
         vi.stubEnv('VITE_CODEGEN', 'true');
         expect(getCodegenEnabled()).toBe(true);
+    });
+});
+
+describe('available in Advanced mode by default (3.2, P-2026-11-15-1730; kills: mode ignored; default off; "false" ignored; flag ignored)', () => {
+    // `advanced` stands for the Redux root `state.advanced` every caller reads; the pill takes the same value first.
+    const available = (advanced: boolean) => codegenAvailable(getCodegenEnabled(), advanced);
+    const pillOnStored = (advanced: boolean) => codePillVisible(
+        available(advanced), advanced,
+        { MM: { id: 'MM', _state: { genTemplates: '{"v":1,"templates":[]}' } }, M: { id: 'M', instanceof: 'MM' } }, 'M', true,
+    );
+
+    it('flag off: unavailable in Advanced mode, with no key and with "true"', () => {
+        vi.stubEnv('VITE_CODEGEN', undefined);
+        expect(available(true)).toBe(false);
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+        expect(available(true)).toBe(false);
+        expect(pillOnStored(true)).toBe(false);
+    });
+
+    it('Basic mode: unavailable with no key and with "true", and the pill hidden on a metamodel with templates', () => {
+        expect(available(false)).toBe(false);
+        expect(pillOnStored(false)).toBe(false);
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+        expect(available(false)).toBe(false);
+        expect(pillOnStored(false)).toBe(false);
+    });
+
+    it('Advanced mode with no key: available, the pill shown', () => {
+        expect(localStorage.getItem(CODEGEN_SETTING_KEY)).toBeNull();
+        expect(available(true)).toBe(true);
+        expect(pillOnStored(true)).toBe(true);
+    });
+
+    it('Advanced mode with "false" stored: unavailable, the pill hidden', () => {
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(available(true)).toBe(false);
+        expect(pillOnStored(true)).toBe(false);
+        setCodegenEnabled(true);
+        expect(available(true)).toBe(true);
     });
 });

@@ -1,6 +1,7 @@
 /**
- * setting — the experimental code generation setting, and the rule of its «Code» pill (slice S5, P-2026-10-10-1825;
- * spec §2, R-GEN-2, discovery §E.1-§E.2, U4).
+ * setting — the code generation setting, and the rule of its «Code» pill (slice S5, P-2026-10-10-1825;
+ * spec §2, R-GEN-2, discovery §E.1-§E.2, U4). On by default in Advanced mode from 3.2 (P-2026-11-15-1730,
+ * docs/discovery/discovery_2026-11-15_advanced_default_text_codegen.md).
  *
  * The one module of `src/codegen/` that loads with the setting off: Settings → Advanced reads and writes it, and
  * EditorV2 reads it to decide whether to mount the pill and, once pressed, the lazy code panel
@@ -8,8 +9,10 @@
  * gate (`scripts/gates/check-codegen-lazy.ts`) allows it alone in the entry's closure.
  *
  * Per browser, like every preference (the `useInterfaceMode` precedent, hooks/useInterfaceMode.ts): one localStorage
- * key, off unless it holds `'true'`. A change in this tab is announced by `JjodelEvents.EXPERIMENTAL_CODEGEN_CHANGED`,
- * one in another tab by the `storage` event; «Clear local data» removes the key, which is off again.
+ * key, on unless it holds `'false'`, the value the Settings switch writes when the user turns it off. A change in this
+ * tab is announced by `JjodelEvents.EXPERIMENTAL_CODEGEN_CHANGED`, one in another tab by the `storage` event; «Clear
+ * local data» removes the key, which is on again. Advanced mode is not read here: the callers read the Redux root
+ * `state.advanced` and combine it through `codegenAvailable`, so this module stays free of the store.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -19,8 +22,8 @@ import { JjodelEvents } from '../events/registry';
 export const CODEGEN_SETTING_KEY = 'jjodel.experimental.codegen';
 
 /**
- * The setting: on only when the build carries the flag and the key holds `'true'`; off with no key, no storage, or a
- * storage that throws. The flag (P-2026-10-12-0012, release 3.1): `VITE_CODEGEN=true` at build time, unset in 3.1 and
+ * The setting, the user's switch: on when the build carries the flag and the key does not hold `'false'`, so on with
+ * no key and with no storage at all; off with a storage that throws. The flag (P-2026-10-12-0012, release 3.1): `VITE_CODEGEN=true` at build time, unset in 3.1 and
  * in vitest; read on every call, so `vi.stubEnv` reaches it. Written as the bare text `import.meta.env.VITE_CODEGEN`:
  * Vite's build replaces that form with a literal and vitest's env replacer matches that text, while a cast such as
  * `(import.meta as any).env` or a `?.` is seen by neither. tsconfig has no vite/client types, hence the ts-ignore.
@@ -29,10 +32,19 @@ export function getCodegenEnabled(): boolean {
     try {
         // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts); see above.
         if (import.meta.env.VITE_CODEGEN !== 'true') return false;
-        return typeof localStorage !== 'undefined' && localStorage.getItem(CODEGEN_SETTING_KEY) === 'true';
+        if (typeof localStorage === 'undefined') return true;
+        return localStorage.getItem(CODEGEN_SETTING_KEY) !== 'false';
     } catch {
         return false;
     }
+}
+
+/**
+ * Textual notation and code generation are available (3.2, P-2026-11-15-1730): the setting on, and Advanced mode, the
+ * Redux root `state.advanced` the caller reads. In Basic mode they stay hidden whatever the key holds.
+ */
+export function codegenAvailable(enabled: boolean, advanced: boolean): boolean {
+    return enabled && advanced;
 }
 
 /** Writes the setting and announces it in this tab. */
