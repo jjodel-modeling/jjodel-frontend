@@ -3398,3 +3398,16 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Prompt document name**: 2026-11-15 17:30
 
 **Ticket** (low): `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` «transcript_path wins over JJODEL_LANE_LOG» fails inside a lane-run session (`expected null to be 'deny'`) and passes 32/32 with `JJODEL_LANE_LOG`, `JJODEL_LANE_LOG_FROM` and `JJODEL_LANES_DIR` unset: the test reads the lane env of the process that runs it.
+
+## 2026-11-15 — docs: closure of P-2026-11-15-1730, visual check passed
+**Prompt**: GO of chat C-2026-11-15-1901 after the visual check of `fd7adaf0d` on localhost:3087 (23:30): Status flip and closure commit, as P13 prescribes.
+**Files touched**: `docs/prompts/claude_2026-11-15_1730_prompt_advanced-default-text-codegen.md` (Status line), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Visual check passed: Advanced with no `jjodel.experimental.codegen` key shows the textual entry, the Code pill and GENERATORS; Basic shows neither entry nor pill. Gates as in the lane entry above.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat C-2026-11-15-1901, built-in browser on localhost:3087, clean localStorage, StateMachine template clone; menu entries read from the DOM.
+**Notes**: The lane entry was committed on its own in `ee13eb679`, before the GO, not held for the closure commit as P13 asks; the log is add-only, so its `Smoke visivo: non applicabile` and `Regressions: unknown` stand and this entry records the outcome. The R-GEN-2 amendment row is the chat's.
+**Prompt document name**: 2026-11-15 17:30
