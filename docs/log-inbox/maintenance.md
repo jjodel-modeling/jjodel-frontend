@@ -1409,3 +1409,40 @@ Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_
 **Smoke visivo**: passato — chat: JjEL mode in Jodie, `self.ownedTransitions.size` on Green of the traffic light answers `1 Integer` (book Fig. 17.2).
 **Notes**: Fixes book defect 1 of P-2026-11-15-1010 (a `[0..*]` feature with one element is an array). Semantic conflict: the branch made `forall`/`exists` raise on a non-collection, `forallMultivar.test.ts` (R-FA) wants `[]`/`false`; the trunk rule stays, decided in chat on Alfonso's delegation.
 **Prompt document name**: 2026-11-15 16:50
+
+## 2026-11-15 — ticket: Co-evolution test suite fails headless: missing updateDebuggerComponent stub
+**Ticket**: The headless co-evolution suite of the trunk fails, all four tests, because the test DOM setup has no `updateDebuggerComponent` hook on `window`. Found by lane P-2026-11-15-2245 while exercising the class-deletion cascade for the book (report: jjodel-book `author/discovery/discovery_2026-11-15_cross_metamodel_class_deletion.md`). The lane ran its probe with a one-line stub and the cascade behaved as expected, so the product code is not implicated; the tests that guard orphaning, slot removal and re-attachment are simply not running.
+
+Proposed fix: add a no-op `updateDebuggerComponent` to `coevolution-tests/stubs/dom-setup.ts`, then confirm the four tests run green headless.
+
+Scope: test stubs only. No product file changes.
+**Priority**: medium
+**Found in**: P-2026-11-15-2245
+
+## 2026-11-15 — ticket: Canvas class deletion duplicates inherited features on the subclass
+**Ticket**: Deleting a class on the canvas copies down into its direct subclasses both the features the class declares and the ones it inherits. The subclass is then re-attached to the supertypes of the deleted class, so an inherited feature (e.g. NamedElement.name) ends up twice on the subclass, and every instance carries two slots for it, one with the value and one empty. The conformance check reports nothing. Decision of Alfonso, 2026-11-15: the trunk changes, the book text stays. Expected: copy down only the features the deleted class declares itself; inherited ones reach the subclass through the re-attachment. Scope: the copy-down of useClassRemoval; canvasToJjom.ts is critical zone and should not need to change.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: high
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: Regression test: canvas class deletion re-attaches subclasses
+**Ticket**: On the canvas path the re-attachment of subclasses works only because the proxy of the deleted class is taken in syncDeleteVertex (canvasToJjom.ts, near line 414) before the inheritance edge is stripped (near lines 445-451). A control run that strips first and deletes through a fresh proxy does not re-attach. No test covers it. Wanted: a regression test pinning TimedEvent.extends = [NamedElement] after handleClassRemoval on the hierarchy NamedElement <- Event <- TimedEvent. Test only; no product change.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: medium
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: extendedBy index stale after class deletion via script and classic editor
+**Ticket**: After deleting a class through the script path or the classic editor, the subclass is re-attached but the reverse index is not: NamedElement.extendedBy stays [] although TimedEvent now extends it. The canvas path leaves it consistent. By reading, this could affect the final and singleton guards and a later deletion of NamedElement; not run. First step: one probe that, after the script path, deletes NamedElement and sets it final, then decide the fix.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: medium
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: Headless coevolution config: app class-field transform and init_editor seeding
+**Ticket**: The headless coevolution test config does not build the D-classes the way the app does: a feature created headless gets no father, so the canvas copy-down silently produces nothing, and the state has no primitive types. Wanted in coevolution-tests/: the class-field transform the app uses (vite.config.ts:34-40) and seeding through DState.init_editor(). Companion of issue 954. Test infrastructure only.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: low
+**Found in**: P-2026-11-15-2305
