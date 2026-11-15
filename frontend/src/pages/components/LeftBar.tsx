@@ -20,7 +20,7 @@ import { deleteProjectScript, readProjectScripts, renameProjectScript } from '..
 import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
 import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
 import type { DProjectScript } from '../../joiner/classes';
-import { generatorEntries, useCodegenEnabled } from '../../codegen/setting';
+import { codegenAvailable, generatorEntries, useCodegenEnabled } from '../../codegen/setting';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -373,7 +373,9 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // R-GEN-42: the GENERATORS section, with the experimental setting on (and the build flag) only, never in
     // consumer mode (R-GEN-23). The keys are read through codegen/setting.ts, the only codegen module this eager
     // file may import; the tab is reached by a dynamic import, so the lazy gate (R-GEN-2) stays green.
-    const codegenOn = useCodegenEnabled();
+    // In Advanced mode only (3.2, P-2026-11-15-1730): Redux `advanced`, which also gates «New model from text».
+    const codegenAdvanced = useSelector((state: any) => !!state.advanced) as boolean;
+    const codegenOn = codegenAvailable(useCodegenEnabled(), codegenAdvanced);
     const showGenerators = codegenOn && !consumer;
     const generatorBags: unknown[] = useSelector((state: any) =>
         (showGenerators ? pMetamodels.map(m => state?.idlookup?.[m.id]?._state) : []), shallowEqual);

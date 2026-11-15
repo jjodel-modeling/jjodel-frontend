@@ -146,7 +146,7 @@ import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureOb
 import { PreviewEdge } from './preview/PreviewEdge';
 import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
 import { PreviewBar } from './preview/PreviewBar';
-import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { codegenAvailable, codePillVisible, useCodegenEnabled } from '../../codegen/setting';
 import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
@@ -686,9 +686,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The Simulation pill: Advanced mode and the metamodel's Simulation toggle (P-2026-09-29-1225, R-SIM-99). A boolean
     // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
     const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
-    // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
+    // The Code pill (R-GEN-2): the setting in Advanced mode (3.2, P-2026-11-15-1730, so hidden in Basic whatever the
+    // metamodel holds), then the rule of codegen/setting.ts, a boolean per dispatch.
     const codegenEnabled = useCodegenEnabled();
-    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenAvailable(codegenEnabled, !!state.advanced), !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
     // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
     // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
     const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid).signature : '');

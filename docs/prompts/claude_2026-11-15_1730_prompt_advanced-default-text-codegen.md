@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-15-1730
 Chat: C-2026-11-15-1010
 Front: codegen
 Lane: full, two phases (Phase 1 discovery read-only with a saved report and a hard stop; Phase 2 the change, after the chat's GO)
-Status: da eseguire
+Status: eseguito 2026-11-15 · lane full · fd7adaf0d · verifica visiva passata 2026-11-15 (passato — chat C-2026-11-15-1901 in the built-in browser on localhost:3087, 23:30, clean localStorage, StateMachine template clone: Advanced, the picker lists Abstract syntax, StateMachine, statemachine (textual entry) and Data manager, the Code pill on the canvas, GENERATORS in the left bar; Basic, Abstract syntax, StateMachine, Data manager, no Code pill.)
 Request: Alfonso, chat of 2026-11-15 17:25: "sintassi testuale e generazione di codice diventano attive di default in Advanced prima del tag 3.2" (decision already stated on 2026-11-11, recorded in the codegen front)
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

@@ -3383,3 +3383,31 @@ In a single-user session the two lengths were equal in every measure of the #682
 **Smoke visivo**: passato — chat, unattended: D6 crops of P-2026-11-09-0020 GO by Alfonso 09:45; D6b chord checked by the chat on DOM checks 12/12, crop 1-hover-chord.png in ~/.jjodel-lanes/P-2026-11-09-0950/
 **Notes**: Rollback tag `pre-textual-d6-pinned-hover` on `733a67020` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-09-1001/result.json`.
 **Prompt document name**: 2026-11-09 10:01
+
+## 2026-11-15 — feat(codegen): text and codegen on by default in Advanced (P-2026-11-15-1730)
+**Prompt**: `claude_2026-11-15_1730_prompt_advanced-default-text-codegen.md`, two phases: Phase 1 discovery (report `9fe733b56`), Phase 2 after the GO on its six recommendations: with `VITE_CODEGEN=true` textual notation and code generation are available in Advanced mode unless `'false'` is stored, hidden in Basic; Settings switch relabelled.
+**Files touched**: `9fe733b56`: `docs/discovery/discovery_2026-11-15_advanced_default_text_codegen.md`; `fd7adaf0d`: `frontend/src/codegen/setting.ts`, `frontend/src/codegen/__tests__/setting.test.ts`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/__tests__/textualPicker.test.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/settings/AdvancedSettings.tsx`, `frontend/scripts/probe/codegen-panel.ts`, `frontend/scripts/probe/codegen-examples.ts`; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates on `fd7adaf0d`'s tree: typecheck exit 0; build passed; check:codegen-lazy ALL GREEN (off, on); check:scripts PASS 152 files; vitest codegen + textualPicker 3780 passed in 81 files; full vitest 16301 passed, 3 files red at import (the §17 set) and 1 test red in `contextCeiling.test.ts`, green 32/32 without the lane env (ticket below). Visual check not yet done.
+**Out-of-scope changes**: yes. 10 code files (over 5, confirmed at the GO, rule 19); the two Playwright probes are a declared scope expansion, edited and not run.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — not run by this lane; owed to Alfonso on a probe port: Advanced with a clean localStorage, textual entry in the picker of a model tab and the Code pill; Basic, neither.
+**Notes**: Advanced is read in each caller from Redux `state.advanced` through the new pure `codegenAvailable`; `setting.ts` stays storage-only, so the lazy gate is unchanged. The Code pill's Basic-with-templates branch is now unreachable by gating its first argument, body untouched. R-GEN-2 «off by default» is amended by the chat. Mutation bench in the commit body (4 mutations, all red).
+**Prompt document name**: 2026-11-15 17:30
+
+**Ticket** (low): `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` «transcript_path wins over JJODEL_LANE_LOG» fails inside a lane-run session (`expected null to be 'deny'`) and passes 32/32 with `JJODEL_LANE_LOG`, `JJODEL_LANE_LOG_FROM` and `JJODEL_LANES_DIR` unset: the test reads the lane env of the process that runs it.
+
+## 2026-11-15 — docs: closure of P-2026-11-15-1730, visual check passed
+**Prompt**: GO of chat C-2026-11-15-1901 after the visual check of `fd7adaf0d` on localhost:3087 (23:30): Status flip and closure commit, as P13 prescribes.
+**Files touched**: `docs/prompts/claude_2026-11-15_1730_prompt_advanced-default-text-codegen.md` (Status line), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Visual check passed: Advanced with no `jjodel.experimental.codegen` key shows the textual entry, the Code pill and GENERATORS; Basic shows neither entry nor pill. Gates as in the lane entry above.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat C-2026-11-15-1901, built-in browser on localhost:3087, clean localStorage, StateMachine template clone; menu entries read from the DOM.
+**Notes**: The lane entry was committed on its own in `ee13eb679`, before the GO, not held for the closure commit as P13 asks; the log is add-only, so its `Smoke visivo: non applicabile` and `Regressions: unknown` stand and this entry records the outcome. The R-GEN-2 amendment row is the chat's.
+**Prompt document name**: 2026-11-15 17:30

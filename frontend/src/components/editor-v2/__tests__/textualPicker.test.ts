@@ -97,7 +97,7 @@ describe('T2b — the routing in Toolbar.tsx', () => {
         expect(guard).toBeGreaterThan(-1);
         expect(entry).toBeGreaterThan(guard);
         expect(entry).toBeLessThan(entries.indexOf('value: DATA_MANAGER_OPTION_VALUE'));
-        expect(TSX).toContain('const codegenEnabled = useCodegenEnabled() && CODEGEN_BUILD;');
+        expect(TSX).toContain('const codegenEnabled = codegenAvailable(useCodegenEnabled(), codegenAdvanced) && CODEGEN_BUILD;');
     });
 });
 

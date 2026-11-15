@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import {
     LModel,
     LProject,
@@ -56,7 +57,7 @@ import {
     buildXmiImportSummary,
     buildErrorImportSummary,
 } from '../import/buildImportSummary';
-import { useCodegenEnabled } from '../../codegen/setting';
+import { codegenAvailable, useCodegenEnabled } from '../../codegen/setting';
 import { isConsumerMode } from '../environment/consumerMode';
 import {
     materializeNested,
@@ -237,7 +238,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     if (!project) return null;
     // An absent target is left out: `.name` on it white-paged the project (P-2026-09-30-1540).
     const metamodels = (project.metamodels || []).filter(m => !!m);
-    const codegenOn = useCodegenEnabled();
+    // The GENERATORS section: the setting in Advanced mode (3.2, P-2026-11-15-1730), Redux `advanced`.
+    const codegenAdvanced = useSelector((state: any) => !!state.advanced) as boolean;
+    const codegenOn = codegenAvailable(useCodegenEnabled(), codegenAdvanced);
     const models = (project.models || []).filter(m => !!m);
     // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
     // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
