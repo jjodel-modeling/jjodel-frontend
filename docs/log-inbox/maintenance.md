@@ -1401,11 +1401,11 @@ Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_
 **Prompt**: chat request of Alfonso (book screenshots, Fig. 17.2 needs multi-valued navigation on the trunk): merge `jjel-multivalued` at `796839cc8` into `alfonso-frontend-jjtl` at `97de6d1fb`, 2 commits on the branch side, no textual conflict.
 **Files touched**: from the branch side `frontend/src/jjel/evaluator/modelContext.ts`, `frontend/src/jjel/__tests__/multivalued-navigation.test.ts`, `docs/discovery/discovery_2026-10-12_jjel_multivalued_navigation.md`; resolution in the merge: `frontend/src/jjel/evaluator/evaluator.ts` kept as on the trunk, and the block of `multivalued-navigation.test.ts` that expected an error from `forall`/`exists` on a non-collection rewritten to expect `[]` and `false`; this entry.
 **Outcome**: ✅ completed
-**Corregge**: a `[0..*]` feature holding one element is now an array in JjEL (book defect 1 of P-2026-11-15-1010).
-**Causa**: semantic conflict, not textual: the branch made `forall`/`exists` raise on a non-null non-collection, while `forallMultivar.test.ts` (spec-forall, R-FA, later on the trunk) requires `[]` and `false`. Decision taken in chat on Alfonso's delegation: the trunk rule stays. It changes nothing for existing expressions, and with the declared multiplicity deciding the shape the case that motivated the error (one value in a many-valued feature) no longer reaches `forall`.
+**Corregge**: —
+**Causa**: —
 **Regressions**: no. Gates on the merged tree: typecheck 0; vitest 16301 tests in 623 files, the 3 known import failures plus `scripts/hooks/__tests__/bashGuard.test.ts` red when run from an osascript shell (environment, untouched by this merge); `src/jjel` 640/640.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato — chat: JjEL mode in Jodie, `self.ownedTransitions.size` on Green of the traffic light answers `1 Integer` (book Fig. 17.2).
-**Notes**: the error variant stays on record in the branch history; implicit singleton lifting (OCL style) is a possible later refinement, not taken here.
+**Notes**: Fixes book defect 1 of P-2026-11-15-1010 (a `[0..*]` feature with one element is an array). Semantic conflict: the branch made `forall`/`exists` raise on a non-collection, `forallMultivar.test.ts` (R-FA) wants `[]`/`false`; the trunk rule stays, decided in chat on Alfonso's delegation.
 **Prompt document name**: 2026-11-15 16:50
