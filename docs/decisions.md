@@ -6581,6 +6581,9 @@ P-2026-10-20-1835.
   **Two ontological levels inside one linguistic level.** One M1 model holds both the classes and their instances
   (UML `InstanceSpecification` and `Slot` style): a class diagram and an object diagram are two views of the same
   model. Deep instantiation, potency and a third ontological level are out of scope; the design must not preclude them.
+  Amendment (2026-11-16, Alfonso in chat C-2026-10-25-2159, 01:53 to 02:00): the third ontological level and beyond are
+  in scope, through the potency roles of the instantiation STC (`_state.ontoBindings`, R-OI-25..28). That STC stays
+  separate from the simulator's: no shared catalog of roles.
 - **R-OI-2** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
   **The ontological instantiation is a relation declared on the metamodel and known to Jjodel as such**, not a set of
   roles serving one palette. Its roles: the type reference (instance to class), the feature container (class to
@@ -6736,6 +6739,34 @@ P-2026-10-20-1835.
   queue of `instantiate`, and no vertex is written: the link draws as one edge. It goes in the container of R-OI-22 for its
   metaclass, on the UML fixture `Package.packagedElements`, and a root without one. A second link between the same pair is
   allowed: UML allows it unless the association is unique.
+- **R-OI-25** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A record declares the levels with two optional single-id roles, `potency` and `featurePotency`, written after
+  `featureSources`; the level itself is derived, and there is no `level` role.** `potency` is an attribute the owner of
+  the type reference owns or inherits; `featurePotency` one the type of the feature container owns or inherits. With
+  `featurePotency` the owner of the feature container conforms to the owner of the type reference, else no feature is
+  ever due more than one level below its classifier. `featurePotency` together with `featureSources` is a check defect
+  until a front gives the pair a meaning. The placement keeps today's UML and DCN bags byte-equal, and an older build's
+  re-encode of a new record byte-equal (`bindingCodec.test.ts` pins both bags' length and sha-256); a non-id value under
+  either key is a shape defect. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the
+  discovery's recommended answers adopted). Discovery P-2026-11-16-0205 §3.1, questions 2, 3 and 12; code P-2026-11-16-0232.
+- **R-OI-26** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Deep instantiation is exact-level, as in DeepJava: a feature of potency p becomes a slot exactly p levels below its
+  classifier.** For an instance of t1, with t2, t3, ... the type chain of t1, every feature of the closure of t_k whose
+  potency is k is due, each once (`dueFeatures`); `slotDiff` judges on it. An unset potency reads 1, and a record without
+  `featurePotency` walks nothing and reads `featureClosure` of t1: the default reproduces R-OI-3, two levels exactly as
+  today, and the DCN's dormant slots (R-DCN-3) are unchanged. A feature of potency below 1, or above its classifier's
+  potency, is never due, and `checkLevels` reports it as a `potency` warning. Durability, as in Melanee, is left out and
+  can come later as its own role. Decided as R-OI-25. Discovery P-2026-11-16-0205, questions 1 and 7.
+- **R-OI-27** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The level of an object is the length of its type chain, from 0 at the top**: a root, with no classifier, is 0, its
+  instances 1, and so on; UML's classes are 0 and its instances 1. It is derived, never written, and cannot drift. The
+  chain stops at a root or at the first repeat: a type cycle is data in the reader (`typeChain`) and one error per cycle
+  in `checkLevels`. Decided as R-OI-25. Discovery P-2026-11-16-0205, question 2.
+- **R-OI-28** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The potency of a clabject is derived from its type**: its own integer value when it holds one, else its classifier's
+  minus 1, never below 0. A root without a value, and every object under a record without `potency`, is unbounded. A
+  clabject of potency 0 is not instantiable: `instantiableClassifiers` leaves it out of the creation options. Decided as
+  R-OI-25. Discovery P-2026-11-16-0205 §3.1.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

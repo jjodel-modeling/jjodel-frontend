@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-16-0232
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (pure model code, no browser; rule 19: six files, listed below)
-Status: da eseguire
+Status: eseguito 2026-11-16 · lane full · 09404b07b
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-16 02:00: «vai adesso in /lane auto ma non ti fermare e prosegui dritto dritto fino all'implementazione»; the discovery's recommended answers Q1..Q12 adopted unattended, RC-21)
 Depends: P-2026-11-16-0205
 Corregge: —

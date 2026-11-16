@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-16-0205
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: discovery (read-only; one report; throwaway probe runs allowed, never committed)
-Status: da eseguire
+Status: eseguito 2026-11-16 · lane discovery · a93e6cca6 · report docs/discovery/discovery_2026-11-16_onto_multilevel_level_potency.md
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-16 01:53-02:00: the instantiation STC is its own STC, separate from the simulator's; multilevel goes into it with `level` and `potency` roles, tested on a clabject metamodel; «vai adesso in /lane auto ma non ti fermare e prosegui dritto dritto fino all'implementazione»)
 Depends: P-2026-11-09-1209 (oi-rail on the trunk)
 Corregge: —

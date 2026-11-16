@@ -421,3 +421,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato: Alfonso GO 2026-11-09 09:42 on oi-rail at localhost:3005; probes on the merged branch S2 57/57, S4 14/14, binding editor 10/10, s3a 8/8, s3b 6/6, split-pane 28/28 (P-2026-11-09-1115)
 **Notes**: Rollback tag `pre-oi-rail` on `53e89405f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-09-1209/result.json`.
 **Prompt document name**: 2026-11-09 12:09
+
+## 2026-11-16 — feat: multilevel L1, potency roles and derived level, with its discovery (P-2026-11-16-0232)
+**Prompt**: P-2026-11-16-0205, read-only discovery of a third ontological level in the instantiation STC (roles, consumers, viewpoint level, fixture, lanes, questions Q1..Q12), and P-2026-11-16-0232, its lane L1: codec, reader and check of the `potency` and `featurePotency` roles, run unattended on Alfonso's instruction of 02:00, Q1..Q12 adopted as recommended.
+**Files touched**: `a93e6cca6`: docs/discovery/discovery_2026-11-16_onto_multilevel_level_potency.md. `09404b07b`: frontend/src/model/ontological/bindingCodec.ts, bindingReader.ts, bindingCheck.ts and __tests__/bindingCodec.test.ts, bindingReader.test.ts, bindingCheck.test.ts. Docs commit: docs/decisions.md (R-OI-1 amendment, R-OI-25..28), docs/log-inbox/instance-of.md (this entry), the Status line of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0; the ontological suite plus instantiate, linkInstance, classElement, instantiationToProblems and dcnToProblems: 10 files, 233 tests (207 before); the UML, DCN and DCN-with-foreign-keys bags re-encode to the bytes of the codec of `a448cadf5`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (model/ontological only, no sync or D-L file)
+**Smoke visivo**: non applicabile (pure model code, no browser)
+**Notes**: RC-21/RC-25: Q1..Q12 adopted as recommended; L1 acts on Q1-3, Q7, Q10, Q12, the rest bind L2..L4. Q7 and the type cycle are M1 findings: `checkLevels` in bindingCheck.ts judges them over the reader's view, as data for L2. The codec test's unknown key `potency: 2` became `durability: 2`, a numeric `potency` being now a shape defect. Bench: `~/.jjodel-lanes/P-2026-11-16-0232/bench.txt`, 5 mutations, all red.
+**Prompt document name**: 2026-11-16 02:32
