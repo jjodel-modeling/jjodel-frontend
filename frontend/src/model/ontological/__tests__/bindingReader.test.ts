@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { OntoBinding } from '../bindingCodec';
-import { featureClosure, instantiableClassifiers, recordFor, recordsFor, slotDiff } from '../bindingReader';
+import {
+    clabjectPotency, dueFeatures, featureClosure, featurePotencyOf, instantiableClassifiers, ontoLevel, recordFor, recordsFor, slotDiff, typeChain,
+} from '../bindingReader';
 import type { OntoReadView } from '../bindingReader';
 
 // The UML subset of the class/object notation design (§2, §6): the library, as M1 objects over M2 ids.
@@ -394,5 +396,175 @@ describe('slotDiff', () => {
             orphans: [{ slot: 's5', feature: 'dueDate' }, { slot: 's6', feature: 'archivedOn' }],
             cycles: [],
         });
+    });
+});
+
+// The clabject fixture of discovery 2026-11-16 §3.4 (probe B): one metaclass on both ends of the type reference.
+
+const MLM: OntoBinding = {
+    name: 'object',
+    typeReference: 'Clabject.type',
+    featureContainer: 'Clabject.fields',
+    generalization: { direct: 'Clabject.supers' },
+    slotContainer: 'Clabject.slots',
+    definingFeature: 'Slot.field',
+    valueHolder: 'Slot.value',
+    abstractFlag: 'Clabject.isAbstract',
+    valueKinds: [{ when: 'primitive:Integer', create: 'IntValue', field: 'IntValue.value' }],
+    potency: 'Clabject.potency',
+    featurePotency: 'Field.potency',
+};
+const MLM_OWNERS: Record<string, string> = { 'Clabject.type': 'Clabject', 'Clabject.fields': 'Clabject' };
+const mlmView = (objects: Record<string, Obj>): OntoReadView => ({
+    ...viewOf(objects),
+    ownerOf: f => MLM_OWNERS[f],
+    conformsTo: (m, s) => m === s,
+});
+const CL = 'Clabject';
+const field = (potency?: unknown): Obj => ({ meta: 'Field', attrs: potency === undefined ? {} : { 'Field.potency': potency } });
+const slotOf = (feature: string): Obj => ({ meta: 'Slot', refs: { 'Slot.field': [feature] } });
+
+// ProductType (potency 2) { taxRate^1, price^2 }; Book : ProductType { isbn, potency unset, reads 1 }; DVD : ProductType;
+// mobyDick : Book. The potencies are written as an EInt or as its string.
+const shop = (overrides: Record<string, Obj> = {}): Record<string, Obj> => ({
+    String: { meta: 'DataType' },
+    Integer: { meta: 'DataType' },
+    ProductType: { meta: CL, refs: { 'Clabject.fields': ['taxRate', 'price'] }, attrs: { 'Clabject.potency': 2 } },
+    taxRate: field(1),
+    price: field('2'),
+    Book: { meta: CL, refs: { 'Clabject.type': ['ProductType'], 'Clabject.fields': ['isbn'], 'Clabject.slots': ['sTax'] } },
+    isbn: field(),
+    sTax: slotOf('taxRate'),
+    DVD: { meta: CL, refs: { 'Clabject.type': ['ProductType'] } },
+    mobyDick: { meta: CL, refs: { 'Clabject.type': ['Book'], 'Clabject.slots': ['sIsbn', 'sPrice'] } },
+    sIsbn: slotOf('isbn'),
+    sPrice: slotOf('price'),
+    ...overrides,
+});
+const ALL = ['String', 'Integer', 'ProductType', 'Book', 'DVD', 'mobyDick'];
+
+describe('levels and potency (clabjects, R-OI-25..28)', () => {
+    it('the existing roles read a clabject: a middle clabject is an instance and a classifier, a root is no instance', () => {
+        const view = mlmView(shop());
+        expect(recordFor(view, [MLM], 'Book')).toBe(MLM);
+        expect(recordFor(view, [MLM], 'mobyDick')).toBe(MLM);
+        expect(recordFor(view, [MLM], 'ProductType')).toBeNull();
+        expect(slotDiff(view, MLM, 'ProductType')).toEqual({ missing: [], orphans: [], cycles: [] });
+    });
+
+    it("the closure of Book is its own fields only: price, two levels up, is not in it", () => {
+        expect(featureClosure(mlmView(shop()), MLM, 'Book').features).toEqual(['isbn']);
+    });
+
+    it('the type chain goes up to the root; the level is its length, from 0 at the top', () => {
+        const view = mlmView(shop());
+        expect(typeChain(view, MLM, 'mobyDick')).toEqual({ chain: ['Book', 'ProductType'], cycle: null });
+        expect(typeChain(view, MLM, 'ProductType')).toEqual({ chain: [], cycle: null });
+        expect(['ProductType', 'Book', 'DVD', 'mobyDick'].map(id => ontoLevel(view, MLM, id))).toEqual([0, 1, 1, 2]);
+    });
+
+    it('the potency is derived from the type: 2, 1, 0; a root without a value is unbounded; a value wins', () => {
+        const view = mlmView(shop());
+        expect(['ProductType', 'Book', 'DVD', 'mobyDick'].map(id => clabjectPotency(view, MLM, id))).toEqual([2, 1, 1, 0]);
+        const unset = mlmView(shop({ ProductType: { meta: CL, refs: { 'Clabject.fields': ['taxRate', 'price'] } } }));
+        expect(clabjectPotency(unset, MLM, 'ProductType')).toBe(Infinity);
+        expect(clabjectPotency(unset, MLM, 'mobyDick')).toBe(Infinity);
+        const dvd0 = mlmView(shop({ DVD: { meta: CL, refs: { 'Clabject.type': ['ProductType'] }, attrs: { 'Clabject.potency': '0' } } }));
+        expect(clabjectPotency(dvd0, MLM, 'DVD')).toBe(0);
+    });
+
+    it('exact level: an instance of ProductType is due taxRate, an instance of Book isbn and price', () => {
+        const view = mlmView(shop());
+        expect(dueFeatures(view, MLM, 'ProductType')).toEqual({ features: ['taxRate'], cycles: [] });
+        expect(dueFeatures(view, MLM, 'Book')).toEqual({ features: ['isbn', 'price'], cycles: [] });
+        expect(dueFeatures(view, MLM, 'DVD').features).toEqual(['price']);
+    });
+
+    it('a field whose potency is unset reads 1: isbn is due one level below Book', () => {
+        expect(featurePotencyOf(mlmView(shop()), MLM, 'isbn')).toBe(1);
+        expect(dueFeatures(mlmView(shop()), MLM, 'Book').features).toContain('isbn');
+    });
+
+    it('slotDiff judges on the due features: Book and mobyDick are complete; a slot one level off is an orphan', () => {
+        const view = mlmView(shop());
+        expect(slotDiff(view, MLM, 'Book')).toEqual({ missing: [], orphans: [], cycles: [] });
+        expect(slotDiff(view, MLM, 'mobyDick')).toEqual({ missing: [], orphans: [], cycles: [] });
+        const off = mlmView(shop({
+            Book: { meta: CL, refs: { 'Clabject.type': ['ProductType'], 'Clabject.fields': ['isbn'], 'Clabject.slots': ['sTax', 'sBookPrice'] } },
+            sBookPrice: slotOf('price'),
+            mobyDick: { meta: CL, refs: { 'Clabject.type': ['Book'], 'Clabject.slots': ['sIsbn', 'sMobyTax'] } },
+            sMobyTax: slotOf('taxRate'),
+        }));
+        expect(slotDiff(off, MLM, 'Book')).toEqual({ missing: [], orphans: [{ slot: 'sBookPrice', feature: 'price' }], cycles: [] });
+        expect(slotDiff(off, MLM, 'mobyDick')).toEqual({ missing: ['price'], orphans: [{ slot: 'sMobyTax', feature: 'taxRate' }], cycles: [] });
+    });
+
+    it('potency 0 is not instantiable: mobyDick leaves the options, and so does a DVD written 0', () => {
+        expect(instantiableClassifiers(mlmView(shop()), MLM, ALL)).toEqual(['ProductType', 'Book', 'DVD']);
+        const dvd0 = mlmView(shop({ DVD: { meta: CL, refs: { 'Clabject.type': ['ProductType'] }, attrs: { 'Clabject.potency': 0 } } }));
+        expect(instantiableClassifiers(dvd0, MLM, ALL)).toEqual(['ProductType', 'Book']);
+        expect(instantiableClassifiers(mlmView(shop()), { ...MLM, potency: undefined }, ALL)).toEqual(['ProductType', 'Book', 'DVD', 'mobyDick']);
+    });
+
+    it('a field below potency 1, or above its owner\'s potency, is never due', () => {
+        const view = mlmView(shop({
+            ProductType: { meta: CL, refs: { 'Clabject.fields': ['taxRate', 'price', 'legacy', 'bonus'] }, attrs: { 'Clabject.potency': 2 } },
+            legacy: field(0),
+            bonus: field(3),
+        }));
+        expect(dueFeatures(view, MLM, 'ProductType').features).toEqual(['taxRate']);
+        expect(dueFeatures(view, MLM, 'Book').features).toEqual(['isbn', 'price']);
+        expect(dueFeatures(view, MLM, 'mobyDick').features).toEqual([]);
+    });
+
+    it('a type cycle terminates as data, and the level, potency and due features with it', () => {
+        const view = mlmView({
+            A: { meta: CL, refs: { 'Clabject.type': ['B'], 'Clabject.fields': ['fa'] } },
+            B: { meta: CL, refs: { 'Clabject.type': ['A'], 'Clabject.fields': ['fb'] } },
+            X: { meta: CL, refs: { 'Clabject.type': ['X'] } },
+            x1: { meta: CL, refs: { 'Clabject.type': ['A'] } },
+            fa: field(1), fb: field(2),
+        });
+        expect(typeChain(view, MLM, 'A')).toEqual({ chain: ['B'], cycle: ['A', 'B', 'A'] });
+        expect(typeChain(view, MLM, 'x1')).toEqual({ chain: ['A', 'B'], cycle: ['A', 'B', 'A'] });
+        expect(typeChain(view, MLM, 'X')).toEqual({ chain: [], cycle: ['X', 'X'] });
+        expect(ontoLevel(view, MLM, 'x1')).toBe(2);
+        expect(clabjectPotency(view, MLM, 'x1')).toBe(Infinity);
+        expect(dueFeatures(view, MLM, 'A').features).toEqual(['fa', 'fb']);
+    });
+
+    it('the closures of every level bring their cycles, each once', () => {
+        const view = mlmView(shop({
+            ProductType: { meta: CL, refs: { 'Clabject.fields': ['taxRate', 'price'], 'Clabject.supers': ['Item'] }, attrs: { 'Clabject.potency': 2 } },
+            Item: { meta: CL, refs: { 'Clabject.supers': ['ProductType'] } },
+        }));
+        expect(dueFeatures(view, MLM, 'Book').cycles).toEqual([['ProductType', 'Item', 'ProductType']]);
+    });
+
+    it('without featurePotency nothing is walked: the due features are the closure, field for field', () => {
+        const noRole: OntoBinding = { ...MLM, featurePotency: undefined };
+        const objs = shop({
+            ProductType: { meta: CL, refs: { 'Clabject.fields': ['taxRate', 'price'], 'Clabject.supers': ['Item'] }, attrs: { 'Clabject.potency': 2 } },
+            Item: { meta: CL, refs: { 'Clabject.supers': ['ProductType'] } },
+        });
+        const view = mlmView(objs);
+        expect(dueFeatures(view, noRole, 'Book')).toEqual(featureClosure(view, noRole, 'Book'));
+        expect(dueFeatures(view, noRole, 'Book')).toEqual({ features: ['isbn'], cycles: [] });
+        const typeReads: string[] = [];
+        const spy: OntoReadView = { ...view, referenceTargets: (id, ref) => { if (ref === 'Clabject.type') typeReads.push(id); return view.referenceTargets(id, ref); } };
+        dueFeatures(spy, noRole, 'Book');
+        expect(typeReads).toEqual([]);
+    });
+
+    it('UML and DCN are unchanged: due features equal the closure, levels are 0 and 1, potency unbounded', () => {
+        const objs = dcnLibrary({ b1: { meta: IS, refs: { 'IS.classifier': ['Book'] } } });
+        const view = viewOf(objs);
+        for (const binding of [OBJECT, DCN]) {
+            for (const c of ['Book', 'Publication', 'Magazine']) expect(dueFeatures(view, binding, c)).toEqual(featureClosure(view, binding, c));
+        }
+        expect(ontoLevel(view, OBJECT, 'Book')).toBe(0);
+        expect(ontoLevel(view, OBJECT, 'b1')).toBe(1);
+        expect(clabjectPotency(view, OBJECT, 'Book')).toBe(Infinity);
+        expect(featurePotencyOf(view, OBJECT, 'isbn')).toBe(1);
     });
 });

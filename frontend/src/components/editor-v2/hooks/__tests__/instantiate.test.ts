@@ -6,6 +6,8 @@ import {
     type SlotSyncPlan, type SynthesisPlan,
     instanceRows, materializePlan,
     instantiate, materializeSlot, syncSlots, type InstantiateResult,
+    linkOptions,
+    bindingsDeclarePotency, clabjectPropertyGroup, ontoLevelIn, ontoLevelKeyOf, ontoLevelsOf,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -577,6 +579,184 @@ describe('S3b: ghost rows and orphan rows (instanceRows, materializePlan)', () =
     });
 });
 
+// The clabject metamodel of the multilevel discovery (§3.4) as D records, with the potency roles (R-OI-25), plus an
+// association for the link rule (R-OI-30). ProductType (potency 2) { taxRate^1, price^2 }; Book : ProductType { isbn }
+// with taxRate; DVD : ProductType with taxRate; mobyDick : Book with isbn and price. Pairs joins two ProductType
+// instances, Stocks a ProductType instance and a Book instance.
+function mlm() {
+    const db: Record<string, Rec> = {};
+    const get = (id: string) => db[id];
+    const cls = (id: string, ext: string[] = [], abstract = false) =>
+        (db[id] = { className: 'DClass', id, name: id, extends: ext, abstract, attributes: [], references: [] });
+    const ref = (owner: string, name: string, type: string) => {
+        const id = `r_${owner}_${name}`;
+        db[id] = { className: 'DReference', id, name, father: owner, type };
+        db[owner].references.push(id);
+    };
+    const attr = (owner: string, name: string, type: string) => {
+        const id = `a_${owner}_${name}`;
+        db[id] = { className: 'DAttribute', id, name, father: owner, type };
+        db[owner].attributes.push(id);
+    };
+    for (const p of ['EString', 'EBoolean', 'EInt']) db[p] = { className: 'DClass', id: p, name: p };
+    cls('Element', [], true); attr('Element', 'name', 'EString');
+    cls('Clabject', ['Element']); attr('Clabject', 'potency', 'EInt'); attr('Clabject', 'isAbstract', 'EBoolean');
+    cls('Field', ['Element']); attr('Field', 'potency', 'EInt'); attr('Field', 'default', 'EString');
+    cls('DataType', ['Element']); cls('Slot'); cls('Value', [], true);
+    cls('StringValue', ['Value']); attr('StringValue', 'value', 'EString');
+    cls('IntValue', ['Value']); attr('IntValue', 'value', 'EInt');
+    cls('Association', ['Element']); cls('End', ['Element']);
+    ref('Clabject', 'type', 'Clabject'); ref('Clabject', 'supers', 'Clabject');
+    ref('Clabject', 'fields', 'Field'); ref('Clabject', 'slots', 'Slot');
+    ref('Field', 'type', 'DataType'); ref('Slot', 'field', 'Field'); ref('Slot', 'value', 'Value');
+    ref('Association', 'ends', 'End'); ref('End', 'type', 'Clabject');
+
+    const shared = { typeReference: 'r_Clabject_type', slotContainer: 'r_Clabject_slots', definingFeature: 'r_Slot_field', valueHolder: 'r_Slot_value' };
+    const object = { name: 'object', ...shared, featureContainer: 'r_Clabject_fields', generalization: { direct: 'r_Clabject_supers' },
+        abstractFlag: 'a_Clabject_isAbstract', featureType: 'r_Field_type', defaultValue: 'a_Field_default',
+        valueKinds: [
+            { when: 'primitive:String', create: 'StringValue', field: 'a_StringValue_value' },
+            { when: 'primitive:Integer', create: 'IntValue', field: 'a_IntValue_value' },
+        ],
+        potency: 'a_Clabject_potency', featurePotency: 'a_Field_potency' };
+    const link = { name: 'link', ...shared, featureContainer: 'r_Association_ends', featureType: 'r_End_type' };
+    db.MM = { className: 'DModel', id: 'MM', isMetamodel: true, _state: { ontoBindings: JSON.stringify({ v: 1, bindings: [object, link] }) } };
+    db.M1 = { className: 'DModel', id: 'M1', isMetamodel: false, instanceof: 'MM', objects: [] };
+
+    const val = (o: string, feature: string, values: unknown[]) => {
+        const vid = `${o}.${feature}`;
+        if (!db[vid]) { db[vid] = { className: 'DValue', id: vid, father: o, instanceof: feature, values: [] }; db[o].features.push(vid); }
+        db[vid].values.push(...values);
+        return vid;
+    };
+    const obj = (id: string, meta: string, father = 'M1') => {
+        db[id] = { className: 'DObject', id, name: id, instanceof: meta, father, features: [] };
+        if (father === 'M1') db.M1.objects.push(id);
+        val(id, 'a_Element_name', [id]);
+    };
+    const clabject = (id: string, type?: string, potency?: number) => {
+        obj(id, 'Clabject');
+        if (type !== undefined) val(id, 'r_Clabject_type', [type]);
+        if (potency !== undefined) val(id, 'a_Clabject_potency', [potency]);
+        val(id, 'r_Clabject_slots', []);
+    };
+    const field = (owner: string, name: string, type: string, potency?: number) => {
+        const id = `f_${owner}_${name}`;
+        obj(id, 'Field', val(owner, 'r_Clabject_fields', [id]));
+        db[id].name = name;
+        val(id, 'r_Field_type', [type]);
+        if (potency !== undefined) val(id, 'a_Field_potency', [potency]);
+        return id;
+    };
+    // A slot is `<clabject>_<field name>`, its value `<slot>_v`.
+    const slot = (inst: string, feature: string, meta?: string, v?: unknown) => {
+        const id = `${inst}_${db[feature]?.name ?? feature}`;
+        obj(id, 'Slot', val(inst, 'r_Clabject_slots', [id]));
+        val(id, 'r_Slot_field', [feature]);
+        if (meta) {
+            obj(`${id}_v`, meta, val(id, 'r_Slot_value', [`${id}_v`]));
+            if (v !== undefined) val(`${id}_v`, `a_${meta}_value`, [v]);
+        }
+        return id;
+    };
+    const association = (id: string, first: string, second: string) => {
+        obj(id, 'Association');
+        for (const [n, type] of [[1, first], [2, second]] as const) {
+            const end = `${id}_end${n}`;
+            obj(end, 'End', val(id, 'r_Association_ends', [end]));
+            val(end, 'r_End_type', [type]);
+        }
+    };
+    for (const t of ['String', 'Integer']) obj(t, 'DataType');
+    clabject('ProductType', undefined, 2);
+    field('ProductType', 'taxRate', 'Integer', 1);
+    field('ProductType', 'price', 'Integer', 2);
+    clabject('Book', 'ProductType');
+    field('Book', 'isbn', 'String');
+    slot('Book', 'f_ProductType_taxRate', 'IntValue', 7);
+    clabject('DVD', 'ProductType');
+    slot('DVD', 'f_ProductType_taxRate', 'IntValue', 5);
+    clabject('mobyDick', 'Book');
+    slot('mobyDick', 'f_Book_isbn', 'StringValue', '978-0142437247');
+    slot('mobyDick', 'f_ProductType_price', 'IntValue', 10);
+    association('Pairs', 'ProductType', 'ProductType');
+    association('Stocks', 'ProductType', 'Book');
+    return { db, get, object, link, val, obj, clabject, field, slot };
+}
+
+describe('multilevel consumers (R-OI-26, R-OI-30; P-2026-11-16-0300)', () => {
+    it('an instance of ProductType gets taxRate alone, an instance of Book gets isbn then price (killed by synthesis on featureClosure)', () => {
+        const { get, object } = mlm();
+        const ofProductType = asPlan(synthesisPlan(get, object as any, 'ProductType'));
+        expect(ofProductType.instanceMetaclass).toBe('Clabject');
+        expect(ofProductType.instanceSeed).toEqual({ type: 'ProductType', name: 'productType1' });
+        expect(ofProductType.slots.map(s => s.feature)).toEqual(['f_ProductType_taxRate']);
+        const ofBook = asPlan(synthesisPlan(get, object as any, 'Book'));
+        expect(ofBook.instanceSeed).toEqual({ type: 'Book', name: 'book1' });
+        expect(ofBook.slots.map(s => s.feature)).toEqual(['f_Book_isbn', 'f_ProductType_price']);
+        expect(ofBook.slots[1].seed).toEqual({ field: 'f_ProductType_price' });
+    });
+
+    it('a default two levels up is planned on the slot it becomes', () => {
+        const { get, object, val } = mlm();
+        val('f_ProductType_price', 'a_Field_default', ['12']);
+        const ofBook = asPlan(synthesisPlan(get, object as any, 'Book'));
+        expect(ofBook.slots[1].value).toEqual({ metaclass: 'IntValue', seed: { value: 12 } });
+    });
+
+    it('the three levels are clean; mobyDick without price shows one ghost price, Book none', () => {
+        const u = mlm();
+        for (const id of ['Book', 'DVD', 'mobyDick']) expect(instanceRows(u.get, id, null)).toEqual({ ghosts: [], orphans: {}, hidden: [] });
+        u.db['mobyDick.r_Clabject_slots'].values = ['mobyDick_isbn'];
+        expect(instanceRows(u.get, 'mobyDick', null)!.ghosts).toEqual([{ feature: 'f_ProductType_price', name: 'price', text: null }]);
+        expect(instanceRows(u.get, 'Book', null)!.ghosts).toEqual([]);
+    });
+
+    it('a ghost being written keeps its place among the due features once its slot has landed (killed by the ghost order on featureClosure)', () => {
+        const u = mlm();
+        u.db['mobyDick.r_Clabject_slots'].values = ['mobyDick_price'];
+        const flight = { features: ['f_ProductType_price'], slots: { mobyDick_price: 'f_ProductType_price' }, materializing: { feature: 'f_ProductType_price', text: '11' } };
+        expect(instanceRows(u.get, 'mobyDick', flight)!.ghosts).toEqual([
+            { feature: 'f_Book_isbn', name: 'isbn', text: null },
+            { feature: 'f_ProductType_price', name: 'price', text: '11' },
+        ]);
+    });
+
+    it('a slot due at another level of the type chain is an orphan that says how many levels, and which way', () => {
+        const u = mlm();
+        u.slot('mobyDick', 'f_ProductType_taxRate', 'IntValue', 7);
+        u.slot('Book', 'f_ProductType_price', 'IntValue', 9);
+        u.slot('DVD', 'f_Book_isbn');
+        expect(instanceRows(u.get, 'mobyDick', null)!.orphans).toEqual({ mobyDick_taxRate: 'taxRate is due 1 level above mobyDick' });
+        expect(instanceRows(u.get, 'Book', null)!.orphans).toEqual({ Book_price: 'price is due 1 level below Book' });
+        expect(instanceRows(u.get, 'DVD', null)!.orphans).toEqual({ DVD_isbn: 'isbn is not a feature of ProductType' });
+    });
+
+    it('a field never due keeps the plain orphan text: potency above its owner\'s, or below 1', () => {
+        const u = mlm();
+        u.db['f_ProductType_price.a_Field_potency'].values = [3];
+        expect(instanceRows(u.get, 'mobyDick', null)!.orphans).toEqual({ mobyDick_price: 'price is not a feature of Book' });
+        u.db['f_ProductType_price.a_Field_potency'].values = [0];
+        expect(instanceRows(u.get, 'mobyDick', null)!.orphans).toEqual({ mobyDick_price: 'price is not a feature of Book' });
+    });
+
+    it('a link joins two instances at one level: Book and DVD by Pairs, never Book and mobyDick (killed by dropping the same-level guard)', () => {
+        const { get } = mlm();
+        expect(linkOptions(get, 'Book', 'DVD').map(o => o.name)).toEqual(['Pairs']);
+        expect(linkOptions(get, 'Book', 'DVD')[0].ends).toEqual(['Book', 'DVD']);
+        // Stocks accepts Book (a ProductType) and mobyDick (a Book) by their classifiers; their levels are 1 and 2.
+        expect(linkOptions(get, 'Book', 'mobyDick')).toEqual([]);
+        expect(linkOptions(get, 'mobyDick', 'Book')).toEqual([]);
+    });
+
+    it('UML, two levels and no potency role: the plans of today, inheritance included', () => {
+        const { get, object } = uml();
+        expect(asPlan(synthesisPlan(get, object as any, 'Magazine')).slots.map(s => s.feature))
+            .toEqual(['p_Magazine_issue', 'p_Publication_title', 'p_Publication_year']);
+        expect(asPlan(synthesisPlan(get, object as any, 'Library')).slots.map(s => s.feature)).toEqual(['p_Library_name']);
+    });
+});
+
 // The write half of `instantiate` over a fake store and a fake undo history (P-2026-11-06-2225). The history keeps the
 // trunk's rules (`reducer.ts` `beginUndoGroup` / `endUndoGroup`): every store write is one entry holding the records it
 // replaced, a nested begin only counts, the outermost end folds the entries since its mark into one, older record kept.
@@ -857,5 +1037,130 @@ describe('instantiate under the layout of the tab, not the root (P-2026-11-07-16
 
     it('no viewpoint given: the root\'s is in force, as before (killed by reading absent as abstract syntax)', async () => {
         expect(await run({ viewpoint: undefined, tabKey: 'CD' })).toEqual({ CD: CLICK });
+    });
+});
+
+describe('the levels of a viewpoint and the instance surfaces (R-OI-29; P-2026-11-16-0340)', () => {
+    const at = (ontoLevel: unknown) => ({ _state: { ontoLevel } });
+    const setOf = (vp: Rec | undefined) => ontoLevelsOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+    const levelOf = (vp: Rec | undefined) => ontoLevelOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+    const has = (vp: Rec | undefined, n: number) => ontoLevelIn(setOf(vp), n);
+    // The MLM fixture with one viewpoint per stored level.
+    const withViewpoint = (ontoLevel?: unknown) => {
+        const fx = mlm();
+        fx.db.VP = ontoLevel === undefined ? {} : at(ontoLevel);
+        return fx;
+    };
+    const names = (options: { name: string }[]) => options.map(o => o.name);
+
+    it('ontoLevelsOf: absent, both and unknown are every level; class {0}; instance every level below the top (killed by instance as {1})', () => {
+        for (const vp of [undefined, {}, at('both'), at('meta'), at(2), at(''), at('1,x'), at('-1')]) {
+            expect([0, 1, 2, 7].map(n => ontoLevelIn(setOf(vp), n))).toEqual([true, true, true, true]);
+        }
+        expect(setOf(at('class'))).toEqual({ levels: [0] });
+        expect([0, 1, 2, 7].map(n => has(at('instance'), n))).toEqual([false, true, true, true]);
+        expect(ontoLevelsOf(() => at('class'), undefined)).toEqual(ontoLevelsOf(() => at('class'), null));
+        expect([0, 1, 2, 3].map(n => has(at('2'), n))).toEqual([false, false, true, false]);
+        expect([0, 1, 2, 3].map(n => has(at(' 2 , 1,2'), n))).toEqual([false, true, true, false]);
+        expect(setOf(at('2,1,2'))).toEqual({ levels: [1, 2] });
+    });
+
+    it('ontoLevelOf on every string form: class exactly at {0}, the aliases as before (killed by class on any set holding 0)', () => {
+        expect(levelOf(at('class'))).toBe('class');
+        expect(levelOf(at('0'))).toBe('class');
+        expect(levelOf(at('0,0'))).toBe('class');
+        expect(levelOf(at('0,1'))).toBe('both');
+        expect(levelOf(at('instance'))).toBe('instance');
+        expect(levelOf(at('1'))).toBe('instance');
+        expect(levelOf(at('2'))).toBe('instance');
+        expect(levelOf(at('1,2'))).toBe('instance');
+        expect(levelOf(at('both'))).toBe('both');
+        expect(levelOf(at('meta'))).toBe('both');
+        expect(levelOf(at(0))).toBe('both');
+        expect(levelOf(undefined)).toBe('both');
+    });
+
+    it('ontoLevelKeyOf gives the canonical stored form the select compares', () => {
+        const key = (vp: Rec | undefined) => ontoLevelKeyOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+        expect([at('class'), at('instance'), at('both'), at('2'), at(' 2,1,2'), at('meta'), at(3), undefined].map(key))
+            .toEqual(['class', 'instance', 'both', '2', '1,2', 'both', 'both', 'both']);
+    });
+
+    it('three levels: each viewpoint offers the classifiers whose instances land at its levels (killed by dropping the level filter)', () => {
+        const offered = (ontoLevel?: unknown) => {
+            const { get, object } = withViewpoint(ontoLevel);
+            return names(creationOptions(get, object as any, 'M1', 'VP'));
+        };
+        expect(offered()).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('both')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('instance')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('1')).toEqual(['ProductType']);
+        expect(offered('2')).toEqual(['Book', 'DVD']);
+        expect(offered('1,2')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('0')).toEqual([]);
+        expect(offered('class')).toEqual([]);
+        expect(offered('3')).toEqual([]);
+        const { get, object } = withViewpoint('2');
+        expect(names(creationOptions(get, object as any, 'M1'))).toEqual(['Book', 'DVD', 'ProductType']);
+    });
+
+    it('the rail follows the viewpoint: its object section and its signature (killed by dropping the level filter)', () => {
+        const { get, db } = withViewpoint('1');
+        const one = ontoRailSections(get, 'M1', 'VP');
+        expect(names(one.sections[0].options)).toEqual(['ProductType']);
+        db.VP = at('2');
+        const two = ontoRailSections(get, 'M1', 'VP');
+        expect(names(two.sections[0].options)).toEqual(['Book', 'DVD']);
+        expect(two.signature).not.toBe(one.signature);
+        expect(names(ontoRailSections(get, 'M1').sections[0].options)).toEqual(['Book', 'DVD', 'ProductType']);
+    });
+
+    it('a drop re-checks the level: a payload of another level runs nothing (killed by dropping the drop guard)', () => {
+        const { get, object, db } = withViewpoint('2');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Book'), 'VP')?.classifierId).toBe('Book');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'ProductType'), 'VP')).toBeNull();
+        db.VP = at('1');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Book'), 'VP')).toBeNull();
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'ProductType'), 'VP')?.classifierId).toBe('ProductType');
+    });
+
+    it('UML unchanged: at every alias and at level 1 the options are those with no viewpoint, the drop too', () => {
+        const { db, get, object } = uml();
+        const none = creationOptions(get, object as any, 'M1');
+        expect(names(none)).toEqual(['Book', 'Library', 'Magazine', 'Member']);
+        for (const ontoLevel of ['both', 'instance', '1']) {
+            db.VP = at(ontoLevel);
+            expect(creationOptions(get, object as any, 'M1', 'VP')).toEqual(none);
+            expect(ontoRailSections(get, 'M1', 'VP')).toEqual(ontoRailSections(get, 'M1'));
+            expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Member'), 'VP')?.classifierId).toBe('Member');
+        }
+        db.VP = at('2');
+        expect(creationOptions(get, object as any, 'M1', 'VP')).toEqual([]);
+    });
+
+    it('the Attributes group: for a clabject below the top, none at class, none on UML', () => {
+        const { db } = withViewpoint('2');
+        db.MM.classes = Object.keys(db).filter(id => db[id].className === 'DClass' && !['EString', 'EBoolean', 'EInt'].includes(id));
+        for (const ontoLevel of ['2', '1', 'instance', 'both']) {
+            db.VP = at(ontoLevel);
+            expect(clabjectPropertyGroup(db, 'M1', 'VP')?.items.map(i => i.metaclass)).toEqual(['Field']);
+        }
+        for (const ontoLevel of ['class', '0']) {
+            db.VP = at(ontoLevel);
+            expect(clabjectPropertyGroup(db, 'M1', 'VP')).toBeNull();
+        }
+        const fx = uml();
+        fx.db.VP = at('instance');
+        expect(clabjectPropertyGroup(fx.db, 'M1', 'VP')).toBeNull();
+    });
+
+    it('bindingsDeclarePotency: the MLM bag declares one, UML\'s none, an unreadable bag none', () => {
+        const { get } = mlm();
+        expect(bindingsDeclarePotency(get, ['MM'])).toBe(true);
+        const u = uml();
+        expect(bindingsDeclarePotency(u.get, ['MM'])).toBe(false);
+        u.db.MM._state = { ontoBindings: '{' };
+        expect(bindingsDeclarePotency(u.get, ['MM', '', 7])).toBe(false);
+        expect(bindingsDeclarePotency(get, [])).toBe(false);
     });
 });

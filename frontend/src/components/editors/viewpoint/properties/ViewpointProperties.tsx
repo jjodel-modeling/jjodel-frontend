@@ -13,7 +13,7 @@ import {
     type MetaclassColorRow,
     type MetaclassColoring,
 } from '../../../../view/viewPoint/metaclassPalette';
-import { ONTO_LEVEL_KEY, ontoLevelOf, type OntoLevel } from '../../../editor-v2/hooks/instantiate';
+import { bindingsDeclarePotency, ONTO_LEVEL_KEY, ontoLevelKeyOf, type OntoLevel } from '../../../editor-v2/hooks/instantiate';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -37,6 +37,9 @@ const ontoLevelOptions: { value: OntoLevel; label: string }[] = [
     { value: 'class', label: 'Classes' },
     { value: 'instance', label: 'Instances' },
 ];
+
+/** The integer levels the select adds when a binding declares a potency role (R-OI-29), numbered from the top. */
+const ontoLevelNumberOptions: { value: string; label: string }[] = [0, 1, 2, 3, 4].map((n) => ({ value: String(n), label: `Level ${n}` }));
 
 /**
  * One entry of the metaclass dropdown: the class, and the colour it paints under this viewpoint.
@@ -122,11 +125,17 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
     // The ontological level (R-OI-19), Advanced only: absent reads as `both`. One write through the `state` setter,
     // which merges, one undo entry; `both` is written, never the key removed: undo does not restore a removed key.
     const advanced = useSelector((state: any) => !!state.advanced);
-    const ontoLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], vpId));
-    const writeOntoLevel = useCallback((level: OntoLevel) => {
+    // The stored value stays a string, an alias or integers (R-OI-29), compared in its canonical form.
+    const ontoLevel = useSelector((state: any) => ontoLevelKeyOf((id: string) => state.idlookup?.[id], vpId));
+    const writeOntoLevel = useCallback((level: string) => {
         if (readOnly || level === ontoLevel) return;
         (viewpoint as any).state = { [ONTO_LEVEL_KEY]: level };
     }, [viewpoint, readOnly, ontoLevel]);
+    const levelsByNumber = useSelector((state: any) => bindingsDeclarePotency((id: string) => state.idlookup?.[id], state.m2models ?? []));
+    const levelOptions: { value: string; label: string }[] = levelsByNumber ? [...ontoLevelOptions, ...ontoLevelNumberOptions] : ontoLevelOptions;
+    // A list such as `'1,2'`, or a level with no potency role left, has no entry: it shows as read, and an entry replaces it.
+    const levelValue = levelOptions.find((o) => o.value === ontoLevel)
+        ?? { value: ontoLevel, label: `${ontoLevel.includes(',') ? 'Levels' : 'Level'} ${ontoLevel.split(',').join(', ')}` };
 
     return (
         <div className="workbench-properties">
@@ -164,11 +173,11 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
             {advanced && (
                 <div className="wp-field">
                     <label className="wp-field__label" id={`${colorId}-onto-level`}>Ontological level</label>
-                    <JjSelect<{ value: OntoLevel; label: string }>
+                    <JjSelect<{ value: string; label: string }>
                         className="jj-select wp-onto-level-select"
                         aria-labelledby={`${colorId}-onto-level`}
-                        options={ontoLevelOptions as any}
-                        value={ontoLevelOptions.find((o) => o.value === ontoLevel) ?? null}
+                        options={levelOptions as any}
+                        value={levelValue}
                         onChange={(o: any) => { if (o) writeOntoLevel(o.value); }}
                         isDisabled={readOnly}
                     />

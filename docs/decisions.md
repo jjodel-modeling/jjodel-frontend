@@ -6581,6 +6581,9 @@ P-2026-10-20-1835.
   **Two ontological levels inside one linguistic level.** One M1 model holds both the classes and their instances
   (UML `InstanceSpecification` and `Slot` style): a class diagram and an object diagram are two views of the same
   model. Deep instantiation, potency and a third ontological level are out of scope; the design must not preclude them.
+  Amendment (2026-11-16, Alfonso in chat C-2026-10-25-2159, 01:53 to 02:00): the third ontological level and beyond are
+  in scope, through the potency roles of the instantiation STC (`_state.ontoBindings`, R-OI-25..28). That STC stays
+  separate from the simulator's: no shared catalog of roles.
 - **R-OI-2** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
   **The ontological instantiation is a relation declared on the metamodel and known to Jjodel as such**, not a set of
   roles serving one palette. Its roles: the type reference (instance to class), the feature container (class to
@@ -6736,6 +6739,77 @@ P-2026-10-20-1835.
   queue of `instantiate`, and no vertex is written: the link draws as one edge. It goes in the container of R-OI-22 for its
   metaclass, on the UML fixture `Package.packagedElements`, and a root without one. A second link between the same pair is
   allowed: UML allows it unless the association is unique.
+- **R-OI-25** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A record declares the levels with two optional single-id roles, `potency` and `featurePotency`, written after
+  `featureSources`; the level itself is derived, and there is no `level` role.** `potency` is an attribute the owner of
+  the type reference owns or inherits; `featurePotency` one the type of the feature container owns or inherits. With
+  `featurePotency` the owner of the feature container conforms to the owner of the type reference, else no feature is
+  ever due more than one level below its classifier. `featurePotency` together with `featureSources` is a check defect
+  until a front gives the pair a meaning. The placement keeps today's UML and DCN bags byte-equal, and an older build's
+  re-encode of a new record byte-equal (`bindingCodec.test.ts` pins both bags' length and sha-256); a non-id value under
+  either key is a shape defect. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the
+  discovery's recommended answers adopted). Discovery P-2026-11-16-0205 §3.1, questions 2, 3 and 12; code P-2026-11-16-0232.
+- **R-OI-26** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Deep instantiation is exact-level, as in DeepJava: a feature of potency p becomes a slot exactly p levels below its
+  classifier.** For an instance of t1, with t2, t3, ... the type chain of t1, every feature of the closure of t_k whose
+  potency is k is due, each once (`dueFeatures`); `slotDiff` judges on it. An unset potency reads 1, and a record without
+  `featurePotency` walks nothing and reads `featureClosure` of t1: the default reproduces R-OI-3, two levels exactly as
+  today, and the DCN's dormant slots (R-DCN-3) are unchanged. A feature of potency below 1, or above its classifier's
+  potency, is never due, and `checkLevels` reports it as a `potency` warning. Durability, as in Melanee, is left out and
+  can come later as its own role. Decided as R-OI-25. Discovery P-2026-11-16-0205, questions 1 and 7.
+- **R-OI-27** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The level of an object is the length of its type chain, from 0 at the top**: a root, with no classifier, is 0, its
+  instances 1, and so on; UML's classes are 0 and its instances 1. It is derived, never written, and cannot drift. The
+  chain stops at a root or at the first repeat: a type cycle is data in the reader (`typeChain`) and one error per cycle
+  in `checkLevels`. Decided as R-OI-25. Discovery P-2026-11-16-0205, question 2.
+- **R-OI-28** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The potency of a clabject is derived from its type**: its own integer value when it holds one, else its classifier's
+  minus 1, never below 0. A root without a value, and every object under a record without `potency`, is unbounded. A
+  clabject of potency 0 is not instantiable: `instantiableClassifiers` leaves it out of the creation options. Decided as
+  R-OI-25. Discovery P-2026-11-16-0205 §3.1.
+- **R-OI-29** (2026-11-16, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A viewpoint's `ontoLevel` names a set of ontological levels, and the instance surfaces offer only the classifiers
+  whose instances land in it.** The key stays a string in `_state` (R-OI-19): absent, `both` or unknown is every level;
+  `class` is {0}; `instance` every level below the top; `'n'` and `'n,m'` those levels (`ontoLevelsOf`). A classifier c
+  is offered when `ontoLevel(c) + 1` (R-OI-27) is in the set, by the rail «Instances of», the pane «New instance of ▸»,
+  the node «New instance» and the drop, which re-checks the level (R-OI-20). `ontoLevelOf` reads `class` exactly at {0},
+  `instance` when the set leaves out the top, `both` otherwise: on two levels `instance` is {1}, and UML reads as
+  before. The level select adds «Level 0» to «Level 4» beside the three aliases only when a binding declares `potency`
+  or `featurePotency` (R-OI-25); a stored list reads «Levels 1, 2». Three clauses decided by the lane and accepted by the
+  chat: (1) the clabject Attributes group, at a level ≥ 1, is wired through `EditorV2.tsx` (a selector, a memo, an
+  enabled flag) and two optional props of `PalettePanel.tsx`, beyond the option lists and drop guard the prompt allowed
+  there; (2) the select's potency check reads every metamodel of the project, a viewpoint having no metamodel link;
+  (3) the link record's rail section is filtered by the same rule, through the link record's own type chain. Decided by
+  the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the discovery's recommended answers adopted).
+  Discovery P-2026-11-16-0205 §3.3 and §7; code P-2026-11-16-0340, probes P-2026-11-16-0410.
+- **R-OI-30** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A link joins two instances at one ontological level, and its association sits one level above them; the instance
+  problems gain two kinds, `type-cycle` and `potency`.** `linkOptions` offers no association when the levels of the two
+  ends (R-OI-27) differ. The association's place follows from its ends' types being the instances' classifiers
+  (`linkEnds`, R-OI-5) and is not checked on its own. On UML both ends are always at level 1, so the menu is today's.
+  The two kinds come from `checkLevels`: `type-cycle`, an error once per cycle, anchored on its members; `potency`, a
+  warning on a field that is never due (R-OI-26), anchored on the field. The «Sync slots» action stays on `missing`
+  alone. An orphan slot whose feature is due at another level of the type chain reads «… is due N levels below» (or
+  above) the instance, in the problem and on the node's orphan mark alike (`orphanReason`); a feature never due keeps
+  the plain text. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the discovery's
+  recommended answers adopted, critical-zone go-ahead for this front's planned lanes). Discovery P-2026-11-16-0205 §3.2,
+  questions 7 and 11; code P-2026-11-16-0300.
+- **R-OI-31** (2026-11-16, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **The clabject fixture `MLM` and its probe `onto-mlm.ts` are the acceptance of multilevel.** The fixture
+  (`scripts/probe/mlm-clabject-fixture.ts`) builds the metamodel `MLM` (Clabject, Field, Slot, values), the binding with
+  `potency` and `featurePotency`, the model ProductType → Book / DVD → mobyDick, and exports
+  `~/jjodel-demo-exports/mlm-clabject/mlm-clabject.jjodel` (not committed). Its viewpoints are «MLM / level 0», «MLM /
+  level 1», «MLM / level 2» (`ontoLevel` `'0'`, `'1'`, `'2'`); the default viewpoint stays `both`. Each holds the same
+  views: Clabject typed (name and type name, two top labels) and root (name), DataType, the Slot row `field = value`,
+  the Field rows `name^p : type` and `name : type`, Field, Slot and the values hidden as nodes. `Clabject.slots` is
+  declared before `Clabject.fields`, so the slots compartment comes first (discovery §7 Q9). Only ProductType's potency
+  (2), taxRate's (1) and price's (2) are written; Book's, DVD's and mobyDick's potency and isbn's feature potency stay
+  unset and are derived (an unset `EInt` reads `undefined`). The instance levels are made through `instantiate` and
+  `createInstance`. The probe's checks M0..M9: at level 0 the rail and the pane menu offer the linguistic Elements
+  (Clabject, Field) and no clabject of the model (R-OI-29); `mobyDick` is offered nowhere; the orphan text reads «price
+  is due 1 level below Book», singular for one level. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction
+  (2026-11-16 02:00, the discovery's recommended answers adopted). Discovery P-2026-11-16-0205 §3.4; fixture and probe
+  P-2026-11-16-0430, P-2026-11-16-0500.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

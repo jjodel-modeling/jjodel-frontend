@@ -15,25 +15,29 @@
  *    metaclass (a `LiteralNull`) is not judged, as in the fixture's rule (`uml-class-object-fixture.ts:589`).
  * And once per cycle of the generalization, over every classifier the record's feature container can hold: one
  * finding anchored on each classifier of the cycle (an error; the closure does not follow it).
+ * And the level findings of `checkLevels` over every model object (R-OI-26, R-OI-27): once per type cycle, an error
+ * anchored on each member (`type-cycle`); with a feature potency, a warning on each field below 1 or above its owner's
+ * potency, which is never due (`potency`). An orphan due at another level of the type chain says so (`orphanReason`).
  *
  * Reconciliation is never destructive (R-OI-3): these are reports; nothing here or in the producer deletes.
  */
 
 import { featureClosure, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
+import { checkLevels } from '../../../model/ontological/bindingCheck';
 import type { OntoBinding } from '../../../model/ontological/bindingCodec';
-import { modelObjectIds, OBJECT_RECORD, ontoReadView, readOntoBindings, type DGet } from '../hooks/instantiate';
+import { modelObjectIds, OBJECT_RECORD, ontoReadView, orphanReason, readOntoBindings, type DGet } from '../hooks/instantiate';
 
-export type InstantiationFindingKind = 'missing' | 'orphan' | 'duplicate' | 'value-type' | 'cycle';
+export type InstantiationFindingKind = 'missing' | 'orphan' | 'duplicate' | 'value-type' | 'cycle' | 'type-cycle' | 'potency';
 
 export interface InstantiationFinding {
     kind: InstantiationFindingKind;
     /** Unique within the kind: the instance (missing), the slot (orphan), `instance:feature` (duplicate), the value
-     *  (value-type), the sorted classifier ids (cycle). */
+     *  (value-type), the sorted classifier ids (cycle), the sorted member ids (type-cycle), `classifier:feature` (potency). */
     key: string;
     severity: 'warning' | 'error';
     title: string;
     description: string;
-    /** The instance judged; `null` for a cycle. */
+    /** The instance judged; `null` for a cycle, a type cycle and a potency. */
     instance: string | null;
     /** The M1 ids the finding is shown on. */
     anchors: string[];
@@ -110,6 +114,25 @@ export function detectInstantiationProblems(get: DGet, modelId: string): Instant
         }
     }
 
+    for (const f of checkLevels(view, objectRecord, ids)) {
+        if (f.kind === 'type-cycle') {
+            const members = Array.from(new Set(f.cycle)).sort();
+            out.push({
+                kind: 'type-cycle', key: members.join(','), severity: f.severity, title: 'Type cycle',
+                description: `${f.cycle.map(nameOf).join(' → ')}: the type chain stops at it`,
+                instance: null, anchors: members, related: members,
+            });
+        } else {
+            out.push({
+                kind: 'potency', key: `${f.classifier}:${f.feature}`, severity: f.severity, title: 'Feature never due',
+                description: f.potency < 1
+                    ? `${nameOf(f.feature)} has potency ${f.potency}, below 1`
+                    : `${nameOf(f.feature)} has potency ${f.potency}, above the potency ${f.classifierPotency} of ${nameOf(f.classifier)}`,
+                instance: null, anchors: [f.feature], related: [f.classifier, f.feature],
+            });
+        }
+    }
+
     for (const id of ids) {
         const record = recordFor(view, bindings, id);
         if (!record || record.name !== OBJECT_RECORD) continue;
@@ -127,7 +150,7 @@ export function detectInstantiationProblems(get: DGet, modelId: string): Instant
         for (const { slot, feature } of diff.orphans) {
             out.push({
                 kind: 'orphan', key: slot, severity: 'error', title: 'Orphan slot',
-                description: feature === null ? 'Its feature is gone' : `${nameOf(feature)} is not a feature of ${nameOf(classifier)}`,
+                description: orphanReason(get, view, record, id, classifier, feature),
                 instance: id, anchors: [id, slot], related: [slot],
             });
         }

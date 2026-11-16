@@ -97,6 +97,10 @@ interface PalettePanelProps {
     onClassActivate?: (kind: ClassRailKind, metaclassId: string) => void;
     /** True when the selection can hold a property: the «Attributes» entries take a click only then. */
     classPropertyEnabled?: boolean;
+    /** Below the top level, the «Attributes» group of a clabject (R-OI-29, `clabjectPropertyGroup`), after «Instances of». */
+    ontoPropertyGroup?: ClassRailGroup | null;
+    /** True when the selection is a clabject that can hold a field: those entries take a click only then. */
+    ontoPropertyEnabled?: boolean;
     /** In a split, the viewpoint of the pane this palette is showing, read beside the Instances title (multi-tab L6c). */
     viewpointName?: string;
 }
@@ -108,7 +112,7 @@ const CLASS_GROUP_ICONS: Record<ClassRailKind, string> = {
     classifier: 'bi-box', association: 'bi-arrow-left-right', property: 'bi-list-ul', generalization: 'bi-arrow-up-short',
 };
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding, classGroups = null, onClassActivate, classPropertyEnabled = false, viewpointName }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false, ontoSections = [], onOntoActivate, onDeclareBinding, classGroups = null, onClassActivate, classPropertyEnabled = false, ontoPropertyGroup = null, ontoPropertyEnabled = false, viewpointName }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -325,6 +329,29 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                                 )}
                             </div>
                         ))}
+                        {!classGroups && ontoPropertyGroup && ontoPropertyGroup.items.length > 0 && (
+                            <div className="palette-onto__group">
+                                <div className="palette-onto__subtitle">{CLASS_GROUP_TITLES.property}</div>
+                                <div className="palette-onto__list">
+                                    {ontoPropertyGroup.items.map((item) => ontoPropertyEnabled ? (
+                                        <div key={item.metaclass} className="palette-onto__item" {...classActivateProps('property', item.metaclass)}>
+                                            <i className={`bi ${CLASS_GROUP_ICONS.property}`} />
+                                            <span>{item.name}</span>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            key={item.metaclass}
+                                            className="palette-onto__item palette-onto__item--disabled"
+                                            aria-disabled="true"
+                                            title={CLASS_RAIL_HINTS.property}
+                                        >
+                                            <i className={`bi ${CLASS_GROUP_ICONS.property}`} />
+                                            <span>{item.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

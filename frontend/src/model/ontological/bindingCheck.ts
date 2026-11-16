@@ -11,16 +11,26 @@
  * - the four slot roles (slot container, defining feature, value holder, value kinds) all come or none does (R-OI-7),
  *   so a record may bind the type reference alone;
  * - each path of `featureSources` (R-DCN-10) is a list of references, the type of hop i owns hop i+1 or inherits it,
- *   and, when the record has a defining feature, the type of the last hop conforms to the type that feature points to.
+ *   and, when the record has a defining feature, the type of the last hop conforms to the type that feature points to;
+ * - the level roles (R-OI-25): `potency` is an attribute the owner of the type reference owns or inherits,
+ *   `featurePotency` an attribute the type of the feature container owns or inherits; with `featurePotency` the owner of
+ *   the feature container conforms to the owner of the type reference (else a classifier has no type, and no feature
+ *   is ever due more than one level below it); `featurePotency` together with `featureSources` is a defect until a
+ *   front gives the pair a meaning.
  * Across records: a name is held once.
+ *
+ * `checkLevels` judges the M1 objects of a model instead, over the reader's view (R-OI-26..28): every type cycle, once,
+ * as an error; with `featurePotency`, every feature whose potency is below 1 or above its classifier's potency, which is
+ * never due, as a warning. Its findings are data for the caller to word and anchor.
  *
  * Defects are data and block nothing (R-VAL-4): the caller shows them.
  *
- * Pure: the only import is a type.
+ * Pure: the imports are two types and the reader's functions.
  */
 
 import type { MetamodelSketch } from '../simulation/profileBinder';
 import type { OntoBinding } from './bindingCodec';
+import { clabjectPotency, featurePotencyOf, typeChain, type OntoReadView } from './bindingReader';
 
 export interface BindingDefect {
     /** The record's name. */
@@ -34,6 +44,13 @@ export interface BindingVerdict {
     ok: boolean;
     defects: BindingDefect[];
 }
+
+/** A finding of `checkLevels`; every id is an M1 id. */
+export type LevelFinding =
+    /** A type cycle, as the ids around it, the first one repeated at the end (R-OI-27). */
+    | { kind: 'type-cycle'; severity: 'error'; cycle: string[] }
+    /** A feature of `classifier` that is never due (R-OI-26): its potency is below 1 or above the classifier's. */
+    | { kind: 'potency'; severity: 'warning'; classifier: string; feature: string; potency: number; classifierPotency: number };
 
 type Sort = 'reference' | 'attribute' | 'class';
 
@@ -69,6 +86,8 @@ export function checkBinding(binding: OntoBinding, sketch: MetamodelSketch): Bin
     expect('abstractFlag', binding.abstractFlag, 'attribute');
     expect('featureType', binding.featureType, 'reference');
     expect('defaultValue', binding.defaultValue, 'attribute');
+    expect('potency', binding.potency, 'attribute');
+    expect('featurePotency', binding.featurePotency, 'attribute');
     for (const kind of binding.valueKinds ?? []) {
         expect('valueKinds', kind.create, 'class');
         expect('valueKinds', kind.field, 'reference', 'attribute');
@@ -121,7 +140,48 @@ export function checkBinding(binding: OntoBinding, sketch: MetamodelSketch): Bin
             defect('featureSources', `${at}.path[${hops.length - 1}]: ${lastHop.id} holds ${lastHop.type}, the defining feature points to ${definingFeature.type}.`);
         }
     });
+
+    const potency = binding.potency !== undefined ? attributes.get(binding.potency) : undefined;
+    if (potency && typeRef && !conforms(typeRef.owner, potency.owner)) {
+        defect('potency', `${potency.id} is owned by ${potency.owner}, which ${typeRef.owner} (the owner of the type reference) neither is nor inherits.`);
+    }
+    const featureContainer = binding.featureContainer !== undefined ? references.get(binding.featureContainer) : undefined;
+    const featurePotency = binding.featurePotency !== undefined ? attributes.get(binding.featurePotency) : undefined;
+    if (featurePotency && featureContainer && !conforms(featureContainer.type, featurePotency.owner)) {
+        defect('featurePotency', `${featurePotency.id} is owned by ${featurePotency.owner}, which ${featureContainer.type} (the type of the feature container) neither is nor inherits.`);
+    }
+    if (binding.featurePotency !== undefined && featureContainer && typeRef && !conforms(featureContainer.owner, typeRef.owner)) {
+        defect('featurePotency', `The feature container is owned by ${featureContainer.owner}, which is no ${typeRef.owner} (the owner of the type reference): a classifier has no type, so no feature is due more than one level below it.`);
+    }
+    if (binding.featurePotency !== undefined && binding.featureSources !== undefined) {
+        defect('featurePotency', 'A feature potency and feature sources together have no meaning yet: one of the two goes.');
+    }
     return defects;
+}
+
+/** The level findings on the M1 objects `objectIds` under `binding`: see the module comment. */
+export function checkLevels(view: OntoReadView, binding: OntoBinding, objectIds: readonly string[]): LevelFinding[] {
+    const findings: LevelFinding[] = [];
+    const seenCycles = new Set<string>();
+    for (const id of objectIds) {
+        const { cycle } = typeChain(view, binding, id);
+        if (cycle === null) continue;
+        const key = [...new Set(cycle)].sort().join('\u0000');
+        if (seenCycles.has(key)) continue;
+        seenCycles.add(key);
+        findings.push({ kind: 'type-cycle', severity: 'error', cycle });
+    }
+    if (binding.featurePotency === undefined || binding.featureContainer === undefined) return findings;
+    for (const classifier of objectIds) {
+        const features = view.referenceTargets(classifier, binding.featureContainer);
+        if (features.length === 0) continue;
+        const classifierPotency = clabjectPotency(view, binding, classifier);
+        for (const feature of features) {
+            const potency = featurePotencyOf(view, binding, feature);
+            if (potency < 1 || potency > classifierPotency) findings.push({ kind: 'potency', severity: 'warning', classifier, feature, potency, classifierPotency });
+        }
+    }
+    return findings;
 }
 
 /** The verdict on a list of records: each one's defects, then a defect for every name held more than once. */

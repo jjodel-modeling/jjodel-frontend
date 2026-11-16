@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { MetamodelSketch } from '../../simulation/profileBinder';
 import type { OntoBinding } from '../bindingCodec';
-import { checkBinding, checkBindings } from '../bindingCheck';
+import { checkBinding, checkBindings, checkLevels } from '../bindingCheck';
+import type { OntoReadView } from '../bindingReader';
 
 // The UML subset of the class/object notation design (§2), as a sketch of its metamodel.
 
@@ -206,5 +207,128 @@ describe('bindingCheck of feature sources (DCN)', () => {
         const { slotContainer, definingFeature, valueHolder, valueKinds, ...noSlots } = withPath(['Class.viewpoints', 'Viewpoint.classes']);
         void slotContainer; void definingFeature; void valueHolder; void valueKinds;
         expect(checkBinding(noSlots as OntoBinding, DCN_SKETCH)).toEqual([]);
+    });
+});
+
+// The clabject metamodel of discovery 2026-11-16 §3.4: one metaclass on both ends of the type reference.
+const MLM_SKETCH: MetamodelSketch = {
+    classes: [cls('Element', true), sub('Clabject', 'Element'), sub('Field', 'Element'), cls('Slot'), cls('Value', true), sub('IntValue', 'Value'), sub('DataType', 'Element')],
+    references: [
+        ref('Clabject.type', 'Clabject', 'Clabject'),
+        ref('Clabject.supers', 'Clabject', 'Clabject'),
+        ref('Clabject.fields', 'Clabject', 'Field'),
+        ref('Clabject.slots', 'Clabject', 'Slot'),
+        ref('Slot.field', 'Slot', 'Field'),
+        ref('Slot.value', 'Slot', 'Value'),
+        ref('Field.type', 'Field', 'DataType'),
+    ],
+    attributes: [
+        attr('Element.rank', 'Element', 'Pointer_EINT'),
+        attr('Clabject.potency', 'Clabject', 'Pointer_EINT'),
+        attr('Clabject.isAbstract', 'Clabject', 'Pointer_EBOOLEAN'),
+        attr('Field.potency', 'Field', 'Pointer_EINT'),
+        attr('Field.default', 'Field'),
+        attr('IntValue.value', 'IntValue', 'Pointer_EINT'),
+    ],
+};
+const MLM: OntoBinding = {
+    name: 'object',
+    typeReference: 'Clabject.type',
+    featureContainer: 'Clabject.fields',
+    generalization: { direct: 'Clabject.supers' },
+    slotContainer: 'Clabject.slots',
+    definingFeature: 'Slot.field',
+    valueHolder: 'Slot.value',
+    abstractFlag: 'Clabject.isAbstract',
+    featureType: 'Field.type',
+    defaultValue: 'Field.default',
+    valueKinds: [{ when: 'primitive:Integer', create: 'IntValue', field: 'IntValue.value' }],
+    potency: 'Clabject.potency',
+    featurePotency: 'Field.potency',
+};
+
+describe('bindingCheck of the level roles (R-OI-25)', () => {
+    it('the clabject record is valid; so are potencies inherited from a common superclass', () => {
+        expect(checkBinding(MLM, MLM_SKETCH)).toEqual([]);
+        expect(checkBinding({ ...MLM, potency: 'Element.rank', featurePotency: 'Element.rank' }, MLM_SKETCH)).toEqual([]);
+    });
+
+    it('a level role needs an attribute of the metamodel', () => {
+        expect(roles(checkBinding({ ...MLM, potency: 'Clabject.type' }, MLM_SKETCH))).toEqual(['potency']);
+        expect(roles(checkBinding({ ...MLM, featurePotency: 'Field.nope' }, MLM_SKETCH))).toEqual(['featurePotency']);
+    });
+
+    it('potency belongs to the instance metaclass, featurePotency to the feature metaclass', () => {
+        const wrong = checkBinding({ ...MLM, potency: 'Field.potency', featurePotency: 'Clabject.potency' }, MLM_SKETCH);
+        expect(roles(wrong)).toEqual(['potency', 'featurePotency']);
+        expect(wrong[0].message).toContain('Field.potency is owned by Field');
+        expect(wrong[1].message).toContain('the type of the feature container');
+    });
+
+    it('featurePotency needs the classifier to have a type: on UML (a Class is no InstanceSpecification) it is a defect', () => {
+        const uml: MetamodelSketch = { ...SKETCH, attributes: [...SKETCH.attributes, attr('Property.potency', 'Property', 'Pointer_EINT'), attr('IS.potency', 'InstanceSpecification', 'Pointer_EINT')] };
+        expect(checkBinding({ ...OBJECT, potency: 'IS.potency' }, uml)).toEqual([]);
+        const d = checkBinding({ ...OBJECT, featurePotency: 'Property.potency' }, uml);
+        expect(roles(d)).toEqual(['featurePotency']);
+        expect(d[0].message).toContain('owned by Class, which is no InstanceSpecification');
+    });
+
+    it('featurePotency together with feature sources is a defect', () => {
+        const sketch: MetamodelSketch = { ...MLM_SKETCH, references: [...MLM_SKETCH.references, ref('Clabject.more', 'Clabject', 'Field')] };
+        const both = checkBinding({ ...MLM, featureSources: [{ path: ['Clabject.more'] }] }, sketch);
+        expect(roles(both)).toEqual(['featurePotency']);
+        expect(checkBinding({ ...MLM, featurePotency: undefined, featureSources: [{ path: ['Clabject.more'] }] }, sketch)).toEqual([]);
+    });
+});
+
+interface Obj { meta: string; refs?: Record<string, string[]>; attrs?: Record<string, unknown> }
+const levelView = (objects: Record<string, Obj>): OntoReadView => ({
+    metaclassOf: id => objects[id]?.meta,
+    referenceTargets: (id, r) => objects[id]?.refs?.[r] ?? [],
+    attributeValue: (id, a) => objects[id]?.attrs?.[a],
+    ownerOf: f => ({ 'Clabject.type': 'Clabject', 'Clabject.fields': 'Clabject' } as Record<string, string>)[f],
+    conformsTo: (m, s) => m === s,
+});
+const field = (potency?: number): Obj => ({ meta: 'Field', attrs: potency === undefined ? {} : { 'Field.potency': potency } });
+
+describe('checkLevels', () => {
+    const shop: Record<string, Obj> = {
+        ProductType: { meta: 'Clabject', refs: { 'Clabject.fields': ['taxRate', 'price', 'legacy', 'bonus'] }, attrs: { 'Clabject.potency': 2 } },
+        taxRate: field(1), price: field(2), legacy: field(0), bonus: field(3),
+        Book: { meta: 'Clabject', refs: { 'Clabject.type': ['ProductType'], 'Clabject.fields': ['isbn'] } },
+        isbn: field(),
+        mobyDick: { meta: 'Clabject', refs: { 'Clabject.type': ['Book'], 'Clabject.fields': ['note'] } },
+        note: field(1),
+        Thing: { meta: 'Clabject', refs: { 'Clabject.fields': ['deep'] } },
+        deep: field(5),
+    };
+    const ids = Object.keys(shop);
+
+    it('a field below 1 or above its classifier\'s potency is a warning; an unbounded root takes any potency', () => {
+        expect(checkLevels(levelView(shop), MLM, ids)).toEqual([
+            { kind: 'potency', severity: 'warning', classifier: 'ProductType', feature: 'legacy', potency: 0, classifierPotency: 2 },
+            { kind: 'potency', severity: 'warning', classifier: 'ProductType', feature: 'bonus', potency: 3, classifierPotency: 2 },
+            { kind: 'potency', severity: 'warning', classifier: 'mobyDick', feature: 'note', potency: 1, classifierPotency: 0 },
+        ]);
+    });
+
+    it('without featurePotency no potency is judged', () => {
+        expect(checkLevels(levelView(shop), { ...MLM, featurePotency: undefined }, ids)).toEqual([]);
+    });
+
+    it('each type cycle is one error, whichever member or descendant meets it first', () => {
+        const view = levelView({
+            A: { meta: 'Clabject', refs: { 'Clabject.type': ['B'] } },
+            B: { meta: 'Clabject', refs: { 'Clabject.type': ['A'] } },
+            x1: { meta: 'Clabject', refs: { 'Clabject.type': ['A'] } },
+            X: { meta: 'Clabject', refs: { 'Clabject.type': ['X'] } },
+        });
+        expect(checkLevels(view, MLM, ['x1', 'A', 'B', 'X'])).toEqual([
+            { kind: 'type-cycle', severity: 'error', cycle: ['A', 'B', 'A'] },
+            { kind: 'type-cycle', severity: 'error', cycle: ['X', 'X'] },
+        ]);
+        expect(checkLevels(view, { ...MLM, featurePotency: undefined, potency: undefined }, ['B'])).toEqual([
+            { kind: 'type-cycle', severity: 'error', cycle: ['B', 'A', 'B'] },
+        ]);
     });
 });

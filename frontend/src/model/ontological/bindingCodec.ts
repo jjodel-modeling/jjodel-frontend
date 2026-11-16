@@ -11,7 +11,10 @@
  * Decoding judges the SHAPE only: the types of the fields, not whether an id exists in the metamodel nor whether the
  * four slot roles come together (both are bindingCheck.ts's, so that a stored record that breaks a rule is still
  * readable and can be shown and mended). `featureSources` (R-DCN-10, R-DCN-20) is a list of paths of M2 reference ids,
- * each path non-empty; a record without it encodes as it did before the role existed. A root or a record that has a key this version does not know keeps it, and
+ * each path non-empty; a record without it encodes as it did before the role existed. `potency` and `featurePotency`
+ * (R-OI-25, discovery 2026-11-16 §3.1) are two more single-id roles, written after `featureSources` so that an older
+ * build, which keeps them as unknown keys at the end of the record, re-encodes a new record to the same bytes; a record
+ * without them encodes as before too. A root or a record that has a key this version does not know keeps it, and
  * `encode` writes it back; an unknown `v` is refused, never guessed at. No VersionFixer step: a project saved before
  * the key has none, and unknown bag keys survive save and load.
  *
@@ -63,6 +66,10 @@ export interface OntoBinding {
     valueKinds?: OntoValueKind[];
     /** More features, reached from every classifier of the generalization closure (R-DCN-17). */
     featureSources?: OntoFeatureSource[];
+    /** Attribute of the instance metaclass: how many levels of instances a clabject still admits (R-OI-28). */
+    potency?: string;
+    /** Attribute of the feature metaclass: how many levels below its classifier a feature becomes a slot (R-OI-26). */
+    featurePotency?: string;
     [unknown: string]: unknown;
 }
 
@@ -78,7 +85,9 @@ export type DecodedOntoBindings =
 
 /** The optional single-id roles, in the order a record is written. */
 const ID_ROLES = ['featureContainer', 'slotContainer', 'definingFeature', 'valueHolder', 'abstractFlag', 'featureType', 'defaultValue'] as const;
-const KNOWN_KEYS = new Set<string>(['name', 'typeReference', 'generalization', 'valueKinds', 'featureSources', ...ID_ROLES]);
+/** The single-id roles of the levels (R-OI-25), written after `featureSources`, in this order. */
+const LEVEL_ROLES = ['potency', 'featurePotency'] as const;
+const KNOWN_KEYS = new Set<string>(['name', 'typeReference', 'generalization', 'valueKinds', 'featureSources', ...ID_ROLES, ...LEVEL_ROLES]);
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isId = (v: unknown): v is string => typeof v === 'string' && v !== '';
@@ -133,7 +142,7 @@ function decodeBinding(item: unknown, index: number, errors: string[]): OntoBind
     const before = errors.length;
     if (!isId(item.name)) errors.push(`${at}.name: no name.`);
     if (!isId(item.typeReference)) errors.push(`${at}.typeReference: no type reference.`);
-    for (const role of ID_ROLES) {
+    for (const role of [...ID_ROLES, ...LEVEL_ROLES]) {
         if (item[role] !== undefined && !isId(item[role])) errors.push(`${at}.${role}: not an id.`);
     }
     let generalization: OntoGeneralization | undefined;
@@ -151,6 +160,7 @@ function decodeBinding(item: unknown, index: number, errors: string[]): OntoBind
     for (const role of ID_ROLES) if (role !== 'featureContainer' && item[role] !== undefined) out[role] = item[role] as string;
     if (valueKinds) out.valueKinds = valueKinds;
     if (featureSources) out.featureSources = featureSources;
+    for (const role of LEVEL_ROLES) if (item[role] !== undefined) out[role] = item[role] as string;
     return { ...out, ...extrasOf(item, KNOWN_KEYS) };
 }
 
