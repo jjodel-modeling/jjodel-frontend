@@ -110,6 +110,7 @@ async function undoOnce(page: Page, model: string, before: Census, made: string 
  *  topmost element is the flow's renderer, so the tips card, the conformance bar and the rail are left out
  *  (onto-s3b-ghost-rows.ts bringIntoView, on the union of the nodes). */
 async function bringIntoView(page: Page, sel: string) {
+    let last: { inside: boolean; fits: boolean } | null = null;
     for (let i = 0; i < 4; i++) {
         const g = await page.evaluate((s) => {
             const els = Array.from(document.querySelectorAll(s)); const flow = document.querySelector('.dock-tabpane-active .react-flow');
@@ -138,12 +139,13 @@ async function bringIntoView(page: Page, sel: string) {
             }
             return { inside, fits, from, area: { x0, x1, y0, y1 } };
         }, sel);
-        if (!g || g.inside || !g.from) return g;
+        last = g;
+        if (!g || g.inside || !g.from || !g.fits) return g;
         await page.mouse.move(g.from.x, g.from.y); await page.mouse.down();
         await page.mouse.move(g.from.ex, g.from.ey, { steps: 12 }); await page.mouse.up();
         await wait(page, 500);
     }
-    return null;
+    return last;
 }
 
 const NODES = '.dock-tabpane-active .react-flow__node';
@@ -271,7 +273,7 @@ try {
     if (!imported.id) throw new Error('the export did not import');
     await page.goto(`${URL}/#/project?id=${imported.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await wait(page, 9000);
-    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner, .tips-card { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner, .tips-card, .dock-tabpane-active .react-flow__minimap { pointer-events: none !important; display: none !important; }' }).catch(() => {});
     if (!(await page.locator('.toolbar-viewpoint-trigger:visible:not([disabled])').count())) {
         await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx'); const m = w.LProject.getProject().models.find((x) => !x.isMetamodel);
             await dm.default.open2(w.LPointerTargetable.fromPointer(m.id)); return 1;`, undefined, 8000);
@@ -352,6 +354,11 @@ try {
     await fit(page);
     const bookV = await vertexOf(page, o.Book);
     if (bookV) await bringIntoView(page, nodeSel(bookV));
+    meas('Book header, level 1', bookV ? await page.evaluate((sel) => { const el = document.querySelector(sel) as HTMLElement | null; if (!el) return null;
+        const n = el.getBoundingClientRect(); const first = el.querySelector('.ir-compartment') as HTMLElement | null;
+        const texts = Array.from(el.querySelectorAll('*')).filter((x) => x.children.length === 0 && (x as HTMLElement).innerText?.trim()).slice(0, 4)
+            .map((x) => { const r = x.getBoundingClientRect(); return { t: (x as HTMLElement).innerText.trim().slice(0, 20), top: Math.round(r.top - n.top), h: Math.round(r.height) }; });
+        return { node: { h: Math.round(n.height), style: el.style.height || null, scroll: el.scrollHeight, client: el.clientHeight }, firstCompartmentTop: first ? Math.round(first.getBoundingClientRect().top - n.top) : null, texts }; }, nodeSel(bookV)) : null);
     await cropBox(page, 'book-slot.png', bookV ? (await nodeRows(page, bookV))?.box ?? null : null);
     const c3 = await census(page, ids.model);
     const item = page.locator(`.dock-tabpane-active ${ITEM}`, { hasText: /^\s*ProductType\s*$/ }).first();
