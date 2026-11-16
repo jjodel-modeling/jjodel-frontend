@@ -133,12 +133,14 @@ const COMPARTMENTS = [
 ];
 const NAME_LABEL = { position: 'top', source: I('name'), style: { fontWeight: 'bold' } };
 const MLM_VIEWS: Array<[string, Record<string, unknown>]> = [
-    // `name : type.name` as two top labels, the UML fixture's fallback for the object header.
+    // `name : type.name` as two top labels, the UML fixture's fallback for the object header. The Clabject views author a
+    // width only: the height is derived from the content (useContentDrivenSize), so the header and every row fit
+    // (P-2026-11-16-0535; a 60 px height cut the rows past the second).
     ['Clabject', { kind: 'vertex', metaclasses: ['Clabject'], label: 'Clabject (typed)', priority: 1, predicate: exists('$type.value'),
-        defaultSize: { width: 220, height: 60 },
+        defaultSize: { width: 220 },
         shape: { ...BOX, labels: [NAME_LABEL, { position: 'top', source: P('$type.value.$name.value'), style: { fontWeight: 'normal', fontStyle: 'italic' } }] },
         fieldCompartments: COMPARTMENTS }],
-    ['Clabject', { kind: 'vertex', metaclasses: ['Clabject'], label: 'Clabject (root)', defaultSize: { width: 220, height: 60 },
+    ['Clabject', { kind: 'vertex', metaclasses: ['Clabject'], label: 'Clabject (root)', defaultSize: { width: 220 },
         shape: { ...BOX, labels: [NAME_LABEL] }, fieldCompartments: COMPARTMENTS }],
     ['DataType', { kind: 'vertex', metaclasses: ['DataType'], label: 'DataType', defaultSize: { width: 120, height: 40 },
         shape: { ...BOX, labels: [{ position: 'top', source: I('name'), style: { fontWeight: 'normal' } }] } }],
