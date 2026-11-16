@@ -460,3 +460,21 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (crops viewed: the rail at levels 0, 1 and 2; the select with «Level 0..4» on MLM and without them on UML)
 **Notes**: RC-21/RC-25: three lane decisions are R-OI-29's clauses; two more inside the perimeter: no chain walk from level 0 or 1, so UML costs as before; the Attributes group shows at `both` too. L3's first crop run read the rail empty at levels 1-2: the MLM project shared the UML project's page and its metamodel came back with the UML one's id. In a fresh context the rail is right (M-3). Bench: `~/.jjodel-lanes/P-2026-11-16-0340/bench.txt`, 3 mutants red.
 **Prompt document name**: 2026-11-16 03:40
+
+## 2026-11-16 — feat: multilevel L4, the clabject fixture and its probe (P-2026-11-16-0430, P-2026-11-16-0500)
+**Prompt**: P-2026-11-16-0430, lane L4 of the multilevel plan (discovery P-2026-11-16-0205 §3.4, §6 item 4): the `MLM` clabject fixture and export, the probe `onto-mlm.ts` M0..M9, the S2 regression, crops, three mutants, R-OI-31; cut at its context ceiling with the fixture committed and the probe at 7/10; and P-2026-11-16-0500, its continuation: the probe's node right click fixed, the rest done
+**Files touched**: `4c44bdb15`: frontend/scripts/probe/mlm-clabject-fixture.ts. `0ad7e3515`, `0901f717d`: frontend/scripts/probe/onto-mlm.ts. Docs commit: docs/decisions.md (R-OI-31), docs/log-inbox/instance-of.md (this entry and the ticket below), the Status line of both prompts. Export `~/jjodel-demo-exports/mlm-clabject/mlm-clabject.jjodel` (135513 B), not committed; crops and `bench.txt` under `~/.jjodel-lanes/P-2026-11-16-0430/`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no product code changed (the three mutants reverted, `git status` clean after each); fixture 10/10 (F-1..F-8: levels 0/1/1/2, potencies 2/1/1/0); `onto-mlm.ts` 10/10, page errors []; S2 on `uml-s3b/uml-class-object.jjodel` 57/57.
+**Out-of-scope changes**: no — six files over four commits, all declared by the two prompts: the fixture, the probe, docs/decisions.md, this inbox, the two prompt files' Status line.
+**Layer Impact Report**: not-required (probe scripts and docs only)
+**Smoke visivo**: fallito (crops viewed: every fixture clabject at levels 0..2 keeps the fixture's 60 px height against 64 px of content, its two header labels squeezed to 6 px, rows past the second cut off; a new `book1` auto-sizes; ticket below)
+**Notes**: Bench: (a) `featureClosure` for `dueFeatures` red M3 [taxRate, price] and M5 [isbn]; (b) potency-0 gate dropped red M1, M2 (mobyDick under both); (c) level filter dropped red M2 (levels 1 and 2 offer all three). The three 0430 reds were the probe's: nodes off the canvas, under the tips card or the minimap; the toolbar has no fit, so fit() zooms out. M1 also compared `Object.keys` order, where '0'..'2' precede 'both'. Lane decisions in R-OI-31.
+**Prompt document name**: 2026-11-16 04:30
+
+## 2026-11-16 — ticket: MLM fixture clabjects clip their header at the level viewpoints
+**Ticket**: In `mlm-clabject.jjodel`, at «MLM / level 0..2», every clabject node (ProductType, Book, DVD, mobyDick) renders at the fixture's `defaultSize` height 60 px (`mlm-clabject-fixture.ts:138,141`) while its content needs 64 px: the name and type labels are squeezed to 6 px each and the rows past the second (Book's `isbn : String`, the ghost `weight =`) are cut off, though present in the DOM. A clabject made in the session (`book1`) auto-sizes and renders whole. To decide: the fixture's height, or whether auto-sizing should grow an imported node.
+**Priority**: low
+**Found in**: P-2026-11-16-0500

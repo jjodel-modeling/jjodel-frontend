@@ -6794,6 +6794,22 @@ P-2026-10-20-1835.
   the plain text. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the discovery's
   recommended answers adopted, critical-zone go-ahead for this front's planned lanes). Discovery P-2026-11-16-0205 §3.2,
   questions 7 and 11; code P-2026-11-16-0300.
+- **R-OI-31** (2026-11-16, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **The clabject fixture `MLM` and its probe `onto-mlm.ts` are the acceptance of multilevel.** The fixture
+  (`scripts/probe/mlm-clabject-fixture.ts`) builds the metamodel `MLM` (Clabject, Field, Slot, values), the binding with
+  `potency` and `featurePotency`, the model ProductType → Book / DVD → mobyDick, and exports
+  `~/jjodel-demo-exports/mlm-clabject/mlm-clabject.jjodel` (not committed). Its viewpoints are «MLM / level 0», «MLM /
+  level 1», «MLM / level 2» (`ontoLevel` `'0'`, `'1'`, `'2'`); the default viewpoint stays `both`. Each holds the same
+  views: Clabject typed (name and type name, two top labels) and root (name), DataType, the Slot row `field = value`,
+  the Field rows `name^p : type` and `name : type`, Field, Slot and the values hidden as nodes. `Clabject.slots` is
+  declared before `Clabject.fields`, so the slots compartment comes first (discovery §7 Q9). Only ProductType's potency
+  (2), taxRate's (1) and price's (2) are written; Book's, DVD's and mobyDick's potency and isbn's feature potency stay
+  unset and are derived (an unset `EInt` reads `undefined`). The instance levels are made through `instantiate` and
+  `createInstance`. The probe's checks M0..M9: at level 0 the rail and the pane menu offer the linguistic Elements
+  (Clabject, Field) and no clabject of the model (R-OI-29); `mobyDick` is offered nowhere; the orphan text reads «price
+  is due 1 level below Book», singular for one level. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction
+  (2026-11-16 02:00, the discovery's recommended answers adopted). Discovery P-2026-11-16-0205 §3.4; fixture and probe
+  P-2026-11-16-0430, P-2026-11-16-0500.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
