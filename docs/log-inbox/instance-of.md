@@ -478,3 +478,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: In `mlm-clabject.jjodel`, at «MLM / level 0..2», every clabject node (ProductType, Book, DVD, mobyDick) renders at the fixture's `defaultSize` height 60 px (`mlm-clabject-fixture.ts:138,141`) while its content needs 64 px: the name and type labels are squeezed to 6 px each and the rows past the second (Book's `isbn : String`, the ghost `weight =`) are cut off, though present in the DOM. A clabject made in the session (`book1`) auto-sizes and renders whole. To decide: the fixture's height, or whether auto-sizing should grow an imported node.
 **Priority**: low
 **Found in**: P-2026-11-16-0500
+
+## 2026-11-16 — fix: MLM fixture clabjects derive their height, closes the ticket of P-2026-11-16-0500 (P-2026-11-16-0535)
+**Prompt**: P-2026-11-16-0535, the low ticket of L4b (MLM fixture clabjects clip their header at the level viewpoints): give the fixture's Clabject view a size that fits its content, rerun the fixture and re-export, `onto-mlm.ts` on the new export, crops of the three level viewpoints
+**Files touched**: `d6c2425db`: frontend/scripts/probe/mlm-clabject-fixture.ts. Closure commit: docs/log-inbox/instance-of.md (this entry), the Status line of docs/prompts/claude_2026-11-16_0535_prompt_onto_mlm_fixture_height.md. Export `~/jjodel-demo-exports/mlm-clabject/mlm-clabject.jjodel` re-made (135409 B), not committed; crops under `~/.jjodel-lanes/P-2026-11-16-0535/crops/`
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-16 04:30
+**Causa**: (c)
+**Regressions**: no — no product code changed; fixture 10/10 (F-1..F-8), `onto-mlm.ts` M0..M9 10/10 on the new export, page errors [], no `instantiate:` warning; `check:scripts` PASS.
+**Out-of-scope changes**: no — the fixture, this inbox and the prompt's Status line, as the prompt declares.
+**Layer Impact Report**: not-required (probe fixture and docs only)
+**Smoke visivo**: passato (crops viewed, levels 0, 1, 2: every row of ProductType, Book, DVD, mobyDick visible, Book's `isbn : String` readable; `ghost-rows.png`: Book grown to `taxRate = 7`, `! price =`, `isbn : String`, ghost `weight =`)
+**Notes**: Closes the ticket «MLM fixture clabjects clip their header at the level viewpoints» (P-2026-11-16-0500). Both Clabject views now author `defaultSize: { width: 220 }`: the content-driven sizer (`useContentDrivenSize`, `defaultBoxFor`) derives the height, so a node grows with its rows, the ghost row included, where a fixed height would have to guess the row count. Causa second letter (d): found at the crops of 0500.
+**Prompt document name**: 2026-11-16 05:35

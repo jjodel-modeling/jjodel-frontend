@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-16-0535
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: fast (one probe fixture file and a re-export; no product code)
-Status: da eseguire
+Status: eseguito 2026-11-16 · lane fast · d6c2425db
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-16 02:00: «vai adesso in /lane auto ma non ti fermare e prosegui dritto dritto fino all'implementazione»; the export is what he will open first)
 Depends: P-2026-11-16-0500
 Corregge: P-2026-11-16-0430
