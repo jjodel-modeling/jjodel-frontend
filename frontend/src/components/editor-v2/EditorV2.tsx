@@ -79,7 +79,7 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, generalizationSlot, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption, type PropertyPlan } from './hooks/instantiate';
+import { clabjectPropertyGroup, classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, generalizationSlot, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption, type PropertyPlan } from './hooks/instantiate';
 import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
 import OntoBindingModal from './onto/OntoBindingModal';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
@@ -692,12 +692,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenAvailable(codegenEnabled, !!state.advanced), !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
     // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
     // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
-    const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid).signature : '');
+    const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid, viewpointId).signature : '');
     // The level of the tab's viewpoint (R-OI-19): at `class` no instance surface, the empty state included (R-OI-20).
     const ontoClassLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], viewpointId) === 'class');
     const ontoSections = useMemo(
-        () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid).sections : []),
-        [ontoRailSig, isModelMode, modelid, ontoClassLevel]
+        () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid, viewpointId).sections : []),
+        [ontoRailSig, isModelMode, modelid, ontoClassLevel, viewpointId]
+    );
+    // The «Attributes» group below the top level, for a clabject (R-OI-29): `null` at `class` and on UML.
+    const ontoPropertySig = useSelector((state: any) => isModelMode && !!modelid
+        ? clabjectPropertyGroup(state.idlookup ?? {}, modelid, viewpointId)?.items.map(i => `${i.metaclass}=${i.name}`).join(',') ?? '' : '');
+    const ontoPropertyGroup = useMemo(
+        () => (isModelMode && modelid && ontoPropertySig ? clabjectPropertyGroup((store.getState() as any)?.idlookup ?? {}, modelid, viewpointId) : null),
+        [ontoPropertySig, isModelMode, modelid, viewpointId]
     );
     // The groups of the `class` level (R-OI-21), `null` at any other: the same string-per-dispatch shape as «Instances of».
     const classRailSig = useSelector((state: any) => isModelMode && !!modelid && ontoClassLevel ? classRail(state.idlookup ?? {}, modelid)?.signature ?? '' : '');
@@ -1732,6 +1739,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
     const classPropertyEnabled = useSelector((state: any) =>
         isModelMode && !!modelid && ontoClassLevel && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
+    const ontoPropertyEnabled = useSelector((state: any) =>
+        !!modelid && !!ontoPropertySig && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -3354,7 +3363,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setContextMenu({
                 x: event.clientX,
                 y: event.clientY,
-                pane: { record, options: creationOptions(get, record, modelid) },
+                pane: { record, options: creationOptions(get, record, modelid, viewpointIdRef.current) },
             });
         },
         [isModelMode, modelid]
@@ -3429,7 +3438,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (metaclass) runClassifier(metaclass, click);
             return;
         }
-        const request = ontoDropRequest(get, modelid, payload);
+        const request = ontoDropRequest(get, modelid, payload, viewpointIdRef.current);
         if (request) runInstantiate(request.classifierId, request.record, click);
     }, [isModelMode, modelid, runInstantiate, runClassifier]);
     runOntoPayloadRef.current = runOntoPayload;
@@ -3745,7 +3754,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const record = objectRecord(get, modelid);
                 const objectId: unknown = get(node.id)?.model;
                 if (record && typeof objectId === 'string' && ontoLevelOf(get, viewpointIdRef.current) !== 'class'
-                    && creationOptions(get, record, modelid).some(o => o.id === objectId)) {
+                    && creationOptions(get, record, modelid, viewpointIdRef.current).some(o => o.id === objectId)) {
                     items.push(
                         { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
                         { divider: true },
@@ -5475,6 +5484,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             classGroups={classGroups}
             onClassActivate={onClassActivate}
             classPropertyEnabled={classPropertyEnabled}
+            ontoPropertyGroup={ontoPropertyGroup}
+            ontoPropertyEnabled={ontoPropertyEnabled}
             viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
         />
     );

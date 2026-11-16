@@ -7,6 +7,7 @@ import {
     instanceRows, materializePlan,
     instantiate, materializeSlot, syncSlots, type InstantiateResult,
     linkOptions,
+    bindingsDeclarePotency, clabjectPropertyGroup, ontoLevelIn, ontoLevelKeyOf, ontoLevelsOf,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -1036,5 +1037,130 @@ describe('instantiate under the layout of the tab, not the root (P-2026-11-07-16
 
     it('no viewpoint given: the root\'s is in force, as before (killed by reading absent as abstract syntax)', async () => {
         expect(await run({ viewpoint: undefined, tabKey: 'CD' })).toEqual({ CD: CLICK });
+    });
+});
+
+describe('the levels of a viewpoint and the instance surfaces (R-OI-29; P-2026-11-16-0340)', () => {
+    const at = (ontoLevel: unknown) => ({ _state: { ontoLevel } });
+    const setOf = (vp: Rec | undefined) => ontoLevelsOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+    const levelOf = (vp: Rec | undefined) => ontoLevelOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+    const has = (vp: Rec | undefined, n: number) => ontoLevelIn(setOf(vp), n);
+    // The MLM fixture with one viewpoint per stored level.
+    const withViewpoint = (ontoLevel?: unknown) => {
+        const fx = mlm();
+        fx.db.VP = ontoLevel === undefined ? {} : at(ontoLevel);
+        return fx;
+    };
+    const names = (options: { name: string }[]) => options.map(o => o.name);
+
+    it('ontoLevelsOf: absent, both and unknown are every level; class {0}; instance every level below the top (killed by instance as {1})', () => {
+        for (const vp of [undefined, {}, at('both'), at('meta'), at(2), at(''), at('1,x'), at('-1')]) {
+            expect([0, 1, 2, 7].map(n => ontoLevelIn(setOf(vp), n))).toEqual([true, true, true, true]);
+        }
+        expect(setOf(at('class'))).toEqual({ levels: [0] });
+        expect([0, 1, 2, 7].map(n => has(at('instance'), n))).toEqual([false, true, true, true]);
+        expect(ontoLevelsOf(() => at('class'), undefined)).toEqual(ontoLevelsOf(() => at('class'), null));
+        expect([0, 1, 2, 3].map(n => has(at('2'), n))).toEqual([false, false, true, false]);
+        expect([0, 1, 2, 3].map(n => has(at(' 2 , 1,2'), n))).toEqual([false, true, true, false]);
+        expect(setOf(at('2,1,2'))).toEqual({ levels: [1, 2] });
+    });
+
+    it('ontoLevelOf on every string form: class exactly at {0}, the aliases as before (killed by class on any set holding 0)', () => {
+        expect(levelOf(at('class'))).toBe('class');
+        expect(levelOf(at('0'))).toBe('class');
+        expect(levelOf(at('0,0'))).toBe('class');
+        expect(levelOf(at('0,1'))).toBe('both');
+        expect(levelOf(at('instance'))).toBe('instance');
+        expect(levelOf(at('1'))).toBe('instance');
+        expect(levelOf(at('2'))).toBe('instance');
+        expect(levelOf(at('1,2'))).toBe('instance');
+        expect(levelOf(at('both'))).toBe('both');
+        expect(levelOf(at('meta'))).toBe('both');
+        expect(levelOf(at(0))).toBe('both');
+        expect(levelOf(undefined)).toBe('both');
+    });
+
+    it('ontoLevelKeyOf gives the canonical stored form the select compares', () => {
+        const key = (vp: Rec | undefined) => ontoLevelKeyOf((id: string) => (id === 'VP' ? vp : undefined), 'VP');
+        expect([at('class'), at('instance'), at('both'), at('2'), at(' 2,1,2'), at('meta'), at(3), undefined].map(key))
+            .toEqual(['class', 'instance', 'both', '2', '1,2', 'both', 'both', 'both']);
+    });
+
+    it('three levels: each viewpoint offers the classifiers whose instances land at its levels (killed by dropping the level filter)', () => {
+        const offered = (ontoLevel?: unknown) => {
+            const { get, object } = withViewpoint(ontoLevel);
+            return names(creationOptions(get, object as any, 'M1', 'VP'));
+        };
+        expect(offered()).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('both')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('instance')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('1')).toEqual(['ProductType']);
+        expect(offered('2')).toEqual(['Book', 'DVD']);
+        expect(offered('1,2')).toEqual(['Book', 'DVD', 'ProductType']);
+        expect(offered('0')).toEqual([]);
+        expect(offered('class')).toEqual([]);
+        expect(offered('3')).toEqual([]);
+        const { get, object } = withViewpoint('2');
+        expect(names(creationOptions(get, object as any, 'M1'))).toEqual(['Book', 'DVD', 'ProductType']);
+    });
+
+    it('the rail follows the viewpoint: its object section and its signature (killed by dropping the level filter)', () => {
+        const { get, db } = withViewpoint('1');
+        const one = ontoRailSections(get, 'M1', 'VP');
+        expect(names(one.sections[0].options)).toEqual(['ProductType']);
+        db.VP = at('2');
+        const two = ontoRailSections(get, 'M1', 'VP');
+        expect(names(two.sections[0].options)).toEqual(['Book', 'DVD']);
+        expect(two.signature).not.toBe(one.signature);
+        expect(names(ontoRailSections(get, 'M1').sections[0].options)).toEqual(['Book', 'DVD', 'ProductType']);
+    });
+
+    it('a drop re-checks the level: a payload of another level runs nothing (killed by dropping the drop guard)', () => {
+        const { get, object, db } = withViewpoint('2');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Book'), 'VP')?.classifierId).toBe('Book');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'ProductType'), 'VP')).toBeNull();
+        db.VP = at('1');
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Book'), 'VP')).toBeNull();
+        expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'ProductType'), 'VP')?.classifierId).toBe('ProductType');
+    });
+
+    it('UML unchanged: at every alias and at level 1 the options are those with no viewpoint, the drop too', () => {
+        const { db, get, object } = uml();
+        const none = creationOptions(get, object as any, 'M1');
+        expect(names(none)).toEqual(['Book', 'Library', 'Magazine', 'Member']);
+        for (const ontoLevel of ['both', 'instance', '1']) {
+            db.VP = at(ontoLevel);
+            expect(creationOptions(get, object as any, 'M1', 'VP')).toEqual(none);
+            expect(ontoRailSections(get, 'M1', 'VP')).toEqual(ontoRailSections(get, 'M1'));
+            expect(ontoDropRequest(get, 'M1', ontoDragPayload(object as any, 'Member'), 'VP')?.classifierId).toBe('Member');
+        }
+        db.VP = at('2');
+        expect(creationOptions(get, object as any, 'M1', 'VP')).toEqual([]);
+    });
+
+    it('the Attributes group: for a clabject below the top, none at class, none on UML', () => {
+        const { db } = withViewpoint('2');
+        db.MM.classes = Object.keys(db).filter(id => db[id].className === 'DClass' && !['EString', 'EBoolean', 'EInt'].includes(id));
+        for (const ontoLevel of ['2', '1', 'instance', 'both']) {
+            db.VP = at(ontoLevel);
+            expect(clabjectPropertyGroup(db, 'M1', 'VP')?.items.map(i => i.metaclass)).toEqual(['Field']);
+        }
+        for (const ontoLevel of ['class', '0']) {
+            db.VP = at(ontoLevel);
+            expect(clabjectPropertyGroup(db, 'M1', 'VP')).toBeNull();
+        }
+        const fx = uml();
+        fx.db.VP = at('instance');
+        expect(clabjectPropertyGroup(fx.db, 'M1', 'VP')).toBeNull();
+    });
+
+    it('bindingsDeclarePotency: the MLM bag declares one, UML\'s none, an unreadable bag none', () => {
+        const { get } = mlm();
+        expect(bindingsDeclarePotency(get, ['MM'])).toBe(true);
+        const u = uml();
+        expect(bindingsDeclarePotency(u.get, ['MM'])).toBe(false);
+        u.db.MM._state = { ontoBindings: '{' };
+        expect(bindingsDeclarePotency(u.get, ['MM', '', 7])).toBe(false);
+        expect(bindingsDeclarePotency(get, [])).toBe(false);
     });
 });

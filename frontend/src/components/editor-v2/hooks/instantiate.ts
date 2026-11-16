@@ -144,9 +144,13 @@ export interface CreationOption {
     name: string;
 }
 
-/** The classifiers the record lets an instance be made of, sorted by name. */
-export function creationOptions(get: DGet, binding: OntoBinding, modelId: string): CreationOption[] {
-    const ids = instantiableClassifiers(ontoReadView(get), binding, modelObjectIds(get, modelId));
+/**
+ * The classifiers the record lets an instance be made of, sorted by name; with a viewpoint, only those whose instances
+ * land at one of its levels (R-OI-29). No viewpoint reads `both`, as `ontoLevelOf` does: every classifier.
+ */
+export function creationOptions(get: DGet, binding: OntoBinding, modelId: string, viewpointId?: string | null): CreationOption[] {
+    const view = ontoReadView(get);
+    const ids = atLevels(view, binding, instantiableClassifiers(view, binding, modelObjectIds(get, modelId)), ontoLevelsOf(get, viewpointId));
     return ids
         .map(id => ({ id, name: String(get(id)?.name ?? id) }))
         .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
@@ -171,15 +175,16 @@ export interface OntoRailSection {
  * options of `creationOptions`; none without a binding. The signature is `''` with no group and changes with any
  * record or option, id or name: the rail's selector compares it, so the scan below runs once per dispatch.
  */
-export function ontoRailSections(get: DGet, modelId: string): { sections: OntoRailSection[]; signature: string } {
+export function ontoRailSections(get: DGet, modelId: string, viewpointId?: string | null): { sections: OntoRailSection[]; signature: string } {
     const bindings = memoBindings(get, modelId);
     const records = [OBJECT_RECORD, LINK_RECORD].map(name => bindings.find(b => b.name === name)).filter((b): b is OntoBinding => !!b);
     if (records.length === 0) return { sections: [], signature: '' };
     const view = ontoReadView(get);
     const ids = modelObjectIds(get, modelId);
+    const levels = ontoLevelsOf(get, viewpointId);
     const sections = records.map(record => ({
         record,
-        options: instantiableClassifiers(view, record, ids)
+        options: atLevels(view, record, instantiableClassifiers(view, record, ids), levels)
             .map(id => ({ id, name: String(get(id)?.name ?? id) }))
             .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
         disabled: record.name !== OBJECT_RECORD,
@@ -195,13 +200,81 @@ export type OntoLevel = 'class' | 'instance' | 'both';
 export const ONTO_LEVEL_KEY = 'ontoLevel';
 
 /**
- * The level of the viewpoint `viewpointId` (R-OI-19): `both` when the key is absent or unknown, and with no viewpoint
- * (`undefined` no tab, `null` abstract syntax). The id comes from the caller, the tab's: `useIRInteractionPlan` follows the root.
+ * The levels a viewpoint authors (R-OI-29), numbered from the top (R-OI-27): `levels`, and with `from` every level from it
+ * down. The stored value stays a string: absent, `both` or unknown is every level; `class` is {0}; `instance` every level
+ * below the top; `'n'` and `'n,m'` those levels. On two levels `instance` is {1}, so R-OI-19 and R-OI-20 read the same.
+ */
+export interface OntoLevelSet {
+    levels: readonly number[];
+    from?: number;
+}
+
+const ALL_LEVELS: OntoLevelSet = { levels: [], from: 0 };
+
+/** The sorted, distinct whole numbers of a stored `'n'` or `'n,m'`; `null` for anything else. */
+function levelList(raw: unknown): number[] | null {
+    if (typeof raw !== 'string') return null;
+    const parts = raw.split(',').map(p => p.trim());
+    if (parts.some(p => !/^\d+$/.test(p))) return null;
+    return [...new Set(parts.map(Number))].sort((a, b) => a - b);
+}
+
+/** The stored level of `viewpointId`, `undefined` with no viewpoint (`undefined` no tab, `null` abstract syntax). */
+function storedLevel(get: DGet, viewpointId: string | null | undefined): unknown {
+    return isId(viewpointId) ? get(viewpointId)?._state?.[ONTO_LEVEL_KEY] : undefined;
+}
+
+/** The levels of the viewpoint `viewpointId` (R-OI-29): every level when the key is absent or unknown, and with no viewpoint. */
+export function ontoLevelsOf(get: DGet, viewpointId: string | null | undefined): OntoLevelSet {
+    const raw = storedLevel(get, viewpointId);
+    if (raw === 'class') return { levels: [0] };
+    if (raw === 'instance') return { levels: [], from: 1 };
+    const list = levelList(raw);
+    return list ? { levels: list } : ALL_LEVELS;
+}
+
+/** Whether `level` is one of `set`. */
+export function ontoLevelIn(set: OntoLevelSet, level: number): boolean {
+    return set.levels.includes(level) || (set.from !== undefined && level >= set.from);
+}
+
+/** The stored level in its canonical form, for the select (R-OI-29): an alias, or the sorted integers joined by commas. */
+export function ontoLevelKeyOf(get: DGet, viewpointId: string | null | undefined): string {
+    const raw = storedLevel(get, viewpointId);
+    if (raw === 'class' || raw === 'instance') return raw;
+    return levelList(raw)?.join(',') ?? 'both';
+}
+
+/**
+ * The level of the viewpoint `viewpointId` (R-OI-19): `class` exactly when its levels are {0}, `instance` when they leave
+ * out the top, `both` otherwise, so the aliases read as before (R-OI-29). The id comes from the caller, the tab's:
+ * `useIRInteractionPlan` follows the root.
  */
 export function ontoLevelOf(get: DGet, viewpointId: string | null | undefined): OntoLevel {
-    if (!isId(viewpointId)) return 'both';
-    const level: unknown = get(viewpointId)?._state?.[ONTO_LEVEL_KEY];
-    return level === 'class' || level === 'instance' ? level : 'both';
+    const set = ontoLevelsOf(get, viewpointId);
+    if (set.from === undefined && set.levels.length === 1 && set.levels[0] === 0) return 'class';
+    return ontoLevelIn(set, 0) ? 'both' : 'instance';
+}
+
+/**
+ * The classifiers of `ids` whose instances land at one of `set`'s levels, `ontoLevel(c) + 1` (R-OI-29), in their order.
+ * From level 0 or 1 down every classifier passes, so no type chain is walked: UML's two levels cost what they did.
+ */
+function atLevels(view: OntoReadView, binding: OntoBinding, ids: string[], set: OntoLevelSet): string[] {
+    if (set.from !== undefined && set.from <= 1) return ids;
+    return ids.filter(id => ontoLevelIn(set, ontoLevel(view, binding, id) + 1));
+}
+
+/**
+ * True when a binding of one of the metamodels `metamodelIds` declares `potency` or `featurePotency` (R-OI-25): the
+ * level select then offers «Level 0» to «Level 4» beside the aliases (R-OI-29).
+ */
+export function bindingsDeclarePotency(get: DGet, metamodelIds: readonly unknown[]): boolean {
+    return metamodelIds.some(mm => {
+        if (!isId(mm)) return false;
+        const decoded = decodeOntoBindings(get(mm)?._state?.[ONTO_BINDINGS_KEY]);
+        return decoded.ok && decoded.value.bindings.some(b => b.potency !== undefined || b.featurePotency !== undefined);
+    });
 }
 
 /** The payload of a rail drag or click: the record by name and the classifier, never the record itself, so a binding
@@ -212,13 +285,16 @@ export function ontoDragPayload(record: OntoBinding, classifierId: string): stri
 
 /** The instantiation a rail payload asks for, its record re-read from the store by name: `null` when it does not
  *  parse, names no `object` record (no link without its two ends, R-OI-5), or the classifier is no longer offered. */
-export function ontoDropRequest(get: DGet, modelId: string, payload: string): { classifierId: string; record: OntoBinding } | null {
+export function ontoDropRequest(
+    get: DGet, modelId: string, payload: string, viewpointId?: string | null,
+): { classifierId: string; record: OntoBinding } | null {
     let parsed: { record?: unknown; classifier?: unknown } | null;
     try { parsed = JSON.parse(payload); } catch { return null; }
     const classifierId = parsed?.classifier;
     if (parsed?.record !== OBJECT_RECORD || !isId(classifierId)) return null;
     const record = objectRecord(get, modelId);
-    if (!record || !creationOptions(get, record, modelId).some(o => o.id === classifierId)) return null;
+    // The level read at the drop (R-OI-20, R-OI-29): a payload dragged from a viewpoint of another level writes nothing.
+    if (!record || !creationOptions(get, record, modelId, viewpointId).some(o => o.id === classifierId)) return null;
     return { classifierId, record };
 }
 
@@ -235,6 +311,25 @@ export function classRail(lookup: Record<string, any>, modelId: string): { group
     const link = bindings.find(b => b.name === LINK_RECORD) ?? null;
     const groups = classRailGroups(sketchOfMetamodel(lookup, metamodel), record, link);
     return { groups, signature: groups.map(g => `${g.kind}:${g.items.map(i => `${i.metaclass}=${i.name}`).join(',')}`).join(';') };
+}
+
+/**
+ * The «Attributes» group of the rail below the top (R-OI-29): `classRail`'s `property` group when the viewpoint authors a
+ * level ≥ 1 and the record's instance metaclass, the owner of `typeReference`, conforms to the owner of
+ * `featureContainer`, so an instance is a classifier too (a clabject); `null` otherwise, and on UML, whose
+ * `InstanceSpecification` is no `Class`.
+ */
+export function clabjectPropertyGroup(lookup: Record<string, any>, modelId: string, viewpointId: string | null | undefined): ClassRailGroup | null {
+    const get: DGet = id => lookup[id];
+    const set = ontoLevelsOf(get, viewpointId);
+    if (set.from === undefined && !set.levels.some(l => l >= 1)) return null;
+    const record = memoBindings(get, modelId).find(b => b.name === OBJECT_RECORD);
+    if (!record || !isId(record.featureContainer)) return null;
+    const view = ontoReadView(get);
+    const instanceMeta = view.ownerOf(record.typeReference);
+    const classifierMeta = view.ownerOf(record.featureContainer);
+    if (instanceMeta === undefined || classifierMeta === undefined || !view.conformsTo(instanceMeta, classifierMeta)) return null;
+    return classRail(lookup, modelId)?.groups.find(g => g.kind === 'property') ?? null;
 }
 
 /** The payload of a class-level drag or click, under `ONTO_DRAG_MIME`: the metaclass by id, read again at the drop. */
