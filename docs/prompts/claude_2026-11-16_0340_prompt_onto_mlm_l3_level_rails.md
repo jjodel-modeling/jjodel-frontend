@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-16-0340
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (UI surfaces of the instance level; no critical-zone file, no core change)
-Status: da eseguire
+Status: eseguito 2026-11-16 · lane full · fa2909f19
 Request: https://claude.ai/code/session_01Qd8VK8yfvc2VwsVGG8qQ1S (Alfonso, 2026-11-16 02:00: «vai adesso in /lane auto ma non ti fermare e prosegui dritto dritto fino all'implementazione»; the discovery's recommended answers adopted unattended, RC-21)
 Depends: P-2026-11-16-0300
 Corregge: —

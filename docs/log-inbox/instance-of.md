@@ -447,3 +447,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (UML unchanged by construction and by its four browser probes; the three-level rendering is L4's probe)
 **Notes**: RC-21: one adoption inside the perimeter, the shared orphan text (R-OI-30). The association's level is not checked on its own. Cost at 200 instances, vitest over D records, median of 5: UML 2.11 → 2.23 ms, MLM 1.93 → 1.89 ms. Mutants all red: synthesis on featureClosure, same-level guard dropped, potency never emitted, plus ghost order and orphan variant. Bench: `~/.jjodel-lanes/P-2026-11-16-0300/bench.txt`.
 **Prompt document name**: 2026-11-16 03:00
+
+## 2026-11-16 — feat: multilevel L3, viewpoint levels filter the instance surfaces (P-2026-11-16-0340, P-2026-11-16-0410)
+**Prompt**: P-2026-11-16-0340, lane L3 of the multilevel plan (discovery P-2026-11-16-0205 §3.3, §6 item 3): `ontoLevelsOf`, the level filter of the rail, pane menu, node menu and drop, the select's «Level 0..4», the clabject Attributes group; cut at its context ceiling after the code commit, and P-2026-11-16-0410, its continuation: the crop probe rerun in a fresh context, crops, the UML probe and mutant check, R-OI-29. Unattended, on Alfonso's instruction of 2026-11-16 02:00.
+**Files touched**: `fa2909f19`: frontend/src/components/editor-v2/hooks/instantiate.ts, EditorV2.tsx, panels/PalettePanel.tsx, viewpoint/properties/ViewpointProperties.tsx, hooks/__tests__/instantiate.test.ts. Docs commit: docs/decisions.md (R-OI-29), docs/log-inbox/instance-of.md (this entry), the Status line of both prompts. The crop probe stays under /tmp, the crops under `~/.jjodel-lanes/P-2026-11-16-0340/crops/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0, with a positive control (an injected TS2322 gave exit 2); 22 files, 432 tests (423 before); build 0; UML probes on `fa2909f19`: binding editor 10/10, split pane 28/28, S2 57/57 with its S2-L level block, unchanged; MLM crop probe 6/6.
+**Out-of-scope changes**: yes — `EditorV2.tsx` beyond the option lists and drop guard the prompt allowed: a selector, a memo, an enabled flag and two optional `PalettePanel.tsx` props for the clabject Attributes group (R-OI-29 clause 1). Nine files over the two commits, listed above.
+**Layer Impact Report**: not-required (no §3.1 or §3.2 file; instance surfaces and the viewpoint select only)
+**Smoke visivo**: passato (crops viewed: the rail at levels 0, 1 and 2; the select with «Level 0..4» on MLM and without them on UML)
+**Notes**: RC-21/RC-25: three lane decisions are R-OI-29's clauses; two more inside the perimeter: no chain walk from level 0 or 1, so UML costs as before; the Attributes group shows at `both` too. L3's first crop run read the rail empty at levels 1-2: the MLM project shared the UML project's page and its metamodel came back with the UML one's id. In a fresh context the rail is right (M-3). Bench: `~/.jjodel-lanes/P-2026-11-16-0340/bench.txt`, 3 mutants red.
+**Prompt document name**: 2026-11-16 03:40

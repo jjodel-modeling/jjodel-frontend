@@ -6767,6 +6767,21 @@ P-2026-10-20-1835.
   minus 1, never below 0. A root without a value, and every object under a record without `potency`, is unbounded. A
   clabject of potency 0 is not instantiable: `instantiableClassifiers` leaves it out of the creation options. Decided as
   R-OI-25. Discovery P-2026-11-16-0205 §3.1.
+- **R-OI-29** (2026-11-16, provisional, unattended, evidence: measured, verified: probe, reversible: branch).
+  **A viewpoint's `ontoLevel` names a set of ontological levels, and the instance surfaces offer only the classifiers
+  whose instances land in it.** The key stays a string in `_state` (R-OI-19): absent, `both` or unknown is every level;
+  `class` is {0}; `instance` every level below the top; `'n'` and `'n,m'` those levels (`ontoLevelsOf`). A classifier c
+  is offered when `ontoLevel(c) + 1` (R-OI-27) is in the set, by the rail «Instances of», the pane «New instance of ▸»,
+  the node «New instance» and the drop, which re-checks the level (R-OI-20). `ontoLevelOf` reads `class` exactly at {0},
+  `instance` when the set leaves out the top, `both` otherwise: on two levels `instance` is {1}, and UML reads as
+  before. The level select adds «Level 0» to «Level 4» beside the three aliases only when a binding declares `potency`
+  or `featurePotency` (R-OI-25); a stored list reads «Levels 1, 2». Three clauses decided by the lane and accepted by the
+  chat: (1) the clabject Attributes group, at a level ≥ 1, is wired through `EditorV2.tsx` (a selector, a memo, an
+  enabled flag) and two optional props of `PalettePanel.tsx`, beyond the option lists and drop guard the prompt allowed
+  there; (2) the select's potency check reads every metamodel of the project, a viewpoint having no metamodel link;
+  (3) the link record's rail section is filtered by the same rule, through the link record's own type chain. Decided by
+  the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the discovery's recommended answers adopted).
+  Discovery P-2026-11-16-0205 §3.3 and §7; code P-2026-11-16-0340, probes P-2026-11-16-0410.
 - **R-OI-30** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **A link joins two instances at one ontological level, and its association sits one level above them; the instance
   problems gain two kinds, `type-cycle` and `potency`.** `linkOptions` offers no association when the levels of the two
