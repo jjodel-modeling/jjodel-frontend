@@ -434,3 +434,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (pure model code, no browser)
 **Notes**: RC-21/RC-25: Q1..Q12 adopted as recommended; L1 acts on Q1-3, Q7, Q10, Q12, the rest bind L2..L4. Q7 and the type cycle are M1 findings: `checkLevels` in bindingCheck.ts judges them over the reader's view, as data for L2. The codec test's unknown key `potency: 2` became `durability: 2`, a numeric `potency` being now a shape defect. Bench: `~/.jjodel-lanes/P-2026-11-16-0232/bench.txt`, 5 mutations, all red.
 **Prompt document name**: 2026-11-16 02:32
+
+## 2026-11-16 — feat: multilevel L2, consumers of the due features (P-2026-11-16-0300)
+**Prompt**: P-2026-11-16-0300, lane L2 of the multilevel plan (discovery P-2026-11-16-0205 §6 item 2): slot synthesis and ghost rows on `dueFeatures`, a link's ends at one level, the problem kinds `type-cycle` and `potency`, the orphan text's level variant; run unattended on Alfonso's instruction of 2026-11-16 02:00, which the chat takes as the critical-zone go-ahead (`editor-v2/problems/`) for this front's planned lanes.
+**Files touched**: `e6d9a3e87`: frontend/src/components/editor-v2/hooks/instantiate.ts, problems/instantiationToProblems.ts, hooks/__tests__/instantiate.test.ts, problems/__tests__/instantiationToProblems.test.ts. Docs commit: docs/decisions.md (R-OI-30), docs/log-inbox/instance-of.md (this entry), the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0; 22 files, 423 tests (ontological, instantiate, linkInstance, classElement, undoGroup, editor-v2/problems); build 0; UML probes S2 57/57, S4 14/14, s3a 8/8, s3b 6/6, unchanged.
+**Out-of-scope changes**: yes — `orphanReason` and `levelsOff` added to instantiate.ts beyond the three spots of COSA 1, so the node's orphan mark keeps the problem's text.
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (UML unchanged by construction and by its four browser probes; the three-level rendering is L4's probe)
+**Notes**: RC-21: one adoption inside the perimeter, the shared orphan text (R-OI-30). The association's level is not checked on its own. Cost at 200 instances, vitest over D records, median of 5: UML 2.11 → 2.23 ms, MLM 1.93 → 1.89 ms. Mutants all red: synthesis on featureClosure, same-level guard dropped, potency never emitted, plus ghost order and orphan variant. Bench: `~/.jjodel-lanes/P-2026-11-16-0300/bench.txt`.
+**Prompt document name**: 2026-11-16 03:00

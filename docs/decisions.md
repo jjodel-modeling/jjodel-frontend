@@ -6767,6 +6767,18 @@ P-2026-10-20-1835.
   minus 1, never below 0. A root without a value, and every object under a record without `potency`, is unbounded. A
   clabject of potency 0 is not instantiable: `instantiableClassifiers` leaves it out of the creation options. Decided as
   R-OI-25. Discovery P-2026-11-16-0205 §3.1.
+- **R-OI-30** (2026-11-16, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A link joins two instances at one ontological level, and its association sits one level above them; the instance
+  problems gain two kinds, `type-cycle` and `potency`.** `linkOptions` offers no association when the levels of the two
+  ends (R-OI-27) differ. The association's place follows from its ends' types being the instances' classifiers
+  (`linkEnds`, R-OI-5) and is not checked on its own. On UML both ends are always at level 1, so the menu is today's.
+  The two kinds come from `checkLevels`: `type-cycle`, an error once per cycle, anchored on its members; `potency`, a
+  warning on a field that is never due (R-OI-26), anchored on the field. The «Sync slots» action stays on `missing`
+  alone. An orphan slot whose feature is due at another level of the type chain reads «… is due N levels below» (or
+  above) the instance, in the problem and on the node's orphan mark alike (`orphanReason`); a feature never due keeps
+  the plain text. Decided by the chat `C-2026-10-25-2159` on Alfonso's instruction (2026-11-16 02:00, the discovery's
+  recommended answers adopted, critical-zone go-ahead for this front's planned lanes). Discovery P-2026-11-16-0205 §3.2,
+  questions 7 and 11; code P-2026-11-16-0300.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
