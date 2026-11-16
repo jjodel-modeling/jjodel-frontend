@@ -19,7 +19,8 @@
  * ── The synthesis ─────────────────────────────────────────────────────────────────────────────────────────────────
  *
  * One instance of the record's instance metaclass (the owner of `typeReference`) with `typeReference = classifier`;
- * then, for each feature of `featureClosure` in order, one slot (the type of `slotContainer`) whose `definingFeature`
+ * then, for each feature of `dueFeatures` in order (the closure itself without a feature potency, R-OI-26), one slot
+ * (the type of `slotContainer`) whose `definingFeature`
  * is the feature; then, when the feature has a `defaultValue` and `valueKinds` an entry for its type, one value object
  * in the slot's `valueHolder`. Every create is contained, so each waits for its owner's slot to exist: the DValues of a
  * new object come from its constructor actions, which have not run when `addObject` returns (`createAdapter.ts`
@@ -45,7 +46,10 @@
  */
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
-import { featureClosure, instantiableClassifiers, linkEnds, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
+import {
+    clabjectPotency, dueFeatures, featureClosure, featurePotencyOf, instantiableClassifiers, linkEnds, ontoLevel, recordFor, slotDiff,
+    typeChain, type OntoReadView,
+} from '../../../model/ontological/bindingReader';
 import { classRailGroups, containerFor, type ClassRailGroup } from '../../../model/ontological/classRail';
 import { sketchOfMetamodel } from '../sim/metamodelSketch';
 import { authoredDefaultSize } from '../nodes/nodeSizing';
@@ -501,7 +505,7 @@ export function synthesisPlan(get: DGet, binding: OntoBinding, classifierId: str
     const roles = slotRoles(get, binding);
     if (!roles) return { error: 'the slot roles do not resolve' };
 
-    const { features, cycles } = featureClosure(view, binding, classifierId);
+    const { features, cycles } = dueFeatures(view, binding, classifierId);
     plan.slotKey = roles.slotKey;
     plan.slotMetaclass = roles.slotMetaclass;
     plan.valueKey = roles.valueKey;
@@ -521,7 +525,7 @@ export function linkRecord(get: DGet, modelId: string): OntoBinding | null {
 }
 
 /** The associations whose two ends accept the classifiers of the two instances, generalizations included (R-OI-5), sorted
- *  by name. Empty unless both are instances under the `object` record of one model. */
+ *  by name. Empty unless both are instances under the `object` record of one model, at one ontological level (R-OI-30). */
 export function linkOptions(get: DGet, sourceId: unknown, targetId: unknown): LinkOption[] {
     if (!isId(sourceId) || !isId(targetId)) return [];
     const modelId = modelOf(get, sourceId);
@@ -530,6 +534,7 @@ export function linkOptions(get: DGet, sourceId: unknown, targetId: unknown): Li
     const object = objectRecord(get, modelId);
     if (!link || !object || !instanceObjectRecord(get, modelId, sourceId) || !instanceObjectRecord(get, modelId, targetId)) return [];
     const view = ontoReadView(get);
+    if (ontoLevel(view, object, sourceId) !== ontoLevel(view, object, targetId)) return [];
     return creationOptions(get, link, modelId).flatMap(({ id, name }) => {
         const ends = linkEnds(view, link, object, id, sourceId, targetId);
         return ends ? [{ id, name, ends }] : [];
@@ -636,6 +641,34 @@ function memoBindings(get: DGet, modelId: string): OntoBinding[] {
     return bindingsMemo.bindings;
 }
 
+/** How many levels below `instanceId` (above, when negative) `feature` is due, met on the instance's type chain at the
+ *  nearest type whose closure holds it (R-OI-26); 0 when no type holds it, or it is due there or never. */
+function levelsOff(view: OntoReadView, binding: OntoBinding, instanceId: string, feature: string): number {
+    const { chain } = typeChain(view, binding, instanceId);
+    for (let k = 1; k <= chain.length; k++) {
+        if (!featureClosure(view, binding, chain[k - 1]).features.includes(feature)) continue;
+        const p = featurePotencyOf(view, binding, feature);
+        return p < 1 || p > clabjectPotency(view, binding, chain[k - 1]) ? 0 : p - k;
+    }
+    return 0;
+}
+
+/**
+ * Why the slot of `instanceId` that `feature` defines is an orphan (S3a): the feature is gone; with a feature potency it
+ * is due at another level of the type chain, «due N levels below» or «above» the instance (R-OI-26); else it is not a
+ * feature of `classifier`. The text of the S3a problem and of the node's orphan mark alike. Pure.
+ */
+export function orphanReason(
+    get: DGet, view: OntoReadView, binding: OntoBinding, instanceId: string, classifier: string, feature: string | null,
+): string {
+    const name = (id: string) => String(get(id)?.name ?? id);
+    if (feature === null) return 'Its feature is gone';
+    const off = binding.featurePotency !== undefined ? levelsOff(view, binding, instanceId, feature) : 0;
+    if (off === 0) return `${name(feature)} is not a feature of ${name(classifier)}`;
+    const n = Math.abs(off);
+    return `${name(feature)} is due ${n} level${n === 1 ? '' : 's'} ${off > 0 ? 'below' : 'above'} ${name(instanceId)}`;
+}
+
 /**
  * The ghost rows and the orphan marks of `instanceId` under its `object` record (S3a D4), `null` when the model has no
  * bindings or the instance is not under that record (a link, S4). While a run is in flight on the instance (`flight`),
@@ -658,9 +691,9 @@ export function instanceRows(get: DGet, instanceId: string, flight: InstanceFlig
     const runSlots = flight?.slots ?? {};
     const writing = flight?.materializing ?? null;
 
-    // The ghost being written stays where it was once its slot has landed: the closure gives its place.
+    // The ghost being written stays where it was once its slot has landed: the due features give its place.
     const missing = writing && !diff.missing.includes(writing.feature)
-        ? featureClosure(view, record, classifier).features.filter(f => f === writing.feature || diff.missing.includes(f))
+        ? dueFeatures(view, record, classifier).features.filter(f => f === writing.feature || diff.missing.includes(f))
         : diff.missing;
     const ghosts = missing
         .filter(f => f === writing?.feature || !running.includes(f))
@@ -668,7 +701,7 @@ export function instanceRows(get: DGet, instanceId: string, flight: InstanceFlig
     const orphans: Record<string, string> = {};
     for (const { slot, feature } of diff.orphans) {
         if (slot in runSlots) continue;
-        orphans[slot] = feature === null ? 'Its feature is gone' : `${name(feature)} is not a feature of ${name(classifier)}`;
+        orphans[slot] = orphanReason(get, view, record, instanceId, classifier, feature);
     }
     const hidden = Object.keys(runSlots).filter(slot => runSlots[slot] === writing?.feature
         || view.referenceTargets(slot, record.definingFeature!)[0] !== runSlots[slot]);

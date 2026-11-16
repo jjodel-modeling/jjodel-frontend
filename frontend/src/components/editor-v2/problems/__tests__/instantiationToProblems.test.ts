@@ -214,4 +214,173 @@ describe('detectInstantiationProblems', () => {
         expect(brief(fs.filter(f => f.kind !== 'cycle'))).toEqual(['missing:mag1:mag1']);
         expect(fs.find(f => f.kind === 'missing')?.related).toEqual(['p_Book_isbn', 'p_Book_genre']);
     });
+
+    it('UML, two levels and no potency role: every defect at once gives today\'s kinds and texts, no level finding', () => {
+        const { db, get, slot, prop, value } = uml();
+        slot('dune', 'p_Member_name');
+        prop('Book', 'pages', 'Integer');
+        const wrong = value('dune_year', 'LiteralString', '1965');
+        delete db.p_Magazine_issue;
+        db['mag1_issue.r_Slot_definingFeature'].values = [];
+        expect(detectInstantiationProblems(get, 'M1').map(f => [f.kind, f.key, f.severity, f.description])).toEqual([
+            ['missing', 'dune', 'warning', 'No slot for pages'],
+            ['orphan', 'dune_name', 'error', 'name is not a feature of Book'],
+            ['value-type', wrong, 'error', 'year : Integer holds a LiteralString'],
+            ['orphan', 'mag1_issue', 'error', 'Its feature is gone'],
+        ]);
+    });
+});
+
+// The clabject metamodel of the multilevel discovery (§3.4) with the potency roles (R-OI-25), the subset of `mlm()` in
+// `hooks/__tests__/instantiate.test.ts` without the association, copied. ProductType (potency 2) { taxRate^1, price^2 };
+// Book : ProductType { isbn } with taxRate; DVD : ProductType with taxRate; mobyDick : Book with isbn and price.
+function mlm() {
+    const db: Record<string, Rec> = {};
+    const get = (id: string) => db[id];
+    const cls = (id: string, ext: string[] = [], abstract = false) =>
+        (db[id] = { className: 'DClass', id, name: id, extends: ext, abstract, attributes: [], references: [] });
+    const ref = (owner: string, name: string, type: string) => {
+        const id = `r_${owner}_${name}`;
+        db[id] = { className: 'DReference', id, name, father: owner, type };
+        db[owner].references.push(id);
+    };
+    const attr = (owner: string, name: string, type: string) => {
+        const id = `a_${owner}_${name}`;
+        db[id] = { className: 'DAttribute', id, name, father: owner, type };
+        db[owner].attributes.push(id);
+    };
+    for (const p of ['EString', 'EBoolean', 'EInt']) db[p] = { className: 'DClass', id: p, name: p };
+    cls('Element', [], true); attr('Element', 'name', 'EString');
+    cls('Clabject', ['Element']); attr('Clabject', 'potency', 'EInt'); attr('Clabject', 'isAbstract', 'EBoolean');
+    cls('Field', ['Element']); attr('Field', 'potency', 'EInt'); attr('Field', 'default', 'EString');
+    cls('DataType', ['Element']); cls('Slot'); cls('Value', [], true);
+    cls('StringValue', ['Value']); attr('StringValue', 'value', 'EString');
+    cls('IntValue', ['Value']); attr('IntValue', 'value', 'EInt');
+    ref('Clabject', 'type', 'Clabject'); ref('Clabject', 'supers', 'Clabject');
+    ref('Clabject', 'fields', 'Field'); ref('Clabject', 'slots', 'Slot');
+    ref('Field', 'type', 'DataType'); ref('Slot', 'field', 'Field'); ref('Slot', 'value', 'Value');
+
+    const object = { name: 'object', typeReference: 'r_Clabject_type', featureContainer: 'r_Clabject_fields',
+        generalization: { direct: 'r_Clabject_supers' }, slotContainer: 'r_Clabject_slots', definingFeature: 'r_Slot_field',
+        valueHolder: 'r_Slot_value', abstractFlag: 'a_Clabject_isAbstract', featureType: 'r_Field_type', defaultValue: 'a_Field_default',
+        valueKinds: [
+            { when: 'primitive:String', create: 'StringValue', field: 'a_StringValue_value' },
+            { when: 'primitive:Integer', create: 'IntValue', field: 'a_IntValue_value' },
+        ],
+        potency: 'a_Clabject_potency', featurePotency: 'a_Field_potency' };
+    db.MM = { className: 'DModel', id: 'MM', isMetamodel: true, _state: { ontoBindings: JSON.stringify({ v: 1, bindings: [object] }) } };
+    db.M1 = { className: 'DModel', id: 'M1', isMetamodel: false, instanceof: 'MM', objects: [] };
+
+    const val = (o: string, feature: string, values: unknown[]) => {
+        const vid = `${o}.${feature}`;
+        if (!db[vid]) { db[vid] = { className: 'DValue', id: vid, father: o, instanceof: feature, values: [] }; db[o].features.push(vid); }
+        db[vid].values.push(...values);
+        return vid;
+    };
+    const obj = (id: string, meta: string, father = 'M1') => {
+        db[id] = { className: 'DObject', id, name: id, instanceof: meta, father, features: [] };
+        if (father === 'M1') db.M1.objects.push(id);
+        val(id, 'a_Element_name', [id]);
+    };
+    const clabject = (id: string, type?: string, potency?: number) => {
+        obj(id, 'Clabject');
+        if (type !== undefined) val(id, 'r_Clabject_type', [type]);
+        if (potency !== undefined) val(id, 'a_Clabject_potency', [potency]);
+        val(id, 'r_Clabject_slots', []);
+    };
+    const field = (owner: string, name: string, type: string, potency?: number) => {
+        const id = `f_${owner}_${name}`;
+        obj(id, 'Field', val(owner, 'r_Clabject_fields', [id]));
+        db[id].name = name;
+        val(id, 'r_Field_type', [type]);
+        if (potency !== undefined) val(id, 'a_Field_potency', [potency]);
+        return id;
+    };
+    // A slot is `<clabject>_<field name>`, its value `<slot>_v`.
+    const slot = (inst: string, feature: string, meta?: string, v?: unknown) => {
+        const id = `${inst}_${db[feature]?.name ?? feature}`;
+        obj(id, 'Slot', val(inst, 'r_Clabject_slots', [id]));
+        val(id, 'r_Slot_field', [feature]);
+        if (meta) {
+            obj(`${id}_v`, meta, val(id, 'r_Slot_value', [`${id}_v`]));
+            if (v !== undefined) val(`${id}_v`, `a_${meta}_value`, [v]);
+        }
+        return id;
+    };
+    for (const t of ['String', 'Integer']) obj(t, 'DataType');
+    clabject('ProductType', undefined, 2);
+    field('ProductType', 'taxRate', 'Integer', 1);
+    field('ProductType', 'price', 'Integer', 2);
+    clabject('Book', 'ProductType');
+    field('Book', 'isbn', 'String');
+    slot('Book', 'f_ProductType_taxRate', 'IntValue', 7);
+    clabject('DVD', 'ProductType');
+    slot('DVD', 'f_ProductType_taxRate', 'IntValue', 5);
+    clabject('mobyDick', 'Book');
+    slot('mobyDick', 'f_Book_isbn', 'StringValue', '978-0142437247');
+    slot('mobyDick', 'f_ProductType_price', 'IntValue', 10);
+    return { db, get, val, clabject, field, slot };
+}
+
+describe('detectInstantiationProblems on three levels (R-OI-26, R-OI-27; P-2026-11-16-0300)', () => {
+    it('the clabject model is clean: Book and DVD hold taxRate, mobyDick isbn and price', () => {
+        const { get } = mlm();
+        expect(detectInstantiationProblems(get, 'M1')).toEqual([]);
+    });
+
+    it('mobyDick without price misses price, a field two levels up', () => {
+        const { db, get } = mlm();
+        db['mobyDick.r_Clabject_slots'].values = ['mobyDick_isbn'];
+        const fs = detectInstantiationProblems(get, 'M1');
+        expect(brief(fs)).toEqual(['missing:mobyDick:mobyDick']);
+        expect(fs[0]).toMatchObject({ description: 'No slot for price', related: ['f_ProductType_price'] });
+    });
+
+    it('a type cycle is one error on its members, however many objects reach it', () => {
+        const { get, clabject } = mlm();
+        clabject('A', 'B'); clabject('B', 'A'); clabject('C', 'A');
+        const fs = detectInstantiationProblems(get, 'M1');
+        expect(brief(fs)).toEqual(['type-cycle:-:A,B']);
+        expect(fs[0]).toMatchObject({
+            severity: 'error', title: 'Type cycle', description: 'A → B → A: the type chain stops at it',
+            anchors: ['A', 'B'], related: ['A', 'B'],
+        });
+    });
+
+    it('a field of potency above its owner\'s, or below 1, is one warning on the field (killed by never emitting potency)', () => {
+        const { get, field } = mlm();
+        const weight = field('ProductType', 'weight', 'Integer', 3);
+        const note = field('Book', 'note', 'String', 0);
+        const fs = detectInstantiationProblems(get, 'M1');
+        expect(brief(fs)).toEqual([`potency:-:ProductType:${weight}`, `potency:-:Book:${note}`]);
+        expect(fs[0]).toMatchObject({
+            severity: 'warning', title: 'Feature never due', description: 'weight has potency 3, above the potency 2 of ProductType',
+            instance: null, anchors: [weight], related: ['ProductType', weight],
+        });
+        expect(fs[1]).toMatchObject({ description: 'note has potency 0, below 1', anchors: [note] });
+    });
+
+    it('a slot due at another level is an orphan that says how many levels, and which way; one off the chain does not', () => {
+        const { get, slot } = mlm();
+        slot('mobyDick', 'f_ProductType_taxRate', 'IntValue', 7);
+        slot('Book', 'f_ProductType_price', 'IntValue', 9);
+        slot('DVD', 'f_Book_isbn');
+        const fs = detectInstantiationProblems(get, 'M1');
+        expect(fs.map(f => [f.kind, f.key, f.description])).toEqual([
+            ['orphan', 'Book_price', 'price is due 1 level below Book'],
+            ['orphan', 'DVD_isbn', 'isbn is not a feature of ProductType'],
+            ['orphan', 'mobyDick_taxRate', 'taxRate is due 1 level above mobyDick'],
+        ]);
+    });
+
+    it('the count is the distance: a field of potency 3 held by a direct instance of its owner is due 2 levels below it', () => {
+        const { get, field, slot, clabject } = mlm();
+        clabject('Root', undefined, 3);
+        const deep = field('Root', 'deep', 'Integer', 3);
+        clabject('T1', 'Root');
+        slot('T1', deep);
+        const fs = detectInstantiationProblems(get, 'M1');
+        expect(brief(fs)).toEqual(['orphan:T1:T1_deep']);
+        expect(fs[0].description).toBe('deep is due 2 levels below T1');
+    });
 });
