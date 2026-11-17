@@ -1446,3 +1446,16 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
 **Priority**: low
 **Found in**: P-2026-11-15-2305
+
+## 2026-11-17 — fix: JjEL equality of model objects decides by identity (P-2026-11-17-2219)
+**Prompt**: `claude_2026-11-17_2219_prompt_jjel_object_identity.md`: two references to the same model object compared as different (`self.parent.father == self` false on the father; a JjTL guard `parent.mother == self` never true, Families2Persons mapped every Member to Male). Confirm the cause in the evaluator, then `==`, `!=` and the operations that rely on equality decide by the id of the underlying object.
+**Files touched**: `0de8bfa89` `frontend/src/jjel/__tests__/object-identity.test.ts` (new), `frontend/src/jjtl/executor/__tests__/source-object-identity.test.ts` (new); `eb2dea24b` `frontend/src/jjel/evaluator/identity.ts` (new), `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjel/evaluator/builtins/collections.ts`; `fe86e2732` `frontend/src/jjel/SPEC.md`; the discovery report, the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non eseguito — the chat drove the app headless on a clone of `families-persons@1` and measured the console context (`buildEvalContext` with Jim, then Brenda, selected): report section 5. Alfonso check owed: Console in JjEL mode with Jim selected, `self.parent.father == self` is true; the Families2Persons guard on objects gives 4 Female and 5 Male.
+**Notes**: Not a regression: same code at 3.0.0, 3.1.0, 3.1.2; October compared a quantifier variable (pool handle), November `self` (a separate record). Tests first, 12 of 20 red; bench in `eb2dea24b`, one mutant survives as declared intent. Typecheck 0; vitest 20 red in 6 tooling and Chromium files, red the same way on `e30274962` here, plus the 3 known. Run by the chat in a cloud checkout. Also fixed: `distinct` threw on handles. Details: the report.
+**Prompt document name**: 2026-11-17 22:19
