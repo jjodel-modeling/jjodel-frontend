@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-18-1815
 Chat: C-2026-11-18-1815
 Front: maintenance
-Status: da eseguire
+Status: 2026-11-18, full lane, bf6005d37 94c1c4d47 6730df10b cbc8f5c86 0e59c274c
 Lane: full (language semantics change in the JjTL executor)
 Depends: none
 Request: https://claude.ai/code/session_01DQt9R56QsDvvpmBV3SoYap (Alfonso, 2026-11-18 18:03-18:12: a helper reading m.parent.mother == m returns false while the same test works as a guard; «procedi»)

@@ -107,33 +107,15 @@ helper integerType(e: Element) -> DataType {
  * is NATURAL with all of them applied, in order; a passage that does not occur is an error.
  * W5 and W6 left this list with P-2026-11-03-2111: a `let` holds its value (#515), so the
  * natural `let $id = idColumn(c)` runs, and with it no `resolve()` is left for W6 to quote.
- * Their form survives as MATCHED_KEY_EDITS below.
+ * Their form survives as MATCHED_KEY_EDITS below. W2 left it with P-2026-11-18-1815: `x.parent`
+ * is the container of any source element, not only the bare `parent` of the matched one, so
+ * `a.parent.name` runs and the owner no longer travels as an argument.
  */
 export const WORKAROUNDS: { why: string; from: string; to: string }[] = [
     {
         why: 'W1: a binding ends at the end of its line; a continuation line starting with `+` is a parse error, "Expected source attribute name"',
         from: '.map(a => refFk(a))\n            + (if',
         to: '.map(a => refFk(a)) + (if',
-    },
-    {
-        why: 'W2: `x.parent` is null for any element but the rule\'s own; only the bare `parent` of the matched element is bound, so the owner travels as an argument',
-        from: '    name := a.parent.name + "_" + a.name\n    let $owner = ownerColumn(a) in {',
-        to: '    name := parent.name + "_" + a.name\n    let $owner = ownerColumn(parent) in {',
-    },
-    {
-        why: 'W2',
-        from: 'rule ownerColumn(a) -> Column {\n    name := a.parent.name.toLowerCase() + "Id"\n    type := integerType(a)',
-        to: 'rule ownerColumn(o) -> Column {\n    name := o.name.toLowerCase() + "Id"\n    type := integerType()',
-    },
-    {
-        why: 'W2',
-        from: '.map(a => refFk(a))',
-        to: '.map(a => refFk(c, a))',
-    },
-    {
-        why: 'W2',
-        from: 'rule refFk(a) -> ForeignKey {\n    name := "fk_" + a.parent.name + "_" + a.name',
-        to: 'rule refFk(c, a) -> ForeignKey {\n    name := "fk_" + c.name + "_" + a.name',
     },
     {
         why: 'W3: there is no allInstances; the Integer type is found in `data`, the whole source model, bound in every context (SPEC 7.3), so the helper needs no element',
@@ -143,10 +125,11 @@ export const WORKAROUNDS: { why: string; from: string; to: string }[] = [
     { why: 'W3', from: '    type := integerType(c)', to: '    type := integerType()' },
     { why: 'W3', from: '    name := a.name + "Id"\n    type := integerType(a)', to: '    name := a.name + "Id"\n    type := integerType()' },
     { why: 'W3', from: 'then integerType(a) else', to: 'then integerType() else' },
+    { why: 'W3', from: '.toLowerCase() + "Id"\n    type := integerType(a)', to: '.toLowerCase() + "Id"\n    type := integerType()' },
     {
         why: 'W4: the string method is `toLower`, not `toLowerCase`; a slip of the writer, reported at run time with "Did you mean \'toLower\'?"',
-        from: 'o.name.toLowerCase()',
-        to: 'o.name.toLower()',
+        from: 'a.parent.name.toLowerCase()',
+        to: 'a.parent.name.toLower()',
     },
 ];
 
@@ -198,12 +181,12 @@ export const MATCHED_KEY_EDITS: { why: string; from: string; to: string }[] = [
     { why: 'W5', from: '    column := a\n    refersTo := a.type', to: '    column := a\n    refersTo := resolve(a.type, Table)' },
     {
         why: 'W5, for the join table: its owner column is the second matched rule on a multi-valued Attribute',
-        from: '    let $owner = ownerColumn(parent) in {\n        columns := [$owner, valueColumn(a)]\n        key := [$owner]\n    }\n',
+        from: '    let $owner = ownerColumn(a) in {\n        columns := [$owner, valueColumn(a)]\n        key := [$owner]\n    }\n',
         to: '    columns := [resolve(a, Column), valueColumn(a)]\n    key := [resolve(a, Column)]\n',
     },
     {
         why: 'W5',
-        from: 'rule ownerColumn(o) -> Column {\n    name := o.name.toLower() + "Id"',
+        from: 'rule ownerColumn(a) -> Column {\n    name := a.parent.name.toLower() + "Id"',
         to: '-- The owner column of a join table.\nAttribute a -> Column where a.multiValued {\n    name := parent.name.toLower() + "Id"',
     },
     { why: 'W5', from: 'c.attributes.filter(a => a.multiValued))', to: 'c.attributes.filter(a => a.multiValued).map(a => resolve(a, Table)))' },

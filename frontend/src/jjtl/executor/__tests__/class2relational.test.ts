@@ -114,9 +114,9 @@ describe('Class2Relational', () => {
 
     it('records each workaround against a passage of the natural text', () => {
         expect(WORKAROUND).not.toEqual(NATURAL);
-        for (const tag of ['W1', 'W2', 'W3', 'W4']) expect(firstOf(tag)).toBeGreaterThanOrEqual(0);
-        for (const tag of ['W5', 'W6']) expect(firstOf(tag)).toBe(-1);
-        expect(WORKAROUNDS).toHaveLength(10);
+        for (const tag of ['W1', 'W3', 'W4']) expect(firstOf(tag)).toBeGreaterThanOrEqual(0);
+        for (const tag of ['W2', 'W5', 'W6']) expect(firstOf(tag)).toBe(-1);
+        expect(WORKAROUNDS).toHaveLength(7);
         // The natural keys: the let stays, no resolve() is written.
         expect(WORKAROUND).toContain('let $id = idColumn(c) in {');
         expect(WORKAROUND).not.toContain('resolve(');
@@ -137,19 +137,28 @@ describe('Class2Relational', () => {
         expect(errors.map((e: any) => `${e.line}:${e.column} ${e.message}`)).toEqual(['23:13 Expected source attribute name']);
     });
 
-    it('W2, W3: `x.parent` is null for an element other than the rule\'s own', async () => {
-        const result = await run(partly(firstOf('W2')));
-        expect(result.success).toBe(true);
+    it('W2 is retired: `x.parent` is the container of any element; W3 and W4 are still met (P-2026-11-18-1815)', async () => {
+        const result = await run(partly(firstOf('W3')));
+        // W4: the writer's slip, reported at run time on the owner column of each join table.
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(2);
+        for (const e of result.errors) expect(e).toMatch(/Unknown method 'toLowerCase' for type String\. Did you mean 'toLower'\?/);
+        // W3: `e.parent.types` is the package's types only when e is a class; from an attribute
+        // its parent is a class, which has none.
         expect(new Set(result.warnings)).toEqual(new Set([
-            "Expression evaluation failed (JjelExpression): Cannot access property 'types' of null",
-            "Expression evaluation failed (JjelExpression): Cannot access property 'name' of null",
+            "Expression evaluation failed (JjelExpression): Cannot call method 'filter' on null",
         ]));
-        // The join tables lose their name, their owner column's name and every Integer type. The
-        // key is the table's own owner column (#515); before P-2026-11-03-2111 it was a second one.
-        expect(render(result).filter(l => l.startsWith('table null'))).toEqual([
-            'table null: null:null, phones:String | key ?',
-            'table null: null:null, itemsId:null | key ?',
-        ]);
+        // Before P-2026-11-18-1815 this stage also warned `Cannot access property 'name' of null`
+        // from `a.parent.name`; the test below shows the natural owner and foreign keys build.
+    });
+
+    it('W3 and W4 applied, the natural owner column and foreign keys build the expected schema', async () => {
+        const result = await run(WORKAROUND);
+        expect(WORKAROUND).toContain('let $owner = ownerColumn(a) in {');
+        expect(WORKAROUND).toContain('name := "fk_" + a.parent.name + "_" + a.name');
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(render(result)).toEqual(EXPECTED_SCHEMA);
     });
 
     it('#515: a let holds its value: $id used three times is one column, the table\'s own, and nothing is left at the root', async () => {

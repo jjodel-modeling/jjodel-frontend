@@ -1459,3 +1459,22 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Smoke visivo**: passato — Alfonso, 2026-11-18, on :3002 (branch jjel-object-identity): Families2Persons with guards on objects gives 4 Female and 5 Male; his further checks fine.
 **Notes**: Not a regression: same code at 3.0.0, 3.1.0, 3.1.2; October compared a quantifier variable (pool handle), November `self` (a separate record). Tests first, 12 of 20 red; bench in `29aab5059`, one mutant survives as declared intent. Typecheck 0; vitest 20 red in 6 tooling and Chromium files, red the same way on `e30274962` here, plus the 3 known. Run by the chat in a cloud checkout. Also fixed: `distinct` threw on handles. Details: the report.
 **Prompt document name**: 2026-11-17 22:19
+
+## 2026-11-18 — fix(jjtl): parent as a property of source objects, lexical helper scope (P-2026-11-18-1815)
+**Prompt**: `claude_2026-11-18_1815_prompt_jjtl_parent_helper_scope.md`, full lane, two-phase, worktree `~/jjodel-w-jjtl-parent` on `jjtl-parent-scope`. A: `x.parent` yields the container of any source object (alias, helper parameter, `forall` element, `{ __ref }` handle), bare `parent` unchanged. B: a helper body sees its parameters, builtins, helpers and `data`, nothing from the caller's instance context. Phase 2 on Alfonso's GO with the answers to report §10.
+**Files touched**: `bf6005d37` `docs/discovery/discovery_2026-11-18_jjtl_parent_and_helper_scope.md`; `94c1c4d47` `frontend/src/jjtl/executor/__tests__/parent-and-helper-scope.test.ts` (16/20 red on base); `6730df10b` (A) `frontend/src/jjtl/executor/executor.ts`, the new test file, `frontend/src/jjtl/executor/__tests__/class2relational.test.ts`, `frontend/src/jjtl/__tests__/fixtures/class2relational.ts`; `cbc8f5c86` (B) `executor.ts`; `0e59c274c` `frontend/src/jjtl/SPEC.md` §3.4, §4.2, §7.3. This commit: this inbox, the report's §0, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run src/jjtl src/jjel` 1574 passed, one file red at import (`ai-prompt-sanitization`, the known window-not-defined), base `4bfd26add` 1553 passed with the same red file; typecheck exit 0, 0 `error TS`; build exit 0, only the chunk warnings.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — executor semantics, covered by the new tests on both parse paths; no UI change.
+**Notes**: Nine files, above five (rule 19): the six of DOVE plus `class2relational.test.ts` and its fixture, widened by Alfonso in the GO (§10.1), and this inbox. W2 retired from WORKAROUNDS, 10 to 7 (ownerColumn needed a new W3 edit). Father fallback skipped for serialized source elements (§10.2). Free names in a helper read null (§10.3). Mutation bench in the report and the A commit. Ticket below: `data` elements (§10.4).
+**Prompt document name**: 2026-11-18 18:15
+
+## 2026-11-18 — ticket: JjTL data elements carry no parent getter
+**Ticket**: `data.filter(...).first().parent` stays null after P-2026-11-18-1815: `data` is bound in `initializeContext` (`frontend/src/jjtl/executor/executor.ts:1405`) as `shallowToJjelValue(sourceModel)`, the raw source array, so its elements never pass through `sourceView` and get no `parent` getter. Only objects reached through an instance, alias, parameter, `forall` element or `{ __ref }` handle have it. Left out by Alfonso's answer to report §10.4.
+**Priority**: low
+**Found in**: P-2026-11-18-1815
+**Detail**: `docs/discovery/discovery_2026-11-18_jjtl_parent_and_helper_scope.md` (§8, §10.4)

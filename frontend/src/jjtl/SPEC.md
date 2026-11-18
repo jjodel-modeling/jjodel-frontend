@@ -309,6 +309,8 @@ returnType = IDENTIFIER ;
 
 **Scoping:** inside a helper's body its parameters shadow a helper, or any builtin, of the same name. Read as a value (`pick`, or passed on as `f(cx, pick)`), the name is the argument. Called (`pick(...)`), it is the argument only when the argument is a function; otherwise the call goes to the helper. The shadowing covers the body and the lambdas in it, not the helpers it calls: each helper sees its own parameters only. Outside helper bodies JjEL resolution is unchanged, builtins first (P-2026-11-06-2226; before it, the parameter read as the helper, silently).
 
+The scope of a body is lexical (P-2026-11-18-1815): it is evaluated in a child of the root context, never of the caller's. It sees its parameters, the helpers and builtins (`resolve`, `range`, the called rules, the environment builtins, which read the environment of the running application as before), and the root bindings of §7.3: `data`, and `source` as the whole source model. It sees nothing of the context it is called from: not the caller's `self`, `source`, `it`, alias, instance features or bare `parent`, not a `let` binding, not a `forall` variable, not the parameters of the called rule it is called from. Such a name reads as any undefined name does on both parse paths: null, with no warning; a member read on it (`parent.mother`) warns `Cannot access property 'mother' of null`. What the body needs from the caller travels as an argument: `helper isMother(m : Member) -> Boolean { m.parent.mother == m }`. Before P-2026-11-18-1815 the body ran in a child of the caller's context, so the caller's names leaked into it and `parent.mother == m` worked only when `m` was the rule's own instance.
+
 ```jjtl
 helper pick(x: Any, which: String) -> String { if which == "a" then "A" else "B" }
 helper echo(cx: Any, pick: String) -> String { pick }               -- the argument
@@ -459,7 +461,9 @@ on a contained class that was silently empty now produces output, and `source` /
 (bound to the whole array) count more elements than before.
 
 Each contained object carries `_containerId`, the id of the object that owns it through
-a containment feature; `parent` resolves through it (§7.3).
+a containment feature; `parent` resolves through it, as the bare name of the current instance
+and as the property `x.parent` of any source object (§7.3). A root carries no `_containerId`,
+so its `parent` is null.
 
 **Several source models of one metamodel (R-JTG-26).** The source may also be a list of
 models, each an array of objects: an array whose items are **all** arrays. The signature of
@@ -884,13 +888,35 @@ All JjEL builtins are available in JjTL expressions:
 
 ### 7.3 Context Binding
 
-For each source instance, the executor creates a child `EvaluationContext` with:
-- `source` → the source instance object
-- `self` → the target instance (when available)
-- `data` → the source model root
+The root context binds `data` and `source` to the whole source model (`classes` and
+`instances` too, when the source has them), and holds the helpers and builtins. For each
+source instance, the executor creates a child of it with:
+- `source`, `self` and `it` → the source instance (`self` is the source instance, not the
+  target; the target is reached through the trace, §5)
+- the alias of the rule, when it has one → the source instance
 - All non-`__` properties of the source instance as individual bindings (e.g., `name`, `isAbstract`, etc.)
+- `parent` → the container of the source instance (below)
+- `data` → the source model root, from the root context
 
-This means `name` and `source.name` are equivalent in expressions.
+This means `name` and `source.name` are equivalent in expressions. A helper body is not a
+child of this context but of the root (§3.4).
+
+**`parent`.** The container of a source object, bound as the bare name `parent` for the
+current instance, and readable as the property `x.parent` of any source object `x`: `self`,
+an alias, a helper parameter, a `forall` element, the handle of a `{ __ref }` value
+(P-2026-11-18-1815). Both forms resolve the same way:
+1. a user feature named `parent` wins;
+2. else `_containerId`, looked up in the source model (§4.2);
+3. else, only for an object that is not an element of the serialized source array (a string
+   `id`, and a `className` or `__type`), `father` / `eContainer` / `owner`, as L-layer proxies
+   and test objects carry it. An element of the array has no fallback: a root's `parent` is
+   null, and its own feature `father` (Families) is not read as its container.
+
+`x.parent` is a non-enumerable getter on the view or handle the expression reads, as the
+features of a `{ __ref }` handle are, so `Object.keys`, JSON and the trace see the same keys as
+before; it is lazy, so a cycle (`m.parent.daughters.first().parent`) is followed one read at a
+time, and `==` decides by id (P-2026-11-17-2219). Not covered: an element read straight from
+`data` (`data.filter(...).first().parent` is null), because `data` is the raw array.
 
 ### 7.4 All instances of a type: search `data`
 
