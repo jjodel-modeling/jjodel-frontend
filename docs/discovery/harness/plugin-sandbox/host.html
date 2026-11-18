@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>plugin sandbox host</title></head>
+<body>
+<script>
+/*
+ * Plugin sandbox harness: the host page (P-2026-10-31-1800). Stands for Jjodel: it holds secrets in its own
+ * storage and loads the plugin page in <iframe sandbox="allow-scripts">. The probe drives it through
+ * runMain, runOnly and runEcho.
+ */
+localStorage.setItem('hostSecret', 'ls-secret');
+const idb = indexedDB.open('hostdb', 1);
+idb.onupgradeneeded = () => idb.result.createObjectStore('secrets');
+
+const SELF = location.origin;
+const EXT = `http://127.0.0.1:${Number(location.port) + 1}`;
+const UDP = Number(location.port) + 2;
+
+function frame(mode, only) {
+    return new Promise((res, rej) => {
+        const f = document.createElement('iframe');
+        f.setAttribute('sandbox', 'allow-scripts');
+        f.src = `/plugin.html?mode=${mode}${only ? `&only=${only}` : ''}`;
+        const t = setTimeout(() => rej(new Error('plugin not ready in 5000 ms')), 5000);
+        const h = (e) => {
+            if (e.source === f.contentWindow && e.data && e.data.type === 'ready') {
+                clearTimeout(t);
+                window.removeEventListener('message', h);
+                res(f);
+            }
+        };
+        window.addEventListener('message', h);
+        document.body.appendChild(f);
+    });
+}
+function reply(f, type, ms) {
+    return new Promise((res) => {
+        const h = (e) => {
+            if (e.source === f.contentWindow && e.data && e.data.type === type) {
+                window.removeEventListener('message', h);
+                res({ data: e.data, origin: e.origin });
+            }
+        };
+        window.addEventListener('message', h);
+        setTimeout(() => res({ timeout: true }), ms);
+    });
+}
+
+window.runMain = async (mode) => {
+    const f = await frame(mode);
+    const wait = reply(f, 'run', 90000);
+    f.contentWindow.postMessage({ cmd: 'run', mode, SELF, EXT, UDP }, '*');
+    const r = await wait;
+    f.remove();
+    return { messageOrigin: r.origin, ...r.data, timeout: r.timeout };
+};
+
+window.runOnly = async (mode, vector) => {
+    const f = await frame(mode, vector);
+    const wait = reply(f, 'only', 2500);
+    f.contentWindow.postMessage({ cmd: 'run', mode, SELF, EXT, UDP }, '*');
+    const r = await wait;
+    await new Promise((x) => setTimeout(x, 1000));
+    let frameReadable = 'n/a';
+    try { frameReadable = f.contentWindow.location.href; } catch (e) { frameReadable = 'cross-origin (' + e.name + ')'; }
+    f.remove();
+    return { js: r.data ? r.data.js : 'no reply (frame replaced?)', frameReadable, hostUrl: location.href };
+};
+
+function payload(targetBytes) {
+    const objects = [];
+    let size = 2;
+    for (let i = 0; size < targetBytes; i++) {
+        const o = { id: `Pointer_${i}`, className: 'DObject', name: `object${i}`, father: 'Pointer_model',
+            instanceof: `Pointer_class${i % 40}`, features: [`Pointer_v${i}a`, `Pointer_v${i}b`, `Pointer_v${i}c`],
+            values: [i, `text value ${i}`, i % 2 === 0] };
+        objects.push(o);
+        size += JSON.stringify(o).length + 1;
+    }
+    return { idlookup: objects };
+}
+
+window.runEcho = async (mode, n, targetBytes, asString) => {
+    const f = await frame(mode);
+    const started = reply(f, 'startEcho', 5000);
+    f.contentWindow.postMessage({ cmd: 'startEcho' }, '*');
+    const s = await started;
+    if (!s.data || !s.data.start.started) return { error: 'worker did not start', s };
+    const obj = payload(targetBytes);
+    const json = JSON.stringify(obj);
+    const body = asString ? json : obj;
+    const times = [];
+    let intact = true;
+    for (let i = 0; i <= n; i++) {
+        const wait = reply(f, 'echo', 10000);
+        const t0 = performance.now();
+        f.contentWindow.postMessage({ cmd: 'echo', id: i, payload: body }, '*');
+        const r = await wait;
+        const dt = performance.now() - t0;
+        if (!r.data || !r.data.payload) return { error: 'echo lost', i };
+        if (i === 0) {
+            const back = asString ? r.data.payload : JSON.stringify(r.data.payload);
+            intact = back === json;
+            continue; // warm-up
+        }
+        times.push(dt);
+    }
+    f.remove();
+    times.sort((a, b) => a - b);
+    return { bytes: json.length, n: times.length, intact, median: times[Math.floor(times.length / 2)],
+        p90: times[Math.floor(times.length * 0.9) - 1] ?? times[times.length - 1], min: times[0], max: times[times.length - 1] };
+};
+
+window.hostReady = true;
+</script>
+</body>
+</html>

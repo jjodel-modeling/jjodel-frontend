@@ -122,12 +122,14 @@ try {
     // 5. The printer's runtime, as a module in the worker.
     const runtime = await page.evaluate(`import('/src/codegen/target/js/printer.ts').then(m => m.JS_RUNTIME)`) as string;
     const rt = await run({
-        code: `${runtime}\nexport function div(a, b) { return $div(a, b); }\nexport function eager() { return $and(false, $read({ marking: {}, attrs: {} }, "M", "zzz")); }`,
+        code: `${runtime}\nexport function div(a, b) { return $div(a, b); }`,
         calls: [{ fn: 'div', args: [1, 0] }, { fn: 'div', args: [1, 4] }],
     });
     check('JS_RUNTIME loads in the worker: $div(1, 0) is null, $div(1, 4) is 0.25', JSON.stringify(rt.response) === JSON.stringify({ ok: true, results: [null, 0.25] }), rt.response);
-    const eager = await run({ code: `${runtime}\nexport function eager() { return $and(false, $read({ marking: {}, attrs: {} }, "M", "zzz")); }`, calls: [{ fn: 'eager', args: [] }] });
-    check('JS_RUNTIME in the worker: and with a throwing right operand throws', eager.response.ok === false && eager.response.error.kind === 'runtime', eager.response);
+    const skip = await run({ code: `${runtime}\nexport function skip() { return $and(false, () => $read({ marking: {}, attrs: {} }, "M", "zzz")); }`, calls: [{ fn: 'skip', args: [] }] });
+    check('JS_RUNTIME in the worker: and under a false left skips a throwing right operand', JSON.stringify(skip.response) === JSON.stringify({ ok: true, results: [false] }), skip.response);
+    const reached = await run({ code: `${runtime}\nexport function reached() { return $and(true, () => $read({ marking: {}, attrs: {} }, "M", "zzz")); }`, calls: [{ fn: 'reached', args: [] }] });
+    check('JS_RUNTIME in the worker: and under a true left reaches a throwing right operand, which throws', reached.response.ok === false && reached.response.error.kind === 'runtime', reached.response);
 
     // 6. A syntax error: measured, not asserted.
     const syntax = await run({ code: 'export function f() {\n  return 1 +;\n}', calls: [{ fn: 'f', args: [] }] });

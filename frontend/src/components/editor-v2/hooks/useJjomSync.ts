@@ -44,9 +44,12 @@ import {
     clearCanvasEdgePair,
     clearCanvasEdgePairs,
     isSingletonSuppressed,
+    acquirePopulateOwner,
+    releasePopulateOwner,
+    isPopulateOwner,
 } from '../sync/syncState';
 import { elementSnapshotsOf, snapshotUnchanged, layoutKeyOnlyChange, rekeyedNode } from '../sync/vertexSnapshot';
-import { getLayoutKeyOf } from '../viewpoint/layout/vertexLayoutAdapter';
+import { getLayoutKeyOf, getLayoutKeyFor } from '../viewpoint/layout/vertexLayoutAdapter';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
@@ -226,6 +229,55 @@ function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
 }
 
 // ---------------------------------------------------------------------------
+// Open settle gate (P-2026-11-04-1500)
+// ---------------------------------------------------------------------------
+// The creators of a populate run reach the store through an async TRANSACTION
+// and a setTimeout(0) dispatch (action.ts:210-226, :349), after the init effect
+// of the same commit has pushed what the graph held. `onInitialized` (EditorV2's
+// open-time layout decision) therefore waits until the open has settled.
+// See docs/discovery/lir_2026-11-04_elk_open_race.md.
+
+/** Re-check interval while the open has not settled. */
+const OPEN_SETTLE_POLL_MS = 50;
+/** Past this time from the init push the open-time layout is given up: it would move nodes the user may be looking at. */
+export const OPEN_SETTLE_DEADLINE_MS = 10_000;
+
+export type OpenSettleVerdict = 'wait' | 'settled' | 'touched' | 'deadline';
+
+export interface OpenSettleInput {
+    /** Ids the populate runs of this mount got back from DVertex.new / DVoidEdge.new2. */
+    created: readonly string[];
+    idlookup: Record<string, unknown>;
+    /** The graph's subElements in the store. */
+    listed: readonly string[];
+    /** The subElements the last canvas push processed (init effect or incremental sync). */
+    processed: readonly string[];
+    /** A React Flow patch is queued or its flush is scheduled. */
+    patchQueued: boolean;
+    /** Objects of the model Step 2bis has still to give a vertex (collectPendingVertexObjects):
+     *  the creating populate run can come in a later commit than the init push. */
+    unplacedObjects: number;
+    /** A canvas write-back marked an element of the graph: the user has started working. */
+    touched: boolean;
+    elapsedMs: number;
+    deadlineMs: number;
+}
+
+/**
+ * Settled: every object of the model has a vertex, every created element is in the store,
+ * every one the graph lists has been pushed to the canvas, no patch is queued. `pending` is
+ * the created ids still awaited.
+ */
+export function openSettleVerdict(i: OpenSettleInput): { verdict: OpenSettleVerdict; pending: string[] } {
+    const listed = new Set(i.listed);
+    const processed = new Set(i.processed);
+    const pending = i.created.filter(id => !(id in i.idlookup) || (listed.has(id) && !processed.has(id)));
+    if (i.touched) return { verdict: 'touched', pending };
+    if (i.unplacedObjects === 0 && pending.length === 0 && !i.patchQueued) return { verdict: 'settled', pending };
+    return { verdict: i.elapsedMs >= i.deadlineMs ? 'deadline' : 'wait', pending };
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -235,6 +287,7 @@ export function useJjomSync(
     setEdges: SetEdges,
     onInitialized?: () => void,
     layoutOptions?: AutoLayoutOptions,
+    viewpointId?: string | null,
 ): UseJjomSyncResult {
     const layout = layoutOptions
         ? { ...DEFAULT_LAYOUT, ...layoutOptions }
@@ -254,6 +307,23 @@ export function useJjomSync(
     const pendingEdgePatchRef = useRef<((prev: Edge[]) => Edge[])[]>([]);
     const rafIdRef = useRef<number>(0);
 
+    // ── Open settle gate state, keyed by modelid (see openSettleVerdict) ──
+    const openGateRef = useRef<{
+        modelid?: string; graphId?: string; created: string[];
+        active: boolean; done: boolean; startedAt: number; timer?: ReturnType<typeof setTimeout>;
+    }>({ created: [], active: false, done: false, startedAt: 0 });
+    const openSettleCheckRef = useRef<() => void>(() => {});
+    const onInitializedRef = useRef(onInitialized);
+    onInitializedRef.current = onInitialized;
+    const openGateFor = (id: string) => {
+        const gate = openGateRef.current;
+        if (gate.modelid !== id) {
+            if (gate.timer !== undefined) clearTimeout(gate.timer);
+            openGateRef.current = { modelid: id, created: [], active: false, done: false, startedAt: 0 };
+        }
+        return openGateRef.current;
+    };
+
     const scheduleFlush = useCallback(() => {
         if (rafIdRef.current) return; // already scheduled
         rafIdRef.current = requestAnimationFrame(() => {
@@ -266,6 +336,7 @@ export function useJjomSync(
             if (edgeFns.length > 0) {
                 setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
             }
+            openSettleCheckRef.current();
         });
     }, [setNodes, setEdges]);
 
@@ -446,6 +517,23 @@ export function useJjomSync(
         return h;
     });
 
+    // ── Populate owner (multi-tab L4, R-MT-17) ───────────────────────
+    // With several instances mounted on one model, the first mounted owns the
+    // populate below and hands it over on unmount; the others render only. This
+    // effect is declared before the populate effect so that it runs first in every
+    // commit. A model switch releases the old model without clearing anything (the
+    // unmount effect never cleared on a switch); the unmount effect releases the
+    // held model and clears the registries on the last release.
+    // See docs/discovery/lir_2026-11-07_l4_populate_owner.md.
+    const populateTokenRef = useRef<object>({});
+    const heldModelRef = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        if (heldModelRef.current === modelid) return;
+        if (heldModelRef.current !== undefined) releasePopulateOwner(heldModelRef.current, populateTokenRef.current);
+        heldModelRef.current = modelid;
+        if (modelid !== undefined) acquirePopulateOwner(modelid, populateTokenRef.current);
+    }, [modelid]);
+
     // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
     const justCreatedGraphRef = useRef(false);
@@ -453,12 +541,17 @@ export function useJjomSync(
     useEffect(() => {
         if (!modelid || creatingGraphRef.current) return;
 
+        // A non-owner runs the analysis below and keeps the canvas-only halves of the
+        // stale-edge deletes; every D-layer write of the run is the owner's (L4).
+        const ownsPopulate = isPopulateOwner(modelid, populateTokenRef.current);
+
         // If no v2-flow graph exists yet, create one (even for empty metamodels).
         // Previously we waited for modelClassCount > 0, which caused a chicken-
         // and-egg problem: the graph is needed for JjOM mode, but JjOM mode is
         // needed to create classes, which populate classCount. We only wait for
         // classCount when the graph already exists (for incremental population).
         const needsNewGraph = !hasGraph;
+        if (needsNewGraph && !ownsPopulate) return;
         if (!needsNewGraph && modelClassCount === 0 && modelObjectCount === 0) return;
 
         // ── Determine what needs to be created ──────────────────────────
@@ -704,8 +797,13 @@ export function useJjomSync(
         // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
         // so they must NOT be wrapped in an outer TRANSACTION (nesting
         // causes x/y coordinates to be lost).
-        creatingGraphRef.current = true;
-        justCreatedGraphRef.current = true;
+        if (ownsPopulate) {
+            creatingGraphRef.current = true;
+            justCreatedGraphRef.current = true;
+        }
+        // The open settle gate waits for what this run creates.
+        const openGate = openGateFor(modelid);
+        const recordCreated = (id: string | undefined) => { if (id && !openGate.done) openGate.created.push(id); };
 
         try {
             // Step 1: Create graph if needed
@@ -719,7 +817,7 @@ export function useJjomSync(
             }
 
             // Step 2: Create missing vertices
-            if (missingClassifiers.length > 0) {
+            if (ownsPopulate && missingClassifiers.length > 0) {
                 const existingCount = vertexIdByModelId.size;
                 const COLS = layout.cols;
                 const COL_W = layout.colWidth;
@@ -737,6 +835,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, entry.id, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(entry.id, dv.id);
+                        recordCreated(dv.id);
                     }
                 }
             }
@@ -745,7 +844,7 @@ export function useJjomSync(
             // JjScript and JjTL transformations create DObject instances directly,
             // without creating their corresponding DVertex in the flow graph. This
             // step ensures every DObject in the model is represented in the graph.
-            if (missingObjectsCount > 0) {
+            if (ownsPopulate && missingObjectsCount > 0) {
                 const existingCount = vertexIdByModelId.size;
                 const COLS = layout.cols;
                 const COL_W = layout.colWidth;
@@ -769,6 +868,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, objId, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(objId, dv.id);
+                        recordCreated(dv.id);
                         createdSoFar++;
                     }
                 }
@@ -820,7 +920,7 @@ export function useJjomSync(
                             return !(endClassId && currentSupIds.has(endClassId));
                         });
                         if (staleExtendEdges.length > 0) {
-                            TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
+                            if (ownsPopulate) TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
                                 for (const pe of staleExtendEdges) {
                                     const staleRaw = idlookup[pe.edgeId];
                                     if (staleRaw) DeleteElementAction.new(staleRaw);
@@ -849,12 +949,12 @@ export function useJjomSync(
                     const tgtVertex = vertexIdByModelId.get(supId);
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
                         const ek = `${srcVertex}→${tgtVertex}`;
-                        if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
-                            DVoidEdge.new2(
+                        if (ownsPopulate && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                            recordCreated(DVoidEdge.new2(
                                 undefined, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isExtend = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             // Register pair so subsequent auto-populate runs
                             // won't recreate this edge even if DVoidEdge.new2
@@ -905,7 +1005,7 @@ export function useJjomSync(
                             // DeleteElementAction cascades via pointedBy, which
                             // maintains the edgesIn/edgesOut reciprocals (same as the
                             // reconcile extras delete and syncDeleteEdge).
-                            TRANSACTION('Delete stale DReference edge (cross-metamodel retarget)', () => {
+                            if (ownsPopulate) TRANSACTION('Delete stale DReference edge (cross-metamodel retarget)', () => {
                                 for (const staleId of crossDecision.deleteEdgeIds) {
                                     const staleRaw = idlookup[staleId];
                                     if (staleRaw) DeleteElementAction.new(staleRaw);
@@ -939,12 +1039,12 @@ export function useJjomSync(
                         // hasCanvasEdgePair is pair-based and would block siblings,
                         // so it's not consulted here — race-window protection is
                         // provided by the idlookup scan above.
-                        if (!existingEdgeKeys.has(ek)) {
-                            DVoidEdge.new2(
+                        if (ownsPopulate && !existingEdgeKeys.has(ek)) {
+                            recordCreated(DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isReference = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             markCanvasEdgePair(srcVertex, tgtVertex);
                         }
@@ -978,7 +1078,7 @@ export function useJjomSync(
                         //
                         // Atomicity is verified by the §4.6 smoke test, not by
                         // unit tests (no mock-store harness exists for this layer).
-                        TRANSACTION('Reconcile DReference edge endpoint', () => {
+                        if (ownsPopulate) TRANSACTION('Reconcile DReference edge endpoint', () => {
                             if (decision.retargetNeeded) {
                                 // `as any` casts match the existing convention in
                                 // this file (e.g. `graphId: any` at the
@@ -1009,7 +1109,7 @@ export function useJjomSync(
             // doesn't have an edge yet. This makes reference values written by
             // JjTL transformations (or by STEP 8b in ProjectEditor) visible as
             // edges in the flow diagram.
-            if (missingM1EdgeCount > 0) {
+            if (ownsPopulate && missingM1EdgeCount > 0) {
                 // Re-read store in case Step 2 just created vertices
                 const freshLookup = store.getState()?.idlookup;
                 if (freshLookup) {
@@ -1048,11 +1148,11 @@ export function useJjomSync(
                             // its own edge.
                             const ek = `${metaId}:${srcVertex}→${tgtVertex}`;
                             if (!existingEdgeKeys.has(ek)) {
-                                DVoidEdge.new2(
+                                recordCreated(DVoidEdge.new2(
                                     metaId, graphId, graphId, undefined,
                                     srcVertex, tgtVertex,
                                     (d: DEdge) => { d.isReference = true; }
-                                );
+                                )?.id);
                                 existingEdgeKeys.add(ek);
                                 markCanvasEdgePair(srcVertex, tgtVertex);
                             }
@@ -1077,11 +1177,65 @@ export function useJjomSync(
     // Plus, per element with a model element, a content hash of everything else the
     // vertex's node renders, the layout key in force included (R-MT-19): a single number
     // entry per vertex — avoids infinite re-render loops. See sync/vertexSnapshot.ts.
+    // The key is the tab's (multi-tab L3): `viewpointId` is the viewpoint of the tab that owns this
+    // canvas, `undefined` when none does, which reads the root as before. A parameter and not the
+    // EditorContext: EditorV2Inner calls this hook above the provider it renders.
+    const layoutKeyIn = (state: DState): string => viewpointId === undefined
+        ? getLayoutKeyOf(state) : getLayoutKeyFor(state, viewpointId);
     const elementSnapshots = useSelector((state: DState) =>
-        elementSnapshotsOf(state.idlookup as any, subElementIds, getLayoutKeyOf(state)), mapReferenceEqual);
+        elementSnapshotsOf(state.idlookup as any, subElementIds, layoutKeyIn(state)), mapReferenceEqual);
     // The key that snapshot was built under, read off the same state: the incremental sync compares
-    // it with prevLayoutKeyRef to patch a vertex the key alone moved (P-2026-11-07-0555).
-    const layoutKey = useSelector((state: DState) => getLayoutKeyOf(state));
+    // it with prevLayoutKeyRef to patch a vertex the key alone moved (P-2026-11-07-0555), and hands
+    // it to every transform below.
+    const layoutKey = useSelector((state: DState) => layoutKeyIn(state));
+
+    // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
+    // Called by the init push, by the flush after its patches, and by its own poll.
+    // The two exits other than a settled open lower justCreatedGraphRef first, so
+    // no open-time layout runs over the user's work or late.
+    openSettleCheckRef.current = () => {
+        const gate = openGateRef.current;
+        if (!gate.active || !gate.graphId) return;
+        const idlookup = (store.getState()?.idlookup ?? {}) as Record<string, any>;
+        const listed: string[] = idlookup[gate.graphId]?.subElements ?? EMPTY_ARRAY;
+        const vertexByObject = new Map<string, string>();
+        for (const id of listed) {
+            const se = idlookup[id];
+            if (se?.className?.includes('Vertex') && se.model) vertexByObject.set(se.model, id);
+        }
+        const unplacedObjects = collectPendingVertexObjects({
+            objects: idlookup[gate.modelid ?? '']?.objects ?? [],
+            idlookup,
+            vertexByObject,
+            isSuppressed: isSingletonSuppressed,
+        }).size;
+        const { verdict, pending } = openSettleVerdict({
+            created: gate.created,
+            idlookup,
+            listed,
+            processed: prevSubElementsRef.current,
+            patchQueued: rafIdRef.current !== 0 || pendingNodePatchRef.current.length > 0 || pendingEdgePatchRef.current.length > 0,
+            unplacedObjects,
+            touched: listed.some(id => isCanvasUpdated(id)),
+            elapsedMs: Date.now() - gate.startedAt,
+            deadlineMs: OPEN_SETTLE_DEADLINE_MS,
+        });
+        gate.created = pending;
+        if (verdict === 'wait') {
+            if (gate.timer === undefined) {
+                gate.timer = setTimeout(() => { gate.timer = undefined; openSettleCheckRef.current(); }, OPEN_SETTLE_POLL_MS);
+            }
+            return;
+        }
+        if (gate.timer !== undefined) clearTimeout(gate.timer);
+        gate.timer = undefined;
+        gate.active = false;
+        gate.done = true;
+        gate.created = [];
+        if (verdict !== 'settled') justCreatedGraphRef.current = false;
+        const cb = onInitializedRef.current;
+        if (cb) requestAnimationFrame(() => cb());
+    };
 
     // ── Initialization: full transform on mount or modelid change ──────
     useEffect(() => {
@@ -1122,11 +1276,11 @@ export function useJjomSync(
 
             for (const v of vertices) {
                 if (isSingletonSuppressed(v.id)) continue;
-                const rfNode = jjomVertexToRFNode(v);
+                const rfNode = jjomVertexToRFNode(v, layoutKey);
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
             for (const e of edges) {
-                const rfEdge = jjomEdgeToRFEdge(e);
+                const rfEdge = jjomEdgeToRFEdge(e, layoutKey);
                 // Skip orphan edges (source/target vertex not in graph)
                 if (rfEdge && nodeCache.has(rfEdge.source) && nodeCache.has(rfEdge.target)) {
                     edgeCache.set(rfEdge.id, rfEdge);
@@ -1152,10 +1306,14 @@ export function useJjomSync(
 
             initializedRef.current = true;
 
-            // Notify caller (e.g. to fitView) — delay to let RF measure nodes
-            if (onInitialized) {
-                requestAnimationFrame(() => onInitialized());
-            }
+            // Notify caller (e.g. to fitView) once the open has settled — the check
+            // delays by a frame to let RF measure nodes, as before.
+            const gate = openGateFor(modelid);
+            gate.graphId = graphInfo!.graphId;
+            gate.startedAt = Date.now();
+            gate.active = true;
+            gate.done = false;
+            openSettleCheckRef.current();
         } catch (err) {
             console.warn('[useJjomSync] Initialization error:', err);
         }
@@ -1202,7 +1360,7 @@ export function useJjomSync(
                         // Skip if already in cache (previous cycle's consumeDropCreated)
                         if (!isDropCreated && rfNodeCache.current.has(id)) continue;
 
-                        const rfNode = jjomVertexToRFNode(lProxy);
+                        const rfNode = jjomVertexToRFNode(lProxy, layoutKey);
                         if (rfNode) {
                             if (isDropCreated) {
                                 rfNode.data = { ...rfNode.data, autoEdit: true };
@@ -1218,7 +1376,7 @@ export function useJjomSync(
                             continue;
                         }
 
-                        const rfEdge = jjomEdgeToRFEdge(lProxy);
+                        const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
@@ -1284,7 +1442,7 @@ export function useJjomSync(
                 const className = rekeyed ? elementSnapshots.get(id).className : (lProxy.className ?? lProxy.__raw?.className);
 
                 if (isVertexClassName(className)) {
-                    const rfNode = rekeyed ?? jjomVertexToRFNode(lProxy);
+                    const rfNode = rekeyed ?? jjomVertexToRFNode(lProxy, layoutKey);
                     if (rfNode) {
                         const existing = rfNodeCache.current.get(id);
                         if (existing) {
@@ -1334,7 +1492,7 @@ export function useJjomSync(
                         }
                     }
                 } else if (isEdgeClassName(className)) {
-                    const rfEdge = jjomEdgeToRFEdge(lProxy);
+                    const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                     if (rfEdge) {
                         // Preserve handles from applyDistribution
                         const existing = rfEdgeCache.current.get(id);
@@ -1487,11 +1645,20 @@ export function useJjomSync(
         return () => {
             if (antiBounceTimerRef.current !== undefined) clearTimeout(antiBounceTimerRef.current);
             antiBounceTimerRef.current = undefined;
-            clearAllCanvasUpdated();
-            clearSyncModes();
-            clearDropCreated();
-            clearEdgeRefIds();
-            clearCanvasEdgePairs();
+            if (openGateRef.current.timer !== undefined) clearTimeout(openGateRef.current.timer);
+            openGateRef.current.timer = undefined;
+            openGateRef.current.active = false;
+            // The registries are module-level and shared by every instance: they clear
+            // only when the last instance of the held model unmounts (L4, R-MT-17).
+            const heldModel = heldModelRef.current;
+            heldModelRef.current = undefined;
+            if (heldModel === undefined || releasePopulateOwner(heldModel, populateTokenRef.current)) {
+                clearAllCanvasUpdated();
+                clearSyncModes();
+                clearDropCreated();
+                clearEdgeRefIds();
+                clearCanvasEdgePairs();
+            }
             rfNodeCache.current.clear();
             rfEdgeCache.current.clear();
             prevElementsRef.current.clear();

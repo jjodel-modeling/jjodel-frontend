@@ -18,15 +18,19 @@ vi.mock('../../joiner', () => ({
     DPointerTargetable: { pendingCreation: {} as { [k: string]: any } },
 }));
 
-const { detectDuplicateNames, getSiblingNamespace } = await import('../logicWrapper/nameUniqueness');
+const { detectDuplicateNames, getSiblingNamespace, checkNameUniqueness } = await import('../logicWrapper/nameUniqueness');
 
 type Any = any;
 
-/** The per-object rule, verbatim from the scan before P-2026-10-21-0030. */
+/**
+ * The per-object rule, verbatim from the scan before P-2026-10-21-0030, plus the one
+ * exemption of R-TXT-46 D2: the empty name is nameless and never collides.
+ */
 function oracle(model: Any): Map<string, Any[]> {
     const out = new Map<string, Any[]>();
     for (const obj of model.allSubObjects) {
         if (!obj) continue;
+        if (obj.name === '') continue;
         const colliding = getSiblingNamespace(obj, { includePending: false }).filter((s: Any) => s.name === obj.name);
         if (colliding.length > 0) out.set(obj.id, colliding);
     }
@@ -62,7 +66,7 @@ beforeEach(() => {
     obj('rA', 'Alpha', model);
     obj('rB', 'Alpha', model);
     obj('rC', 'alpha', model);     // case-sensitive: not a homonym of Alpha
-    obj('rE', '', model);          // the empty name compares like any value
+    obj('rE', '', model);          // the empty name is nameless: never a collision (R-TXT-46 D2)
     obj('rF', '', model);
     obj('rD', 'Delta', model);     // collides with the nested n6 (root namespace is recursive)
 
@@ -89,7 +93,6 @@ describe('detectDuplicateNames — same collisions as the per-object rule', () =
     it('reports the expected collisions on the fixture', () => {
         expect(ids(detectDuplicateNames(model))).toEqual({
             rA: ['rB'], rB: ['rA'],
-            rE: ['rF'], rF: ['rE'],
             rD: ['n6'],
             n1: ['n2'], n2: ['n1'],
             n3: ['n4', 'n5'], n4: ['n3', 'n5'], n5: ['n3', 'n4'],
@@ -115,6 +118,20 @@ describe('detectDuplicateNames — same collisions as the per-object rule', () =
         const map = detectDuplicateNames(model);
         expect(map.get('rD')!.map((o: Any) => o.id)).toEqual(['n6']);
         expect(map.has('n6')).toBe(false);
+    });
+
+    it("two nameless ('') siblings are not duplicates, and a named homonym is unaffected (R-TXT-46 D2)", () => {
+        obj('e1', '', v3);
+        obj('e2', '', v3);
+        const map = detectDuplicateNames(model);
+        for (const id of ['rE', 'rF', 'e1', 'e2']) expect(map.has(id)).toBe(false);
+        expect(map.get('rA')!.map((o: Any) => o.id)).toEqual(['rB']);
+    });
+
+    it("checkNameUniqueness never refuses the empty name, and still refuses a taken one", () => {
+        expect(checkNameUniqueness({ father: model, name: '' }).ok).toBe(true);
+        expect(checkNameUniqueness({ father: v3, name: '' }).ok).toBe(true);
+        expect(checkNameUniqueness({ father: model, name: 'Alpha' }).ok).toBe(false);
     });
 
     it('undefined names collide with each other, as `===` does', () => {

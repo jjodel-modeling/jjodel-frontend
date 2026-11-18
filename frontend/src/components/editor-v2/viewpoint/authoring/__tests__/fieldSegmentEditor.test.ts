@@ -10,9 +10,9 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FieldSegmentEditor, applyValueEditable } from '../FieldSegmentEditor';
+import { FieldSegmentEditor, applyLiteralText, applyValueEditable } from '../FieldSegmentEditor';
 import type { FieldSegmentEditorProps } from '../FieldSegmentEditor';
-import { Toggle, Select } from '../../../../ui';
+import { Toggle, Select, Input } from '../../../../ui';
 import type { FieldSegment } from '../../ir/irTypes';
 
 type ValueSegment = Extract<FieldSegment, { kind: 'value' }>;
@@ -124,5 +124,33 @@ describe('FieldSegmentEditor: the editable inline toggle of a value segment', ()
         selects[0].props.onChange!({ target: { value: 'value' } });
         expect(calls).toEqual([{ kind: 'value' }]);
         expect('editable' in calls[0]).toBe(false);
+    });
+});
+
+describe('FieldSegmentEditor: a text edit of a literal segment (P-2026-11-11-2025, R-VP-20)', () => {
+    type LiteralSegment = Extract<FieldSegment, { kind: 'literal' }>;
+    const styled = (): LiteralSegment =>
+        ({ kind: 'literal', text: 'w = ', style: { fontSize: 12, fontWeight: 'medium', color: '#64748b' } });
+
+    it('applyLiteralText replaces the text and keeps the style, deep-equal', () => {
+        expect(applyLiteralText(styled(), 'weight = ')).toEqual({ ...styled(), text: 'weight = ' });
+    });
+
+    it('the text Input keeps a persisted style; rebuilding the segment from scratch kills this test', () => {
+        const calls: FieldSegment[] = [];
+        const inputs = find<{ onChange?: (e: { target: { value: string } }) => void }>(
+            tree(styled(), (s) => calls.push(s)), Input);
+        expect(inputs).toHaveLength(1);
+        inputs[0].props.onChange!({ target: { value: 'weight = ' } });
+        expect(calls).toEqual([{ kind: 'literal', text: 'weight = ', style: styled().style }]);
+    });
+
+    it('a literal without style stays without style: no key is added', () => {
+        const calls: FieldSegment[] = [];
+        const inputs = find<{ onChange?: (e: { target: { value: string } }) => void }>(
+            tree({ kind: 'literal', text: '=' }, (s) => calls.push(s)), Input);
+        inputs[0].props.onChange!({ target: { value: ':' } });
+        expect(calls).toEqual([{ kind: 'literal', text: ':' }]);
+        expect('style' in calls[0]).toBe(false);
     });
 });

@@ -1247,6 +1247,52 @@ $transition: 150ms ease;
 }
 
 // ============================================
+// IMPORTED MARKER — gallery card and list row
+// Overlaid, so the card keeps its size when the marker appears and goes.
+// ============================================
+
+.imported-marker__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-success);
+  pointer-events: none;
+
+  .gallery-card & { border-radius: 8px 8px 0 0; }
+}
+
+.imported-marker__badge {
+  position: absolute;
+  padding: 2px 6px;
+  border: 0.5px solid var(--color-success);
+  border-radius: 4px;
+  background: var(--color-success-bg);
+  color: var(--color-green-800);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+
+  // In the footer, right of the timestamp
+  .gallery-card & {
+    right: 14px;
+    bottom: 11px;
+  }
+
+  // In the actions slot, which is empty until the row is hovered
+  .project-row & {
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .project-row:hover & { opacity: 0; }
+}
+
+// ============================================
 // PROJECT CHECKBOX - Bulk Selection
 // ============================================
 

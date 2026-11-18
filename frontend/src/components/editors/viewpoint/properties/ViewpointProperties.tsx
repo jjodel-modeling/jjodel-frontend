@@ -13,6 +13,7 @@ import {
     type MetaclassColorRow,
     type MetaclassColoring,
 } from '../../../../view/viewPoint/metaclassPalette';
+import { bindingsDeclarePotency, ONTO_LEVEL_KEY, ontoLevelKeyOf, type OntoLevel } from '../../../editor-v2/hooks/instantiate';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -30,6 +31,15 @@ const typeOptions: { value: ViewpointType; label: string; enabled: boolean; reas
     { value: 'semantics', label: 'Semantics', enabled: false, reason: 'Not available yet.' },
     { value: 'editor_behavior', label: 'Editor', enabled: false, reason: 'Not available yet.' },
 ];
+
+const ontoLevelOptions: { value: OntoLevel; label: string }[] = [
+    { value: 'both', label: 'Classes and instances' },
+    { value: 'class', label: 'Classes' },
+    { value: 'instance', label: 'Instances' },
+];
+
+/** The integer levels the select adds when a binding declares a potency role (R-OI-29), numbered from the top. */
+const ontoLevelNumberOptions: { value: string; label: string }[] = [0, 1, 2, 3, 4].map((n) => ({ value: String(n), label: `Level ${n}` }));
 
 /**
  * One entry of the metaclass dropdown: the class, and the colour it paints under this viewpoint.
@@ -112,6 +122,21 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).metaclassColoring = clearMetaclassOverrides(readMetaclassColoring(viewpoint.__raw as any));
     }, [viewpoint, readOnly]);
 
+    // The ontological level (R-OI-19), Advanced only: absent reads as `both`. One write through the `state` setter,
+    // which merges, one undo entry; `both` is written, never the key removed: undo does not restore a removed key.
+    const advanced = useSelector((state: any) => !!state.advanced);
+    // The stored value stays a string, an alias or integers (R-OI-29), compared in its canonical form.
+    const ontoLevel = useSelector((state: any) => ontoLevelKeyOf((id: string) => state.idlookup?.[id], vpId));
+    const writeOntoLevel = useCallback((level: string) => {
+        if (readOnly || level === ontoLevel) return;
+        (viewpoint as any).state = { [ONTO_LEVEL_KEY]: level };
+    }, [viewpoint, readOnly, ontoLevel]);
+    const levelsByNumber = useSelector((state: any) => bindingsDeclarePotency((id: string) => state.idlookup?.[id], state.m2models ?? []));
+    const levelOptions: { value: string; label: string }[] = levelsByNumber ? [...ontoLevelOptions, ...ontoLevelNumberOptions] : ontoLevelOptions;
+    // A list such as `'1,2'`, or a level with no potency role left, has no entry: it shows as read, and an entry replaces it.
+    const levelValue = levelOptions.find((o) => o.value === ontoLevel)
+        ?? { value: ontoLevel, label: `${ontoLevel.includes(',') ? 'Levels' : 'Level'} ${ontoLevel.split(',').join(', ')}` };
+
     return (
         <div className="workbench-properties">
             <h4 className="workbench-properties__section-header">Viewpoint</h4>
@@ -144,6 +169,21 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                 </div>
                 <p className="wp-field__hint">Only Syntax can be chosen here.</p>
             </div>
+
+            {advanced && (
+                <div className="wp-field">
+                    <label className="wp-field__label" id={`${colorId}-onto-level`}>Ontological level</label>
+                    <JjSelect<{ value: string; label: string }>
+                        className="jj-select wp-onto-level-select"
+                        aria-labelledby={`${colorId}-onto-level`}
+                        options={levelOptions as any}
+                        value={levelValue}
+                        onChange={(o: any) => { if (o) writeOntoLevel(o.value); }}
+                        isDisabled={readOnly}
+                    />
+                    <p className="wp-field__hint">What this viewpoint's canvas creates: at Classes, no instance surface.</p>
+                </div>
+            )}
 
             <div className="wp-toggle">
                 <span className="wp-toggle__label" id={`${colorId}-toggle`}>Color by metaclass</span>

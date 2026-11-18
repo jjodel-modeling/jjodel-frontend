@@ -30,7 +30,7 @@ import type { JjelExpression } from '../../jjel/types/ast';
 import { describeType, evaluateTriState } from '../jjelTriState';
 import type { NotEvaluableReason } from '../jjelTriState';
 import { checkGuardSubset } from './subsetChecker';
-import type { SubsetDiagnostic } from './subsetChecker';
+import type { SubsetDiagnostic, SubsetOptions } from './subsetChecker';
 
 /** Why a guard gave no verdict: at compile time, for a missing handle, or one of the three entrances. */
 export type GuardDefectReason = 'parse-error' | 'subset' | 'no-handle' | NotEvaluableReason;
@@ -55,9 +55,10 @@ const EVALUATOR = new JjelEvaluator();
 
 /**
  * Parses and checks a guard. Absent means `undefined`, `null` or blank
- * (R-SIM-17: an undeclared role or an empty feature).
+ * (R-SIM-17: an undeclared role or an empty feature). `options.dcn`: a DCN
+ * guard, where `x.in(V::D)` is accepted (subsetChecker.ts `SubsetOptions`).
  */
-export function compileGuard(source: string | null | undefined): CompiledGuard {
+export function compileGuard(source: string | null | undefined, options?: SubsetOptions): CompiledGuard {
     const text = source ?? '';
     if (text.trim() === '') return { source: text, expr: null, diagnostics: [], defect: null };
 
@@ -70,7 +71,7 @@ export function compileGuard(source: string | null | undefined): CompiledGuard {
         };
     }
 
-    const diagnostics = checkGuardSubset(parsed.expression, text);
+    const diagnostics = checkGuardSubset(parsed.expression, text, options);
     const error = diagnostics.find(d => d.severity === 'error');
     return {
         source: text,

@@ -31,6 +31,8 @@ vi.mock('react', async (importOriginal) => {
             return value;
         },
         useEffect: () => {},
+        // No canvas context outside a render: the hook resolves under the root, as with no tab (L5).
+        useContext: () => null,
         useSyncExternalStore: (_subscribe: unknown, get: () => unknown) => get(),
     };
 });

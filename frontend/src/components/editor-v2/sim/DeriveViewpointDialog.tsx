@@ -19,11 +19,14 @@
  * opens on the notation select and goes back where it was on close.
  */
 
-import { ReactElement, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { store } from '../../../joiner';
 import { JjodelEvents } from '../../../events/registry';
-import { createDerivedViewpoint, projectViewpointIds } from '../../../utils/deriveViewpoint';
+import { createDerivedViewpoint, createExprFoldViewpoint, importBriefExprBinding, importExprBinding, projectViewpointIds } from '../../../utils/deriveViewpoint';
+import { exprFoldStatus, type ExprFoldStatus } from '../../../model/expression/exprFoldViews';
+import { EXPR_BINDING_KEY } from '../../../model/expression/exprBinding';
+import { toast } from '../../Toast/toastDispatch';
 import { sketchOfMetamodel } from './metamodelSketch';
 import {
     DERIVED_NOTATIONS, canDerive, dialogPrefill, initialNotation, notationRoles, roleLabel,
@@ -51,6 +54,13 @@ export interface DeriveViewpointFormProps {
     onRole: (classId: string, role: NotationRoleId | '') => void;
     onCancel: () => void;
     onConfirm: () => void;
+    /** The expression fold section (R-EXP-12); absent, the dialog draws as before. */
+    expressionFold?: {
+        status: ExprFoldStatus;
+        onImportFile: () => void;
+        onImportBrief: () => void;
+        onDerive: () => void;
+    };
 }
 
 const TITLE_ID = 'derive-viewpoint-dialog-title';
@@ -66,7 +76,7 @@ const FROM: Readonly<Record<DialogPrefill['from'], string>> = {
 
 /** The dialog's content, without its portal and its state: what the tests render. */
 export function DeriveViewpointForm(props: DeriveViewpointFormProps): ReactElement {
-    const { metamodelName, classes, notation, roles, effective, prefillFrom, onNotation, onRole, onCancel, onConfirm } = props;
+    const { metamodelName, classes, notation, roles, effective, prefillFrom, onNotation, onRole, onCancel, onConfirm, expressionFold } = props;
     const offered = notationRoles(notation);
     const ready = canDerive({ notation, classRoles: roles });
     const emptyOption = (classId: string): string => {
@@ -127,6 +137,24 @@ export function DeriveViewpointForm(props: DeriveViewpointFormProps): ReactEleme
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+                {expressionFold && (
+                    <div role="group" aria-label="Expression fold">
+                        <div className="sim-roles-modal__section">Expression fold</div>
+                        <p className="derive-viewpoint-dialog__empty" role="status">{expressionFold.status.text}</p>
+                        <div className="sim-roles-modal__actions">
+                            <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--secondary" onClick={expressionFold.onImportFile}>Import binding</button>
+                            <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--secondary" onClick={expressionFold.onImportBrief}>Use Brief binding</button>
+                            <button
+                                type="button"
+                                className="sim-roles-modal__btn sim-roles-modal__btn--secondary"
+                                disabled={!expressionFold.status.ok}
+                                onClick={expressionFold.onDerive}
+                            >
+                                Derive fold viewpoint
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -209,7 +237,36 @@ export function DeriveViewpointDialog(): ReactElement | null {
         [target, roles],
     );
 
-    if (!target) return null;
+    // The raw binding, watched on the store: the status follows an import without the dialog being told.
+    const rawBinding = useSyncExternalStore(store.subscribe, () => (target ? lookupNow()[target.metamodelId]?._state?.[EXPR_BINDING_KEY] : undefined));
+    const foldStatus = useMemo(
+        () => (target ? exprFoldStatus(lookupNow(), target.metamodelId) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [target, rawBinding],
+    );
+
+    if (!target || !foldStatus) return null;
+
+    const reportImport = (errors: readonly string[]) => {
+        if (errors.length > 0) toast.error(errors.join('; '), 'Binding refused');
+        else toast.success('The expression binding is on the metamodel.', 'Binding imported');
+    };
+    const importFile = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = () => {
+            input.files?.[0]?.text().then((body) => {
+                let doc: unknown;
+                try { doc = JSON.parse(body); } catch (err) { reportImport([`Not JSON: ${(err as Error).message}`]); return; }
+                reportImport(importExprBinding(target.metamodelId, doc));
+            });
+        };
+        input.click();
+    };
+    const deriveFold = () => {
+        if (createExprFoldViewpoint(target.metamodelId)) close();
+    };
 
     const onNotation = (n: DerivedNotationId) => {
         const prefill = dialogPrefill(lookupNow(), target.metamodelId, n, target.viewpointIds);
@@ -253,6 +310,7 @@ export function DeriveViewpointDialog(): ReactElement | null {
                 onRole={onRole}
                 onCancel={close}
                 onConfirm={confirm}
+                expressionFold={{ status: foldStatus, onImportFile: importFile, onImportBrief: () => reportImport(importBriefExprBinding(target.metamodelId)), onDerive: deriveFold }}
             />
         </div>,
         document.body,

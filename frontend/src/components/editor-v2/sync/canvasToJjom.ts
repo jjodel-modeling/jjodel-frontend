@@ -33,6 +33,7 @@ import { resolveVertexLayoutWrite, type VertexLayout, type VertexLayoutSource, t
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
+import { createSlotAppendQueue } from './slotAppendQueue';
 import { isClassKind } from '../../../model/classifierKindRules';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,9 @@ import { isClassKind } from '../../../model/classifierKindRules';
  * One short-circuit: if the D-object cannot be resolved there is nothing to materialize a
  * complete record from, so the patch falls back to the scalars — the pre-1b behavior. A layout
  * gesture must never throw inside a TRANSACTION.
+ *
+ * The five writes below take the key as an optional last parameter, the canvas's (its tab's
+ * viewpoint, multi-tab L3); absent, they read `getActiveLayoutKey()` once per gesture, as before.
  */
 function resolveLayoutWriteFor(
     vertexId: string,
@@ -84,9 +88,9 @@ function writeLayoutDictionary(vertexId: string, write: VertexLayoutWrite): void
  * Write a vertex's new position to JjOM.
  * Called on drag end (lazy mode) or during drag (faithful mode).
  */
-export function syncPositionToJjom(vertexId: string, x: number, y: number): void {
+export function syncPositionToJjom(vertexId: string, x: number, y: number, layoutKey?: string): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { x, y }, getActiveLayoutKey());
+    const write = resolveLayoutWriteFor(vertexId, { x, y }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 drag', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'x' as any, x, undefined, false);
@@ -99,10 +103,10 @@ export function syncPositionToJjom(vertexId: string, x: number, y: number): void
  * vertex's box as sized by hand (`isResized`), in the same record: two writes of one vertex in one batch would each
  * read the record as the store holds it and the later would take back the earlier's half (P-2026-10-11-1156).
  */
-export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number; w?: number; h?: number }>): void {
+export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number; w?: number; h?: number }>, tabLayoutKey?: string): void {
     if (updates.length === 0) return;
     markCanvasUpdatedBatch(updates.map(u => u.id));
-    const layoutKey = getActiveLayoutKey();
+    const layoutKey = tabLayoutKey ?? getActiveLayoutKey();
     TRANSACTION('EditorV2 drag batch', () => {
         for (const { id, x, y, w, h } of updates) {
             const sized = w !== undefined && h !== undefined;
@@ -129,9 +133,9 @@ export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; 
  * width/height on reload (w/h alone can't be the gate: every DVertex gets
  * default w/h at creation, so unresized nodes must keep auto-sizing).
  */
-export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
+export function syncSizeToJjom(vertexId: string, w: number, h: number, layoutKey?: string): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, getActiveLayoutKey());
+    const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 resize', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
@@ -145,9 +149,9 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
  * content-driven again on the next load (w/h keep their last values but the
  * transformers ignore them while `isResized` is false).
  */
-export function syncSizeResetToJjom(vertexId: string): void {
+export function syncSizeResetToJjom(vertexId: string, layoutKey?: string): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { isResized: false }, getActiveLayoutKey());
+    const write = resolveLayoutWriteFor(vertexId, { isResized: false }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 reset size', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'isResized' as any, false, undefined, false);
@@ -158,10 +162,10 @@ export function syncSizeResetToJjom(vertexId: string): void {
  * Write the same or per-vertex size to multiple vertices at once
  * (e.g. propagate one instance's dimensions to all instances of a view).
  */
-export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>): void {
+export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>, tabLayoutKey?: string): void {
     if (sizes.length === 0) return;
     markCanvasUpdatedBatch(sizes.map(s => s.vertexId));
-    const layoutKey = getActiveLayoutKey();
+    const layoutKey = tabLayoutKey ?? getActiveLayoutKey();
     TRANSACTION('EditorV2 propagate size', () => {
         for (const { vertexId, w, h } of sizes) {
             const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, layoutKey);
@@ -1625,6 +1629,21 @@ export function syncUpdateFeatureValue(
     }
 }
 
+const { plan: planQueuedAppend, forget: forgetSlotAppends } = createSlotAppendQueue({
+    storedValues: (slotId) => (store.getState() as any).idlookup?.[slotId]?.values,
+    currentBuffer: () => (window as any).transactionStatus?.pendingActions,
+    dispatchesInFlight: () => (window as any).transactionStatus?.dispatchesInFlight ?? 0,
+    subscribe: (listener) => { store.subscribe(listener); },
+});
+
+/**
+ * The array to assign to `slot.values` to append `id`, over what the store holds and the appends to that
+ * slot still on their way (slotAppendQueue.ts). Records `id` as queued, so once per write.
+ */
+export function planSlotAppend(slot: { id: string; __raw?: { values?: any[] } }, id: string): any[] {
+    return planQueuedAppend(slot.id, slot.__raw?.values ?? [], id);
+}
+
 /**
  * Assign a REFERENCE slot on a DObject instance — the write path of the singleton select
  * (R-SGL-4): with the singleton nodes hidden there is no arrow to draw, so the value is
@@ -1681,8 +1700,9 @@ export function syncSetReferenceValue(
                 // Declared no-op: re-adding a value already in the slot would duplicate the
                 // entry and, pair-keyed as it is, produce no second edge anyway.
                 if (meaningful.includes(targetObjectId)) return;
-                slot.values = [...meaningful, targetObjectId];
+                slot.values = planSlotAppend(slot, targetObjectId as string);
             } else {
+                forgetSlotAppends(slot.id);
                 slot.values = targetObjectId ? [targetObjectId] : [];
             }
         });
@@ -1736,9 +1756,7 @@ export function syncCreateCompositionLink(
             // index 1+ instead of index 0 for [1..1] references.
             const refProxy = (parentObject as any)['$' + referenceName];
             if (refProxy) {
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, childObject.id];
+                refProxy.values = planSlotAppend(refProxy, childObject.id);
             }
 
             // Create visual edge — pass the metaclass DReference id so the
@@ -1804,9 +1822,7 @@ export function syncCreateReferenceLink(
             // Read from __raw.values — see comment in syncCreateCompositionLink.
             const refProxy = (sourceObject as any)['$' + referenceName];
             if (refProxy) {
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, targetObject.id];
+                refProxy.values = planSlotAppend(refProxy, targetObject.id);
             }
 
             // Create visual edge — pass the metaclass DReference id so the

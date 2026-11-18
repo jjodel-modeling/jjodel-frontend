@@ -83,6 +83,24 @@ export interface TypeInfo {
 }
 
 /**
+ * True when `cls`, or a class it inherits from transitively, is named `typeName`. Parents are the
+ * class shell's `superTypes` (buildEvalContext) or the L class's `extends`; read only, cycle-safe.
+ */
+function classChainNamed(cls: unknown, typeName: string): boolean {
+    const seen = new Set<unknown>();
+    const queue: unknown[] = [cls];
+    while (queue.length > 0) {
+        const c: any = queue.shift();
+        if (!c || typeof c !== 'object' || seen.has(c)) continue;
+        seen.add(c);
+        if (c.name === typeName) return true;
+        const parents = Array.isArray(c.superTypes) ? c.superTypes : c.extends;
+        if (Array.isArray(parents)) queue.push(...parents);
+    }
+    return false;
+}
+
+/**
  * Registry for type checking with 'is' operator
  */
 export class TypeRegistry {
@@ -118,6 +136,13 @@ export class TypeRegistry {
             // Check supertypes
             const objTypeInfo = this.types.get(className);
             if (objTypeInfo?.superTypes?.includes(typeName)) return true;
+        }
+
+        // A model instance (record of buildEvalContext, or L proxy) is a T when its class or a
+        // supertype of it is named T: kind-of, SPEC §5.8. Class shells are not instances.
+        if (isJjelObject(value) && (value.__type === 'Object' || value.className === 'DObject')
+            && classChainNamed((value as any).instanceof ?? (value as any).instanceOf, typeName)) {
+            return true;
         }
 
         // Primitive type checks
@@ -275,6 +300,17 @@ export interface JjelStateAccess {
 }
 
 /**
+ * What `x.in(V::D)` asks (R-DCN-7, R-DCN-2). Set only by a binder; everywhere
+ * else `.in(V::D)` is an error. JjEL hands over the receiver as evaluated and
+ * the two names as written: how the classification is derived is the binder's
+ * business. The answer must be a boolean; anything else is an evaluation error.
+ */
+export interface JjelClassificationAccess {
+    /** Whether dynamic class `dynamicClass` of viewpoint `viewpoint` is active for `object`. */
+    isIn(object: unknown, viewpoint: string, dynamicClass: string): boolean;
+}
+
+/**
  * One part of an interpolated string as a `JjelTextHost` receives it
  * (R-GEN-10): the literal text between holes, unescaped, or a hole with its value.
  */
@@ -324,6 +360,26 @@ export interface JjelTextHost {
      * the next and turn a hole that throws into a value. Absent: `evaluate()`.
      */
     evaluateHole?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+    /**
+     * Optional: `left + right`, the `Binary` node `expr`. Evaluates `left()`
+     * then `right()`; with a Text operand returns their concatenation, else
+     * `plain(left, right)` as is. Lets the host attribute each operand.
+     */
+    evaluateConcat?(
+        expr: JjelExpression,
+        left: () => JjelValue,
+        right: () => JjelValue,
+        plain: (left: JjelValue, right: JjelValue) => JjelValue,
+    ): JjelValue;
+    /** Optional: runs around a lambda body and returns `evaluate()` as is. */
+    evaluatePart?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+    /** Optional: `items.map(f)` with a function, `call` being `f` on one item; returns the items mapped by `call`. */
+    mapItems?(items: JjelValue[], call: (item: JjelValue) => JjelValue): JjelValue[];
+    /**
+     * Optional: `items.join(separator)`, the call node `expr` when known. With
+     * a Text item or separator returns their join, else `plain()` as is.
+     */
+    evaluateJoin?(expr: JjelExpression | undefined, items: JjelValue[], separator: JjelValue, plain: () => JjelValue): JjelValue;
 }
 
 // ============================================
@@ -352,10 +408,22 @@ export class EvaluationContext {
      */
     ambiguousInstances?: Map<string, AmbiguousInstanceInfo>;
     /**
+     * Names whose scope binding wins over a builtin of the same name: a JjTL
+     * helper's parameters inside its body (P-2026-11-06-2226). Read as a value,
+     * the binding wins; called, it wins only when it holds a function.
+     * `undefined`: builtins first, as everywhere else. Inherited by children.
+     */
+    shadowedBuiltins?: ReadonlySet<string>;
+    /**
      * The state `x.[a]` reads (R-SIM-43). `undefined`: no state here, and
      * `.[a]` throws. Inherited by children, like `diagnostics`.
      */
     stateAccess?: JjelStateAccess;
+    /**
+     * What `x.in(V::D)` asks (R-DCN-7). `undefined`: no classification here,
+     * and `.in(V::D)` throws. Inherited by children, like `stateAccess`.
+     */
+    classification?: JjelClassificationAccess;
     /**
      * Text values for templates (R-GEN-10). `undefined`: an interpolation is a
      * plain string and `+`, `join` take their usual path. Set only by the code
@@ -451,8 +519,12 @@ export class EvaluationContext {
         child.diagnostics = this.diagnostics;
         // Propagate the ambiguity map so warnings fire inside forall/lambda scopes.
         child.ambiguousInstances = this.ambiguousInstances;
+        // Propagate the shadowed names so lambdas in a helper body see the parameters.
+        child.shadowedBuiltins = this.shadowedBuiltins;
         // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
         child.stateAccess = this.stateAccess;
+        // Propagate the classification hook so `.in(V::D)` answers inside forall/lambda scopes.
+        child.classification = this.classification;
         // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
         child.textHost = this.textHost;
         child.readObserver = this.readObserver;

@@ -201,6 +201,104 @@
     box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
 }
 
+// The run card of a DCN instance (P-2026-11-08-2042, R-DCN-29). One column under the node's box holds the tags and the
+// card, so neither overlaps the other; without a card the tags keep their own position (Petri runs included).
+.sim-node-run__column {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: max-content;
+    max-width: 240px;
+
+    .sim-node-run__tags {
+        position: static;
+    }
+}
+
+.sim-node-run__dcn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 240px;
+    padding: 8px;
+    border: 1px solid var(--color-sim-sigma-border);
+    border-radius: 6px;
+    background: var(--color-inode-surface);
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    line-height: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+}
+
+.sim-node-run__dcn-viewpoint {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sim-node-run__dcn-viewpoint-name {
+    font-weight: 600;
+}
+
+.sim-node-run__dcn-classes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+// A dynamic class: the empty token's colours, the token's cyan while active (R-DCN-25).
+.sim-node-run__dcn-class {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 16px;
+    padding: 0 8px;
+    border: 1px solid var(--color-sim-token-empty-border);
+    border-radius: 8px;
+    background: var(--color-sim-token-empty-bg);
+    color: var(--color-sim-token-empty-fg);
+    line-height: 1;
+    white-space: nowrap;
+
+    &--active {
+        border-color: var(--color-sim-token-bg);
+        background: var(--color-sim-token-bg);
+        color: var(--color-sim-token-fg);
+        font-weight: 600;
+    }
+}
+
+.sim-node-run__dcn-monitors {
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sim-node-run__dcn-slots {
+    font-family: var(--font-mono);
+}
+
+.sim-node-run__dcn-slot {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--dormant {
+        color: var(--color-text-tertiary);
+    }
+
+    &--changed {
+        color: var(--color-sim-sigma-fg);
+    }
+}
+
 // The canvas layer (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109): mounted by the simulation panel, a sibling of it in
 // `.editor-switch-container`, positioned as the panel is (simulation-panel.scss: absolute on the editor's box, z-index
 // 850 inside the dock). The canvas's top-right corner, 16 px in: under the editor's toolbar, whose height is

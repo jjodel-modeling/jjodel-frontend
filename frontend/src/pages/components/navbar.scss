@@ -1776,6 +1776,17 @@ html[data-mode="advanced"] body > .dropdown.dropdown--portal > div.item {
         line-height: 1;
       }
     }
+
+    // A generator tab (codegen, P-2026-10-25-1200): the `bi-code-slash` glyph its own title bar shows.
+    &--generator {
+      background-color: #E2E8F0;  // Slate-200
+      color: #475569;             // Slate-600
+
+      .bi {
+        font-size: 10px;
+        line-height: 1;
+      }
+    }
   }
 
   &__name {

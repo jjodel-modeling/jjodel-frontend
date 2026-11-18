@@ -1143,6 +1143,24 @@ describe('cost: spendByDay and costEvents', () => {
     const at = (d: number, h: number, m: number) => new Date(2026, 9, d, h, m).getTime();
     const turn = (e: number) => ({ s: e - 60000, e });
 
+    test('fresh sessions add cost even when the new counter is larger; resume counts only its increment', async () => {
+        const { costEvents, spendByDay, logFacts } = await load();
+        const log = [
+            { type: 'system', subtype: 'init', session_id: 'old', model: 'fixture' },
+            { type: 'result', session_id: 'old', total_cost_usd: 2, modelUsage: { fixture: { outputTokens: 10 } } },
+            { type: 'system', subtype: 'init', session_id: 'new', model: 'fixture' },
+            { type: 'result', session_id: 'new', total_cost_usd: 3, modelUsage: { fixture: { outputTokens: 20 } } },
+            { type: 'system', subtype: 'init', session_id: 'new', model: 'fixture' },
+            { type: 'result', session_id: 'new', total_cost_usd: 4, modelUsage: { fixture: { outputTokens: 25 } } },
+        ].map(e => JSON.stringify(e)).join('\n') + '\n';
+        const buf = Buffer.from(log);
+        const c = costEvents(buf);
+        expect(c.max).toBe(6);
+        expect(c.events.map((e: any) => e.usd)).toEqual([2, 5, 6]);
+        expect(spendByDay(c.events, [turn(at(17, 10, 0)), turn(at(18, 10, 0)), turn(at(18, 11, 0))])).toEqual({ '2026-10-17': 2, '2026-10-18': 4 });
+        expect(logFacts(buf, [])).toMatchObject({ costUSD: 6, outTokens: 35 });
+    });
+
     test('the delta of an event is the increase over the previous event of the log, each on the day its turn ended (the cumulative value taken as a delta, or the day of another turn)', async () => {
         const { spendByDay } = await load();
         const turns = [turn(at(17, 10, 0)), turn(at(18, 10, 0)), turn(at(18, 12, 0))];

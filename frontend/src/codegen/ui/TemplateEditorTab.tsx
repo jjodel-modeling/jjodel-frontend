@@ -26,35 +26,77 @@
  *
  * The tab is not closable by rc-dock: its title carries the close button, which asks before dropping unsaved
  * drafts (rc-dock's own close removes the tab with no way to ask). The title and the opener reach an open tab
- * through the registry below, by metamodel id.
+ * through the registry below, by tab id.
+ *
+ * Slice G3 (P-2026-10-24-0003; R-GEN-36, R-GEN-40, R-GEN-41): the tab is one generator's, id `generatorTabId`
+ * (generatorTabs.ts), titled «<generator> · <metamodel>». The list is that generator's templates (codec G1), and a
+ * Save writes them through `saveGeneratorTemplates`, one `state` set, one undo step; the default's list is still
+ * `genTemplates`. Above the list a selector opens another generator's tab, and New, Rename, Delete write one patch
+ * each (Delete refuses the default, and closes the tab). The right pane is GeneratorPane.tsx: Preview, Run and Check
+ * over a conforming model, its generation errors of the edited template still Monaco markers here; «go to template»
+ * from a fragment selects that template here and reveals the producing range when the origin gives it. The paragraph
+ * on the preview above describes S3; the entry select gave way to the generator's declared files.
+ *
+ * Beside the canvas (P-2026-10-25-0925): while an opened generator tab sits beside the canvas the Properties/Tree rail
+ * is collapsed, by the topbar's own `toggleRail`, and it comes back as it was when no generator tab is beside any
+ * more; a reopen by the user is kept until the next opening (`useRailBeside` below, the rules in generatorTabs.ts).
+ *
+ * Anomalies of the export (P-2026-10-31-1342): a Save, New template and Delete move the generator's root and file
+ * entries with the renamed or deleted templates (`retargetGenerator`); a new template is named one past the listed
+ * ones, a renamed draft counted once (`freshTemplateName`); Export with unsaved drafts asks first and exports the saved
+ * list; once the metamodel or the generator is gone the right pane is off, with its reason, and the selector shows the
+ * generator's last known name. Root, file entries and new names are key-aware (P-2026-10-31-1640):
+ * a rename or Delete of one of two templates of one name leaves an entry of that name where the other still serves it.
+ *
+ * Dispatch (P-2026-10-31-1410): beside the parameters a «Type» select types the first parameter with a class of the
+ * metamodel, empty for an untyped template; templates of one name are told apart by their key (`templateKey`), which
+ * is the name for an untyped one, so the list, the drafts and «go to template» key on it. Below the editor, the
+ * dispatch problems of the edited name (dispatch.ts, over the metamodel's class graph): arity, unknown types and
+ * ambiguities as errors, the concrete classes no template of the name applies to as warnings.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import { shallowEqual, useSelector } from 'react-redux';
-import { DUser, LPointerTargetable, Monaco, monaco, store } from '../../joiner';
+import { LPointerTargetable, Monaco, monaco, store } from '../../joiner';
 import { buildEvalContext } from '../../jjscript';
 import { evalContextFor } from '../../components/editor-v2/sim/simBridge';
 import DockManager from '../../components/abstract/DockManager';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import { largeMonacoOptions, mergeMonacoOptions } from '../../components/editors/monacoConfig';
-import { generate } from '../engine/generate';
-import { GEN_TEMPLATES_KEY, decodeTemplates, templatesPatch } from '../engine/templateCodec';
+import { GEN_TEMPLATES_KEY } from '../engine/templateCodec';
+import {
+    DEFAULT_GENERATOR_ID, GEN_GENERATORS_KEY, addGenerator, decodeGenerators, generatorsPatch, removeGenerator, renameGenerator,
+} from '../engine/generatorCodec';
 import { TEMPLATE_LANGUAGE_ID, TEMPLATE_TEXT_LANGUAGE_ID, TEMPLATE_THEME_ID, ensureTemplateLanguage } from './templateLanguage';
 import { templateMarkers } from './templateMarkers';
 import { convertBody } from './templateMode';
-import { applyDrafts, changedOutside, editDraft, followStore, paramsOf, shownDraft } from './templateDrafts';
-import { conformingModels } from './conformingModels';
-import { linesOf } from './codeLines';
-import { previewEntry, previewMarkers, previewTemplates } from './templatePreview';
+import { applyDrafts, editDraft, followStore, outsideNoteShown, paramsOf, recordOf, savedNames, shownDraft } from './templateDrafts';
+import { dispatchProblems, graphOfLookup, templateKey } from '../engine/dispatch';
+import type { ClassGraph, Metaclass } from '../engine/dispatch';
+import { previewMarkers, previewTemplates } from './templatePreview';
 import { buildCompletionContext, setTemplateCompletionContext } from './templateCompletion';
 import type { DraftEdit, Drafts } from './templateDrafts';
-import type { GenerateResult } from '../engine/generate';
+import { elementName } from './codeOrigins';
+import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+import {
+    armRailCollapse, exportDraftsQuestion, forgetRail, freshTemplateName, generatorBeside, generatorTabId, goneGeneratorLabel, previewOffReason, railShown,
+    railStep, rememberGenerator, saveGeneratorTemplates, templateToSelect,
+} from './generatorTabs';
+import { openTemplateEditor } from './openTemplateEditor';
+import GeneratorPane from './GeneratorPane';
+import { useGeneratorImport } from './GeneratorImportDialog';
+import { exportGenerator } from './generatorTransfer';
+import { ColumnSplitter, SPLIT_MIN_PX, readSplitRatio } from './splitter';
+import type { GeneratorResult } from '../engine/generateFiles';
+import type { GeneratorRecord } from '../engine/generatorCodec';
+import type { TemplateTarget } from './codeOrigins';
 import type { TemplateCompletionContext } from './templateCompletion';
 import type { TemplateMode, TemplateRecord } from '../engine/templates';
 import './TemplateEditorTab.scss';
 
-/** The dock tab id of a metamodel's Template Editor (R-GEN-20). */
-export const templateTabId = (metamodelId: string): string => `codegen_tpl_${metamodelId}`;
+/** The dock tab id of a metamodel's Template Editor (R-GEN-20); a generator's other than the default's (G3). */
+export const templateTabId = (metamodelId: string, generatorId: string = DEFAULT_GENERATOR_ID): string => generatorTabId(metamodelId, generatorId);
 
 /** The Monaco marker owner of the parse errors. */
 const MARKER_OWNER = 'codegen-parse';
@@ -62,36 +104,49 @@ const MARKER_OWNER = 'codegen-parse';
 /** The Monaco marker owner of the preview's generation errors (S3). */
 const GEN_MARKER_OWNER = 'codegen-gen';
 
-/** The pause after the last edit before the preview generates again (S3, discovery §3.4, risk 6). */
-const PREVIEW_DELAY_MS = 400;
+/** A stored key as the codecs read it. */
+const storedKey = (v: unknown): string | null | undefined => (typeof v === 'string' ? v : v === undefined || v === null ? v : String(v));
 
-type Lookup = Record<string, any>;
-
-/** The project of the current user, as CodePanel.tsx reads it; '' when none. */
-function projectIdOfUser(): string {
-    try {
-        return (LPointerTargetable.fromPointer(DUser.current as any) as any)?.project?.id ?? '';
-    } catch {
-        return '';
-    }
+/** The two keys of a metamodel's generators, from the store. */
+function useGeneratorKeys(metamodelId: string): { rawT: string | null | undefined; rawG: string | null | undefined } {
+    const rawT = useSelector((state: any) => storedKey(state.idlookup?.[metamodelId]?._state?.[GEN_TEMPLATES_KEY]));
+    const rawG = useSelector((state: any) => storedKey(state.idlookup?.[metamodelId]?._state?.[GEN_GENERATORS_KEY]));
+    return { rawT, rawG };
 }
 
-/** An element's name for a reader, as CodePanel.tsx words it. */
-function elementName(lookup: Lookup, id: string): string {
-    const d = lookup[id];
-    return typeof d?.name === 'string' && d.name ? d.name : `${d?.className ?? 'element'} ${id}`;
+/** A generator name no generator of the list holds. */
+function freshGeneratorName(list: readonly GeneratorRecord[]): string {
+    const taken = new Set(list.map(g => g.name));
+    let n = list.length;
+    while (taken.has(`generator${n}`)) n++;
+    return `generator${n}`;
 }
 
-/** One refresh of the preview: the generation, or why the model could not be read. */
-interface Preview {
-    readonly result: GenerateResult | null;
-    readonly failure: string | null;
+/**
+ * Creates a generator on the metamodel, named fresh, and opens its tab on `model` (the selector's «New generator»,
+ * and the left bar's «+ New generator» through openTemplateEditor, R-GEN-42); the new generator's id, or null when
+ * the metamodel is gone.
+ */
+export function createGenerator(metamodelId: string, model?: string): string | null {
+    const idlookup = (store.getState() as any).idlookup ?? {};
+    if (!idlookup[metamodelId]) return null;
+    const bag = idlookup[metamodelId]._state;
+    const rawT = storedKey(bag?.[GEN_TEMPLATES_KEY]);
+    const rawG = storedKey(bag?.[GEN_GENERATORS_KEY]);
+    const current = decodeGenerators(rawT, rawG).generators;
+    const next = addGenerator(current, freshGeneratorName(current));
+    const patch = generatorsPatch(rawT, rawG, next);
+    if (patch) (LPointerTargetable.fromPointer(metamodelId as any) as any).state = patch;
+    const id = next[next.length - 1].id;
+    openTemplateEditor(metamodelId, elementName(idlookup, metamodelId), null, id, model);
+    return id;
 }
 
-// ── Registry of the open tabs, by metamodel id ───────────────────────────────
+// ── Registry of the open tabs, by tab id ─────────────────────────────────────
 
 interface OpenTab {
     select(name: string | null): void;
+    chooseModel(modelId: string): void;
     requestClose(): void;
 }
 
@@ -99,9 +154,9 @@ const openTabs = new Map<string, OpenTab>();
 const dirtyCounts = new Map<string, number>();
 const dirtyListeners = new Set<() => void>();
 
-function setDirtyCount(metamodelId: string, n: number | null): void {
-    if (n === null) dirtyCounts.delete(metamodelId);
-    else dirtyCounts.set(metamodelId, n);
+function setDirtyCount(tabId: string, n: number | null): void {
+    if (n === null) dirtyCounts.delete(tabId);
+    else dirtyCounts.set(tabId, n);
     dirtyListeners.forEach(l => l());
 }
 
@@ -110,11 +165,24 @@ const subscribeDirty = (listener: () => void) => {
     return () => { dirtyListeners.delete(listener); };
 };
 
-/** Selects a template in the open tab of the metamodel; false when no tab is open. */
-export function selectInTemplateTab(metamodelId: string, name: string | null): boolean {
-    const tab = openTabs.get(metamodelId);
+/** The unsaved drafts of the open tab of a metamodel's generator; 0 when no tab is open (generator import, P-2026-10-30-1515). */
+export function templateTabDrafts(metamodelId: string, generatorId: string): number {
+    return dirtyCounts.get(templateTabId(metamodelId, generatorId)) ?? 0;
+}
+
+/** Selects a template in the open tab of the metamodel's generator (the default when absent); false when no tab is open. */
+export function selectInTemplateTab(metamodelId: string, name: string | null, generatorId?: string): boolean {
+    const tab = openTabs.get(templateTabId(metamodelId, generatorId));
     if (!tab) return false;
     tab.select(name);
+    return true;
+}
+
+/** Chooses the model of the right pane in the open tab of the metamodel's generator; false when no tab is open. */
+export function chooseModelInTemplateTab(metamodelId: string, modelId: string, generatorId?: string): boolean {
+    const tab = openTabs.get(templateTabId(metamodelId, generatorId));
+    if (!tab) return false;
+    tab.chooseModel(modelId);
     return true;
 }
 
@@ -123,20 +191,33 @@ export function selectInTemplateTab(metamodelId: string, name: string | null): b
 export interface TemplateTabTitleProps {
     readonly metamodelId: string;
     readonly name: string;
+    /** The generator of the tab; the default when absent (G3). */
+    readonly generatorId?: string;
 }
 
-export function TemplateTabTitle({ metamodelId, name }: TemplateTabTitleProps): React.ReactElement {
-    const dirty = useSyncExternalStore(subscribeDirty, () => dirtyCounts.get(metamodelId) ?? 0);
+/**
+ * Closes a generator tab as its title's close does: through the open tab, which asks before dropping unsaved drafts,
+ * else straight from the dock. The app bar reaches it through the tab's `requestClose` (P-2026-10-25-1200).
+ */
+export function requestCloseTemplateTab(tabId: string): void {
+    const tab = openTabs.get(tabId);
+    if (tab) tab.requestClose();
+    else DockManager.closeTab(tabId);
+}
+
+export function TemplateTabTitle({ metamodelId, name, generatorId = DEFAULT_GENERATOR_ID }: TemplateTabTitleProps): React.ReactElement {
+    const tabId = templateTabId(metamodelId, generatorId);
+    const dirty = useSyncExternalStore(subscribeDirty, () => dirtyCounts.get(tabId) ?? 0);
+    const { rawT, rawG } = useGeneratorKeys(metamodelId);
+    const generatorName = useMemo(() => decodeGenerators(rawT, rawG).generators.find(g => g.id === generatorId)?.name ?? generatorId, [rawT, rawG, generatorId]);
     const close = (e: React.SyntheticEvent) => {
         e.stopPropagation();
-        const tab = openTabs.get(metamodelId);
-        if (tab) tab.requestClose();
-        else DockManager.closeTab(templateTabId(metamodelId));
+        requestCloseTemplateTab(tabId);
     };
     return (
         <div className="tab-title active-on-mouseenter codegen-tpl-title">
             <i className="bi bi-code-slash" />
-            <span>{`Templates · ${name}`}</span>
+            <span>{`${generatorName} · ${name}`}</span>
             {dirty > 0 && <span className="codegen-tpl-title__dirty" title={`${dirty} unsaved`} />}
             <button
                 type="button"
@@ -158,13 +239,99 @@ export interface TemplateEditorTabProps {
     readonly metamodelId: string;
     /** The template selected on open; the first when absent or gone. */
     readonly initial?: string | null;
+    /** The generator of the tab; the default when absent (G3). */
+    readonly generatorId?: string;
+    /** The model the right pane chooses first (a pill pressed on a model canvas). */
+    readonly model?: string | null;
 }
 
-/** A unique name for a new template, over the stored names and the names drafts give. */
-function freshName(taken: ReadonlySet<string>): string {
-    let n = taken.size + 1;
-    while (taken.has(`template${n}`)) n++;
-    return `template${n}`;
+/** An element's horizontal paddings and borders, 0 when absent. */
+function frameWidth(el: Element | null | undefined): number {
+    if (!el) return 0;
+    const cs = getComputedStyle(el);
+    return [cs.paddingLeft, cs.paddingRight, cs.borderLeftWidth, cs.borderRightWidth].reduce((n, v) => n + (parseFloat(v) || 0), 0);
+}
+
+// ── The rail beside the tab (P-2026-10-25-0925) ──────────────────────────────
+
+/** The rail's state and its own controls, as the tabs' provider gives them. */
+interface RailControls {
+    readonly tree: boolean;
+    readonly inspector: boolean;
+    readonly toggleRail: () => void;
+    readonly show: () => void;
+    readonly showInspector: () => void;
+}
+
+/** The controls of the last rendered tab: every tab reads the same provider. */
+let railControls: RailControls | null = null;
+let mountedTabs = 0;
+
+/** Applies the rail's step for the dock as it is now (generatorTabs.ts `railStep`). */
+function settleRail(c: RailControls): void {
+    const dock = DockManager.dock;
+    const step = railStep(!!dock && generatorBeside(dock.getLayout()), { tree: c.tree, inspector: c.inspector });
+    if (step?.kind === 'collapse') c.toggleRail();
+    else if (step?.kind === 'restore') {
+        if (step.zones.tree) c.show();
+        if (step.zones.inspector) c.showInspector();
+    }
+}
+
+/**
+ * A reload or a close while the rail is auto-collapsed: its zones come back first, synchronously, so the keys the
+ * provider stores them under keep the user's state and nothing of the auto-collapse is persisted.
+ */
+function restoreOnLeave(): void {
+    const c = railControls;
+    if (!c) return;
+    const step = railStep(false, { tree: c.tree, inspector: c.inspector });
+    if (step?.kind !== 'restore') return;
+    flushSync(() => {
+        if (step.zones.tree) c.show();
+        if (step.zones.inspector) c.showInspector();
+    });
+}
+
+/** An opening of a generator tab (openTemplateEditor.ts): the rail collapses once the tab is beside the canvas. */
+export function collapseRailOnOpen(): void {
+    armRailCollapse();
+    // A tab already on screen beside the canvas does not resize: settle once the dock has rendered the opening.
+    setTimeout(() => { if (railControls) settleRail(railControls); }, 0);
+}
+
+/**
+ * The rail collapses while an opened generator tab is beside the canvas, the way the topbar's control collapses it
+ * (`toggleRail`), and comes back as it was when none is. A tab is shown, hidden, moved and resized as its root
+ * resizes; a closed tab settles after it has left the dock. A reopen by the user drops the memory (`railShown`).
+ */
+function useRailBeside(rootRef: React.RefObject<HTMLElement>): void {
+    const { isVisible, isInspectorVisible, isRailVisible, toggleRail, show, showInspector } = useTreeViewPanel();
+    const live = useRef<RailControls>({ tree: isVisible, inspector: isInspectorVisible, toggleRail, show, showInspector });
+    live.current = { tree: isVisible, inspector: isInspectorVisible, toggleRail, show, showInspector };
+    railControls = live.current;
+    useEffect(() => {
+        if (isRailVisible) railShown();
+    }, [isRailVisible]);
+    useEffect(() => {
+        if (mountedTabs++ === 0) window.addEventListener('pagehide', restoreOnLeave);
+        const el = rootRef.current;
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => settleRail(live.current));
+        if (el && observer) observer.observe(el);
+        return () => {
+            observer?.disconnect();
+            mountedTabs--;
+            const last = live.current;
+            setTimeout(() => {
+                settleRail(last);
+                if (mountedTabs === 0) {
+                    window.removeEventListener('pagehide', restoreOnLeave);
+                    forgetRail();
+                    railControls = null;
+                }
+            }, 0);
+        };
+    }, []);
 }
 
 interface Item {
@@ -174,19 +341,61 @@ interface Item {
     readonly stored: boolean;
 }
 
-export default function TemplateEditorTab({ metamodelId, initial = null }: TemplateEditorTabProps): React.ReactElement {
+const NO_TEMPLATES: readonly TemplateRecord[] = [];
+
+/** The class graph of a metamodel as one string, so the selector re-renders only when it changes. */
+const graphSignature = (lookup: Record<string, any> | undefined, metamodelId: string): string =>
+    JSON.stringify([...graphOfLookup(lookup ?? {}, metamodelId).values()]);
+
+/** The parameters as the list shows them: the first with its type, when typed. */
+const paramsLabel = (params: string, paramType: string): string => {
+    const list = paramsOf(params);
+    if (paramType === '' || list.length === 0) return params;
+    return [`${list[0]}: ${paramType}`, ...list.slice(1)].join(', ');
+};
+
+export default function TemplateEditorTab({ metamodelId, initial = null, generatorId = DEFAULT_GENERATOR_ID, model = null }: TemplateEditorTabProps): React.ReactElement {
+    const tabId = templateTabId(metamodelId, generatorId);
     const exists = useSelector((state: any) => !!state.idlookup?.[metamodelId]);
-    const raw = useSelector((state: any) => {
-        const v = state.idlookup?.[metamodelId]?._state?.[GEN_TEMPLATES_KEY];
-        return typeof v === 'string' ? v : v === undefined || v === null ? v : String(v);
-    }) as string | null | undefined;
-    const decoded = useMemo(() => decodeTemplates(raw), [raw]);
-    const templates = decoded.templates;
+    const { rawT, rawG } = useGeneratorKeys(metamodelId);
+    const decoded = useMemo(() => decodeGenerators(rawT, rawG), [rawT, rawG]);
+    const generator = decoded.generators.find(g => g.id === generatorId) ?? null;
+    const templates = generator?.templates ?? NO_TEMPLATES;
+    const defects = decoded.defects.filter(d => d.id === generatorId || (generatorId === DEFAULT_GENERATOR_ID && d.id === null));
+    const graphText = useSelector((state: any) => graphSignature(state.idlookup, metamodelId));
+    const classGraph: ClassGraph = useMemo(() => new Map((JSON.parse(graphText) as Metaclass[]).map(c => [c.name, c])), [graphText]);
+    const classNames = useMemo(() => [...classGraph.keys()].sort((a, b) => a.localeCompare(b)), [classGraph]);
 
     const [drafts, setDrafts] = useState<Drafts>({});
     const [selected, setSelected] = useState<string | null>(initial);
     const [refused, setRefused] = useState<string | null>(null);
     const [confirmClose, setConfirmClose] = useState(false);
+    // The generator's last known name, for the selector once it is gone (P-2026-10-31-1342).
+    const knownName = useRef<string | null>(null);
+    if (exists && generator) knownName.current = generator.name;
+
+    // The editor column's share of the width right of the list, against the right pane (P-2026-10-24-1515).
+    const [split, setSplit] = useState(() => readSplitRatio());
+    const rootRef = useRef<HTMLDivElement>(null);
+    useRailBeside(rootRef);
+    const mainRef = useRef<HTMLElement>(null);
+    const splitArea = useCallback(() => {
+        const root = rootRef.current?.getBoundingClientRect();
+        const mainEl = mainRef.current;
+        if (!root || !mainEl) return null;
+        const main = mainEl.getBoundingClientRect();
+        const barEl = rootRef.current?.querySelector('.codegen-tpl__splitter');
+        const bar = barEl?.getBoundingClientRect().width ?? 0;
+        // The columns' paddings and borders sit outside the flex share: the split is measured on what grows, so the
+        // column's edge follows the pointer and the minimums hold on the columns' outer widths.
+        const fm = frameWidth(mainEl), fp = frameWidth(barEl?.nextElementSibling);
+        return {
+            left: main.left + fm,
+            width: root.right - main.left - bar - fm - fp,
+            minStart: Math.max(0, SPLIT_MIN_PX - fm),
+            minEnd: Math.max(0, SPLIT_MIN_PX - fp),
+        };
+    }, []);
 
     // Drafts the store has come to hold are dropped (an Undo/Redo onto the draft, the panel saving the same text).
     useEffect(() => {
@@ -194,51 +403,98 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     }, [templates]);
 
     const items: Item[] = useMemo(() => [
-        ...templates.map(t => ({ key: t.name, record: t, stored: true })),
-        ...Object.entries(drafts).filter(([key]) => !templates.some(t => t.name === key)).map(([key, d]) => ({ key, record: d.base, stored: false })),
+        ...templates.map(t => ({ key: templateKey(t), record: t, stored: true })),
+        ...Object.entries(drafts).filter(([key]) => !templates.some(t => templateKey(t) === key)).map(([key, d]) => ({ key, record: d.base, stored: false })),
     ], [templates, drafts]);
     const current = items.find(i => i.key === selected) ?? items[0] ?? null;
     const shown = current ? shownDraft(drafts, current.record) : null;
     const applied = useMemo(() => applyDrafts(templates, drafts), [templates, drafts]);
     const dirtyCount = Object.keys(drafts).length;
     const problem = current ? applied.problems[current.key] ?? null : null;
-    const outside = current && drafts[current.key] ? changedOutside(drafts[current.key], templates) : false;
+    const outside = current ? outsideNoteShown(exists, drafts[current.key], templates) : false;
 
-    // ── Preview (S3): a model of the metamodel, an entry, the generated text ──
-    const models = useSelector((state: any) => conformingModels(state.idlookup ?? {}, projectIdOfUser(), metamodelId), shallowEqual);
-    const [chosenModel, setChosenModel] = useState<string | null>(null);
-    const [chosenEntry, setChosenEntry] = useState<string | null>(null);
-    const [preview, setPreview] = useState<Preview | null>(null);
-    const targetId = chosenModel !== null && models.includes(chosenModel) ? chosenModel : models[0] ?? null;
+    // ── Preview (S3, G3): the generator with the drafts merged in, generated by the right pane ──
     const previewList = useMemo(() => previewTemplates(templates, drafts), [templates, drafts]);
     const edited = shown ? shown.name.trim() : null;
-    const entryName = previewEntry(previewList, chosenEntry, edited);
-
-    // Generated again PREVIEW_DELAY_MS after the last change; the model's record is built anew each time.
-    useEffect(() => {
-        if (entryName === null || targetId === null) {
-            setPreview(null);
-            return;
-        }
-        const timer = setTimeout(() => {
-            const lookup: Lookup = (store.getState() as any).idlookup ?? {};
-            try {
-                const globals = buildEvalContext(evalContextFor(lookup, targetId, projectIdOfUser()), { extentModelId: targetId });
-                setPreview({ result: generate(globals, lookup, targetId, previewList, entryName), failure: null });
-            } catch (error) {
-                setPreview({ result: null, failure: error instanceof Error ? error.message : String(error) });
-            }
-        }, PREVIEW_DELAY_MS);
-        return () => clearTimeout(timer);
-    }, [previewList, entryName, targetId]);
-    const previewLines = useMemo(() => (preview?.result ? linesOf(preview.result.code, preview.result.map) : []), [preview]);
+    // Nothing is generated once the metamodel or the generator is gone (P-2026-10-31-1342): the default still decodes.
+    const previewOff = previewOffReason(exists, generator);
+    // The key the preview labels the edited template's errors with (`name:Type` when typed).
+    const editedKey = shown ? templateKey(recordOf(shown)) : null;
+    const dispatchRows = useMemo(
+        () => (edited === null ? [] : dispatchProblems(previewList, classGraph).filter(p => p.name === edited)),
+        [previewList, classGraph, edited],
+    );
+    const previewGenerator = useMemo(() => (generator && exists ? { ...generator, templates: previewList } : null), [generator, exists, previewList]);
+    const [generated, setGenerated] = useState<GeneratorResult | null>(null);
+    const [paneModel, setPaneModel] = useState<string | null>(model);
+    const pendingReveal = useRef<TemplateTarget | null>(null);
+    const [revealTick, setRevealTick] = useState(0);
 
     // ── Writes ──────────────────────────────────────────────────────────────
-    const write = useCallback((next: readonly TemplateRecord[]) => {
-        const patch = templatesPatch(raw, next);
+    const writePatch = useCallback((patch: Record<string, string> | null) => {
         if (!patch) return;
         (LPointerTargetable.fromPointer(metamodelId as any) as any).state = patch;
-    }, [metamodelId, raw]);
+    }, [metamodelId]);
+    const write = useCallback((next: readonly TemplateRecord[], renames: Readonly<Record<string, string>> = {}) => {
+        writePatch(saveGeneratorTemplates(rawT, rawG, decoded.generators, generatorId, next, renames));
+    }, [writePatch, rawT, rawG, decoded, generatorId]);
+
+    // ── Generators: open another, New, Rename, Delete (one patch each) ────────
+    const metamodelName = () => elementName((store.getState() as any).idlookup ?? {}, metamodelId);
+    const [renaming, setRenaming] = useState<string | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [confirmExport, setConfirmExport] = useState<string | null>(null);
+    const openGenerator = (id: string) => {
+        if (id !== generatorId) openTemplateEditor(metamodelId, metamodelName(), null, id, paneModel ?? undefined);
+    };
+    const newGenerator = () => { createGenerator(metamodelId, paneModel ?? undefined); };
+    const commitRename = () => {
+        const name = (renaming ?? '').trim();
+        setRenaming(null);
+        if (name && generator && name !== generator.name) writePatch(generatorsPatch(rawT, rawG, renameGenerator(decoded.generators, generatorId, name)));
+    };
+    // Import and export of generators as JSON (P-2026-10-30-1515): export reads the stored list, not the drafts.
+    const importer = useGeneratorImport({
+        metamodels: [{ id: metamodelId, name: metamodelName() }],
+        target: metamodelId,
+        draftsOf: templateTabDrafts,
+        onImported: imported => {
+            const first = imported[0];
+            if (first && first.generatorId !== generatorId) openTemplateEditor(metamodelId, metamodelName(), null, first.generatorId, paneModel ?? undefined);
+        },
+    });
+    const exportTitle = templates.length === 0
+        ? 'The generator has no template to export'
+        : dirtyCount > 0
+            ? `Export the generator as JSON: the saved templates, without the ${dirtyCount} unsaved draft${dirtyCount === 1 ? '' : 's'}`
+            : 'Export the generator as JSON';
+    const exportStored = () => exportGenerator({ id: metamodelId, name: metamodelName() }, generatorId);
+    // With unsaved drafts Export asks first, then exports the saved list (P-2026-10-31-1342).
+    const requestExport = () => {
+        const question = exportDraftsQuestion(dirtyCount);
+        if (question) setConfirmExport(question);
+        else exportStored();
+    };
+    const deleteGenerator = () => {
+        setConfirmDelete(false);
+        if (generatorId === DEFAULT_GENERATOR_ID) return;
+        writePatch(generatorsPatch(rawT, rawG, removeGenerator(decoded.generators, generatorId)));
+        openTemplateEditor(metamodelId, metamodelName(), null, DEFAULT_GENERATOR_ID, paneModel ?? undefined);
+        DockManager.closeTab(tabId);
+    };
+
+    // «Go to template» (R-GEN-41): the template selected here, the producing range revealed once its body is shown.
+    const goToTemplate = useCallback((target: TemplateTarget) => {
+        const name = templateToSelect(templates.map(t => templateKey(t)), target);
+        if (name === null) {
+            setRefused(`The template ${target.template} is not in this generator.`);
+            return;
+        }
+        setRefused(null);
+        setSelected(name);
+        pendingReveal.current = target;
+        setRevealTick(t => t + 1);
+    }, [templates]);
 
     const save = () => {
         if (dirtyCount === 0) return;
@@ -248,8 +504,8 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
             setRefused(`Not saved: ${firstProblem[1]}`);
             return;
         }
-        write(applied.next);
-        if (current && drafts[current.key]) setSelected(drafts[current.key].name.trim());
+        write(applied.next, savedNames(drafts));
+        if (current && drafts[current.key]) setSelected(templateKey(recordOf(drafts[current.key])));
         setDrafts({});
         setRefused(null);
     };
@@ -263,8 +519,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     };
 
     const addTemplate = () => {
-        const taken = new Set([...templates.map(t => t.name), ...Object.values(drafts).map(d => d.name.trim()), ...Object.keys(drafts)]);
-        const name = freshName(taken);
+        const name = freshTemplateName(templates.map(t => templateKey(t)), drafts);
         write([...templates, { name, params: [], body: '', mode: 'text' }]);
         setSelected(name);
     };
@@ -273,7 +528,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         if (!current) return;
         const key = current.key;
         setDrafts(({ [key]: _gone, ...others }) => others);
-        if (current.stored) write(templates.filter(t => t.name !== key));
+        if (current.stored) write(templates.filter(t => templateKey(t) !== key));
     };
 
     const switchMode = (to: TemplateMode) => {
@@ -297,21 +552,27 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     const draftsRef = useRef(drafts);
     draftsRef.current = drafts;
     useEffect(() => {
-        openTabs.set(metamodelId, {
+        openTabs.set(tabId, {
             select: name => { if (name !== null) setSelected(name); },
+            chooseModel: id => setPaneModel(id),
             requestClose: () => {
-                if (Object.keys(draftsRef.current).length === 0) DockManager.closeTab(templateTabId(metamodelId));
+                if (Object.keys(draftsRef.current).length === 0) DockManager.closeTab(tabId);
                 else setConfirmClose(true);
             },
         });
+        rememberGenerator(metamodelId, generatorId);
         return () => {
-            openTabs.delete(metamodelId);
-            setDirtyCount(metamodelId, null);
+            openTabs.delete(tabId);
+            setDirtyCount(tabId, null);
         };
-    }, [metamodelId]);
+    }, [tabId, metamodelId, generatorId]);
     useEffect(() => {
-        setDirtyCount(metamodelId, dirtyCount);
-    }, [metamodelId, dirtyCount]);
+        setDirtyCount(tabId, dirtyCount);
+    }, [tabId, dirtyCount]);
+    // A pane no longer shown leaves no generation behind for the markers.
+    useEffect(() => {
+        if (!previewGenerator) setGenerated(null);
+    }, [previewGenerator]);
 
     // ── Monaco ──────────────────────────────────────────────────────────────
     const hostRef = useRef<HTMLDivElement>(null);
@@ -387,14 +648,30 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         mark(model);
     }, [body, mode, hasTemplate, current?.key]);
 
+    // The producing range of a «go to template», once the template's body is in the editor.
+    useEffect(() => {
+        const target = pendingReveal.current;
+        const editor = editorRef.current;
+        const model = editor?.getModel();
+        if (!target || !editor || !model || current?.key !== target.template) return;
+        pendingReveal.current = null;
+        editor.focus();
+        if (target.line === null || target.line > model.getLineCount()) return;
+        const column = Math.max(1, target.column ?? 1);
+        const end = model.getLineMaxColumn(target.line);
+        editor.setSelection(new monaco.Selection(target.line, column, target.line, Math.max(column, end)));
+        editor.revealLineInCenter(target.line);
+    }, [revealTick, current?.key, body]);
+
     // The preview's errors of the edited template, at their hole; between refreshes Monaco moves them with the text.
     useEffect(() => {
         const model = editorRef.current?.getModel();
         if (!model) return;
         const parsed = templateMarkers(model.getValue(), modeRef.current);
-        const markers = previewMarkers(preview?.result?.errors ?? [], hasTemplate ? edited : null, parsed);
+        const errors = (generated?.files ?? []).flatMap(f => f.result.errors);
+        const markers = previewMarkers(errors, hasTemplate ? editedKey : null, parsed);
         monaco.editor.setModelMarkers(model, GEN_MARKER_OWNER, markers.map(m => ({ ...m, severity: monaco.MarkerSeverity.Error })));
-    }, [preview, edited, hasTemplate]);
+    }, [generated, editedKey, hasTemplate]);
 
     // Ctrl/Cmd+S outside Monaco (the name and parameter fields).
     const onKeyDown = (e: React.KeyboardEvent) => {
@@ -406,19 +683,98 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     };
 
     return (
-        <div className="codegen-tpl" onKeyDown={onKeyDown}>
+        <div className="codegen-tpl" ref={rootRef} tabIndex={-1} onKeyDown={onKeyDown} onPointerDownCapture={() => rememberGenerator(metamodelId, generatorId)}>
             <aside className="codegen-tpl__side">
+                <div className="codegen-tpl__side-title">Generator</div>
+                <div className="codegen-tpl__generator">
+                    {renaming !== null ? (
+                        <input
+                            className="codegen-tpl__input"
+                            aria-label="Generator name"
+                            value={renaming}
+                            autoFocus
+                            spellCheck={false}
+                            onChange={e => setRenaming(e.target.value)}
+                            onBlur={commitRename}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') commitRename();
+                                if (e.key === 'Escape') setRenaming(null);
+                            }}
+                        />
+                    ) : (
+                        <select
+                            className="codegen-tpl__input"
+                            aria-label="Generator"
+                            value={generatorId}
+                            onChange={e => openGenerator(e.target.value)}
+                        >
+                            {exists && decoded.generators.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                            {(!exists || !generator) && <option value={generatorId}>{goneGeneratorLabel(generatorId, knownName.current)}</option>}
+                        </select>
+                    )}
+                    <div className="codegen-tpl__generator-actions">
+                        <button type="button" className="codegen-tpl__icon" title="New generator" aria-label="New generator" disabled={!exists} onClick={newGenerator}>
+                            <i className="bi bi-plus-lg" />
+                        </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title="Rename the generator"
+                            aria-label="Rename the generator"
+                            disabled={!exists || !generator}
+                            onClick={() => setRenaming(generator?.name ?? '')}
+                        >
+                            <i className="bi bi-pencil" />
+                        </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title={generatorId === DEFAULT_GENERATOR_ID ? 'The default generator cannot be deleted' : 'Delete the generator'}
+                            aria-label="Delete the generator"
+                            disabled={!exists || !generator || generatorId === DEFAULT_GENERATOR_ID}
+                            onClick={() => setConfirmDelete(true)}
+                        >
+                            <i className="bi bi-trash" />
+                        </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title="Import a generator from a JSON file"
+                            aria-label="Import a generator"
+                            disabled={!exists}
+                            onClick={importer.start}
+                        >
+                            <i className="bi bi-box-arrow-in-down" />
+                        </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title={exportTitle}
+                            aria-label="Export the generator"
+                            disabled={!exists || !generator || templates.length === 0}
+                            onClick={requestExport}
+                        >
+                            <i className="bi bi-box-arrow-up" />
+                        </button>
+                    </div>
+                </div>
+                {generator && (
+                    <div className="codegen-tpl__generator-meta">
+                        {`target ${generator.target} · ${generator.files.map(f => f.path).join(', ') || 'no file'}`}
+                    </div>
+                )}
+                {!generator && <div className="codegen-tpl__hint codegen-tpl__hint--error">This generator is gone.</div>}
                 <div className="codegen-tpl__side-title">Templates</div>
-                {decoded.defects.map((d, i) => (
+                {defects.map((d, i) => (
                     <div className="codegen-tpl__hint codegen-tpl__hint--warning" key={`defect-${i}`}>
-                        {d.index === null ? d.message : `Template ${d.index + 1}: ${d.message}`}
+                        {d.template ? (d.template.index === null ? d.template.message : `Template ${d.template.index + 1}: ${d.template.message}`) : d.message}
                     </div>
                 ))}
                 <div className="codegen-tpl__list" role="listbox" aria-label="Templates">
                     {items.map(i => {
                         const d = drafts[i.key];
                         const label = d ? d.name.trim() || i.key : i.record.name;
-                        const params = d ? d.params : i.record.params.join(', ');
+                        const params = d ? paramsLabel(d.params, d.paramType) : paramsLabel(i.record.params.join(', '), i.record.paramType ?? '');
                         return (
                             <button
                                 type="button"
@@ -435,13 +791,13 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                         );
                     })}
                 </div>
-                <button type="button" className="codegen-tpl__add" disabled={!exists} onClick={addTemplate}>
+                <button type="button" className="codegen-tpl__add" disabled={!exists || !generator} onClick={addTemplate}>
                     <i className="bi bi-plus-lg" />
                     <span>New template</span>
                 </button>
             </aside>
 
-            <section className="codegen-tpl__main">
+            <section className="codegen-tpl__main" ref={mainRef} style={{ flex: `${split / (1 - split)} 1 0` }}>
                 {!exists && <div className="codegen-tpl__hint codegen-tpl__hint--error">This metamodel is gone: its templates cannot be saved.</div>}
                 {current && shown ? (
                     <div className="codegen-tpl__fields">
@@ -465,6 +821,19 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                             />
                         </label>
                         <label className="codegen-tpl__field">
+                            <span className="codegen-tpl__label">Type</span>
+                            <select
+                                className="codegen-tpl__input"
+                                value={shown.paramType}
+                                title="The class of the first parameter: a call runs the template of the most specific class of its argument. Empty: any value, the fallback of the name."
+                                onChange={e => edit({ paramType: e.target.value })}
+                            >
+                                <option value="">Any</option>
+                                {shown.paramType !== '' && !classGraph.has(shown.paramType) && <option value={shown.paramType}>{shown.paramType}</option>}
+                                {classNames.map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                        </label>
+                        <label className="codegen-tpl__field">
                             <span className="codegen-tpl__label">Mode</span>
                             <select
                                 className="codegen-tpl__input"
@@ -483,6 +852,9 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                 <div className={`codegen-tpl__monaco${current ? '' : ' codegen-tpl__monaco--empty'}`} ref={hostRef} />
                 {problem && <div className="codegen-tpl__hint codegen-tpl__hint--error">{problem}</div>}
                 {refused && !problem && <div className="codegen-tpl__hint codegen-tpl__hint--error">{refused}</div>}
+                {dispatchRows.map((p, i) => (
+                    <div className={`codegen-tpl__hint codegen-tpl__hint--${p.severity}`} key={`dispatch-${i}`}>{p.message}</div>
+                ))}
                 {outside && (
                     <div className="codegen-tpl__hint codegen-tpl__hint--warning">
                         This template changed outside the editor since the draft began: Save writes the draft over it, Revert takes the stored one.
@@ -492,7 +864,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                     <button
                         type="button"
                         className="codegen-tpl__button codegen-tpl__button--primary"
-                        disabled={dirtyCount === 0 || !exists}
+                        disabled={dirtyCount === 0 || !exists || !generator}
                         title="Save every draft (Ctrl/Cmd+S): one undo step"
                         onClick={save}
                     >
@@ -526,62 +898,15 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                 </div>
             </section>
 
-            <section className="codegen-tpl__preview" aria-label="Preview">
-                <div className="codegen-tpl__side-title">Preview</div>
-                <div className="codegen-tpl__fields">
-                    <label className="codegen-tpl__field codegen-tpl__field--wide">
-                        <span className="codegen-tpl__label">Model</span>
-                        <select
-                            className="codegen-tpl__input"
-                            value={targetId ?? ''}
-                            disabled={models.length === 0}
-                            onChange={e => setChosenModel(e.target.value)}
-                        >
-                            {models.length === 0 && <option value="">No model</option>}
-                            {models.map(id => <option key={id} value={id}>{elementName((store.getState() as any).idlookup ?? {}, id)}</option>)}
-                        </select>
-                    </label>
-                    <label className="codegen-tpl__field codegen-tpl__field--wide">
-                        <span className="codegen-tpl__label">Entry</span>
-                        <select
-                            className="codegen-tpl__input"
-                            value={entryName ?? ''}
-                            disabled={previewList.length === 0}
-                            onChange={e => setChosenEntry(e.target.value)}
-                        >
-                            {previewList.map((t, i) => <option key={`${i}-${t.name}`} value={t.name}>{t.name}</option>)}
-                        </select>
-                    </label>
-                </div>
-                {models.length === 0 && (
-                    <div className="codegen-tpl__hint" role="status">No model conforms to this metamodel: create one to see the generated text.</div>
-                )}
-                {preview?.failure && <div className="codegen-tpl__hint codegen-tpl__hint--error">{`The model could not be read: ${preview.failure}`}</div>}
-                {preview?.result && preview.result.errors.length > 0 && (
-                    <ul className="codegen-tpl__errors" aria-label="Generation errors">
-                        {preview.result.errors.map((e, i) => (
-                            <li className="codegen-tpl__error" key={`error-${i}`}>
-                                <span className="codegen-tpl__error-at">{`${e.template} ${e.line}:${e.column}`}</span>
-                                <span>{e.message}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                {preview?.result && (
-                    <pre className="codegen-tpl__code" aria-label="Generated text">
-                        {previewLines.map((pieces, i) => (
-                            <span className="codegen-tpl__line" data-line={i + 1} key={i}>
-                                <span className="codegen-tpl__gutter">{i + 1}</span>
-                                <span className="codegen-tpl__text">
-                                    {pieces.map((p, j) => (p.entry === null
-                                        ? <React.Fragment key={j}>{p.text}</React.Fragment>
-                                        : <span key={j} className={`codegen-tpl__span codegen-tpl__span--${p.entry.origin.kind}`}>{p.text}</span>))}
-                                </span>
-                            </span>
-                        ))}
-                    </pre>
-                )}
-            </section>
+            <ColumnSplitter ratio={split} onRatio={setSplit} area={splitArea} />
+
+            {previewGenerator ? (
+                <GeneratorPane metamodelId={metamodelId} generator={previewGenerator} model={paneModel} onGoToTemplate={goToTemplate} onGenerated={setGenerated} />
+            ) : (
+                <section className="codegen-tpl__preview" aria-label="Generation">
+                    {previewOff && <div className="codegen-tpl__hint">{previewOff}</div>}
+                </section>
+            )}
 
             <ConfirmDialog
                 isOpen={confirmClose}
@@ -592,10 +917,34 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                 variant="warning"
                 onConfirm={() => {
                     setConfirmClose(false);
-                    DockManager.closeTab(templateTabId(metamodelId));
+                    DockManager.closeTab(tabId);
                 }}
                 onCancel={() => setConfirmClose(false)}
             />
+            <ConfirmDialog
+                isOpen={confirmDelete}
+                title="Delete the generator?"
+                message={`${generator?.name ?? generatorId} and its ${templates.length} template${templates.length === 1 ? '' : 's'} are removed from ${metamodelName()}: one undo step.`}
+                confirmText="Delete"
+                cancelText="Keep"
+                variant="warning"
+                onConfirm={deleteGenerator}
+                onCancel={() => setConfirmDelete(false)}
+            />
+            <ConfirmDialog
+                isOpen={confirmExport !== null}
+                title="Export the saved templates?"
+                message={confirmExport ?? ''}
+                confirmText="Export saved"
+                cancelText="Keep editing"
+                variant="warning"
+                onConfirm={() => {
+                    setConfirmExport(null);
+                    exportStored();
+                }}
+                onCancel={() => setConfirmExport(null)}
+            />
+            {importer.element}
         </div>
     );
 }

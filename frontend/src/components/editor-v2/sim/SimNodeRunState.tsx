@@ -39,10 +39,16 @@
  * right corner. Painted for such an element even when the run shows nothing
  * else of it. Coverage off, the overlay renders as before. It follows the
  * coverage channel too.
+ *
+ * P-2026-11-08-2042 (R-DCN-25, R-DCN-26, R-DCN-29): an instance of a DCN run shows
+ * a run card under the node, in the tags' column so the two never overlap, and no
+ * dashed ring (nearly every instance would be lit). Nodes of any other run render
+ * as before, the column included: it exists only around a card.
  */
 
-import { getSimNodeState, getSimRun, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
+import { getSimDcnNode, getSimNodeState, getSimRun, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
 import type { SimNodeState, SimSigmaRow } from './simCanvasState';
+import type { DcnNodeState } from '../../../model/simulation/dcn/dcnCanvasState';
 import { getSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
 import { getSimNodeCoverage, useSimCoverageVersion } from './simCoverage';
 import './simNodeRunState.scss';
@@ -52,6 +58,47 @@ export interface SimNodeRunStateProps {
     objectId: string | null;
     /** Where the token is drawn: the pill on the corner (absent, the default) or the dot inside a derived view's node. */
     placement?: 'corner' | 'inside';
+}
+
+/** The run card of a DCN instance (R-DCN-29): compartments per viewpoint, dormant slots, static slots σ changed. */
+function SimDcnCard({ objectId, card }: { objectId: string; card: DcnNodeState }) {
+    return (
+        <div className="sim-node-run__dcn" data-sim-dcn={objectId}>
+            {card.viewpoints.map(vp => {
+                const monitors = card.monitors.filter(m => m.viewpoint === vp.name);
+                return (
+                    <div key={vp.name} className="sim-node-run__dcn-viewpoint" data-sim-dcn-viewpoint={vp.name}>
+                        <div className="sim-node-run__dcn-viewpoint-name">{vp.name}</div>
+                        <div className="sim-node-run__dcn-classes">
+                            {vp.classes.map(c => (
+                                <span key={c.name} className={`sim-node-run__dcn-class${c.active ? ' sim-node-run__dcn-class--active' : ''}`}>
+                                    {monitors.some(m => m.dynamicClass === c.name) && <i className="bi bi-activity" aria-hidden="true" />}
+                                    {c.name}
+                                </span>
+                            ))}
+                        </div>
+                        {monitors.map(m => (
+                            <div key={m.dynamicClass} className="sim-node-run__dcn-monitors">{m.names.join(', ')}</div>
+                        ))}
+                    </div>
+                );
+            })}
+            {card.dormant.length > 0 && (
+                <div className="sim-node-run__dcn-slots">
+                    {card.dormant.map(d => (
+                        <div key={d.name} className="sim-node-run__dcn-slot sim-node-run__dcn-slot--dormant">{`${d.name} = ${String(d.value)}`}</div>
+                    ))}
+                </div>
+            )}
+            {card.changedStatic.length > 0 && (
+                <div className="sim-node-run__dcn-slots">
+                    {card.changedStatic.map(c => (
+                        <div key={c.name} className="sim-node-run__dcn-slot sim-node-run__dcn-slot--changed">{`${c.name} ${String(c.reset)} → ${String(c.current)}`}</div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 }
 
 export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
@@ -66,7 +113,9 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
     // R-SIM-140: the counts, only while the canvas layer's «Coverage» is on for the model.
     const known = getSimNodeCoverage(objectId);
     const cov = known && getSimViewerPrefs(known.modelId).coverage === true ? known : null;
-    if (!found && !pending && !cov) return null;
+    // R-DCN-29: the run card; `null` on every node a DCN run does not know as an instance.
+    const dcn = getSimDcnNode(objectId);
+    if (!found && !pending && !cov && !dcn) return null;
     // A candidate of the open list is always enabled; the fallback only keeps the ring if that ever fails.
     const s: Pick<SimNodeState, 'tokens' | 'sigma' | 'enabled'> = found ?? { tokens: null, sigma: [], enabled: false };
     const tokensTitle = s.tokens === null ? '' : `${s.tokens} ${s.tokens === 1 ? 'token' : 'tokens'} in the run`;
@@ -81,6 +130,31 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
     // R-SIM-109: node's tags, every presentation value, while the canvas switch is on.
     const nodeTags: readonly SimSigmaRow[] = prefs?.inspectNode ? found?.presentation ?? [] : [];
     const valueText = (r: SimSigmaRow) => (r.before !== undefined ? `${r.before ?? '—'} → ${r.value}` : r.value);
+    const tags = (sigmaTags.length > 0 || nodeTags.length > 0) && (
+        <div className="sim-node-run__tags">
+            {sigmaTags.map(r => (
+                <span
+                    key={`σ\u0000${r.attr}`}
+                    className={`sim-node-run__tag sim-node-run__tag--sigma${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
+                    title={`σ: self.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}${r.before !== undefined ? ' (changed by this step)' : ''}`}
+                >
+                    <span className="sim-node-run__tag-glyph">σ</span>
+                    <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
+                    <span className="sim-node-run__tag-value">{valueText(r)}</span>
+                </span>
+            ))}
+            {nodeTags.map(r => (
+                <span
+                    key={`node\u0000${r.attr}`}
+                    className={`sim-node-run__tag sim-node-run__tag--node${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
+                    title={`node.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}`}
+                >
+                    <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
+                    <span className="sim-node-run__tag-value">{valueText(r)}</span>
+                </span>
+            ))}
+        </div>
+    );
     return (
         <div
             className={inside ? 'sim-node-run sim-node-run--inside' : 'sim-node-run'}
@@ -97,7 +171,7 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
             )}
             {pending
                 ? <div className="sim-node-run__pending" title="Candidate of the open choice: pick it in the panel" />
-                : s.enabled && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
+                : s.enabled && !dcn && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
             {inside && s.tokens !== null && s.tokens > 0 && (
                 <>
                     <span className="sim-node-run__dot" title={tokensTitle} aria-label={tokensTitle} />
@@ -114,31 +188,9 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
                     {s.tokens}
                 </span>
             )}
-            {(sigmaTags.length > 0 || nodeTags.length > 0) && (
-                <div className="sim-node-run__tags">
-                    {sigmaTags.map(r => (
-                        <span
-                            key={`σ\u0000${r.attr}`}
-                            className={`sim-node-run__tag sim-node-run__tag--sigma${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
-                            title={`σ: self.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}${r.before !== undefined ? ' (changed by this step)' : ''}`}
-                        >
-                            <span className="sim-node-run__tag-glyph">σ</span>
-                            <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
-                            <span className="sim-node-run__tag-value">{valueText(r)}</span>
-                        </span>
-                    ))}
-                    {nodeTags.map(r => (
-                        <span
-                            key={`node\u0000${r.attr}`}
-                            className={`sim-node-run__tag sim-node-run__tag--node${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
-                            title={`node.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}`}
-                        >
-                            <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
-                            <span className="sim-node-run__tag-value">{valueText(r)}</span>
-                        </span>
-                    ))}
-                </div>
-            )}
+            {dcn
+                ? <div className="sim-node-run__column">{tags}<SimDcnCard objectId={objectId} card={dcn} /></div>
+                : tags}
             {cov && cov.count > 0 && (
                 <span
                     className="sim-node-run__cov"

@@ -72,6 +72,8 @@ export interface MmEdge {
     style: MmEdgeStyle;
     fromSide: Side;
     toSide: Side;
+    /** Tooltip of the label pill, when the pill does not say it all */
+    title?: string;
 }
 
 // ─── Style map ────────────────────────────────────────────────────────────────
@@ -87,6 +89,16 @@ export const EDGE_STYLES: Record<MmEdgeType, MmEdgeStyle & { label: string }> = 
     sourceOf:        { color: '#378ADD', dasharray: '5,3',   strokeWidth: 1.2, opacity: 0.8, label: 'sourceOf' },
     instanceInputOf: { color: '#1D9E75', dasharray: '5,3',  strokeWidth: 1,   opacity: 0.7, label: 'instanceInputOf' },
 };
+
+/** The text of an edge's pill: the label of its kind, or `included` for the input of an included model (R-JTG-35). */
+export function edgeLabelOf(type: MmEdgeType, metadata?: Record<string, unknown>): string {
+    return metadata?.included ? 'included' : EDGE_STYLES[type].label;
+}
+
+/** The tooltip of an edge's pill: the full text of an included input, nothing for the others. */
+export function edgeTitleOf(type: MmEdgeType, metadata?: Record<string, unknown>): string | undefined {
+    return metadata?.included ? `${EDGE_STYLES[type].label} (included)` : undefined;
+}
 
 // ─── Port / anchor helpers ────────────────────────────────────────────────────
 
@@ -154,11 +166,79 @@ export function computeAdaptiveSides(
 
 // ─── Manhattan routing ────────────────────────────────────────────────────────
 
+/** Distance between two vertical tracks in one gap (the base grid). */
+export const TRACK_GAP = 8;
+
+export interface RouteEnds {
+    p1: Point;
+    exitSide: Side;
+    p2: Point;
+    entrySide: Side;
+}
+
+const isVerticalSide = (side: Side): boolean => side === 'top' || side === 'bottom';
+
+/** The y of a route's left end and of its right end. */
+function leftRightY(r: RouteEnds): { a: number; b: number } {
+    return r.p1.x <= r.p2.x ? { a: r.p1.y, b: r.p2.y } : { a: r.p2.y, b: r.p1.y };
+}
+
+/** How many times two routes cross when `l` takes the track on the left of `r`'s. */
+function crossingsOf(l: RouteEnds, r: RouteEnds): number {
+    const left = leftRightY(l);
+    const right = leftRightY(r);
+    const within = (y: number, e: { a: number; b: number }) =>
+        Math.min(e.a, e.b) < y && y < Math.max(e.a, e.b);
+    return (within(right.a, left) ? 1 : 0) + (within(left.b, right) ? 1 : 0);
+}
+
+/**
+ * The offset of each route's vertical segment from the centre of its gap. Routes whose vertical
+ * segments fall on one x get a track each, TRACK_GAP apart and centred there; a route alone in
+ * its gap gets 0. Routes that leave and enter a node horizontally are the only ones with such a
+ * segment. The order starts from the height of the left end, and neighbours swap while that
+ * removes crossings: a crossing depends only on which of the two is on the left.
+ */
+export function verticalTrackOffsets(routes: RouteEnds[]): number[] {
+    const offsets: number[] = routes.map(() => 0);
+
+    const gaps = new Map<number, number[]>();
+    routes.forEach((r, i) => {
+        if (isVerticalSide(r.exitSide) || isVerticalSide(r.entrySide)) return;
+        const key = Math.round((r.p1.x + r.p2.x) / 2);
+        if (!gaps.has(key)) gaps.set(key, []);
+        gaps.get(key)!.push(i);
+    });
+
+    for (const indices of gaps.values()) {
+        const order = [...indices].sort((i, j) =>
+            leftRightY(routes[i]).a - leftRightY(routes[j]).a || leftRightY(routes[i]).b - leftRightY(routes[j]).b);
+
+        for (let swapped = true; swapped;) {
+            swapped = false;
+            for (let k = 0; k + 1 < order.length; k++) {
+                const [l, r] = [routes[order[k]], routes[order[k + 1]]];
+                if (crossingsOf(r, l) < crossingsOf(l, r)) {
+                    [order[k], order[k + 1]] = [order[k + 1], order[k]];
+                    swapped = true;
+                }
+            }
+        }
+
+        order.forEach((routeIndex, position) => {
+            offsets[routeIndex] = (position - (order.length - 1) / 2) * TRACK_GAP;
+        });
+    }
+
+    return offsets;
+}
+
 /**
  * Compute waypoints for a Manhattan (orthogonal) route between two ports.
  * Always exits/enters perpendicular to the port side.
+ * `trackOffset` shifts a vertical segment that runs between two horizontal ports.
  */
-export function routePoints(p1: Point, exitSide: Side, p2: Point, entrySide: Side): Point[] {
+export function routePoints(p1: Point, exitSide: Side, p2: Point, entrySide: Side, trackOffset = 0): Point[] {
     const exitV  = exitSide === 'top' || exitSide === 'bottom';
     const entryV = entrySide === 'top' || entrySide === 'bottom';
 
@@ -167,7 +247,7 @@ export function routePoints(p1: Point, exitSide: Side, p2: Point, entrySide: Sid
         return [p1, { x: p1.x, y: mid }, { x: p2.x, y: mid }, p2];
     }
     if (!exitV && !entryV) {
-        const mid = (p1.x + p2.x) / 2;
+        const mid = (p1.x + p2.x) / 2 + trackOffset;
         return [p1, { x: mid, y: p1.y }, { x: mid, y: p2.y }, p2];
     }
     if (exitV && !entryV) {

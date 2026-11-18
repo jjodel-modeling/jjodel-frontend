@@ -1,0 +1,20 @@
+MEAS  ids  {"mm":"Pointer1793763304208_USER_4","m1":"Pointer1793763304209_USER_23","mmName":"Library","m1Name":"sample-Library"}
+PASS  the picker shows C-like, enabled, with the catalog  {"value":"clike","disabled":false,"options":["clike:C-like","pascal:Pascal/Ada"]}
+PASS  the text is the model print  {"len":579}
+PASS  Pascal: the record names the base  {"base":"pascal","raw":"{\"v\":1,\"style\":{\"base\":\"pascal\"}}"}
+PASS  Pascal: the text reprints in Pascal, the print of the model  {"head":["Library 'City Library' begin","  items begin","    Book begin","      title := 'Pride and Prejudice';","      borrowedBy := Anna;","      isbn := '978-0141439518';"]}
+PASS  Pascal: no pending edit, the picker stays free  {"status":"Up to date"}
+PASS  EBNF: the grammar is the Pascal one  {"head":["Model        ::= {Library | Book | Magazine | Member | Writer} ;","Library      ::= \"Library\" [name=NAME] \"begin\" [\"items\" \"begin\" {items+=LibraryItem_} \"end\" \";\"] [\"members\" \"begin\" {members+=Member} \"end\" \";\"] [\"writers\" \"begin\" {writers+=Writer} \"end\" \";\"] \"end\" \";\" ;","Book         ::= \"Book\" \"begin\" [\"title\" \":=\" title=STRING \";\"] [\"borrowedBy\" \":=\" borrowedBy=REF \";\"] [\"isbn\" \":=\" isbn=STRING \";\"] [\"authors\" \":=\" (\"(\" [authors+=REF {\",\" authors+=REF}] \")\") \";\"] \"end\" \";\" ;","Magazine     ::= \"Magazine\" \"begin\" [\"title\" \":=\" title=STRING \";\"] [\"borrowedBy\" \":=\" borrowedBy=REF \";\"] [\"issue\" \":=\" issue=INT \";\"] \"end\" \";\" ;"]}
+PASS  library: a string feature in the Pascal print  ":= 'Pride and Prejudice';"
+PASS  while the edit is pending the picker is disabled  {"value":"pascal","disabled":true,"options":["clike:C-like","pascal:Pascal/Ada"]}
+PASS  the edit applies  {"status":"Applied"}
+PASS  the applied text holds the edit and is the model print  {"edited":"'Pride and Prejudice'#10'x'"}
+PASS  after Applied the picker is free again  {"value":"pascal","disabled":false,"options":["clike:C-like","pascal:Pascal/Ada"]}
+PASS  library: the store holds the line break  true
+PASS  one Cmd+Z undoes the edit: the Pascal text as it was  {"now":["Library 'City Library' begin","  items begin","    Book begin","      title := 'Pride and Prejudice';"]}
+PASS  after the Undo the record still names Pascal  {"base":"pascal","raw":"{\"v\":1,\"style\":{\"base\":\"pascal\"}}"}
+PASS  back to C-like: the text before the switch, byte for byte  {"head":["Library \"City Library\" {","  items {","    Book {","      title \"Pride and Prejudice\""]}
+PASS  back to C-like: the record string before the switch, or the empty record when there was none  {"before":null,"after":"{\"v\":1}"}
+PASS  one Cmd+Z undoes the switch back: Pascal again, text and record  {"base":"pascal","raw":"{\"v\":1,\"style\":{\"base\":\"pascal\"}}"}
+PASS  no page error  []
+ALL PASS  case library

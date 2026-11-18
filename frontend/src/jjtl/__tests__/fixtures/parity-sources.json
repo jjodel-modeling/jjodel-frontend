@@ -1,0 +1,530 @@
+[
+  {
+    "id": "tests#001",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson -> Human {\n  name := name\n}"
+  },
+  {
+    "id": "tests#002",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in attributes such that not a.multiValued -> Column {\n                        name := a.name\n                    }\n                }"
+  },
+  {
+    "id": "tests#003",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human {\n  name := p.name\n}"
+  },
+  {
+    "id": "tests#004",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human where not p.abstract {\n  name := p.name\n}"
+  },
+  {
+    "id": "tests#005",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in attributes -> Column {\n                        name := a.name\n                    }\n                }"
+  },
+  {
+    "id": "tests#006",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human {\n  label := p.name\n}"
+  },
+  {
+    "id": "tests#007",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in source.attributes -> Column {\n                        name := a.name\n                    }\n                }"
+  },
+  {
+    "id": "tests#008",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  x := x\n}\nC c -> D {\n  y := c.y\n}"
+  },
+  {
+    "id": "tests#009",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    targetName := name\n                    forall a in attributes -> Column {\n                        name := a.name\n                    }\n                }"
+  },
+  {
+    "id": "tests#010",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human {\n  label := name\n}"
+  },
+  {
+    "id": "tests#011",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human where not p.abstract {\n  label := p.name\n}"
+  },
+  {
+    "id": "tests#012",
+    "source": "transformation Test\nfrom Source\nto Target\nPerson p -> Human {\n  label := p.name\n  fullName := p.firstName\n}"
+  },
+  {
+    "id": "tests#013",
+    "source": "transformation Test\nfrom Source\nto Target\nClass c, Package p -> Table {\n  name := p.name\n}"
+  },
+  {
+    "id": "tests#014",
+    "source": "transformation Test\nfrom Source\nto Target\nA a, B b, C c -> D {\n  x := a.x\n}"
+  },
+  {
+    "id": "tests#015",
+    "source": "transformation Test\nfrom Source\nto Target\nClass c, Package p -> Table where c.pkg == p.name {\n  name := p.name\n}"
+  },
+  {
+    "id": "tests#016",
+    "source": "transformation Test\nfrom Source\nto Target\nClass c, Package p -> Table {\n  name := p.name\n  className := c.name\n}"
+  },
+  {
+    "id": "tests#017",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in attributes -> Column {\n                        name := a.name\n                        dataType := a.type\n                    }\n                }"
+  },
+  {
+    "id": "tests#018",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in attributes -> Column {\n                        name := a.name + \"_col\"\n                    }\n                }"
+  },
+  {
+    "id": "tests#019",
+    "source": "transformation Test\n                from Source\n                to Target\n\n                MyClass -> MyTarget {\n                    forall a in attributes -> Column {\n                        name := a.name.snakeCase()\n                    }\n                }"
+  },
+  {
+    "id": "tests#020",
+    "source": "transformation Class2Relational\n                from ClassDiagram\n                to Relational\n\n                Class -> Table {\n                    tableName := name.snakeCase()\n                    forall a in attributes such that not a.multiValued -> Column {\n                        name := a.name.snakeCase()\n                        type := a.type\n                    }\n                }"
+  },
+  {
+    "id": "tests#021",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    a := requirements.size()\n    b := requirements.first().kind\n    c := requirements.map(p => p.kind)\n    d := requirements.filter(p => p.kind == \"X\").isNotEmpty()\n    e := a.requirements.last().name\n    f := self.requirements.filter(p => p.kind == \"Y\").size()\n}"
+  },
+  {
+    "id": "tests#022",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M where requirements.any(q => q.kind == \"Y\") {\n    a := requirements.size()\n}"
+  },
+  {
+    "id": "tests#023",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M where requirements.any(q => q.kind == \"Z\") {\n    a := requirements.size()\n}"
+  },
+  {
+    "id": "tests#024",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    reqs := requirements\n}\n\nRequirement -> Reg {\n    name := name\n}"
+  },
+  {
+    "id": "tests#025",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    reqs := requirements\n}"
+  },
+  {
+    "id": "tests#026",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    -> regs {\n        forall p in requirements such that p.kind == \"X\" -> Reg {\n            name := p.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#027",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    -> regs {\n        forall p in requirements -> Reg {\n            name := a.name + \".\" + p.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#028",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    -> regs {\n        forall p in requirements such that a.requirements.size() == 3 -> Reg {\n            name := p.name\n            -> fields {\n                forall q in a.requirements such that q.kind == p.kind -> Field {\n                    name := a.name + \".\" + p.name + \".\" + q.name\n                }\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#029",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    forall p in requirements -> Reg {\n        name := a.name + p.name\n    }\n}"
+  },
+  {
+    "id": "tests#030",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    c := requirements.map(p => p.kind)\n}"
+  },
+  {
+    "id": "tests#031",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    -> regs {\n        forall p in requirements such that exists q in requirements such that q.kind == \"Y\" -> Reg {\n            name := p.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#032",
+    "source": "transformation T\nfrom S\nto Tg\n\nArbiter a -> M {\n    -> regs {\n        forall p in requirements such that exists q in requirements such that q.kind == \"Z\" -> Reg {\n            name := p.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#033",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes\n        -> Column {\n            name := a.name\n        }\n}\n"
+  },
+  {
+    "id": "tests#034",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes such that a.isKey\n        -> Column {\n            name := a.name\n        }\n}\n"
+  },
+  {
+    "id": "tests#035",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        name := a.name\n    }\n}\n"
+  },
+  {
+    "id": "tests#036",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes\n    Column {\n        name := a.name\n    }\n}\n"
+  },
+  {
+    "id": "tests#037",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        type := a.type : String=VARCHAR, Integer=INTEGER, Boolean=BOOLEAN\n    }\n}\n"
+  },
+  {
+    "id": "tests#038",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        -> type : a.type : String=VARCHAR, Integer=INTEGER\n    }\n}\n"
+  },
+  {
+    "id": "tests#039",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        type := a.type : String=VARCHAR, Integer=INTEGER\n    }\n}\n"
+  },
+  {
+    "id": "tests#040",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nState -> Place {\n    tokens := isInitial : true=1, false=0\n}\n"
+  },
+  {
+    "id": "tests#041",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        -> name : a.name\n    }\n}\n"
+  },
+  {
+    "id": "tests#042",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        name := a.name\n        isPrimaryKey := a.isKey\n    }\n}\n"
+  },
+  {
+    "id": "tests#043",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        a.name -> name\n    }\n}\n"
+  },
+  {
+    "id": "tests#044",
+    "source": "transformation Team2Plan\nfrom Team\nto Plan\n\nTeam -> Plan {\n    name := name\n    -> tasks {\n        forall m in members -> Task {\n            name := \"task_\" + m.name\n            -> deps {\n                forall o in members such that o.rank < m.rank -> Link {\n                    name := m.name + \"_after_\" + o.name\n                    -> via {\n                        -> Link { name := \"via_\" + m.name }\n                    }\n                }\n            }\n            -> owner {\n                -> Link { name := \"own_\" + m.name }\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#045",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where not isAbstract {\n  label := name\n}"
+  },
+  {
+    "id": "tests#046",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where not isAbstract and attributes.isNotEmpty {\n  label := name\n}"
+  },
+  {
+    "id": "tests#047",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where name != \"Object\" {\n  label := name\n}"
+  },
+  {
+    "id": "tests#048",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where isAbstract implies subClasses.isNotEmpty {\n  label := name\n}"
+  },
+  {
+    "id": "tests#049",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where exists a in attributes such that a.type == \"String\" {\n  label := name\n}"
+  },
+  {
+    "id": "tests#050",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where with superClass do attributes.isNotEmpty {\n  label := name\n}"
+  },
+  {
+    "id": "tests#051",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where isAbstract implies (exists s in subClasses such that not s.isAbstract) {\n  label := name\n}"
+  },
+  {
+    "id": "tests#052",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where if isAbstract then subClasses.size > 0 else true {\n  label := name\n}"
+  },
+  {
+    "id": "tests#053",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where (parent ?? self).name == \"Root\" {\n  label := name\n}"
+  },
+  {
+    "id": "tests#054",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  tableName := name.snakeCase()\n}"
+  },
+  {
+    "id": "tests#055",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  label := name + \"_suffix\"\n}"
+  },
+  {
+    "id": "tests#056",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  isLeaf := not isAbstract implies subClasses.isEmpty\n}"
+  },
+  {
+    "id": "tests#057",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  attrNames := forall a in attributes : a.name\n}"
+  },
+  {
+    "id": "tests#058",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  hasStrings := exists a in attributes such that a.type == \"String\"\n}"
+  },
+  {
+    "id": "tests#059",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  parentName := with parent do name ?? \"root\"\n}"
+  },
+  {
+    "id": "tests#060",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  display := if active then \"yes\" else \"no\"\n}"
+  },
+  {
+    "id": "tests#061",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  active := true\n}"
+  },
+  {
+    "id": "tests#062",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nAttribute -> Column {\n    name := name\n    isPrimaryKey := isKey\n}"
+  },
+  {
+    "id": "tests#063",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  count := attributes.filter(a => a.isPublic).size\n}"
+  },
+  {
+    "id": "tests#064",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  label := name.toUpper()\n  count := attributes.size\n}"
+  },
+  {
+    "id": "tests#065",
+    "source": "transformation Test\nfrom Source\nto Target\nhelper formatName(s: String) -> String { s.camelCase() }"
+  },
+  {
+    "id": "tests#066",
+    "source": "transformation Test\nfrom Source\nto Target\nhelper isLeaf(c: Class) -> Boolean { not c.isAbstract implies c.subClasses.isEmpty }"
+  },
+  {
+    "id": "tests#067",
+    "source": "transformation Test\nfrom Source\nto Target\nhelper hasStringAttr(c: Class) -> Boolean { exists a in c.attributes such that a.type == \"String\" }"
+  },
+  {
+    "id": "tests#068",
+    "source": "transformation Test\nfrom Source\nto Target\nhelper parentName(c: Class) -> String { with c.parent do name ?? \"root\" }"
+  },
+  {
+    "id": "tests#069",
+    "source": "transformation Test\nfrom Source\nto Target\nhelper label(c: Class) -> String { if c.isAbstract then c.name + \" (abstract)\" else c.name }"
+  },
+  {
+    "id": "tests#070",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  enabled := active : true=1, false=0\n}"
+  },
+  {
+    "id": "tests#071",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where name == \"test\" {\n  label := name\n}"
+  },
+  {
+    "id": "tests#072",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where not isAbstract {\n  label := name.snakeCase()\n}"
+  },
+  {
+    "id": "tests#073",
+    "source": "transformation ER2Rel\n            from ERD\n            to Relational\n\n            Attribute -> Column {\n                name := parent.name + \".\" + name\n            }"
+  },
+  {
+    "id": "tests#074",
+    "source": "transformation ER2Rel\n            from ERD\n            to Relational\n\n            Entity -> Table {\n                name := name\n            }"
+  },
+  {
+    "id": "tests#075",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    name := name\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            name := a.name\n            isPrimaryKey := a.isKey\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#076",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            name := a.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#077",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        forall a in ownedAttributes such that a.isKey -> Column {\n            name := a.name\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#078",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity e -> Table {\n    let $x = \"T\" in {\n        forall a in ownedAttributes -> Column {\n            name := a.name\n            tag := $x\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#079",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    name := name\n    -> columns {\n        -> Column {\n            name := \"id\"\n            isPrimaryKey := true\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#080",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        -> Nope {\n            name := \"x\"\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#081",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> colonne {\n        -> Column {\n            name := \"id\"\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#082",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    name := name\n    -> Column {\n        name := \"id\"\n    }\n}"
+  },
+  {
+    "id": "tests#083",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    name := name\n    forall a in ownedAttributes -> Column {\n        name := a.name\n    }\n}"
+  },
+  {
+    "id": "tests#084",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    forall a in ownedAttributes -> Column {\n        name := a.name\n    }\n}"
+  },
+  {
+    "id": "tests#085",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity e -> Table {\n    let $x = \"T\" in {\n        -> columns {\n            forall a in ownedAttributes -> Column {\n                name := a.name\n                -> parts {\n                    forall p in a.parts -> Part {\n                        tag := $x + p.name\n                    }\n                }\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#086",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity e -> Table {\n    let $x = \"T\" in {\n        -> columns {\n            -> Column {\n                tag := $x\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#087",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity e -> Table {\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            let $y = a.name in {\n                name := $y\n                -> parts {\n                    -> Part {\n                        tag := $y\n                    }\n                }\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#088",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            name := a.name\n            type := a.type : String=VARCHAR, Integer=INTEGER\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#089",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            -> type : a.type : String=VARCHAR, Integer=INTEGER\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#090",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity e -> Table {\n    let $x = \"T\" in {\n        let $z = \"Z\" in {\n            forall a in ownedAttributes -> Column {\n                tag := $x + $z + a.name\n            }\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#091",
+    "source": "transformation ER2Rel\nfrom ERD\nto Relational\n\nEntity -> Table {\n    -> columns {\n        forall a in ownedAttributes -> Column {\n            type := a.type : String=VARCHAR\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#092",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  name := \"id\"\n}"
+  },
+  {
+    "id": "tests#093",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  weight := 1\n}"
+  },
+  {
+    "id": "tests#094",
+    "source": "transformation T\nfrom S\nto Tg\n\nCore c -> M {\n    -> regs {\n        forall i in range(4) -> Register {\n            index := i\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#095",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  count := 1 + 2\n}"
+  },
+  {
+    "id": "tests#096",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  fullName := firstName + \" \" + lastName\n}"
+  },
+  {
+    "id": "tests#097",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  flag := not isAbstract\n}"
+  },
+  {
+    "id": "tests#098",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  tokens := if isInitial then 1 else 0\n}"
+  },
+  {
+    "id": "tests#099",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  label := name ?? \"unnamed\"\n}"
+  },
+  {
+    "id": "tests#100",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  label := name\n}"
+  },
+  {
+    "id": "tests#101",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  tokens := isInitial : true=1, false=0\n}"
+  },
+  {
+    "id": "tests#102",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  code := status : \"active\"=1, \"inactive\"=0\n}"
+  },
+  {
+    "id": "tests#103",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  level := visibility : \"public\"=3, \"protected\"=2, \"private\"=1\n}"
+  },
+  {
+    "id": "tests#104",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  names := items.map(x => x.name)\n}"
+  },
+  {
+    "id": "tests#105",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  total := items.reduce((a, b) => a + b)\n}"
+  },
+  {
+    "id": "tests#106",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  filtered := items.filter(x => x.isPublic)\n}"
+  },
+  {
+    "id": "tests#107",
+    "source": "transformation T\nfrom S\nto Tg\n\nCore c -> M {\n    -> regs {\n        forall i in range(nregs) -> Register {\n            name := \"x\" + i\n            index := i\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#108",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  sorted := items.sortBy(x => x.priority)\n}"
+  },
+  {
+    "id": "tests#109",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  long := surname.length > 8\n}"
+  },
+  {
+    "id": "tests#110",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  flag := count < 10\n}"
+  },
+  {
+    "id": "tests#111",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  adult := age >= 18\n}"
+  },
+  {
+    "id": "tests#112",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  label := name\n  long := surname.length > 8\n}"
+  },
+  {
+    "id": "tests#113",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B where name.length > 3 {\n  label := name\n}"
+  },
+  {
+    "id": "tests#114",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  -- this is a comment\n  label := name\n}"
+  },
+  {
+    "id": "tests#115",
+    "source": "transformation Test\nfrom Source\nto Target\nA -> B {\n  names := items.filter(x => x.isPublic).map(x => x.name)\n}"
+  },
+  {
+    "id": "tests#116",
+    "source": "transformation T\nfrom S\nto Tg\n\nCore c -> M {\n    -> regs {\n        forall i in range(0) -> Register {\n            index := i\n        }\n    }\n}"
+  },
+  {
+    "id": "tests#117",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $p = prompt('Name', EString) in {\n    -> name : $p\n  }\n}\n"
+  },
+  {
+    "id": "tests#118",
+    "source": "transformation T\nfrom A\nto B\n\nhelper formatLabel(name: String, prefix: String) -> String {\n    prefix + \"_\" + name\n}\n"
+  },
+  {
+    "id": "tests#119",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $prefix = \"hello\" in {\n    name -> label : $prefix\n  }\n}\n"
+  },
+  {
+    "id": "tests#120",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $a = \"x\", $b = \"y\" in {\n    -> name : $a\n  }\n}\n"
+  },
+  {
+    "id": "tests#121",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $p = prompt('Name', EString, \"default\") in {\n    -> name : $p\n  }\n}\n"
+  },
+  {
+    "id": "tests#122",
+    "source": "transformation T\nfrom A\nto B\n\nhelper translateType(t: Type) -> SqlType {\n    if t == \"String\" then \"VARCHAR\"\n    else if t == \"Integer\" then \"INTEGER\"\n    else \"BOOLEAN\"\n}\n"
+  },
+  {
+    "id": "tests#123",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $p = prompt('Name', EString), $q = name.snakeCase() in {\n    name -> name : $p + $q\n  }\n}\n"
+  },
+  {
+    "id": "tests#124",
+    "source": "transformation T\nfrom A\nto B\n\nhelper translateType(t: Type) -> SqlType {\n    if t == \"String\" then \"VARCHAR\"\n    else if t == \"Integer\" then \"INTEGER\"\n    else \"BOOLEAN\"\n}\n\nX -> Y {\n    kind := translateType(type)\n}\n"
+  },
+  {
+    "id": "tests#125",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $name = prompt('Name', EString),\n      $upper = $name.toUpper() in {\n    name  -> name  : $name\n    label -> label : $upper\n  }\n}\n"
+  },
+  {
+    "id": "tests#126",
+    "source": "transformation SM2PN\nfrom StateMachine\nto PetriNet\nTransition -> Transition {\n    name := label\n    -> inputArcs { -> Arc { source := source } }\n}"
+  },
+  {
+    "id": "tests#127",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $name = prompt('Name', EString)\n  in {\n    name -> name : $name\n  }\n}\n"
+  },
+  {
+    "id": "tests#128",
+    "source": "transformation Test\nfrom Source\nto Target\nSourceClass -> TargetClass {\n  let $p = prompt('Name', EString), $q = name.snakeCase() in {\n    name -> name : $p\n  }\n}\n"
+  },
+  {
+    "id": "tests#129",
+    "source": "transformation SM2PN\nfrom StateMachine\nto PetriNet\nTransition -> Transition {\n    name := label\n\n    -> inputArcs {\n        -> Arc {\n            source := source\n            weight := 1\n        }\n    }\n}\n"
+  },
+  {
+    "id": "tests#130",
+    "source": "transformation SM2PN\nfrom StateMachine\nto PetriNet\nTransition -> Transition {\n    name := label\n\n    -> inputArcs {\n        -> Arc {\n            source := source\n            weight := 1\n        }\n    }\n\n    -> outputArcs {\n        -> Arc {\n            target := target\n            weight := 1\n        }\n    }\n}\n"
+  },
+  {
+    "id": "tests#131",
+    "source": "transformation T\nfrom A\nto B\n\nX -> Y {\n    a := if flag then 1 else 2\n    b := 3\n}\n"
+  },
+  {
+    "id": "tests#132",
+    "source": "transformation T\nfrom A\nto B\n\nX -> Y {\n    a := if flag then 1\n         else 2\n    b := 3\n}\n"
+  }
+]

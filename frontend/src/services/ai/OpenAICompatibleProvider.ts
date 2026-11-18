@@ -122,7 +122,14 @@ export class OpenAICompatibleProvider extends BaseProvider {
             messages: this.messages(req, modelId),
             max_tokens: this.maxOutputTokens(req),
         }, { signal: req.signal });
-        return completion.choices[0]?.message?.content ?? '';
+        // A refusal or a tool-call-only reply carries no string content (P-2026-10-30-1215).
+        const choice = completion.choices?.[0];
+        const content = choice?.message?.content;
+        if (typeof content !== 'string') {
+            const refusal = choice?.message?.refusal ? `, refusal: ${choice.message.refusal}` : '';
+            throw new Error(`${this.name} returned no text (finish_reason=${choice?.finish_reason}${refusal})`);
+        }
+        return content;
     }
 
     protected async *stream(modelId: string, req: ChatRequest): AsyncIterable<string> {

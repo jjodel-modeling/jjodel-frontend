@@ -42,6 +42,9 @@
  * values in a conforming model (`FEATURE_HAS_VALUES`, one per model, from `PlanMetamodel.slotValues`;
  * the line still plans). A mixed script is planned per level (`lineLevel`).
  *
+ * M1 move (P-2026-11-03-1225): a containment `+=` or `=` takes the target out of the slot that held it, and the
+ * reference effect carries `movedFrom`; a `-=` of a child the model lists takes it to the top level.
+ *
  * Declared limits: `let`, `forall`, blocks, `move`, `copy` and an M2 `remove` are `unsupported`;
  * a `delete` lists the contained elements it cascades to but not the incoming links it clears;
  * M2 names resolve inside the metamodel only (the executor's project-wide fallback is not mirrored).
@@ -70,6 +73,8 @@ export interface PlanReference {
 export interface PlanAttribute {
     name: string;
     upper: number | '*';
+    /** The attribute's type when it is an enumeration (R-TXT-25 (2)): its name and literals, in order. */
+    enumeration?: { name: string; literals: string[] };
 }
 
 /** A metaclass, found by name as `findMetaclassByName` finds it (`instance.ts:93-115`). */
@@ -92,6 +97,8 @@ export interface PlanElement {
     className: string;
     /** Listed in `model.objects`. */
     root: boolean;
+    /** Listed in `model.objects`, contained or not (R-NEST-1): the executor's `isListedAtRoot` (`instance.ts:440-443`). */
+    listed?: boolean;
     /** The slot that is its father, when it is a contained instance. */
     container?: { owner: string; feature: string };
     /** Reference slots by feature: the ids they hold (`__raw.values`, holes dropped). */
@@ -181,8 +188,8 @@ export interface PlannedFeature {
     value: string | number | boolean | null;
     /** A multi-valued attribute: `=` on a vector replaces the whole vector (#211). */
     many: boolean;
-    /** #211: the vector a `set` writes, when it is a list (`value` is then null). */
-    values?: (string | number | boolean | null)[];
+    /** A list written on a multi-valued attribute: it replaces every value (`value` is then null). */
+    values?: Array<string | number | boolean | null>;
     /** `M2`: a `set` (or `abstract`) on an element of the metamodel. */
     level?: 'M2';
 }
@@ -211,6 +218,8 @@ export interface PlannedReference {
     targetCreated: boolean;
     /** Ids taken out of the slot. */
     removed: string[];
+    /** A containment write that took the target out of another slot: a move (`LModelElement.tsx:7961-7978`). */
+    movedFrom?: { owner: string; feature: string };
 }
 
 export interface PlannedRename { line: number; id: string; from: string; to: string; level?: 'M2' }
@@ -258,6 +267,8 @@ interface SimElement {
     name: string;
     className: string;
     root: boolean;
+    /** `PlanElement.listed`; an instance this run creates is not (its listing lands after the run's writes). */
+    listed: boolean;
     container?: { owner: string; feature: string };
     references: Record<string, string[]>;
     created: boolean;
@@ -292,7 +303,7 @@ class Simulation {
 
     constructor(readonly world: PlanWorld) {
         this.elements = world.elements.map((e) => ({
-            id: e.id, name: e.name, className: e.className, root: e.root,
+            id: e.id, name: e.name, className: e.className, root: e.root, listed: !!e.listed,
             container: e.container ? { ...e.container } : undefined,
             references: Object.fromEntries(Object.entries(e.references ?? {}).map(([k, v]) => [k, [...v]])),
             created: false, deleted: false,
@@ -331,6 +342,57 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
         case 'boolean': case 'number': case 'string': return value.value;
         default: return null;
     }
+}
+
+/** `set.ts`: a list is the value of a model attribute, not of a metamodel property. */
+const LIST_AT_M2 = 'A list is the value of a many-valued attribute of a model, not of a metamodel property';
+
+type Primitive = string | number | boolean | null;
+type AttributeWrite = { ok: true; value: Primitive } | { ok: true; values: Primitive[] } | { ok: false; code: string; message: string };
+
+/**
+ * `attributeWrite` and `attributeScalar` (`instance.ts`, R-TXT-25 (2)): a list replaces the values
+ * of a multi-valued attribute and is refused on a single one; a name is a literal of the
+ * attribute's enumeration (`L`, `E.L`, `E::L`), stored by its name; anything else as given.
+ */
+function attributeWrite(attribute: PlanAttribute, value: LiteralValue | QualifiedName): AttributeWrite {
+    if (isLiteral(value) && value.kind === 'array') {
+        if (!isManyValued(attribute.upper)) return { ok: false, code: 'LIST_ON_SINGLE_VALUED', message: `'${attribute.name}' holds one value: write it without brackets` };
+        const values: Primitive[] = [];
+        for (const v of value.values) {
+            const one = attributeScalar(attribute, v);
+            if (!one.ok) return one;
+            values.push((one as { value: Primitive }).value);
+        }
+        return { ok: true, values };
+    }
+    return attributeScalar(attribute, value);
+}
+
+function attributeScalar(attribute: PlanAttribute, value: LiteralValue | QualifiedName): AttributeWrite {
+    let spelled: { enumName: string; literal: string };
+    if (!isLiteral(value)) {
+        const qn = value as QualifiedName;
+        spelled = qn.member
+            ? { enumName: qn.segments.join('::'), literal: qn.member }
+            : { enumName: qn.segments.slice(0, -1).join('::'), literal: qn.segments[qn.segments.length - 1] ?? qn.raw };
+    } else if (value.kind === 'enumLiteral') {
+        spelled = { enumName: value.enum.segments.join('::'), literal: value.literal };
+    } else if (value.kind === 'array') {
+        return { ok: false, code: 'TYPE_MISMATCH', message: 'A list cannot hold a list' };
+    } else {
+        return { ok: true, value: literalToPrimitive(value) };
+    }
+    const e = attribute.enumeration;
+    const shown = spelled.enumName ? `${spelled.enumName}.${spelled.literal}` : spelled.literal;
+    if (!e) return { ok: false, code: 'TYPE_MISMATCH', message: `Cannot assign a name '${shown}' to an attribute` };
+    if (spelled.enumName && spelled.enumName !== e.name) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.enumName}' is not the enumeration of '${attribute.name}', which is ${e.name}` };
+    }
+    if (!e.literals.includes(spelled.literal)) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.literal}' is not a literal of the enumeration ${e.name} (${e.literals.join(', ')})` };
+    }
+    return { ok: true, value: spelled.literal };
 }
 
 function conforms(world: PlanWorld, className: string, type: string): boolean {
@@ -385,10 +447,15 @@ function planCreate(sim: Simulation, args: CreateArgs, line: number): LineResult
 
     const name = explicitName ?? generateName(sim, className);                                                       // :583
     if (sim.handles.has(name)) return fail('HANDLE_IN_USE', `Handle '${name}' already used in this script`);         // :588-598
+    const holder = sim.live().find((e) => e.name === name);                                                           // #938 name conflict
+    if (holder) {
+        return fail('NAME_CONFLICT', `An instance named '${name}' already exists: `
+            + (holder.className ? `${holder.className} (${holder.id})` : holder.id));
+    }
 
     const id = sim.nextId();
     sim.elements.push({
-        id, name, className, root: !container, references: {}, created: true, deleted: false,
+        id, name, className, root: !container, listed: false, references: {}, created: true, deleted: false,
         container: container ? { owner: container.owner.id, feature: container.feature } : undefined,
     });
     sim.handles.set(name, id);                                                                                        // :633-634
@@ -415,40 +482,30 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     const operator = args.operator ?? '=';
 
     if (attribute) {
-        // #211: a vector attribute (upper > 1) takes `= [...]`, `+= <v>`, `-= <v>`. The
-        // simulation does not track attribute slots, so it cannot check capacity or absence,
-        // the way it can for reference slots; the executor does.
+        // #211 and R-TXT-25 (2): `=` writes one value or, on a vector (upper > 1), a list; `+=` and
+        // `-=` act on one element of a vector. The simulation does not track attribute slots, so it
+        // cannot check capacity or absence, the way it can for reference slots; the executor does.
         const many = isManyValued(attribute.upper);
         if (operator !== '=' && !many) return fail('OPERATOR_NOT_SUPPORTED', `'${operator}' is not available on the attribute '${args.property}'`); // :977-987
-        if (!isLiteral(args.value)) return fail('TYPE_MISMATCH', `Attribute '${args.property}' expects a literal value`); // :988-998
-        const lit = args.value as LiteralValue;
-        if (lit.kind === 'array') {
+        const listed = isLiteral(args.value) && (args.value as LiteralValue).kind === 'array' ? (args.value as LiteralValue & { kind: 'array' }).values : null;
+        if (listed && many && listed.some((v) => isLiteral(v) && (v as LiteralValue).kind === 'null')) {
+            return fail('TYPE_MISMATCH', `An element of '${ownerName}.${args.property}' must be a value, not null`);
+        }
+        const written = attributeWrite(attribute, args.value);                                                       // `attributeWrite`
+        if (!written.ok) return fail(written.code, written.code === 'TYPE_MISMATCH' ? `Attribute '${args.property}' expects a literal value` : written.message);
+        const base = { line, owner: ownerName, ownerId: source.id, feature: args.property };
+        if ('values' in written) {
             if (operator !== '=') return fail('TYPE_MISMATCH', `'${operator}' takes a single element, not a list`);
-            if (!many) return fail('MULTIPLICITY_EXCEEDED', `'${ownerName}.${args.property}' is single-valued`);
-            for (const v of lit.values) {
-                if (!isLiteral(v) || (v as LiteralValue).kind === 'null' || (v as LiteralValue).kind === 'enumLiteral') {
-                    return fail('TYPE_MISMATCH', `An element of '${ownerName}.${args.property}' must be a primitive literal`);
-                }
-            }
-            const vector = lit.values.map((v) => literalToPrimitive(v as LiteralValue));
-            return ok({ kind: 'feature', value: {
-                line, owner: ownerName, ownerId: source.id, feature: args.property,
-                value: null, many: true, values: vector,
-            } });
+            return ok({ kind: 'feature', value: { ...base, value: null, many: true, values: written.values } });
         }
-        if (lit.kind === 'null' && many && operator === '=') {
-            return ok({ kind: 'feature', value: {
-                line, owner: ownerName, ownerId: source.id, feature: args.property,
-                value: null, many: true, values: [],
-            } });
+        const lit = isLiteral(args.value) ? (args.value as LiteralValue) : null;
+        if (lit?.kind === 'null' && many && operator === '=') {
+            return ok({ kind: 'feature', value: { ...base, value: null, many: true, values: [] } });
         }
-        if ((operator === '+=' || operator === '-=') && (lit.kind === 'null' || lit.kind === 'enumLiteral')) {
-            return fail('TYPE_MISMATCH', `'${ownerName}.${args.property}' holds primitives, not ${lit.kind === 'null' ? 'null' : 'enum literals'}`);
+        if (operator !== '=' && lit?.kind === 'null') {
+            return fail('TYPE_MISMATCH', `'${ownerName}.${args.property}' holds primitives, not null`);
         }
-        return ok({ kind: 'feature', value: {
-            line, owner: ownerName, ownerId: source.id, feature: args.property,
-            value: literalToPrimitive(lit), many,
-        } });
+        return ok({ kind: 'feature', value: { ...base, value: written.value, many } });
     }
 
     const ref = reference!;
@@ -478,20 +535,22 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     if (operator !== '-=' && !conforms(sim.world, target.className, ref.type)) {
         return fail('TYPE_MISMATCH', `'${targetName}' is a ${target.className}: ${cls.name}.${ref.name} holds ${ref.type} and its subclasses`);
     }
-    const effect = (op: PlannedReference['operator'], removed: string[]): LineResult =>
-        ok({ kind: 'reference', value: { ...base, operator: op, target: targetName, targetId: target.id, targetCreated: target.created, removed } });
+    const effect = (op: PlannedReference['operator'], removed: string[], moved?: Map<string, { owner: string; feature: string }>): LineResult => {
+        const movedFrom = moved?.get(target.id);
+        return ok({ kind: 'reference', value: { ...base, operator: op, target: targetName, targetId: target.id, targetCreated: target.created, removed, ...(movedFrom ? { movedFrom } : {}) } });
+    };
 
     if (operator === '+=') {                                                                                          // :1230-1240
         const plan = planAdd(slot, target.id, ref.upper);
         if ('full' in plan) return fail('MULTIPLICITY_EXCEEDED', `'${ownerName}.${ref.name}' is full (at most ${plan.full})`);
-        if ('write' in plan) putIn(sim, source, ref, plan.write);
-        return effect('+=', []);
+        return effect('+=', [], 'write' in plan ? putIn(sim, source, ref, plan.write) : undefined);
     }
     if (operator === '-=') {                                                                                          // :1241-1253
         const plan = planRemove(slot, target.id);
         if ('absent' in plan) return fail('NOT_LINKED', `'${targetName}' is not in ${ownerName}.${ref.name}`);
         const bornHere = target.container?.owner === source.id && target.container.feature === ref.name;
-        if (ref.containment && bornHere && !target.root) {
+        // The executor refuses only a child the model does not list (`isListedAtRoot`); a listed one goes to the top level.
+        if (ref.containment && bornHere && !target.root && !target.listed) {
             return fail('WOULD_ORPHAN', `Cannot remove '${targetName}' from ${ownerName}.${ref.name}: it would be left outside the model`);
         }
         takeOut(sim, source, ref, plan.remove);
@@ -499,8 +558,7 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     }
     const plan = planLink(slot, target.id, isManyValued(ref.upper));                                                 // :1162-1166
     takeOut(sim, source, ref, plan.remove);
-    if (plan.write) putIn(sim, source, ref, plan.write);
-    return effect('=', plan.remove);
+    return effect('=', plan.remove, plan.write ? putIn(sim, source, ref, plan.write) : undefined);
 }
 
 /** `removeLinked` (`instance.ts:344-351`): out by value; a contained child fathered here goes back to the model. */
@@ -512,14 +570,26 @@ function takeOut(sim: Simulation, source: SimElement, ref: PlanReference, ids: r
     }
 }
 
-/** `refProxy.values = write`: a containment target moves into the slot (`referenceWrite.ts:13-14`). */
-function putIn(sim: Simulation, source: SimElement, ref: PlanReference, write: string[]): void {
+/**
+ * `refProxy.values = write`: a containment target moves into the slot (`referenceWrite.ts:13-14`), out of the slot
+ * that held it (`LModelElement.tsx:7964-7978`, the detach from the old parent). Returns the moved ids, by origin.
+ */
+function putIn(sim: Simulation, source: SimElement, ref: PlanReference, write: string[]): Map<string, { owner: string; feature: string }> {
+    const moved = new Map<string, { owner: string; feature: string }>();
     source.references[ref.name] = [...write];
-    if (!ref.containment) return;
+    if (!ref.containment) return moved;
     for (const id of write) {
         const e = sim.byId(id);
-        if (e) e.container = { owner: source.id, feature: ref.name };
+        if (!e) continue;
+        const from = e.container;
+        if (from && (from.owner !== source.id || from.feature !== ref.name)) {
+            const owner = sim.byId(from.owner);
+            if (owner) owner.references[from.feature] = sim.slot(owner, from.feature).filter((v) => v !== id);
+            moved.set(id, { ...from });
+        }
+        e.container = { owner: source.id, feature: ref.name };
     }
+    return moved;
 }
 
 /** `executeRenameInstance` (`instance.ts:790-897`). */
@@ -818,6 +888,7 @@ function planM2Set(m2: M2Simulation, args: SetArgs, line: number): LineResult {
     const allowed = [...COMMON_PROPERTIES, ...SET_PROPERTIES[e.kind]];
     const property = allowed.find((p) => p.toLowerCase() === args.property.toLowerCase());
     if (!property) return fail('UNKNOWN_PROPERTY', `${e.kind} '${e.name}' has no property '${args.property}'`);            // :67-82
+    if (isLiteral(args.value) && args.value.kind === 'array') return fail('LIST_NOT_SUPPORTED', LIST_AT_M2);             // set.ts list guard
 
     let value: string | number | boolean | null;
     if (property === 'type' && TYPE_RULES[e.kind]) {                                                                // :84-92
@@ -937,6 +1008,8 @@ function planCommand(sim: Simulation, m2: M2Simulation, open: 'M1' | 'M2', ast: 
         case 'set':
             return lineLevel(sim, m2, open, (args as SetArgs).target) === 'M2' ? planM2Set(m2, args as SetArgs, line) : planSet(sim, args as SetArgs, line);
         case 'rename':
+            // R-FA-9: the executor computes the name over the JjEL context, which a plan does not read.
+            if ((args as RenameArgs).newNameExpr !== undefined) return fail('UNSUPPORTED', `unsupported: rename to a computed name (${(args as RenameArgs).newNameExpr})`);
             return lineLevel(sim, m2, open, (args as RenameArgs).target, args.elementType) === 'M2' ? planM2Rename(m2, args as RenameArgs, line) : planRename(sim, args as RenameArgs, line);
         case 'delete':
             return lineLevel(sim, m2, open, (args as DeleteArgs).target, args.elementType) === 'M2' ? planM2Delete(m2, args as DeleteArgs, line) : planDelete(sim, args as DeleteArgs, line);

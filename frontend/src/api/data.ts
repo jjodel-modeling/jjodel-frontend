@@ -45,6 +45,7 @@ import {
     DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug
 } from "../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toLongEClass} from "../common/U";
+import {ecoreDefaultValueLiteral, ecoreLiteralValue, ecoreLiteralLabel, ecoreEnumSerializable} from "../services/export/ecoreFeatureReads";
 type RET<T = boolean> = T | Promise<T>;
 /*
 
@@ -884,6 +885,7 @@ export class EcoreParser{
                 case ECoreEnum.xsitype: case ECoreNamed.namee: break;
                 case ECoreEnum.eLiterals: break;
                 case ECoreEnum.serializable: dObject.serializable = value === 'true'; break;
+                case EcoreParser.XMLinlineMarker + 'serializable': dObject.serializable = ecoreEnumSerializable(json); break;
                 case ECoreEnum.instanceTypeName: dObject.instanceClassName = value + ''; break;
             }
         }
@@ -933,8 +935,9 @@ export class EcoreParser{
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
-        dObject.value = +this.read(json, ECoreLiteral.value, Number.NEGATIVE_INFINITY);//vv4
-        dObject.literal = this.read(json, ECoreLiteral.literal, '');
+        // P-2026-11-01-2300: read under the '-' key xmlToJson writes (ECoreLiteral.value has none).
+        dObject.value = ecoreLiteralValue(json);//vv4
+        dObject.literal = ecoreLiteralLabel(json) || this.read(json, ECoreLiteral.literal, '');
         dObject.name = this.read(json, ECoreNamed.namee,  dObject.literal || 'literal_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         /// *** specific end *** ///
@@ -973,6 +976,8 @@ export class EcoreParser{
         dObject.transient = U.fromBoolString(this.read(json, ECoreAttribute.transient, false), false);
         dObject.volatile = U.fromBoolString(this.read(json, ECoreAttribute.volatile, false), false);
         dObject.unsettable = U.fromBoolString(this.read(json, ECoreAttribute.unsettable, false), false);
+        // P-2026-11-01-2300: the field JjScript `set ... default` writes for an editor-built metamodel.
+        dObject.defaultValueLiteral = ecoreDefaultValueLiteral(json);
         /// *** specific end *** ///
         return generated; }
 

@@ -31,9 +31,10 @@ describe('stateHeading: Marking for a Petri profile, Configuration for every con
         nfa: 'Configuration',
         moore: 'Configuration',
         mealy: 'Configuration',
+        dynamicClassification: 'Configuration',
     };
 
-    it('every system profile, the eight of R-SIM-54 (mutants: always Marking, always Configuration, the test inverted)', () => {
+    it('every system profile, the eight of R-SIM-54 and Dynamic classification (mutants: always Marking, always Configuration, the test inverted)', () => {
         expect(SYSTEM_PROFILES.map(p => p.id).sort()).toEqual(Object.keys(EXPECTED).sort());
         for (const p of SYSTEM_PROFILES) expect([p.id, stateHeading(p)]).toEqual([p.id, EXPECTED[p.id]]);
     });

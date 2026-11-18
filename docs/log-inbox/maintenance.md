@@ -374,3 +374,1088 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Built-in browser (dev, zoom 60%), Jjodel harness after merge 460d77437: BPMN 48 nodes 42 edges; selection click 0.4 s of long tasks (145/129/121), ring in 745 ms by rAF polling under dev load; drag of about 80 px 0.69 s of long tasks including the drop, dragged back; node sizes unchanged on screen
 **Notes**: Rollback tag `pre-perf-round3-P-2026-10-21-1753` on `b0a5ec435` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1753/result.json`.
 **Prompt document name**: 2026-10-21 17:53
+
+## 2026-10-30 — ticket: JjTL: a transformation run is many undo steps, not one
+**Ticket**: A JjTL transformation run in the app writes the output model through several deferred steps (STEP 6c addObject per level, then the attribute timer). Each write is its own undo entry, so undoing a run takes many steps and can stop half-way with a partial output model.
+
+Expected: one transformation run is one undo step.
+
+Found by P-2026-10-30-1440 (report docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md, section 8, Q7); left out of scope by decision of Alfonso 2026-10-30.
+**Priority**: low
+**Found in**: P-2026-10-30-1440
+
+## 2026-10-30 — ticket: Rename via the $name slot bypasses the R-S1-2 same-name guard
+**Ticket**: R-S1-2 refuses a second child with the same explicit name in one containment slot at creation (addObject). A rename written through the child $name slot afterwards is not checked: the P-2026-10-30-1335/1440 probe produced two same-named siblings in one slot with no toast and no refusal.
+
+R-S1-6 (2026-10-30) makes the JjTL output deliberately use this path for nested objects, so the fix must keep that exception: decide whether set_name through the $name slot should run the R-S1-2 verdict for user gestures and JjScript, and how the transformation path opts out.
+
+Measured in docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md.
+**Priority**: medium
+**Found in**: P-2026-10-30-1440
+
+## 2026-11-02 — ticket: Opening a large model with no viewpoint lands the canvas on an empty area
+**Ticket**: Opening the harness model (`~/jjodel-papers/2026-sosym-harness-models/jjodel/jjodel.harness.project.jjodel`, 407 nodes) with no viewpoint lands the canvas on an empty area: `translate(~-1224, -9802) scale(0.5)` in most runs, `(-1197, -1107)` in others, on trunk `4383c2572` and on the branch of P-2026-11-02-0020 alike. No node is in view at open; the user sees an empty canvas and must zoom out or fit by hand. Found by P-2026-11-02-0020 (DOM check and the click-profile probe, which reports `visible nodes in the target pane 0` and cannot click or drag).
+
+Expected: opening a model fits the view to its nodes (or restores a saved viewport that contains nodes). The viewport at open should be deterministic for the same file.
+**Priority**: medium
+**Found in**: P-2026-11-02-0020
+
+## 2026-11-02 — perf(editor-v2): conditional onlyRenderVisibleElements (P-2026-11-02-0225)
+**Prompt**: Close P-2026-11-02-0020 from its handoff: rerun typecheck and the colocated test, commit the code with explicit pathspec, write this entry and the two Status lines uncommitted (RC-17), delete the temp DOM probe and the trunk worktree. Alfonso accepted on 2026-11-02 02:20 the open time and his hand measurement of 2026-10-31 for the no-viewpoint case.
+**Files touched**: 36694dbfb: frontend/src/components/editor-v2/EditorV2.tsx (import, useMemo `onlyRenderVisible`, prop on `<ReactFlow>`), NEW frontend/src/components/editor-v2/onlyRenderVisible.ts, NEW frontend/src/components/editor-v2/__tests__/onlyRenderVisible.test.ts. Uncommitted: this entry, Status lines of docs/prompts/claude_2026-11-02_0020_prompt_only_visible_conditional.md and claude_2026-11-02_0225_prompt_only_visible_conditional_closure.md.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (RC-23, built-in browser, 2026-11-02 02:55, dev server of only-visible-conditional; Alfonso GO 06:46)
+**Notes**: Partial: no-viewpoint drag unmeasured, the probe viewport opens on an empty area on both builds, so no node is clicked; a probe change, its own lane. Causa (g): smoke run 1 timed out on page.goto on a cold server, run 2 green. New module is the pure-predicate seam of 0020 item 2 (EditorV2 does not import in the bench). Handoff said 13 tests; the tree holds 12, byte-identical to handoff.diff. Supersedes branch only-visible-wip, prompts P-2026-11-01-0040..2335.
+**Prompt document name**: 2026-11-02 02:25
+
+**Ticket** (evidence, from the 0020 handoff). Timing, CLICK_PROD=1 CLICK_STEPS=open,drag CLICK_NODES=1, trunk and branch interleaved, load gate 1-min < 16, wallMs, three runs each:
+
+| case | step | trunk | branch | median trunk / branch |
+|------|------|-------|--------|-----------------------|
+| no viewpoint | open | 17735 17849 17602 | 6009 6060 5974 | 17735 / 6009 |
+| BPMN | open | 5209 5297 5459 | 5149 5133 5558 | 5297 / 5149 |
+| BPMN | drag | 4709 4827 5261 | 4701 4690 5282 | 4827 / 4701 |
+
+Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed (the known window-is-not-defined nine), 12659 tests passed; smoke 12 passed, 3 skipped (run 2); bpmn-lanes probe pass=12 fail=0. Rerun here: typecheck exit 0, colocated test 12/12. Mutation bench 11, 10 killed; m10 (dropping the `checked` dedupe) survives, cost only. DOM checks (prod previews 3092 branch, 3093 trunk): open viewport nondeterministic on both builds; no viewpoint at translate(~-1224,-9802) scale(0.5): branch 0 nodes, 104 edges (99 crossing, none zero-length), trunk 407 nodes, 0 in view, 97 edges crossing; minimap 407 = 407; BPMN 48 nodes 42 edges on both; console errors only `init_dash` on both. Not done: the zoom-in edge pick, covered by the 0-node case.
+
+**Timing, no viewpoint, drag** (P-2026-11-02-0233, probe 604f578ed). CLICK_PROD=1 CLICK_VP=- CLICK_FIT=1 CLICK_STEPS=open,drag CLICK_NODES=1, prod previews (trunk = merge base 4383c2572, branch = 9217e9185), interleaved, 1-min load 2.06-3.61, three runs each. Viewport on all six runs x 124, y -9862, zoom 0.5 (minZoom clamp, centred on the node nearest the bbox centre); drag from the same point (437,569) on the same object `dRC_13`. wallMs includes the settle; act = the mouse sequence; LT = long-task sum and longest task in the drag step (the probe has no hitch measure of its own, the longest task stands in).
+
+| step | trunk | branch | median trunk / branch |
+|------|-------|--------|-----------------------|
+| open wallMs | 18463 18046 18393 | 6020 6016 6939 | 18393 / 6020 |
+| drag wallMs | 5991 6114 6099 | 3713 3709 3726 | 6099 / 3713 |
+| drag act ms | 2967 3107 3081 | 704 703 719 | 3081 / 704 |
+| drag LT sum | 1033 1821 2640 | 58 234 119 | 1821 / 119 |
+| drag longest LT | 270 270 275 | 58 60 60 | 270 / 60 |
+
+## 2026-11-02 — merge: only-visible-conditional into alfonso-frontend-jjtl (P-2026-11-02-0656)
+**Prompt**: Bring `only-visible-conditional` at bfb6ee654 (conditional onlyRenderVisibleElements 36694dbfb, CLICK_FIT probe 604f578ed) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14); union resolution of this inbox.
+**Files touched**: merge commit 7a4094009 (`frontend/src/components/editor-v2/EditorV2.tsx`, `onlyRenderVisible.ts`, `__tests__/onlyRenderVisible.test.ts`, `frontend/scripts/probe/large-model-click-profile.ts`, the branch's three prompts, this inbox); `docs/prompts/claude_2026-11-02_0656_prompt_merge_only-visible-conditional.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
+**Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
+**Prompt document name**: 2026-11-02 06:56
+
+## 2026-11-02 — feat(jjtl): forall over several variables (P-2026-11-02-1331)
+**Prompt**: Execute P-2026-10-31-1741 (superseded) with R-FA-1 and R-FA-7: JjTL `forall q, r in xs` and `forall q in xs, r in ys`, mixable, cartesian product first variable outermost, flat in the feature; a later collection reads an earlier variable; check the JjEL route. Two-phase in one session.
+**Files touched**: bd135bd57 `docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`; 482936ee5 `frontend/src/jjtl/parser/parser.ts`, `types/ast.ts`, `executor/executor.ts`, `executor/__tests__/forall-multivar.test.ts`, `parser/__tests__/forall-multivar.test.ts`; 0845044e3 `frontend/src/jjtl/SPEC.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Seven files, all named by the prompt or its acceptance. `bindings?` is an optional field of ForAllMappingAST, read only in jjtl. JjEL route: the collection parser has no object literal (F5); records bound by let lost their ref getters in fromJjelValue, fixed in the executor (bindForAllElement). Gates: tsc 0 errors; vitest src/jjtl src/jjel 910 passed, the same 7 window failures before and after; build exit 0. node_modules: temporary symlink, removed.
+**Prompt document name**: 2026-11-02 13:31
+
+## 2026-11-02 — merge: jjtl-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1404)
+**Prompt**: `claude_2026-11-02_1404_prompt_merge_jjtl-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-forall-multivar` at `fc3bfee2a` into `alfonso-frontend-jjtl`, merge base `17beac16c`, 4 commits on the branch side.
+**Files touched**: merge `100889e0c`: 9 files from the branch side (`docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1331_prompt_jjtl_forall_multivar.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `100889e0c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12843 tests in 486 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: parser and executor only, no UI change: visual check not applicable; merge gates green (12843 tests, 9 red at import, build exit 0)
+**Notes**: Rollback tag `pre-jjtl-forall-multivar` on `8913bf878` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1404/result.json`.
+**Prompt document name**: 2026-11-02 14:04
+
+## 2026-11-02 — feat(jjel): forall and exists over several variables (P-2026-11-02-1410)
+**Prompt**: Close P-2026-11-02-1330 (hard-stop at the context ceiling, RC-51) from its handoff: decisions F1 `flatten`, F2 parse error, E-VALUE record rule adopted by the chat; add `forall x, y in |` and `forall x in A, y in |` to the `after-forall-in` autocomplete context with a test; SPEC.md grammar and §5.1.1; gates, code commit, log, Status flips, symlink removal.
+**Files touched**: fd13ba517 (13 files: `frontend/src/jjel/parser/parser.ts`, `SPEC.md`, `autocomplete/context.ts`, `autocomplete/providers/identifier.ts`, `autocomplete/util/boundVariables.ts` new, `__tests__/forallMultivar.test.ts` new; `frontend/src/model/simulation/subsetChecker.ts`; tests of codegen printer, templateCompletion, jjscript parser, guardEvaluator, subsetChecker, validationEvaluator); Status lines of the 1330 and 1410 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
+**Prompt document name**: 2026-11-02 14:10
+
+## 2026-11-02 — merge: jjel-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1511)
+**Prompt**: `claude_2026-11-02_1511_prompt_merge_jjel-forall-multivar.md`, a direct merge by `lane-run merge --direct`, closed by hand by the chat because the worker ended blocked and `lane-run go` did not apply.
+**Files touched**: merge `bf4b33e74`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 12886 tests, 4 failed, all in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts` (generation errors). Same run: 3 of the 4 red before the merge, 0 on the branch. The two files alone on the trunk, twice, load average 13: 23 of 23 green. Intermittent; the 2000 ms generation budget (R-GEN-28) under a full run is a hypothesis, the error text was not captured. Other gates green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001, from the served modules: eight expressions as R-FA, both parse errors, three autocomplete contexts `after-forall-in`. The suggestion list in the console UI was not exercised.
+**Notes**: Rollback tag `pre-jjel-forall-multivar` on `a122f5463`. Worker: `~/.jjodel-lanes/P-2026-11-02-1511/result.json`.
+**Prompt document name**: 2026-11-02 15:11
+
+## 2026-11-02 — feat(jjscript): forall...do over several variables (P-2026-11-02-1332)
+**Prompt**: R-FA-7 in JjScript: `forall a, b in S ... do` and `forall x in A, y in x.f ... do` desugared by the parser to nested ForAllArgs, filter on the innermost; tests, one Jjodie prompt line.
+**Files touched**: df3455a9d (4 files: `frontend/src/jjscript/parser/parser.ts`, `__tests__/parser.test.ts`, `executor/__tests__/forallMultivar.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 1332 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Executor, planner, guard, validator unchanged (planner: `unsupported: forall`, pinned by a test). Undo is the Run's group, not run end to end (executor does not import in the bench). `x, y in S` reading x is a regex parse error (a lambda rebinding x is a false positive). `rename b to b.name + _dup` does not parse (rename takes a name token, pre-existing). Gates: tsc 0, vitest 1425 passed (context-binding the known failure), build 0. Mutation: bindingContinues=false kills 5.
+**Prompt document name**: 2026-11-02 13:32
+
+## 2026-11-02 — merge: jjscript-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1701)
+**Prompt**: `claude_2026-11-02_1701_prompt_merge_jjscript-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-multivar` at `1d415bd5d` into `alfonso-frontend-jjtl`, merge base `767d350a3`, 2 commits on the branch side.
+**Files touched**: merge `838ea1449`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1332_prompt_jjscript_forall_multivar.md`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/__tests__/parser.test.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `838ea1449` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12899 tests in 488 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 from the served JjScript parser: both multi-variable spellings parse to nested forall, a repeated name is a parse error. No command was run on a model in the UI; merge gates green
+**Notes**: Rollback tag `pre-jjscript-forall-multivar` on `767d350a3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1701/result.json`.
+**Prompt document name**: 2026-11-02 17:01
+
+## 2026-11-02 — ticket: Abstract-syntax viewport is not restored after a reload
+**Ticket**: With no viewpoint (abstract syntax), reloading the page and reopening a model does not restore its stored viewport, while under a viewpoint (BPMN on the harness model) it does. Found by P-2026-11-02-0646 (discovery `docs/discovery/discovery_2026-11-02_open_viewport_empty.md`, §5.3 and open question 4), on HEAD `246edb1bc`: under BPMN the initial transform equals the stored `jjodel.viewport.<model>.<viewpoint>` value and no fit runs; without a viewpoint the key `jjodel.viewport.<model>.__abstract__` is present but the initial transform is the identity and a fresh fit runs.
+
+Expected: the abstract-syntax viewport is restored on reopen like the viewpoint ones (the restore site is around `EditorV2.tsx:609`). Kept out of the #419 fix on purpose.
+**Priority**: low
+**Found in**: P-2026-11-02-0646
+
+## 2026-11-02 — ticket: Toolbar auto layout blocks the page for minutes on a 407-node model
+**Ticket**: On the harness model (`~/jjodel-papers/2026-sosym-harness-models/jjodel/jjodel.harness.project.jjodel`, 407 nodes, no viewpoint), the toolbar's full auto layout (button `title="Auto layout"`, `Toolbar.tsx:1042-1050`, handler `handleToolbarAutoLayout` in `EditorV2.tsx`) blocks the main thread for about 391 s before its fit runs. Observed by P-2026-11-02-1856 while probing the fit fallback of ticket #419 (the probe needed a 600 s wait); not measured on the trunk, so it is not known whether the cost is the same there.
+
+Expected: measure it on the trunk first (open, auto layout, time to the fit, longest task, where the time goes: ELK layout, port distribution, React commit). A layout that takes minutes should at least run off the main thread or show progress and be cancellable.
+**Priority**: medium
+**Found in**: P-2026-11-02-1856
+
+## 2026-11-02 — feat(jjscript): rename to a JjEL expression (P-2026-11-02-2030)
+**Prompt**: R-FA-9: `rename ... to/as <expression>`; a single name followed by the end of the command stays literal, anything else is JjEL evaluated per execution with the forall variables and let bindings; errors carry expression and value; tests, help, one prompt line.
+**Files touched**: bd161d1a9 (discovery `docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md`); 62522c9bf (7 files: `frontend/src/jjscript/parser/parser.ts`, `types.ts`, `executor/commands/rename.ts`, `executor/effectsPlanner.ts`, `executor/commands/help.ts`, `executor/__tests__/renameExpression.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 2030 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 7 files, all named by the prompt (effectsPlanner because it would plan a rename to the source text). R-FA-9 deviation: a single name before a trailing `in` stays literal (defaultPrompts.ts:147 form). Old `to "A_" + c.name` silently renamed to `A_` (F1). Gates: tsc 0, vitest jjscript+jjel 1448 passed (context-binding the known failure), build 0. Temp node_modules symlink, removed. Details: the discovery report.
+**Prompt document name**: 2026-11-02 20:30
+
+## 2026-11-02 — ticket: forall rename of same-named elements fails as ambiguous
+**Ticket**: `executeForAll` substitutes the iteration variable in the body by the element's name (`forall.ts:79-82`), and the command resolves that name again. With two classes of one name in a metamodel, `resolveTargetInProject` returns `ambiguousWith` (measured on `e5e60dca4`), so `forall a, b in classes such that a != b and a.name == b.name do rename b to b.name + "_dup"` refuses every pair with `AMBIGUOUS_TARGET`, whatever the new name. Expected: the body acts on the iterated element (substitute by id, or pass the element through the context).
+**Priority**: medium
+**Found in**: P-2026-11-02-2030
+**Detail**: docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md
+
+## 2026-11-02 — fix(editor-v2): an open fit that frames no node pans onto one (P-2026-11-02-1856)
+**Prompt**: `claude_2026-11-02_1856_prompt_open_viewport_fix.md`, full lane, Phase 2 of P-2026-11-02-0646 on the GO of 2026-11-02 18:26 (Q1 the two auto-layout fits, Q2 a restored viewport with no node in view, Q3 anchor nearest the box centre, Q5 commit the probe). Closes ticket #419; the abstract-syntax restore stays ticket #440.
+**Files touched**: `55e4d2703`: `frontend/src/components/editor-v2/openViewport.ts` (new), `frontend/src/components/editor-v2/__tests__/openViewport.test.ts` (new), `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/scripts/probe/open-viewport.ts` (new). Closure commit (RC-17): this inbox, the Status lines of the prompts P-2026-11-02-0646 and P-2026-11-02-1856.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat, RC-23, 2026-11-02 ~19:55, built-in browser, dev server from open-viewport-empty, harness fixture, fresh profile, pane 822x644: no viewpoint first open shows nodes in view (2 at that pane) and stores the corrected viewport; BPMN after reload opens at (-1440.5, -1173, 0.5) with 9 nodes in view, as on the trunk with the same pane; no console errors. GO Alfonso 2026-11-02 20:20.
+**Notes**: No viewpoint now opens at (-160.75, -10106.75, 0.5), 21 nodes in view, same over 3 fresh opens; BPMN unchanged (-1197.5, -1107, 0.5); reload, stored-empty, toolbar layout in view; 0 empty frames between fit and fallback, counter control 54/54. Bench 14 tests, 3 mutations killed. bpmn-lanes 12/12, smoke GREEN, typecheck 0, build ok. First full vitest had a 10th red (textual.test.ts R-TXT-21 (10)) under load: green alone and on the rerun.
+**Prompt document name**: 2026-11-02 18:56
+
+**Ticket** (P-2026-11-02-1856): the toolbar's full auto layout on the harness model with no viewpoint (407 nodes) holds the main thread about 391 s before its fit (probe `open-viewport.ts`, toolbar scenario, load under 6); measured on this branch only, not on the base, and the layout code is untouched here.
+
+## 2026-11-02 — merge: open-viewport-empty takes alfonso-frontend-jjtl (P-2026-11-02-2028)
+**Prompt**: `claude_2026-11-02_2028_prompt_open-viewport-empty_take_trunk.md`, full lane: bring the trunk at the explicit sha e5e60dca4 into open-viewport-empty with one --no-ff merge commit (RC-14), union for the inboxes; stopped at step 2 on the EditorV2.tsx conflict, resumed on the chat's authorization (RC-21, Alfonso GO 20:20) to keep both import lines.
+**Files touched**: merge commit 91033dfc9 (the trunk's 127 files; resolved by hand: `docs/log-inbox/maintenance.md` by union, `frontend/src/components/editor-v2/EditorV2.tsx` the import hunk only); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, GO 2026-11-02 on the merge tree; the chat runs the combined-tree visual check before the trunk merge)
+**Notes**: Trunk tip moved to 4d1d32b8b (docs only, R-TXT-29); e5e60dca4 merged. Gates on 91033dfc9: typecheck and typecheck:scripts exit 0; vitest 492 files, 483 passed + the known 9, 12957 = trunk 12943 + 14; hooks 967 = trunk (a first run red on a laneBoard 10 s timeout, run beside the build, green alone); build exit 0; check:docs 5/5; check:scripts, check:addonly PASS. Full read of EditorV2.tsx by an explorer subagent.
+**Prompt document name**: 2026-11-02 20:28
+
+## 2026-11-02 — merge: open-viewport-empty into alfonso-frontend-jjtl (P-2026-11-02-2112)
+**Prompt**: `claude_2026-11-02_2112_prompt_merge_open-viewport-empty.md`, full lane: bring open-viewport-empty at the explicit sha b319e15a2 into the trunk with one --no-ff merge commit (RC-14), union for the inbox conflict; stopped at step 7 for the chat's smoke, resumed on the GO (Alfonso GO 20:20).
+**Files touched**: merge commit ebe3bd548 (the branch's 9 files; resolved by hand: `docs/log-inbox/maintenance.md` by union, base then trunk tail then branch tail); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23 on the combined tree, same code as ebe3bd548; GO 2026-11-02)
+**Notes**: Trunk tip moved to 02586b29b (docs only, R-TXT-30); R-TXT-30 control counted 1 from the trunk, 0 on the branch. Gates on ebe3bd548: typecheck, typecheck:scripts exit 0; vitest 12988 = trunk 12974 + 14, the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk runs red on load timeouts (textual.test.ts 2000 ms, one laneRun 15 s), green alone.
+**Prompt document name**: 2026-11-02 21:12
+
+## 2026-11-02 — merge: jjscript-rename-expression into alfonso-frontend-jjtl (P-2026-11-02-2045)
+**Prompt**: `claude_2026-11-02_2045_prompt_merge_jjscript-rename-expression.md`, a direct merge, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `43350d3cd`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, none attributed. vitest 12966 tests, 6 failed: 4 in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts`, 2 in `scripts/gates/__tests__/traceMonitor.test.ts`; 0 before the merge. The next merge, P-2026-11-02-2057, on a tree containing this one: 12974 tests, 0 failed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001 from the served parser: expression and literal forms parse as R-FA-9. The command was not run on a model.
+**Notes**: Ticket, load-sensitive tests: the two codegen files alone gave 23 of 23 green at load 13, and 4 and 6 failures in two runs at load 140, generation errors. Hypotheses, not measured: the 2000 ms generation budget (R-GEN-28) and the `spawnSync` of `traceMonitor.test.ts` returning a null status under load. With parallel lanes they can block a direct merge at random. Rollback tag `pre-jjscript-rename-expression`.
+**Prompt document name**: 2026-11-02 20:45
+
+## 2026-11-02 — discovery: forall body by element id, stopped before Phase 2 (P-2026-11-02-2105)
+**Prompt**: a `forall` body acts on the iterated element, not on its name (ticket «forall rename of same-named elements fails as ambiguous»); two-phase in one session.
+**Files touched**: 4d28b4868 (`docs/discovery/discovery_2026-11-02_jjscript_forall_element_by_id.md`); Status line of the 2105 prompt; this entry
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Phase 1 only: report 4d28b4868 (probe, F1-F7, four questions; Phase 2 needed commands/eval.ts and commands/instance.ts, outside the DOVE list). The session hit the context ceiling (RC-51) before this entry; entry and Status were written by P-2026-11-02-2140 from its handoff.md. Phase 2 is P-2026-11-02-2140.
+**Prompt document name**: 2026-11-02 21:05
+
+## 2026-11-02 — feat(jjscript): forall body acts on the element by id (P-2026-11-02-2140)
+**Prompt**: Phase 2 of P-2026-11-02-2105 with the chat's answers (R-FA-10): an `id` on the M2 shells, `instance.ts` and `eval.ts` in scope (7 files), `c.attr` fixed, identity on targets only as `QualifiedName.elementId`; both duplicates examples tested; the id neither persisted nor written back.
+**Files touched**: 733ae10c0 (`frontend/src/jjscript/types.ts`, `executor/resolvers.ts`, `executor/executor.ts`, `executor/commands/forall.ts`, `executor/commands/instance.ts`, `executor/commands/eval.ts`, `executor/__tests__/forallById.test.ts` new); Status lines of 2105 and 2140; this entry and the 2105 one
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `elementId` only on a `target`, denotes segments[0]; an id miss is a miss. Also substituted: `c.x` and `set c.p` (F4); an outer-bound target is not re-read by an inner variable. No existing test changed (vitest 4066 passed, context-binding the known failure); codegen untouched. Not executed here: the guard wiring in executor.ts and the M1 delete/set sites (no node import); undo. Gates: tsc 0, build 0. Temp node_modules symlink, removed.
+**Prompt document name**: 2026-11-02 21:40
+
+## 2026-11-02 — merge: jjscript-forall-by-id into alfonso-frontend-jjtl (P-2026-11-02-2222)
+**Prompt**: `claude_2026-11-02_2222_prompt_merge_jjscript-forall-by-id.md`, a direct merge, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `371a3dfe2`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 13054 tests, 3 failed, in `defaultText.test.ts` and `textual.test.ts`, the load-sensitive tests of the ticket in P-2026-11-02-2045. The same two files alone on the merge, three runs at load 4: 23 of 23. These tests build no element through `commands/eval.ts`; read, not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: not run. The `a != b` behaviour in the app (`NAME_CONFLICT` or both `Foo_dup`) stays unmeasured.
+**Notes**: Rollback tag `pre-jjscript-forall-by-id`.
+**Prompt document name**: 2026-11-02 22:22
+
+## 2026-11-02 — test: codegen and trace-monitor tests get a load-proof time budget (P-2026-11-02-2250)
+**Prompt**: `claude_2026-11-02_2250_prompt_load_sensitive_tests.md`: tests that fail under load, `defaultText.test.ts`, `textual.test.ts` (via `spec.ts`) and the CLI tests of `traceMonitor.test.ts`.
+**Files touched**: `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`. Tests only; `text.ts` and the 2000 ms of R-GEN-28 untouched.
+**Outcome**: ⚠️ partial: fix committed and gates green; the third verification was cut by the chat
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. tsc 0, typecheck:scripts 0, `vitest run src/codegen scripts/gates` 60 files, 2906 tests green, no load.
+**Out-of-scope changes**: no. `unsetDefaultLiteral.test.ts` is the one other test of the same shape (default-text generator, default budget); it never failed.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Codegen: at 40 CPU hogs, 8 tests stopped with `Generation stopped after 2000 ms: template 'block' was still running` (R-GEN-28), so time; fix `{ timeMs: 60_000 }` via `limits`. CLI: at 500 hogs `spawnSync` gave ETIMEDOUT, SIGTERM, status null; timeout now 90 s. Codegen green 3 runs at 40 hogs; CLI green in 1 run at 500 hogs, the other 2 cut by the chat (shared Mac). Detail in the report.
+**Prompt document name**: 2026-11-02 22:50
+
+## 2026-11-02 — merge: codegen-tests-budget into alfonso-frontend-jjtl (P-2026-11-02-2330)
+**Prompt**: `claude_2026-11-02_2330_prompt_merge_codegen-tests-budget.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-tests-budget` at `e13326d89` into `alfonso-frontend-jjtl`, merge base `8a2490c20`, 3 commits on the branch side.
+**Files touched**: merge `7536db524`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_2250_prompt_load_sensitive_tests.md`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7536db524` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13060 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: tests only, no UI change: visual check not applicable; merge gates green (13060 tests, 0 failed, 9 red at import, build exit 0)
+**Notes**: Lesson: a prompt that asks for load states a cap below load 20. P-2026-11-02-2250 gave none, its lane ran 500 hogs, load 600 for about 20 minutes on the shared Mac; gates of other lanes between 22:50 and 23:10 may be falsely red. Rollback tag `pre-codegen-tests-budget` on `52e49d05c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2330/result.json`.
+**Prompt document name**: 2026-11-02 23:30
+
+## 2026-11-02 — feat(jjtl): JjEL parses a forall collection the legacy parser cannot (P-2026-11-02-2345)
+**Prompt**: `claude_2026-11-02_2345_prompt_jjtl_forall_collection_jjel.md`: with the source text, a forall collection such as `requesters.flatMap(... { hi: q, lo: r })` is parsed by JjEL up to `such`, `->` and the binding comma (R-FA-5), so it no longer fails with `Expected expression`; no test expectation changes.
+**Files touched**: `9c0ac6c3d`: `frontend/src/jjtl/parser/parser.ts` (new `forAllCollection`), `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts` (+4), `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts` (+3), `frontend/src/jjtl/SPEC.md` (one line); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc exit 0; vitest src/jjtl src/jjel 998 passed, 7 files red at import (window is not defined, the known list); build exit 0; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Legacy first, JjEL on fallback: the legacy result stays when it stops at a forall stop token, otherwise backtrack (errors truncated) to JjEL. Bench: JjEL always fails 2 AST assertions of parser forall-multivar and parity fixture tests#107; reverting the call site kills the 6 new tests. useJjtlParser already passes source. node_modules symlinked to ~/jjodel/frontend/node_modules (untracked, as every lane worktree).
+**Prompt document name**: 2026-11-02 23:45
+
+**Ticket** (P-2026-11-02-2345): under JjEL the collection of parity fixture `tests#107` evaluates differently at run time (`range() takes integers, got null`), so JjEL-always for forall collections is not run-time equivalent today. Still legacy-only with source: the messages of `alert`/`notify` and the statement-level `prompt`/`confirm`/`input` arguments (parser.ts alertStatement, notifyStatement, promptExpression, confirmExpression, inputExpression).
+
+## 2026-11-03 — merge: jjtl-forall-collection-jjel into alfonso-frontend-jjtl (P-2026-11-02-2357)
+**Prompt**: `claude_2026-11-02_2357_prompt_merge_jjtl-forall-collection-jjel.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-forall-collection-jjel` at `b4378e231` into `alfonso-frontend-jjtl`, merge base `54fbfa71e`, 4 commits on the branch side.
+**Files touched**: merge `98d34c9c4`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_2345_prompt_jjtl_forall_collection_jjel.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `98d34c9c4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13067 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: parser only, no UI change: visual check not applicable; merge gates green (13067 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjtl-forall-collection-jjel` on `54fbfa71e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2357/result.json`.
+**Prompt document name**: 2026-11-02 23:57
+
+## 2026-11-03 — fix(jjscript): four JjScript console defects (P-2026-11-03-0000)
+**Prompt**: `claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, lane full, auto: four defects seen on 3001 in the JjScript console (`create package` crash on `cname`, `create class X in P` with no P reporting success, `eval` refusing lambdas and strings, a `let` value cut at a `forall`'s `in`). Two phases in one session, one commit per defect, order 2, 1, 3, 4.
+**Files touched**: discovery `9ff3f733b` (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`); defect 2 `2decd2160` and defect 1 `b9c45587a` (`frontend/src/jjscript/executor/commands/create.ts`); defect 3 `c3fcb4e0a` and defect 4 `217b931da` (`frontend/src/jjscript/parser/parser.ts`); tests in all four (`frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, new), `frontend/src/jjscript/__tests__/parserTermination.test.ts` in `c3fcb4e0a`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `217b931da`: `npx tsc --noEmit` exit 0; `npx vitest run src/jjscript src/jjel` 1487+ tests green, 1 file red at import (`context-binding.test.ts`, the known `window is not defined`); `npm run build` exit 0; `npm run check:docs` run at the close.
+**Out-of-scope changes**: no. Seven files across the lane (RC-11), all in the declared scope: `create.ts`, `parser.ts`, the two test files, the discovery report, this inbox, the prompt file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Causes: `createPackage` omitted the `fatherType` that `Constructors.DPackage` reads; a named parent resolved nowhere fell through to `DClass.new` with no father; `eval` joined token values with spaces; `forall` lexes as COMMAND, unseen by the `let` value collector. `parserTermination.test.ts` pinned the dropped quotes of `eval "a end b"` and now expects them kept. `node_modules` via a temporary symlink, removed at the close (P14).
+**Prompt document name**: 2026-11-03 00:00
+
+## 2026-11-03 — ticket: Info.tsx creates a package without fatherType
+**Ticket**: `frontend/src/components/editors/Info.tsx:384` calls `DPackage.new('NewPackage', '', '', parentId, true)` with no `fatherType`; `Constructors.DPackage` (`joiner/classes.ts:996-997`) reads `fatherType.cname` whenever there is a father, the crash fixed in JjScript `create package` by `b9c45587a`. Not reproduced in the UI.
+**Priority**: medium
+**Found in**: P-2026-11-03-0000
+**Detail**: docs/discovery/discovery_2026-11-03_jjscript_console_defects.md
+
+## 2026-11-03 — merge: jjscript-console-defects into alfonso-frontend-jjtl (P-2026-11-03-0020)
+**Prompt**: `claude_2026-11-03_0020_prompt_merge_jjscript-console-defects.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-console-defects` at `fe85c80cb` into `alfonso-frontend-jjtl`, merge base `34b82af49`, 7 commits on the branch side.
+**Files touched**: merge `5b186217f`: 7 files from the branch side (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, `frontend/src/jjscript/executor/commands/create.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5b186217f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13145 tests in 498 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 in a throwaway project, JjScript console: create package P1, create class Foo in P1 (appears in classes), create class X in Missing refused, eval with a lambda and with a string, let with an unparenthesized forall a, b reading x.size = 4: all as expected. Merge gates green (13145 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjscript-console-defects` on `e1b35c188` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0020/result.json`.
+**Prompt document name**: 2026-11-03 00:20
+
+## 2026-11-03 — fix(jjscript): forall summary counts leaf commands; Info.tsx package fatherType (P-2026-11-03-1015)
+**Prompt**: `claude_2026-11-03_1015_prompt_forall_summary_and_info_package.md`, lane fast, unattended: (1) a multi-variable `forall` summary counted outer iterations (`2/2` for one rename): count the leaf commands; (2) `Info.tsx` called `DPackage.new` without the father's type, the defect `b9c45587a` fixed in `create.ts`. One commit per fix.
+**Files touched**: fix 1 `9373d1fa7`: `frontend/src/jjscript/executor/commands/forall.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`; fix 2 `72d1b3cf2`: `frontend/src/components/editors/Info.tsx`; this commit: this entry. Status of the prompt file not flipped: the `status-flip` skill is user-invocable only.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 13:32
+**Causa**: (a)
+**Regressions**: no. Gates on `72d1b3cf2`: `npx tsc --noEmit` exit 0; `npx vitest run src/jjscript` 949 tests green, 1 file red at import (`context-binding.test.ts`, `window is not defined`); `npm run build` exit 0; `npm run check:docs` run at the close.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Fix 1: a body result that is a forall summary adds its leaf counts; any other result is one leaf, so one-variable messages are unchanged. `data.total/successCount/errorCount` are now leaf counts; `data.results` stays one entry per outer iteration, read only by `forallById.test.ts:179`. Mutation bench (aggregation removed) kills 4 tests. Fix 2: father is always the metamodel, so `DModel`; no node-importable home for a test, checked by reading `classes.ts:577-591,996-997` and typecheck.
+**Prompt document name**: 2026-11-03 10:15
+
+## 2026-11-03 — merge: jjscript-forall-summary into alfonso-frontend-jjtl (P-2026-11-03-1041)
+**Prompt**: `claude_2026-11-03_1041_prompt_merge_jjscript-forall-summary.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-summary` at `7fd560341` into `alfonso-frontend-jjtl`, merge base `6b4f96183`, 6 commits on the branch side.
+**Files touched**: merge `16c38c9e0`: 5 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_1015_prompt_forall_summary_and_info_package.md`, `frontend/src/components/editors/Info.tsx`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/executor/commands/forall.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `16c38c9e0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13234 tests in 502 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: forall summary and Info.tsx: covered by unit tests and by the merge gates (13234 tests, 0 failed, 9 red at import); not repeated in the app
+**Notes**: Rollback tag `pre-jjscript-forall-summary` on `fa9e886cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1041/result.json`.
+**Prompt document name**: 2026-11-03 10:41
+
+## 2026-11-03 — discovery: JjTL forall collection under JjEL only, stopped before Phase 2 (P-2026-11-03-1016)
+**Prompt**: `claude_2026-11-03_1016_prompt_jjtl_collection_jjel_only.md`: find out why JjEL-always for a forall collection breaks AST assertions and parity fixture `tests#107`; make JjEL the only parser only if the cause is a small local fix that changes no run-time result.
+**Files touched**: `1300be2cc` (`docs/discovery/discovery_2026-11-03_jjtl_collection_jjel_only.md`); this commit: this entry and the Status line of the 1016 prompt.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. No code changed; tsc exit 0; vitest src/jjtl src/jjel 1048 passed, 7 files red at import (the known list); build exit 0; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Phase 1 only. The two paths agree on the AST and on `range(null)`. The executor differs: a legacy builtin `FunctionCall` throws (executor.ts:2859-2863, outside the try), so the mapping fails, while a JjelExpression warns and yields null (2881-2886). Probe P2, with that path aligned: parity 145/145, and only 3 AST-shape assertions red. Each fix changes `tests#107`, which is a stop. Causa (c): the 2345 ticket put the cause in parsing. Detail in the report.
+**Prompt document name**: 2026-11-03 10:16
+
+## 2026-11-03 — merge: jjtl-collection-jjel-only into alfonso-frontend-jjtl (P-2026-11-03-1053)
+**Prompt**: direct merge of the discovery of P-2026-11-03-1016, docs only, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `d8773e4cd`, docs only.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: the merge changes no code. vitest 13234 tests, 1 failed: `scripts/hooks/__tests__/laneBoard.test.ts:665`, `expected null to be +0`, a spawned process with a null status. The file alone at load 3: 95 passed, 0 failed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: not applicable, docs only.
+**Notes**: Ticket: the load-sensitive tests of P-2026-11-02-2250 are not the whole class: this one has the same shape as `traceMonitor`, unmeasured here. Open question from 1016: a failing builtin in JjTL, error or warning with null; waits for Alfonso.
+**Prompt document name**: 2026-11-03 10:53
+
+## 2026-11-03 — fix(jjtl): a failing builtin is an error on both paths; JjEL alone parses a forall collection (P-2026-11-03-1135)
+**Prompt**: `claude_2026-11-03_1135_prompt_jjtl_builtin_error_jjel_collection.md`: apply R-FA-11 (a builtin that fails inside a JjTL expression stops the mapping with an error on every path) and drop the legacy-first fallback of P-2026-11-02-2345 for a forall collection when the source text is present.
+**Files touched**: `9afbe4376`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/parser.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/executor/__tests__/builtin-error.test.ts` (new); this commit: this entry and the Status line of the 1135 prompt.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 10:16 (the stopped Phase 2 of P-2026-11-03-1016)
+**Causa**: (f)
+**Regressions**: no. tsc exit 0; vitest src/jjtl src/jjel 1055 passed, 0 failed, 7 files red at import (the known list); build exit 0; parity 145/145, `tests#107` an error on both paths.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Builtins registered on the run context are wrapped (JjtlEvaluationContext) to throw JjtlBuiltinError; evaluateExpression names the outermost expression and rethrows on both paths. Unchanged: `Function 'f' is not defined`, failing methods. Measured: in a `where` guard the run stops (`Execution failed`). Legacy locates a binary expression at its operator, so the column differs by path there. Mutation bench: parser revert killed by the new multivar test.
+**Prompt document name**: 2026-11-03 11:35
+
+## 2026-11-03 — merge: jjtl-collection-jjel-only into alfonso-frontend-jjtl (P-2026-11-03-1148)
+**Prompt**: `claude_2026-11-03_1148_prompt_merge_jjtl-collection-jjel-only.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-collection-jjel-only` at `03967006a` into `alfonso-frontend-jjtl`, merge base `9e72593b7`, 3 commits on the branch side.
+**Files touched**: merge `e226a7625`: 7 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_1135_prompt_jjtl_builtin_error_jjel_collection.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/builtin-error.test.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e226a7625` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13241 tests in 503 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: JjTL parser and executor, no UI change: not run in the app; merge gates green (13241 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjtl-collection-jjel-only-P-2026-11-03-1148` on `9e72593b7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1148/result.json`.
+**Prompt document name**: 2026-11-03 11:48
+
+## 2026-11-04 — merge: origin/staging b619c8300 into staging-realign (P-2026-11-04-1640)
+**Prompt**: `claude_2026-11-04_1640_prompt_staging_realign.md`: merge staging `b619c8300` into `staging-realign` with one `--no-ff` merge, resolve the four measured conflicts, carry `8d5b5a1fe` into `services/ai`, look for silent breakages and the Worker's callers. No push, no trunk merge.
+**Files touched**: merge `f59fc2371` (81 staging commits); by hand: `docs/decisions.md`, `docs/harness/fronts.json`, `frontend/src/services/ai/AnthropicCompatibleProvider.ts`, `frontend/src/services/ai/OpenAICompatibleProvider.ts`, `frontend/src/services/ai/__tests__/requestShaping.test.ts`; deleted `AIProviderService.ts` and its test. Docs: `docs/discovery/discovery_2026-11-04_staging_realign.md`, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck 0, build 0, check:docs 5/5, check:agents PASS; vitest before the commit, same tree: 13978 passed, 32 red all `bashGuard` from `MERGE_HEAD`, 160/160 after it. The full re-run after the commit was killed twice at 600 s, load 228.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no sync or D-L file touched by hand)
+**Smoke visivo**: non applicabile (no UI change by hand; build only)
+**Notes**: No R- id collision (only R-GEN-18 differs, trunk-only edit). Bench: staging's send() fails 4 of the 5 ported tests. No runtime caller of jjodel-ai-proxy left. npm ci (lockfile differs), no symlink. Detail in the report.
+**Prompt document name**: 2026-11-04 16:40
+
+## 2026-11-11 — discovery: IR coverage of the view properties panel (P-2026-11-11-1925)
+**Prompt**: `claude_2026-11-11_1925_prompt_ir_view_panel_coverage.md`, full lane, discovery only with hard stop, read-only on code: for every IR field a view can carry (vertex, graphVertex, edge, row), does the view properties panel read and write it, or only the Source tab; inventory, drift, orphans, totals, Phase 2 slices, questions
+**Files touched**: `419b31657`: `docs/discovery/discovery_2026-11-11_ir_view_panel_coverage.md` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_1925_prompt_ir_view_panel_coverage.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only, no code touched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 157 rows: 82 covered, 38 partial, 21 missing, 15 out of scope by decision, 1 in progress (gV frame, P-2026-11-11-1110). Ran over three sessions (two context-ceiling continuations). A zsh sweep with an unquoted multi-file variable failed silently in continuation 1 and was rerun with an array. v1.2 incorporates v1.1 by reference; the v1.1 base drift is in report §3. Ten questions in the report.
+**Prompt document name**: 2026-11-11 19:25
+
+**Ticket** (data loss, read at `bb7821a10`): `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx:64` rebuilds a literal segment as `{ kind: 'literal', text }` and drops a persisted `literal.style` on any edit of the text; the gV cornerRadius control overwrites a persisted Conditional on first edit (`GraphVertexAuthoringPanel.tsx:325-333`, `shapeRegistry.ts:467-468`). Slice S0 of the report.
+
+## 2026-11-11 — fix: IR view panel S0, literal style and gV corner radius data loss (P-2026-11-11-2025)
+**Prompt**: `claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md`, fast lane, slice S0 of the IR view panel coverage audit (R-IPC-7): the literal segment text edit drops a persisted `style`; the graphVertex corner radius stepper reads a persisted Conditional as default and overwrites it
+**Files touched**: `999ea5d5a`: `authoring/FieldSegmentEditor.tsx`, `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/__tests__/fieldSegmentEditor.test.ts`, `authoring/__tests__/graphVertexCornerRadius.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 11:56
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Literal: `applyLiteralText` spreads the segment; forKind left as is (a kind switch resets by design). gV: the vertex panel's ConditionalEditor mount with rulesTable, writers unchanged, graphVertexAuthoring.ts untouched. Negative control: Input wiring test fails on the old line (1 failed, 14 passed). Node bench has no DOM: mount tests are SSR with spies on view.ir and the writers. Corregge: gV S4 (stepper); the literal loss dates from C2, P-2026-09-30-0150. No gV smoke scene.
+**Prompt document name**: 2026-11-11 20:25
+
+## 2026-11-11 — merge: ir-panel-s0 into alfonso-frontend-jjtl (P-2026-11-11-2028)
+**Prompt**: `claude_2026-11-11_2028_prompt_merge_ir-panel-s0.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s0` at `8de50544e` into `alfonso-frontend-jjtl`, merge base `6c77a7bce`, 3 commits on the branch side.
+**Files touched**: merge `919c9e2e0`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2025_prompt_ir_panel_s0_data_loss.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/fieldSegmentEditor.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/graphVertexCornerRadius.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `919c9e2e0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16089 tests in 611 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. Chat visual check not run: no graphVertex scene in the smoke harness and 3001 down; the change is covered by tests (literal style kept, conditional corner radius not overwritten, negative control fails on the old line). Alfonso visual GO owed on localhost:3000: graphVertex Appearance tab, conditional radius shows chip in Basic and rules in Advanced.
+**Notes**: Rollback tag `pre-ir-panel-s0` on `191a97892` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2028/result.json`.
+**Prompt document name**: 2026-11-11 20:28
+
+## 2026-11-11 — feat: IR view panel S1a, vertex visible, entry, bar thickness, exclude, literal style (P-2026-11-11-2035)
+**Prompt**: `claude_2026-11-11_2035_prompt_ir_panel_s1a.md`, fast lane, slice S1 of the IR view panel coverage audit (R-IPC-11): controls for audit rows V-12 vertex `visible`, V-21 `shape.entry`, V-22 `shape.barThickness`, V-48 compartment `source.exclude` (and `withCompartmentSource` keeping it), V-53 literal segment `style`; UI only
+**Files touched**: `043b9cc02`: `authoring/VertexAuthoringPanel.tsx`, `authoring/FieldCompartmentListEditor.tsx`, `authoring/FieldSegmentEditor.tsx`, `authoring/__tests__/irPanelS1a.test.ts` (new), `authoring/__tests__/panelSections.test.ts` (vertex snapshot gains Visibility); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2035_prompt_ir_panel_s1a.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (seven files across two commits, all in the declared scope)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates: typecheck 0, build, authoring 384/384, unit 16105 passed, 3 known import failures, 2 timing budgets red under load and green alone (126/126). Negative control: entry reset writing `undefined` fails 2 of 21. Bar thickness shows on a bar, a Conditional form, or a set value. Literal TextStyleField without features (no optional prop added to FieldSegmentEditorProps). No smoke scene for the vertex panel.
+**Prompt document name**: 2026-11-11 20:35
+
+## 2026-11-11 — merge: ir-panel-s1a into alfonso-frontend-jjtl (P-2026-11-11-2054)
+**Prompt**: `claude_2026-11-11_2054_prompt_merge_ir-panel-s1a.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s1a` at `3c406f850` into `alfonso-frontend-jjtl`, merge base `dc2126f5d`, 3 commits on the branch side.
+**Files touched**: merge `6ab5d35bb`: 7 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2035_prompt_ir_panel_s1a.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldCompartmentListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/irPanelS1a.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/panelSections.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ab5d35bb` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16110 tests in 612 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scene for the vertex panel; covered by irPanelS1a tests with negative control. Alfonso visual GO owed on localhost:3000: vertex view Structure/Appearance, rows visible, entry, bar thickness, compartment exclude, literal segment style.
+**Notes**: Rollback tag `pre-ir-panel-s1a` on `dc2126f5d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2054/result.json`.
+**Prompt document name**: 2026-11-11 20:54
+
+## 2026-11-11 — feat: IR view panel S1b, edge curve, label template, label style (P-2026-11-11-2036)
+**Prompt**: `claude_2026-11-11_2036_prompt_ir_panel_s1b.md`, fast lane, slice S1 of the IR view panel coverage audit (R-IPC-11): controls in the edge panel for `edge.curve` (E-19, R-VP-22), `edge.labels.template` (E-22) and `edge.labels.style` (E-23, R-VP-20); UI only
+**Files touched**: `5d9cc9ea6`: `authoring/EdgeAuthoringPanel.tsx`, `authoring/__tests__/edgeCurveLabelControls.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2036_prompt_ir_panel_s1b.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Curve: Select from VALID_CURVE_VALUES, empty option drops the key. Template: ListEditor + TextSourceEditor; last segment removed drops the key (validator refuses empty). Style: TextStyleField. Both via setLabelsKey (spread, labels dropped when empty). Tests SSR, writes seen through a withMetaclassPins spy; negative control (labels rebuilt from {}) fails 7/15. Full suite: tolerant.test.ts timing guard 1295>1000 ms under load, green alone (64/64). No IR edge scene in the smoke harness.
+**Prompt document name**: 2026-11-11 20:36
+
+## 2026-11-11 — merge: ir-panel-s1b into alfonso-frontend-jjtl (P-2026-11-11-2101)
+**Prompt**: `claude_2026-11-11_2101_prompt_merge_ir-panel-s1b.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s1b` at `18397b4d0` into `alfonso-frontend-jjtl`, merge base `dc2126f5d`, 3 commits on the branch side.
+**Files touched**: merge `f33239a6d`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2036_prompt_ir_panel_s1b.md`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/edgeCurveLabelControls.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f33239a6d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16125 tests in 613 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by edgeCurveLabelControls tests with negative control. Alfonso visual GO owed on localhost:3000: edge view, curve control, label template list, label style.
+**Notes**: Rollback tag `pre-ir-panel-s1b` on `c50d9e689` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2101/result.json`.
+**Prompt document name**: 2026-11-11 21:01
+
+## 2026-11-11 — feat: IR view panel S1c, letter spacing and case in TextStyleEditor (P-2026-11-11-2037)
+**Prompt**: `claude_2026-11-11_2037_prompt_ir_panel_s1c.md`, fast lane, slice S1 row X3 of the IR view panel coverage audit (R-IPC-11): `TextStyle.letterSpacing` and `TextStyle.textTransform` had no control in `TextStyleEditor`
+**Files touched**: `f4c06dcc2`: `authoring/TextStyleEditor.tsx`, `authoring/__tests__/textStyleScalarAxes.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2037_prompt_ir_panel_s1c.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Rows Spacing (em, step 0.01) and Case (Default/Uppercase/Lowercase/None) after Color, same row classes, no ƒx: both keys are plain scalars in irTypes. Writes through setAxis. TextStyleField untouched (holds no axis list). Tests call the hook-free editor and fire the row onChange. Negative control: Case onChange rebuilding the style, 3 failed / 10 passed. Gates: typecheck 0, authoring 376/376, unit 16099 passed + 3 known import failures, build. No smoke scene with a TextStyle popover.
+**Prompt document name**: 2026-11-11 20:37
+
+## 2026-11-11 — merge: ir-panel-s1c into alfonso-frontend-jjtl (P-2026-11-11-2109)
+**Prompt**: `claude_2026-11-11_2109_prompt_merge_ir-panel-s1c.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s1c` at `2516db6ac` into `alfonso-frontend-jjtl`, merge base `dc2126f5d`, 3 commits on the branch side.
+**Files touched**: merge `d520c2923`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2037_prompt_ir_panel_s1c.md`, `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/textStyleScalarAxes.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d520c2923` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16138 tests in 614 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scene opens a TextStyle popover; covered by textStyleScalarAxes tests. Alfonso visual GO owed on localhost:3000: TextStyle popover, letter spacing and case rows.
+**Notes**: Rollback tag `pre-ir-panel-s1c` on `33c98dcc4` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2109/result.json`.
+**Prompt document name**: 2026-11-11 21:09
+
+## 2026-11-11 — feat: IR view panel S2, rules table on the remaining Conditional controls (P-2026-11-11-2120)
+**Prompt**: `claude_2026-11-11_2120_prompt_ir_panel_s2.md`, fast lane, slice S2 of the IR view panel coverage audit (R-IPC-11): pass `rulesTable` on every Conditional control that showed a saved `rules` value as the read-only chip (V-28/G-30, V-32, V-34, V-56, X3, G-12, E-13..17, R-10), and offer row `visible` from absent; UI only
+**Files touched**: `941649249`: `authoring/LabelEntryEditor.tsx`, `authoring/BadgeListEditor.tsx`, `authoring/FieldCompartmentListEditor.tsx`, `authoring/TextStyleEditor.tsx`, `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/EdgeAuthoringPanel.tsx`, `authoring/RowAuthoringPanel.tsx`, `authoring/__tests__/irPanelS2.test.ts` (new); this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2120_prompt_ir_panel_s2.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (ten files across two commits, above five, all in the declared scope: the eight code files listed by the prompt, the inbox and the prompt Status)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: All 16 mounts covered, none left (step 2). Child editors pass only valueNoun: subjectName is optional, falls back to 'instance', no interface change. Row visible: always shown, withRowVisible (undefined drops the key), Reset when set. Negative control: rulesTable dropped from badge icon, 1 failed / 23 passed. Gates: typecheck 0, authoring 436/436, unit 16159 passed + 3 known import failures, build. No smoke scene. Vertex V-12 visible (S1a) also lacks rulesTable: out of scope.
+**Prompt document name**: 2026-11-11 21:20
+
+## 2026-11-11 — merge: ir-panel-s2 into alfonso-frontend-jjtl (P-2026-11-11-2128)
+**Prompt**: `claude_2026-11-11_2128_prompt_merge_ir-panel-s2.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s2` at `8c1b5bb48` into `alfonso-frontend-jjtl`, merge base `c5a07acc9`, 3 commits on the branch side.
+**Files touched**: merge `7c51baec4`: 10 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2120_prompt_ir_panel_s2.md`, `frontend/src/components/editor-v2/viewpoint/authoring/BadgeListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldCompartmentListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/RowAuthoringPanel.tsx`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7c51baec4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16162 tests in 615 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No smoke scenes for these editors; covered by irPanelS2 tests with negative control. Alfonso visual GO owed on localhost:3000: rules table in Advanced on label, badge and compartment visible, badge icon, TextStyle axes, graphVertex visible, edge line and ends; row visible can be added when absent.
+**Notes**: Rollback tag `pre-ir-panel-s2` on `c5a07acc9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2128/result.json`.
+**Prompt document name**: 2026-11-11 21:28
+
+## 2026-11-11 — feat: IR view panel S3, edge label, placement, waypoints, caption (P-2026-11-11-2140)
+**Prompt**: `claude_2026-11-11_2140_prompt_ir_panel_s3.md`, fast lane, slice S3 of the IR view panel coverage audit (R-IPC-11): edge view `label` (E-10), `edge.labels.placement` (E-21), `edge.persistWaypoints` (E-26), expression-source `caption` in TextSourceEditor, and three `irValidate` checks (placement, persistWaypoints, caption)
+**Files touched**: `16639fa43`: `ir/irValidate.ts`, `ir/__tests__/irS3Keys.test.ts` (new), `authoring/EdgeAuthoringPanel.tsx`, `authoring/TextSourceEditor.tsx`, `authoring/__tests__/irPanelS3.test.ts` (new), `authoring/__tests__/panelSections.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2140_prompt_ir_panel_s3.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (eight files across two commits, above five, all in the declared scope: the three code files, tests in `authoring/__tests__` and beside the irValidate tests, the inbox and the prompt Status; `panelSections.test.ts` edge snapshot gains the new General section)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Step 1: validateIR is authoring-only (panels, creation seed); the render never calls it, so sibling severity (ok: false) takes no saved view off the canvas. View label drops the key when emptied (vertex keeps ''). Placement menu: above, below; Auto is the empty option. Negative control: persistWaypoints reset writing undefined, 1 failed / 20 passed. Gates: typecheck 0, unit 16191 passed + 3 known import failures, build. No smoke scene with an IR edge view.
+**Prompt document name**: 2026-11-11 21:40
+
+## 2026-11-11 — merge: ir-panel-s3 into alfonso-frontend-jjtl (P-2026-11-11-2148)
+**Prompt**: `claude_2026-11-11_2148_prompt_merge_ir-panel-s3.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s3` at `e21bb3d52` into `alfonso-frontend-jjtl`, merge base `99f62d9c8`, 3 commits on the branch side.
+**Files touched**: merge `7397be79f`: 8 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2140_prompt_ir_panel_s3.md`, `frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/TextSourceEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/irPanelS3.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/panelSections.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irS3Keys.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irValidate.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7397be79f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16194 tests in 617 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No IR edge view scene in the smoke harness; covered by irPanelS3 and irS3Keys tests with negative control. validateIR runs only at authoring, so the new checks cannot take a saved view off the canvas. Alfonso visual GO owed on localhost:3000: edge view General section label, label placement select, Save the layout toggle, caption field on an expression text source.
+**Notes**: Rollback tag `pre-ir-panel-s3` on `99f62d9c8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2148/result.json`.
+**Prompt document name**: 2026-11-11 21:48
+
+## 2026-11-11 — feat: IR view panel S4a, graphVertex shape keys, badges, compartments (P-2026-11-11-2315)
+**Prompt**: `claude_2026-11-11_2315_prompt_ir_panel_s4a.md`, fast lane, slice S4 of the IR view panel coverage audit (R-IPC-11): graphVertex parity for `shape.padding`, `marker`, `entry`, `barThickness`, `text`, `badges` and `fieldCompartments` (G-19..G-24, G-33), UI only
+**Files touched**: `719be490a`: `authoring/GraphVertexAuthoringPanel.tsx`, `authoring/__tests__/irPanelS4a.test.ts` (new), `authoring/__tests__/panelSections.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2315_prompt_ir_panel_s4a.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Mounts mirror the vertex panel's (Padding Advanced only, compartments behind structureCapabilities). Resets drop the key by rest/spread, also the last badge or compartment removed (the vertex panel keeps [] and writes key: undefined there; not touched). graphVertexAuthoring.ts untouched. Negative control: reset writing key: undefined, 7 failed / 6 passed. Gates: typecheck 0, authoring 475/475, unit 16209 + 3 known import failures, build 0. No graphVertex smoke scene.
+**Prompt document name**: 2026-11-11 23:15
+
+## 2026-11-11 — merge: ir-panel-s4a into alfonso-frontend-jjtl (P-2026-11-11-2321)
+**Prompt**: `claude_2026-11-11_2321_prompt_merge_ir-panel-s4a.md`, a direct merge by `lane-run merge --direct`, no session: `ir-panel-s4a` at `a0567c6fc` into `alfonso-frontend-jjtl`, merge base `2d05fdcee`, 3 commits on the branch side.
+**Files touched**: merge `52a92fca1`: 5 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2315_prompt_ir_panel_s4a.md`, `frontend/src/components/editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/irPanelS4a.test.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/panelSections.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `52a92fca1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16212 tests in 618 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Gates green on the merge tip. No graphVertex panel scene in the smoke harness; covered by irPanelS4a tests with negative control. Alfonso visual GO owed on localhost:3000: graphVertex Appearance padding, marker with rules table, entry, bar thickness, text style, badges, field compartments.
+**Notes**: Rollback tag `pre-ir-panel-s4a` on `2d05fdcee` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-11-2321/result.json`.
+**Prompt document name**: 2026-11-11 23:21
+
+## 2026-11-11 — feat: IR view panel S4b, graphVertex partition separator (P-2026-11-11-2316)
+**Prompt**: `claude_2026-11-11_2316_prompt_ir_panel_s4b.md`, fast lane, slice S4b of the IR view panel coverage audit (R-IPC-11): G-44 `containment.layout.separator`, a Containment row visible on Partitions only, mirroring the «Frame» row of P-2026-11-11-1110
+**Files touched**: `ad99a39c0`: `authoring/ContainmentSection.tsx`, `authoring/graphVertexAuthoring.ts` (`withLayoutSeparator`), `authoring/__tests__/containmentSection.test.ts`, `authoring/__tests__/graphVertexAuthoring.test.ts`; this commit: `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-11_2316_prompt_ir_panel_s4b.md` (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (six files across two commits, above five, all declared: the two code files, two tests in `authoring/__tests__`, the inbox and the prompt Status)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Basic row after Layout, like Frame (they never show together). Solid drops the key, Dashed writes it; the Free switch already dropped it (withLayoutMode, P-2026-11-11-1110), so no mode-switch change. Negative control: Solid writing separator: 'solid', 1 failed / 27 passed, restored. Gates: typecheck 0, unit 16200 passed + 3 known import failures, build 0. No smoke scene with a graphVertex view; visual GO follows the merge.
+**Prompt document name**: 2026-11-11 23:16
+
+## 2026-11-12 — ticket: JjTL trace: every := binding recorded as not invertible on the app parse path
+**Ticket**: On the app's parse path every `:=` binding of a JjTL rule is traced as not invertible, including a plain property copy such as `name := name`.
+
+Cause (read on `alfonso-frontend-jjtl` at `ea82026e1`): with source text the parser wraps each expression as `JjelExpression` (`jjtl/parser/parser.ts:907, 927`); `isExpressionInvertible` (`jjtl/executor/executor.ts:2170-2204`) has no case for that type and returns `false`. On the legacy parse path (no source text) the same run records the binding as invertible.
+
+Expected: a binding whose expression is a property reference is recorded invertible on both paths (the Jjodel book, `tab:jjtl-trace-example`, states "invertible: property reference").
+
+Observed in a run with the book fixture `author/tools/codegen-fixture/` of the book repository; details in `author/discovery/discovery_2026-11-12_review_l1_runs.md`, section 3.1. Alfonso decided on 2026-11-12 that the trunk is fixed and the book stays as it is.
+**Priority**: medium
+**Found in**: P-2026-11-12-2022
+
+## 2026-11-12 — ticket: JjTL: two creation blocks on one feature overwrite each other
+**Ticket**: Two creation blocks on the same target feature in one JjTL rule (two `-> cols` blocks) overwrite each other instead of adding up: only the columns of the second block remain.
+
+Case: `lst:jjtl-uml2rdbms` of the Jjodel book (UML to RDBMS). The first `-> cols` block creates the key column, the second the columns of the attributes; after the run the key column is lost entirely, not only missing from `pkey`. The program as printed is in `author/tools/codegen-fixture/uml2rdbms-as-printed.jjtl` of the book repository.
+
+Expected: several creation blocks on one multi-valued feature accumulate, in the order written.
+
+Observed in a run on `alfonso-frontend-jjtl` at `ea82026e1`; details in `author/discovery/discovery_2026-11-12_review_l1_runs.md` (JjTL section). Alfonso decided on 2026-11-12 that the trunk is fixed and the book stays as it is.
+**Priority**: medium
+**Found in**: P-2026-11-12-2022
+
+## 2026-11-13 — ticket: JjEL lexer: the hint for oclIsTypeOf suggests is, which includes subclasses
+**Ticket**: The JjEL lexer gives the same hint for the two OCL type tests: `frontend/src/jjel/lexer/lexer.ts:19-20` answers both `expr.oclIsTypeOf(Type)` and `expr.oclIsKindOf(Type)` with "JjEL uses 'expr is Type'", and `lexer-own-keys.test.ts:61-62` expects it.
+
+`is` has kind-of semantics (it includes subclasses), so the hint is exact for `oclIsKindOf` and wrong for `oclIsTypeOf`, which tests the exact class. The exact-class test in JjEL is `x.instanceOf.name == "T"` (`evaluator.ts:617` already tells users "use 'obj.instanceOf.name'"; `docs/jjtl-jjel-paper.tex:600` suggests `x.instanceOf == T`).
+
+Expected: a distinct hint for `oclIsTypeOf` that names the exact-class form.
+
+Found by an external review of the Jjodel book and confirmed on `alfonso-frontend-jjtl` at 7330df76d by lane P-2026-11-13-0056. The book now states the difference under its table of OCL forms.
+**Priority**: low
+**Found in**: P-2026-11-13-0056
+
+## 2026-11-13 — ticket: JjEL: is answers false on model instances (SPEC and the book say kind-of)
+**Ticket**: `x is T` answers `false` for every model instance, including an instance of `T` itself, in every context where a modeller writes JjEL except JjTL: validation rules, JjScript `eval`/`let`/`such that`, JjGen holes, guards and actions of a semantic type class, the generated JavaScript, and the Console's JjEL mode. In a JjTL `where` clause and binding it is `true` for the instance's own class and `false` for a superclass.
+
+SPEC and the Jjodel book give `is` kind-of semantics ("an instance of a subclass satisfies `is`"), and the lexer's hints send OCL users to `expr is Type`.
+
+Cause (read and measured on `alfonso-frontend-jjtl` at `145921db6` by lane P-2026-11-13-1305): `TypeRegistry.isInstance` (`frontend/src/jjel/context.ts:95-154`) compares `__type` and `className` exactly and never reads `instanceOf`; no production code fills the registry, so its `superTypes` lookup never runs. The subset checker already warns about it (`subsetChecker.ts:354`, `W-IS`).
+
+Proposed fix, report `docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md` (branch `jjel-is-instances`, commit `8828c7a19`), section 6: in `TypeRegistry.isInstance`, for an instance record or an L proxy, walk `instanceOf` and then `superTypes`, transitively and cycle-safe; drop `W-IS`; tests first; no critical-zone file, no exported interface. JjTL stays exact until its source records carry the hierarchy. `x is Null` does not parse (the lexer turns `Null` into the keyword): separate note.
+
+Phase 2 of P-2026-11-13-1305 waits for Alfonso's go-ahead, and for the merge of `jjel-and-or`, which moves the same three test files. The book marks its sentences on `is` with `%% DEPENDS (trunk fix)` until then.
+**Priority**: high
+**Found in**: P-2026-11-13-1246
+
+## 2026-11-13 — fix: JjTL bindings invertible on the app path, creation blocks accumulate (#897, #898)
+**Prompt**: P-2026-11-13-1245 Phase 2, after the chat's GO: fix jjodel-lanes #897 (every `:=` binding traced as not invertible on the app parse path) and #898 (two creation blocks on one feature overwrite each other), tests first, one code commit per defect.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (92f0d90d3, b895ab900); `frontend/src/jjtl/executor/__tests__/binding-invertibility.test.ts` (92f0d90d3, new); `frontend/src/jjtl/executor/__tests__/creation-blocks-accumulate.test.ts` (b895ab900, new); this inbox and the prompt's Status (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on b895ab900 (typecheck 0, build 0, vitest same four known files as the base). No smoke scene loads the SimpleUML/SimpleRDBMS program of the book; covered by binding-invertibility.test.ts (9) and creation-blocks-accumulate.test.ts (26), both with a negative control. Alfonso visual GO owed on localhost:3000: the trace panel shows the invertible icon and a non-zero Invertible figure for name := name; the generated Table has its _tid key column first in cols.
+**Notes**: Negative controls: #897 4 failed / 5 passed, #898 18 failed / 8 passed, both restored. Gates on b895ab900: typecheck 0; vitest 4 files / 1 test red, the baseline set of e0f9adcae (3 window-import files + contextCeiling.test.ts, red also with JJODEL_LANE_LOG unset, cause not established); build 0. Deviation from the GO: the printed lst:jjtl-uml2rdbms never binds pkey, so its test asserts the key column in cols and pkey unset. Report: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md.
+**Prompt document name**: 2026-11-13 12:45
+
+## 2026-11-13 — ticket: JjTL: inverse of name := name is undefined, SPEC promises one
+**Ticket**: `computeInverseExpression` (`frontend/src/jjtl/executor/executor.ts`) gives `inverseExpression: undefined` for a property-reference binding such as `name := name`, on both parse paths; `frontend/src/jjtl/SPEC.md:808` promises the inverse "`name := label`". Kept as is by the GO of P-2026-11-13-1245 (answer 2).
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL: Literal bindings invertible in code, not invertible in SPEC
+**Ticket**: `isExpressionInvertible` returns `true` for a `Literal` ("Constant values are technically invertible"), now on both parse paths; `frontend/src/jjtl/SPEC.md:813` lists "`Literal` expression | No". One of the two has to change. The code's answer was kept by the GO of P-2026-11-13-1245 (answer 1).
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL analyzer bidirectionality.ts lacks JjelExpression and has no caller
+**Ticket**: `frontend/src/jjtl/analyzer/bidirectionality.ts` has no `'JjelExpression'` case (`:382-391`), so on the app parse path it would answer as the executor did before #897; it also has no caller in the tree. Either align it with `isJjelExpressionInvertible` or retire it.
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — ticket: JjTL trace: := bindings recorded with expression undefined
+**Ticket**: The trace records every `:=` binding with `expression: undefined`: `executor.ts` computes `expressionSource` only for `conversion.expression` (about `:2055`), not for `mapping.expression`. Observed on both parse paths by the probe of P-2026-11-13-1245. The trace panel cannot show the source of a `:=` binding.
+**Priority**: low
+**Found in**: P-2026-11-13-1245
+**Detail**: docs/discovery/discovery_2026-11-13_jjtl_book_findings.md
+
+## 2026-11-13 — merge: jjtl-book-findings into alfonso-frontend-jjtl (P-2026-11-13-1302)
+**Prompt**: `claude_2026-11-13_1302_prompt_merge_jjtl-book-findings.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-book-findings` at `6036d30b5` into `alfonso-frontend-jjtl`, merge base `d648c4a02`, 4 commits on the branch side.
+**Files touched**: merge `d20dc194e`: 6 files from the branch side (`docs/discovery/discovery_2026-11-13_jjtl_book_findings.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-13_1245_prompt_jjtl_book_findings.md`, `frontend/src/jjtl/executor/__tests__/binding-invertibility.test.ts`, `frontend/src/jjtl/executor/__tests__/creation-blocks-accumulate.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d20dc194e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16251 tests in 620 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. No smoke scene loads a JjTL program with two creation blocks or a trace; covered by binding-invertibility.test.ts and creation-blocks-accumulate.test.ts with negative controls. Alfonso visual GO owed on localhost:3000: trace panel, invertible icon and Invertible figure on name := name; the generated Table keeps its _tid key column first in cols.
+**Notes**: Rollback tag `pre-jjtl-book-findings` on `3df726197` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1302/result.json`.
+**Prompt document name**: 2026-11-13 13:02
+
+## 2026-11-13 — fix(jjel): and/or short-circuit as SPEC says, and the oclIsTypeOf hint (P-2026-11-13-1246)
+**Prompt**: `claude_2026-11-13_1246_prompt_jjel_and_or_hint.md`, full lane, Phase 2 after the chat's GO (Q1, Q2, Q4, Q5, Q6 yes; Q3 no), resumed after a context ceiling: `and`/`or` decided by a non-bit-vector left operand leave the right one unevaluated (evaluator, JS target, subset checker together), every input that had a value keeps it; the `oclIsTypeOf` hint names the exact-class test; documents aligned.
+**Files touched**: `1aa3dba00`: `docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md`. `1daf90c86`: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/codegen/target/js/printer.ts`, `frontend/src/model/simulation/subsetChecker.ts`, `frontend/scripts/probe/codegen-runner.ts`, tests `jjel/__tests__/and-or-short-circuit.test.ts` (new), `jjel/__tests__/bitvector.test.ts`, `codegen/target/js/__tests__/printer.test.ts`, `model/simulation/__tests__/subsetChecker.test.ts`, `model/simulation/__tests__/guardEvaluator.test.ts`, `codegen/engine/__tests__/textMode.test.ts`. `971e866df`: `frontend/src/jjel/lexer/lexer.ts`, `jjel/__tests__/lexer-own-keys.test.ts`, `jjel/__tests__/parser.test.ts`. This commit: `frontend/src/jjel/SPEC.md`, `docs/help/simulation/simulation-guide.md`, `docs/help/simulation/simulation-semantics.md`, `frontend/src/codegen/examples/turnstile/README.md`, `docs/jjtl-jjel-paper.tex`, this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: More than 5 files, approved by the GO. Out of the declared list: `textMode.test.ts` (goldens hash the embedded `$and`/`$or` runtime; base hashes reproduced, then re-measured) and `parser.test.ts:536` (pinned the old hint). Gates: typecheck exit 0, build green, check:scripts PASS, vitest: 3 known import failures plus `contextCeiling.test.ts`, red on the clean tip too (ticket below). `unknown`: the worker probe was updated, not run (needs a dev server).
+**Prompt document name**: 2026-11-13 12:46
+
+## 2026-11-13 — ticket: JjEL: and/or on a bit-vector stay a defect; bitwise is x.and(y)
+**Ticket**: After P-2026-11-13-1246, `and`/`or` with a bit-vector operand that is reached remain a defect, on the evaluator and on the JS target alike (`'and' needs booleans ... a bit-vector has no truth value`); `false and x` and `true or x` with a vector `x` are now `false` and `true`, by short-circuit. Bitwise conjunction and disjunction are the methods `x.and(y)` and `x.or(y)`. The book and any text that shows `bits(...) and bits(...)` as bitwise should say so.
+**Priority**: low
+**Found in**: P-2026-11-13-1246
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md
+
+## 2026-11-13 — ticket: contextCeiling.test.ts fails on the clean tip
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, "transcript_path wins over JJODEL_LANE_LOG: the lane log above soft fires over a transcript below", fails on `1aa3dba00` in a clean temporary worktree, with and without `JJODEL_LANE_LOG` in the environment (measured 2026-11-13 during P-2026-11-13-1246). An earlier run of the same file on the same tip passed, so the test depends on something outside its fixture (time, or a file it reads from the real lane directory). Not touched by the lane.
+**Priority**: medium
+**Found in**: P-2026-11-13-1246
+
+## 2026-11-13 — merge: jjel-and-or into alfonso-frontend-jjtl (P-2026-11-13-1310)
+**Prompt**: `claude_2026-11-13_1310_prompt_merge_jjel-and-or.md`, a direct merge by `lane-run merge --direct`, no session: `jjel-and-or` at `78966fafc` into `alfonso-frontend-jjtl`, merge base `d648c4a02`, 4 commits on the branch side.
+**Files touched**: merge `6ac8a1bfd`: 21 files from the branch side (`docs/discovery/discovery_2026-11-13_jjel_and_or_short_circuit.md`, `docs/help/simulation/simulation-guide.md`, `docs/help/simulation/simulation-semantics.md`, `docs/jjtl-jjel-paper.tex`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-13_1246_prompt_jjel_and_or_hint.md`, `frontend/scripts/probe/codegen-runner.ts`, `frontend/src/codegen/engine/__tests__/textMode.test.ts`, and 13 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ac8a1bfd` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16263 tests in 621 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile — chat, unattended: Gates green on the merge tip. No visual change: evaluator, generated JavaScript and subset checker of JjEL and/or, one lexer message, documents.
+**Notes**: Rollback tag `pre-jjel-and-or` on `6820fd573` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1310/result.json`.
+**Prompt document name**: 2026-11-13 13:10
+
+## 2026-11-13 — fix: JjEL is is kind-of on model instances (P-2026-11-13-1305)
+**Prompt**: `claude_2026-11-13_1305_prompt_jjel_is_on_instances_discovery.md`, Phase 2 after the GO of 2026-11-13 13:31 (jjodel-lanes#912): `x is T` on a model instance walks its class and the transitive supertypes by name; W-IS retired; JjTL `is` stays exact; `x is Null` gets a SPEC note and a ticket.
+**Files touched**: `b55bd43aa` discovery report; `a065ce9c0` `frontend/src/jjel/evaluator/context.ts`, `frontend/src/model/simulation/subsetChecker.ts`, `frontend/src/jjel/__tests__/is-kind-of.test.ts` (new), `guardEvaluator.test.ts`, `subsetChecker.test.ts`, `codegen/target/js/__tests__/printer.test.ts`; `992bfeb4d` `frontend/src/jjel/SPEC.md`; `ad6a7545a` `docs/help/simulation/simulation-semantics.md`; this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on a065ce9c0 (typecheck 0, build 0, vitest same four known files as the base), is-kind-of.test.ts red before and green after, mutation bench M1..M5 caught. The app was not driven. Alfonso check owed on localhost:3000, Console in JjEL mode with a state selected: self is State and self is NamedElement both true.
+**Notes**: Nine files over four commits, all named in the GO (RC-11). Tests first: 5 red on the unfixed code. Mutation bench in the body of `a065ce9c0`: M1-M5 killed, M6 survives as declared intent. Gates: typecheck 0, build 0, test 4 red files / 618 passed, the baseline set (3 known window files plus contextCeiling.test.ts, already ticketed). SPEC and help split in two commits: the guard reads `frontend/src/jjel/SPEC.md` as code. Console check in the app not run: this lane did not drive the app.
+**Prompt document name**: 2026-11-13 13:05
+
+## 2026-11-13 — ticket: JjTL is on source elements stays exact-class
+**Ticket**: After P-2026-11-13-1305, JjEL `is` is kind-of on model instances, but the objects a JjTL rule matches still answer `is` by exact class, so a JjTL `where` clause or binding reads `x is Base` as false on an instance of `Sub`. SPEC §2 and §5.8 state the limit. Aligning it touches JjTL matching, which the prompt kept out of scope.
+**Priority**: medium
+**Found in**: P-2026-11-13-1305
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md
+
+## 2026-11-13 — ticket: JjEL x is Null does not parse
+**Ticket**: SPEC §2 lists `Null` among the types of the `is` operator, but `x is Null` does not parse (measured during P-2026-11-13-1305). SPEC now says to write `x == null`. Either the parser accepts `Null` after `is` or the type leaves the list; a grammar change, out of the lane's scope.
+**Priority**: low
+**Found in**: P-2026-11-13-1305
+**Detail**: docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md
+
+## 2026-11-13 — merge: jjel-is-instances into alfonso-frontend-jjtl (P-2026-11-13-1616)
+**Prompt**: `claude_2026-11-13_1616_prompt_merge_jjel-is-instances.md`, a direct merge by `lane-run merge --direct`, no session: `jjel-is-instances` at `21f8393fa` into `alfonso-frontend-jjtl`, merge base `171d8d079`, 5 commits on the branch side.
+**Files touched**: merge `18b4db198`: 11 files from the branch side (`docs/discovery/discovery_2026-11-13_jjel_is_on_model_instances.md`, `docs/help/simulation/simulation-semantics.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-13_1305_prompt_jjel_is_on_instances_discovery.md`, `frontend/src/codegen/target/js/__tests__/printer.test.ts`, `frontend/src/jjel/SPEC.md`, `frontend/src/jjel/__tests__/is-kind-of.test.ts`, `frontend/src/jjel/evaluator/context.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `18b4db198` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. No smoke scene evaluates is in the Console; covered by is-kind-of.test.ts and the mutation bench of a065ce9c0. Alfonso check owed on localhost:3000, Console in JjEL mode with a state selected: self is State and self is NamedElement both true.
+**Notes**: Rollback tag `pre-jjel-is-instances` on `171d8d079` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-13-1616/result.json`.
+**Prompt document name**: 2026-11-13 16:16
+
+## 2026-11-14 — fix(ui): «Depends on models», three book-review checks (P-2026-11-14-1235)
+**Prompt**: `claude_2026-11-14_1235_prompt_book_review_trunk_checks.md`, full lane: Part 1 read-only, three questions of the book review (Q17 JjGen `forall`, Q18 JjScript `create instance ... "red"`, Q19 JjTL `:=` coercion) answered from the code and by probes; Part 2 the label «Depends from models» becomes «Depends on models», wording only.
+**Files touched**: `e07d6b0f0` `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`; `c3b2d06df` `frontend/src/components/editors/Info.tsx` (line 554), `frontend/src/view/viewElement/view.tsx` (line 1486, info text of `storeSize`); this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; build exit 0; `npx vitest run` 3 failed files, the three `window is not defined` of §17, 619 passed, 16271 tests passed.
+**Out-of-scope changes**: no — `view.tsx` is the one other user-visible «depends from», which the prompt's search includes; the comment at `info-improvements.scss:861` quoting the old label is left as is (not shown, not asserted).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on c3b2d06df (typecheck 0, build 0, vitest with the three known import failures). Two user-visible strings changed, no identifier. Alfonso check owed on localhost:3000: the Dependencies section of the properties panel of a model with a dependency reads Depends on models.
+**Notes**: Findings: Q17 forall keeps order and repetitions in JjEL and in a JjGen hole (no set; SPEC.md:221-223 labels it Set); Q18 the string is the object's name plus a run handle, no `name` slot write, no check for a missing `name` attribute; Q19 bindings stored unconverted, no warning, both parse paths. No test asserted the label. Probes deleted, logs in `.agent-logs/q1{7,8,9}-*`.
+**Prompt document name**: 2026-11-14 12:35
+
+## 2026-11-14 — merge: book-review-checks into alfonso-frontend-jjtl (P-2026-11-14-1309)
+**Prompt**: `claude_2026-11-14_1309_prompt_merge_book-review-checks.md`, a direct merge by `lane-run merge --direct`, no session: `book-review-checks` at `8b1ee3cb9` into `alfonso-frontend-jjtl`, merge base `8252a8aa4`, 3 commits on the branch side.
+**Files touched**: merge `0b52cf6c7`: 5 files from the branch side (`docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-14_1235_prompt_book_review_trunk_checks.md`, `frontend/src/components/editors/Info.tsx`, `frontend/src/view/viewElement/view.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0b52cf6c7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: Gates green on the merge tip. Two user-visible strings. Alfonso check owed on localhost:3000: Dependencies section of the properties panel reads Depends on models.
+**Notes**: Rollback tag `pre-book-review-checks` on `8252a8aa4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1309/result.json`.
+**Prompt document name**: 2026-11-14 13:09
+
+## 2026-11-14 — ticket: JjTL: a binding stores a value of another primitive type unconverted, with no warning
+**Ticket**: A JjTL binding stores the value its expression computes without converting it to the primitive type of the target feature, and says nothing: no refusal, no warning, on both parse paths (17 cases probed by lane P-2026-11-14-1235, report `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, question 3). The value is converted only when the model reads it back, and some readings surprise: `"abc"` in an EInt feature reads as 0, `true` in an EInt reads as NaN, `0` or `false` in an EString read as `""`.
+
+Expected, at the least: a warning in the transformation's diagnostics when the primitive type of a binding's value differs from the type of the target feature. Whether the executor should convert, or refuse, is a design decision.
+
+Found while checking a question of the second external review of the Jjodel book. The book now states the present behaviour in its chapter on JjTL and names the explicit helper as the way to convert.
+**Priority**: medium
+**Found in**: P-2026-11-14-1235
+
+## 2026-11-14 — ticket: JjEL SPEC: the forall forms are labelled Set, the evaluator returns an ordered collection
+**Ticket**: `frontend/src/jjel/SPEC.md:221-223` labels the result of the `forall` forms `Set`. The evaluator returns an ordered collection that keeps repetitions (`evaluator.ts:1178-1194`; probe of lane P-2026-11-14-1235, report `docs/discovery/discovery_2026-11-14_book_review_trunk_checks.md`, question 1), in JjEL and in a hole of JjGen alike. The label is misleading; the wording of SPEC should say ordered collection, or the name should be explained.
+**Priority**: low
+**Found in**: P-2026-11-14-1235
+
+## 2026-11-14 — docs: forall returns a collection in the JjEL SPEC and in the rules dialog hint
+**Prompt**: P-2026-11-14-1815, closes ticket #932: SPEC 5.1 labels the forall forms Set; the evaluator returns an ordered collection with repetitions. Correct the wording, no behaviour change.
+**Files touched**: `frontend/src/jjel/SPEC.md` (Returns column Set and Set + Map to Collection; one sentence under the table on order, repetitions and `distinct()`), `frontend/src/components/validation/ValidationRulesModal.tsx` (hint: returns a collection), commit `f79f13bc1`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0, build exit 0 (chunk-size warning only). No test: nothing behaves differently.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — one user-visible word in a hint; the visual line is closed by the chat
+**Notes**: Commit subject shortened from the prompt's 79 characters to fit the 72 of §6.2 (bash-guard refused it). Other texts that say forall returns a set, not edited and listed for the chat: `frontend/src/jjel/types/ast.ts:259`, `docs/jjtl-jjel-paper.tex:297,376,436`; SPEC line 19 says "selects sets", kept with line 35.
+**Prompt document name**: 2026-11-14 18:15
+
+## 2026-11-14 — merge: spec-forall into alfonso-frontend-jjtl (P-2026-11-14-1816)
+**Prompt**: `claude_2026-11-14_1816_prompt_merge_spec-forall.md`, a direct merge by `lane-run merge --direct`, no session: `spec-forall` at `3d8b3ff7b` into `alfonso-frontend-jjtl`, merge base `253d60d07`, 2 commits on the branch side.
+**Files touched**: merge `4bcd96b88`: 3 files from the branch side (`docs/log-inbox/maintenance.md`, `frontend/src/components/validation/ValidationRulesModal.tsx`, `frontend/src/jjel/SPEC.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4bcd96b88` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: gates green on 4bcd96b88 (typecheck 0, build 0, vitest with the three known import failures). Wording only: SPEC.md 5.1 and one word of the hint in the validation rules dialog (set becomes collection), no identifier, no behaviour. Alfonso check owed on localhost:3000: the hint under a rule in the Validation Rules dialog reads returns a collection and produces no verdict.
+**Notes**: Rollback tag `pre-spec-forall-P-2026-11-14-1816` on `253d60d07` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1816/result.json`.
+**Prompt document name**: 2026-11-14 18:16
+
+## 2026-11-14 — merge: spec-forall into alfonso-frontend-jjtl (P-2026-11-14-1828)
+**Prompt**: `claude_2026-11-14_1828_prompt_merge_spec-forall.md`, a direct merge by `lane-run merge --direct`, no session: `spec-forall` at `4d69ba32d` into `alfonso-frontend-jjtl`, merge base `3d8b3ff7b`, 1 commit on the branch side.
+**Files touched**: merge `3a49e0db8`: 1 files from the branch side (`docs/prompts/claude_2026-11-14_1815_prompt_jjel_spec_forall_collection.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3a49e0db8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: docs only, the Status flip of P-2026-11-14-1815; gates green on 3a49e0db8.
+**Notes**: Rollback tag `pre-spec-forall-P-2026-11-14-1828` on `599b43fe0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-1828/result.json`.
+**Prompt document name**: 2026-11-14 18:28
+
+## 2026-11-14 — ticket: JjEL SPEC: the do form of forall is labelled JjTL only, it runs only in JjScript
+**Ticket**: `frontend/src/jjel/SPEC.md` says the `do` form of `forall` is "JjTL only" (lines 214, 224, 234, 255-256, 785 as read on `c32e79c98`). On the trunk `forall x in S do ...` runs only in JjScript; the JjEL parser and JjTL reject it everywhere (probes of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository). `frontend/src/jjtl/SPEC.md` lists `do {}` blocks under Phase 4, which agrees with the code.
+
+Expected: the JjEL SPEC says that the `do` form belongs to JjScript, and that JjTL creates per element with `forall ... -> Class`. Wording only.
+
+Found while verifying the third part of the second external review of the Jjodel book. Chapter 7 of the book said the same wrong thing in four places and is corrected.
+**Priority**: low
+**Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjTL SPEC: a literal binding is listed as not invertible, the analysis and its test say invertible
+**Ticket**: `frontend/src/jjtl/SPEC.md:813` says a `Literal` expression in a binding is not invertible ("No source to reverse"). The invertibility analysis returns invertible for a bare literal, and `binding-invertibility.test.ts` pins that answer, noting that the SPEC table says no (probe of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository). The same analysis marks `a + 1` invertible.
+
+Expected: SPEC and code agree. Which one changes is a design decision: the book now states what the code does (Section 11.6, Appendix C, Table C.6) and explains the literal as the case with nothing of the source to recover.
+
+Found while verifying the third part of the second external review of the Jjodel book.
+**Priority**: low
+**Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjScript: create instance does not check the name, a script can create instances it cannot address
+**Ticket**: The canvas refuses two instances with the same name in one container. `create instance` in a JjScript script does not check the name against the model, while `rename instance` checks the whole model, and the resolver of instance names searches all the instances of the model and refuses a shared name with `AMBIGUOUS_INSTANCE`. A script can therefore create two instances with one name that no later command (`set`, `delete instance`, `rename instance`) can address by name (probe of book lane P-2026-11-14-2100, report `author/discovery/discovery_2026-11-14_gpt_review_third_part.md` in the book repository).
+
+Expected, at the least: `create instance` applies a name check and refuses or warns. Which scope the check has (the container, as on the canvas, or the whole model, as `rename instance`) is a design decision.
+
+Found while verifying the third part of the second external review of the Jjodel book. The book now lists the present behaviour among the limitations of JjScript (Appendix B).
+**Priority**: medium
+**Found in**: P-2026-11-14-2100
+
+## 2026-11-14 — ticket: JjTL: forall ... do at rule level is dropped silently, no error and nothing created
+**Ticket**: In a JjTL transformation, `forall c in classes do createTable(c)` written at rule level gives no error and no warning: the parse produces `mappings: []`, the run reports `success: true`, and nothing is created (probe of lane P-2026-11-14-2145). Inside a rule body the same form is refused with `Expected '->' for object creation in forall`.
+
+Expected: the rule-level form is refused with a diagnostic, as in a rule body, until `do {}` blocks exist (Phase 4 of the JjTL SPEC).
+**Priority**: medium
+**Found in**: P-2026-11-14-2145
+
+## 2026-11-14 — ticket: JjTL invertibility: any + with a literal is invertible, no inverse for numbers, other operand unchecked
+**Ticket**: The invertibility analysis of a JjTL binding (`executor.ts:2186-2192`, `:2223`) marks any `+` with one literal operand invertible. Two consequences, from the probe of lane P-2026-11-14-2145: for a numeric literal (`b := a + 1`, `b := 1 + a`) the verdict is invertible but no `inverseExpression` is recorded; and, read in the code and not probed, the other operand is not inspected, so `name.toUpper() + "x"` would be marked invertible although `toUpper` loses information.
+
+Expected: the verdict and the recorded inverse agree (an inverse for the numeric case, or a verdict of not invertible), and the other operand of `+` is itself required to be invertible. A design decision before a fix. There is no backward executor today, so nothing misbehaves at run time: the verdict is shown in the mapping panel and the book quotes it.
+**Priority**: low
+**Found in**: P-2026-11-14-2145
+
+## 2026-11-14 — ticket: Wording: CLAUDE.md 12.6 on do, JjTL SPEC line 11 on running in either direction
+**Ticket**: Two texts contradict what the code does (lane P-2026-11-14-2145): the root `CLAUDE.md` §12.6 says "`do` — only in JjEL `with...do`. Nowhere else.", while `forall ... do` is a JjScript command; `frontend/src/jjtl/SPEC.md:11` says the engine "can execute transformations in either direction", while JjTL has no backward executor (`inverseExpression` is stored in the trace "for future reverse execution", `traceModel.ts:53`, and nothing reads it; SPEC §6.3 says so).
+
+Expected: both texts corrected. `CLAUDE.md` is normative: the change needs Alfonso's word.
+**Priority**: low
+**Found in**: P-2026-11-14-2145
+
+## 2026-11-14 — docs: forall do is JjScript's; a literal binding is invertible (SPEC)
+**Prompt**: P-2026-11-14-2145. Correct the JjEL SPEC on the `do` form of `forall` (ticket #936) and the JjTL SPEC §5.4 on a literal binding (ticket #937), after probes of the three parsers and of the trace on four bindings. Closes #936 and #937.
+**Files touched**: `frontend/src/jjel/SPEC.md`, `frontend/src/jjtl/SPEC.md` (`7fa09dfe3`); `docs/log-inbox/maintenance.md` (this entry)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probes in gitignored `frontend/scripts/smoke/_tmp_*`, deleted. JjEL rejects `forall ... do`; JjScript parses it as the `forall` command; JjTL rejects it in a rule body and drops it at rule level with no error. All four bindings trace invertible; only `a + "suffix"` records an inverse. No backward run exists (§6.3). Gates: check:docs and typecheck exit 0.
+**Prompt document name**: 2026-11-14 21:45
+
+## 2026-11-14 — merge: spec-do-literal into alfonso-frontend-jjtl (P-2026-11-14-2159)
+**Prompt**: `claude_2026-11-14_2159_prompt_merge_spec-do-literal.md`, a direct merge by `lane-run merge --direct`, no session: `spec-do-literal` at `d89d35529` into `alfonso-frontend-jjtl`, merge base `22cf59a25`, 3 commits on the branch side.
+**Files touched**: merge `b153c8027`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-14_2145_prompt_spec_forall_do_literal_invertible.md`, `frontend/src/jjel/SPEC.md`, `frontend/src/jjtl/SPEC.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b153c8027` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16274 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: wording of two SPEC files, gates green on b153c8027. Nothing to see in the app.
+**Notes**: Rollback tag `pre-spec-do-literal` on `065f14bd5` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-2159/result.json`.
+**Prompt document name**: 2026-11-14 21:59
+
+## 2026-11-14 — ticket: JjScript: set x.name writes an instance name with no name check, a script can still create unaddressable twins
+**Ticket**: `set x.name = "..."` writes the name of an M1 instance with no name check, so a script can still give two instances one name after #938 closed the `create instance` path. `create instance` and `rename instance` refuse a name another instance of the model holds (`NAME_CONFLICT`, `commands/instance.ts`), but the `HANDLE_IN_USE` text at `commands/instance.ts:700` says outright that "the 'name' attribute can still be set to any (even duplicate) value afterwards". The handle of the run keeps pointing at the renamed instance, so a later `create instance ... "y"` in the same run can also slip past the model lookup while the store has not committed the write.
+
+Expected: `set <inst>.name = ...` either routes through the same model-wide check as `rename instance` or is refused in favour of `rename instance`. Which one is a design decision.
+
+Found while closing #938 (discovery report `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`, section Dependencies and risks).
+**Priority**: low
+**Found in**: P-2026-11-14-2146
+**Detail**: docs/discovery/discovery_2026-11-14_create_instance_name_check.md
+
+## 2026-11-14 — fix(jjscript): create instance refuses a name the model holds (P-2026-11-14-2146)
+**Prompt**: `claude_2026-11-14_2146_prompt_jjscript_create_instance_name_check.md`, full lane, two phases: Phase 1 read-only discovery of how `create instance` names an instance and what `rename instance` and the canvas check; Phase 2, after the chat's GO, `create instance` refuses a name another instance of the model holds, with `NAME_CONFLICT`, in the executor and in the effects planner. Closes ticket #938.
+**Files touched**: `e1e4aa3f9` `docs/discovery/discovery_2026-11-14_create_instance_name_check.md`; `b240b96b3` `frontend/src/jjscript/executor/commands/instance.ts`, `frontend/src/jjscript/executor/effectsPlanner.ts`, `frontend/src/components/Jodie/consumerProposalModel.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, `frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts`, `frontend/src/components/Jodie/__tests__/consumerProposal.test.ts`; `c4c9095f3` ticket #945 in this inbox; this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; build exit 0; `npx vitest run src/jjscript src/components/Jodie` 1104 tests passed, 1 failed file, `context-binding.test.ts` at import (`window is not defined`, §17); `check:docs` exit 0.
+**Out-of-scope changes**: yes — seven files, above five (rule 19), all listed in the report and confirmed by the chat's GO; `consumerProposalModel.ts` is a Jodie UI file outside the named layers (rule 20), included by the GO's answer 4.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — chat, unattended: gates green on b240b96b3 (typecheck 0, build 0, JjScript and Jodie tests green, the known import failure aside). Alfonso check owed on localhost:3000: in the Console of an M1 model with an instance idle of State, create instance of State "idle" answers An instance named idle already exists: State (id) and nothing appears on the canvas; the same line in the script panel of Jodie is marked in the preview and refused by Apply.
+**Notes**: The check runs after the same-run HANDLE_IN_USE check, so a duplicate within one script keeps that code; the holder is named Class (id), as describeAmbiguity does. Mutation bench: disabling the executor check, the planner check and the subject fallback kills 4 tests. No in-repo JjScript SPEC exists; the book appendix is the reference. The ticket #945 block went in its own docs commit before this closure, a second docs commit of the lane.
+**Prompt document name**: 2026-11-14 21:46
+
+## 2026-11-14 — merge: create-instance-name into alfonso-frontend-jjtl (P-2026-11-14-2215)
+**Prompt**: `claude_2026-11-14_2215_prompt_merge_create-instance-name.md`, a direct merge by `lane-run merge --direct`, no session: `create-instance-name` at `a5220748e` into `alfonso-frontend-jjtl`, merge base `22cf59a25`, 4 commits on the branch side.
+**Files touched**: merge `aea148e92`: 10 files from the branch side (`docs/discovery/discovery_2026-11-14_create_instance_name_check.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-14_2146_prompt_jjscript_create_instance_name_check.md`, `frontend/src/components/Jodie/__tests__/consumerProposal.test.ts`, `frontend/src/components/Jodie/consumerProposalModel.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts`, `frontend/src/jjscript/executor/__tests__/m1Containment.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `aea148e92` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16281 tests in 622 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato, chat unattended: gates green on aea148e92. Alfonso check owed on localhost:3000: create instance of State "idle" in the Console of a model that has idle is refused with An instance named idle already exists.
+**Notes**: Rollback tag `pre-create-instance-name-P-2026-11-14-2215` on `0e5f64b04` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-14-2215/result.json`.
+**Prompt document name**: 2026-11-14 22:15
+
+## 2026-11-15 — merge: jjel-multivalued into alfonso-frontend-jjtl (P-2026-10-12-0120)
+**Prompt**: chat request of Alfonso (book screenshots, Fig. 17.2 needs multi-valued navigation on the trunk): merge `jjel-multivalued` at `796839cc8` into `alfonso-frontend-jjtl` at `97de6d1fb`, 2 commits on the branch side, no textual conflict.
+**Files touched**: from the branch side `frontend/src/jjel/evaluator/modelContext.ts`, `frontend/src/jjel/__tests__/multivalued-navigation.test.ts`, `docs/discovery/discovery_2026-10-12_jjel_multivalued_navigation.md`; resolution in the merge: `frontend/src/jjel/evaluator/evaluator.ts` kept as on the trunk, and the block of `multivalued-navigation.test.ts` that expected an error from `forall`/`exists` on a non-collection rewritten to expect `[]` and `false`; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merged tree: typecheck 0; vitest 16301 tests in 623 files, the 3 known import failures plus `scripts/hooks/__tests__/bashGuard.test.ts` red when run from an osascript shell (environment, untouched by this merge); `src/jjel` 640/640.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: JjEL mode in Jodie, `self.ownedTransitions.size` on Green of the traffic light answers `1 Integer` (book Fig. 17.2).
+**Notes**: Fixes book defect 1 of P-2026-11-15-1010 (a `[0..*]` feature with one element is an array). Semantic conflict: the branch made `forall`/`exists` raise on a non-collection, `forallMultivar.test.ts` (R-FA) wants `[]`/`false`; the trunk rule stays, decided in chat on Alfonso's delegation.
+**Prompt document name**: 2026-11-15 16:50
+
+## 2026-11-15 — ticket: Co-evolution test suite fails headless: missing updateDebuggerComponent stub
+**Ticket**: The headless co-evolution suite of the trunk fails, all four tests, because the test DOM setup has no `updateDebuggerComponent` hook on `window`. Found by lane P-2026-11-15-2245 while exercising the class-deletion cascade for the book (report: jjodel-book `author/discovery/discovery_2026-11-15_cross_metamodel_class_deletion.md`). The lane ran its probe with a one-line stub and the cascade behaved as expected, so the product code is not implicated; the tests that guard orphaning, slot removal and re-attachment are simply not running.
+
+Proposed fix: add a no-op `updateDebuggerComponent` to `coevolution-tests/stubs/dom-setup.ts`, then confirm the four tests run green headless.
+
+Scope: test stubs only. No product file changes.
+**Priority**: medium
+**Found in**: P-2026-11-15-2245
+
+## 2026-11-15 — ticket: Canvas class deletion duplicates inherited features on the subclass
+**Ticket**: Deleting a class on the canvas copies down into its direct subclasses both the features the class declares and the ones it inherits. The subclass is then re-attached to the supertypes of the deleted class, so an inherited feature (e.g. NamedElement.name) ends up twice on the subclass, and every instance carries two slots for it, one with the value and one empty. The conformance check reports nothing. Decision of Alfonso, 2026-11-15: the trunk changes, the book text stays. Expected: copy down only the features the deleted class declares itself; inherited ones reach the subclass through the re-attachment. Scope: the copy-down of useClassRemoval; canvasToJjom.ts is critical zone and should not need to change.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: high
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: Regression test: canvas class deletion re-attaches subclasses
+**Ticket**: On the canvas path the re-attachment of subclasses works only because the proxy of the deleted class is taken in syncDeleteVertex (canvasToJjom.ts, near line 414) before the inheritance edge is stripped (near lines 445-451). A control run that strips first and deletes through a fresh proxy does not re-attach. No test covers it. Wanted: a regression test pinning TimedEvent.extends = [NamedElement] after handleClassRemoval on the hierarchy NamedElement <- Event <- TimedEvent. Test only; no product change.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: medium
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: extendedBy index stale after class deletion via script and classic editor
+**Ticket**: After deleting a class through the script path or the classic editor, the subclass is re-attached but the reverse index is not: NamedElement.extendedBy stays [] although TimedEvent now extends it. The canvas path leaves it consistent. By reading, this could affect the final and singleton guards and a later deletion of NamedElement; not run. First step: one probe that, after the script path, deletes NamedElement and sets it final, then decide the fix.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: medium
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-15 — ticket: Headless coevolution config: app class-field transform and init_editor seeding
+**Ticket**: The headless coevolution test config does not build the D-classes the way the app does: a feature created headless gets no father, so the canvas copy-down silently produces nothing, and the state has no primitive types. Wanted in coevolution-tests/: the class-field transform the app uses (vite.config.ts:34-40) and seeding through DState.init_editor(). Companion of issue 954. Test infrastructure only.
+
+Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
+**Priority**: low
+**Found in**: P-2026-11-15-2305
+
+## 2026-11-17 — fix: JjEL equality of model objects decides by identity (P-2026-11-17-2219)
+**Prompt**: `claude_2026-11-17_2219_prompt_jjel_object_identity.md`: two references to the same model object compared as different (`self.parent.father == self` false on the father; a JjTL guard `parent.mother == self` never true, Families2Persons mapped every Member to Male). Confirm the cause in the evaluator, then `==`, `!=` and the operations that rely on equality decide by the id of the underlying object.
+**Files touched**: `e74d77994` `frontend/src/jjel/__tests__/object-identity.test.ts` (new), `frontend/src/jjtl/executor/__tests__/source-object-identity.test.ts` (new); `29aab5059` `frontend/src/jjel/evaluator/identity.ts` (new), `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjel/evaluator/builtins/collections.ts`; `aa39e1c81` `frontend/src/jjel/SPEC.md`; the discovery report, the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, 2026-11-18, on :3002 (branch jjel-object-identity): Families2Persons with guards on objects gives 4 Female and 5 Male; his further checks fine.
+**Notes**: Not a regression: same code at 3.0.0, 3.1.0, 3.1.2; October compared a quantifier variable (pool handle), November `self` (a separate record). Tests first, 12 of 20 red; bench in `29aab5059`, one mutant survives as declared intent. Typecheck 0; vitest 20 red in 6 tooling and Chromium files, red the same way on `e30274962` here, plus the 3 known. Run by the chat in a cloud checkout. Also fixed: `distinct` threw on handles. Details: the report.
+**Prompt document name**: 2026-11-17 22:19

@@ -601,6 +601,32 @@ describe('resolveMetaclassColoring', () => {
     });
 });
 
+describe('resolveMetaclassColoring follows the tab\'s viewpoint (multi-tab L5, R8)', () => {
+    const OTHER = { enabled: true, baseColor: '#f59e0b', border: true };
+
+    it('a tab on `other` paints with other\'s setting while the active one has none', () => {
+        const s = fixture();
+        const viaTab = resolveMetaclassColoring(s, 'C', 'other')!;
+        expect(viaTab).not.toBeNull();
+        const g = metaclassGraph(s.idlookup, 'MM');
+        expect(viaTab.fill).toBe(assignMetaclassColors(g.ids, g.adjacency, OTHER.baseColor).C);
+    });
+
+    it('a tab on `vp` paints with vp\'s setting while the active one is `other`', () => {
+        expect(resolveMetaclassColoring(fixture(ON, 'other'), 'C', 'vp')).toEqual(resolveMetaclassColoring(fixture(ON), 'C'));
+    });
+
+    it('a tab on abstract syntax paints nothing, whatever the active viewpoint', () => {
+        expect(resolveMetaclassColoring(fixture(ON), 'C', null)).toBeNull();
+    });
+
+    it('no tab id: the active viewpoint, as before', () => {
+        const s = fixture(ON);
+        expect(resolveMetaclassColoring(s, 'C', undefined)).toEqual(resolveMetaclassColoring(s, 'C'));
+        expect(resolveMetaclassColoring(s, 'C', undefined)).not.toBeNull();
+    });
+});
+
 describe('metaclassColorTable (the panel list)', () => {
     it('lists each metamodel with its classes in order, the colour the resolver paints and whether it is overridden', () => {
         const s = fixture({ ...ON, overrides: { C: SW[4] } });

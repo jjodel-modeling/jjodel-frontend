@@ -16,6 +16,8 @@
  *   the features of a class, inherited ones included, when the receiver is a parameter of the edited template whose
  *   class is known; else nothing. `self` is not bound in a template body (templates.ts binds the parameters only),
  *   so it has no class and nothing is offered after it.
+ * - A JjEL value of the Text tab (step F, lane F1d, R-TXT-55 F4) asks with `CompletionOptions`: `self` of a known
+ *   class, offered and navigated as a parameter is, and `stc` and `target` left out, as a model value has neither.
  * - A parameter's class is known from its call sites, never from its name: every call of the template, in every
  *   template body, passes at that position a variable bound by `forall v in C.instances` (or `C.allInstances`, or
  *   `exists`), or a parameter whose class is known already, and all of them name the same class. One call site
@@ -58,6 +60,14 @@ export interface TemplateCompletionContext {
 }
 
 export type CompletionKind = 'class' | 'template' | 'variable' | 'feature' | 'member' | 'function';
+
+/** How a caller other than the Template Editor asks (lane F1d); absent, the Template Editor's own behaviour. */
+export interface CompletionOptions {
+    /** `stc` and `target`, offered and navigated: true when absent. */
+    readonly builtins?: boolean;
+    /** The class `self` is bound to; absent, `self` is not bound. */
+    readonly selfClass?: string;
+}
 
 /** One offer, Monaco-free: the provider maps the kind and the snippet flag. */
 export interface TemplateCompletion {
@@ -336,14 +346,16 @@ function membersOf(owner: 'stc' | 'target', members: readonly { readonly name: s
  * The offers at an offset of a body: null where nothing is offered (outside code, or after a receiver of unknown
  * class), else the list.
  */
-export function completionsAt(ctx: TemplateCompletionContext, body: string, offset: number, mode: TemplateMode): TemplateCompletion[] | null {
+export function completionsAt(ctx: TemplateCompletionContext, body: string, offset: number, mode: TemplateMode, options: CompletionOptions = {}): TemplateCompletion[] | null {
     if (!inCodeAt(body, offset, mode)) return null;
+    const builtins = options.builtins ?? true;
+    const { selfClass } = options;
     const before = body.slice(0, offset);
     const dot = /(^|[^\w.?])([A-Za-z_]\w*)\s*\??\.\s*\w*$/.exec(before);
     if (dot) {
         const receiver = dot[2];
-        if (ctx.params.includes(receiver)) {
-            const cls = ctx.paramClasses.get(receiver);
+        if (ctx.params.includes(receiver) || (selfClass !== undefined && receiver === 'self')) {
+            const cls = ctx.params.includes(receiver) ? ctx.paramClasses.get(receiver) : selfClass;
             const info = cls ? ctx.classes.get(cls) : undefined;
             if (!info) return null;
             return info.features.map(f => ({
@@ -354,13 +366,14 @@ export function completionsAt(ctx: TemplateCompletionContext, body: string, offs
                 detail: `${f.owner}.${f.name}${f.type ? `: ${f.type}` : ''}`,
             }));
         }
-        if (receiver === 'stc') return membersOf('stc', STC_MEMBERS);
-        if (receiver === 'target') return membersOf('target', TARGET_MEMBERS);
+        if (builtins && receiver === 'stc') return membersOf('stc', STC_MEMBERS);
+        if (builtins && receiver === 'target') return membersOf('target', TARGET_MEMBERS);
         return null;
     }
     // A dot after something that is not a plain name (`a.b.`, `f().`, `"x".`): no receiver whose members are known.
     if (/\??\.\s*\w*$/.test(before)) return null;
     const out: TemplateCompletion[] = [];
+    if (selfClass !== undefined && !ctx.params.includes('self')) out.push({ label: 'self', kind: 'variable', insertText: 'self', snippet: false, detail: `self: ${selfClass}` });
     for (const p of ctx.params) {
         const cls = ctx.paramClasses.get(p);
         out.push({ label: p, kind: 'variable', insertText: p, snippet: false, detail: cls ? `parameter: ${cls}` : 'parameter' });
@@ -369,8 +382,10 @@ export function completionsAt(ctx: TemplateCompletionContext, body: string, offs
         out.push({ label: t.name, kind: 'template', insertText: callSnippet(t.name, t.params), snippet: true, detail: `template ${t.name}(${t.params.join(', ')})` });
     }
     for (const c of ctx.classes.values()) out.push({ label: c.name, kind: 'class', insertText: c.name, snippet: false, detail: 'class' });
-    out.push({ label: 'stc', kind: 'variable', insertText: 'stc', snippet: false, detail: 'the model\'s STC roles' });
-    out.push({ label: 'target', kind: 'variable', insertText: 'target', snippet: false, detail: 'the target profile' });
+    if (builtins) {
+        out.push({ label: 'stc', kind: 'variable', insertText: 'stc', snippet: false, detail: 'the model\'s STC roles' });
+        out.push({ label: 'target', kind: 'variable', insertText: 'target', snippet: false, detail: 'the target profile' });
+    }
     return out;
 }
 

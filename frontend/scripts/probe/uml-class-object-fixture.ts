@@ -272,7 +272,8 @@ function modelPlan(): ModelPlan {
         }
     }
     for (const [o, cls, x, y, slots] of OBJECTS) {
-        add(o, 'InstanceSpecification', o, [x, y], box(300, 2, slots.length)); packaged.push(o);
+        // S3b decision 2 (P-2026-10-21-1955): no manual box, the node hugs its rows, ghost rows included.
+        add(o, 'InstanceSpecification', o, [x, y]); packaged.push(o);
         references.push([o, 'classifier', cls]);
         for (const [attr, kind, value] of slots) {
             const sk = `slot_${o}_${attr}`; const vk = `val_${o}_${attr}`;
@@ -445,7 +446,6 @@ const IS_LINK = exists('$classifier.value.$memberEnds.values[0]');
 const slotHead = [P('$definingFeature.value.$name.value'), L(' = ')];
 export const OBJECT_VIEWS: Array<[string, Record<string, unknown>]> = [
     ['InstanceSpecification', { kind: 'vertex', metaclasses: ['InstanceSpecification'], label: 'Object', predicate: not(IS_LINK),
-        defaultSize: { width: 280, height: 60 },
         shape: { ...BOX, labels: [
             { position: 'top', source: I('name'), style: { fontWeight: 'normal', underline: true } },
             { position: 'top', source: P('$classifier.value.$name.value'), style: { fontWeight: 'normal', underline: true } }] },

@@ -30,6 +30,7 @@ vi.mock('../../../joiner', () => ({
 }));
 vi.mock('../../../redux/action/action', () => ({
     COMMIT: vi.fn(() => { calls.push('commit'); }),
+    dispatchesInFlight: () => 0,
 }));
 vi.mock('../../../components/editor-v2/hooks/shapeAdapter', () => ({
     makeShapeCtx: (modelId: string) => ({ shape: () => ({ enums: {}, classes: {}, modelId }) }),

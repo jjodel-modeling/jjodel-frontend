@@ -203,6 +203,7 @@ SYNTAX:
   rename <target> as <newname>
   rename <type> <target> to <newname>
   rename <type> <name> in <parent> to <newname>
+  rename <target> to <expression>
 
 The element type (class, attribute, etc.) is optional and can be used
 for clarity or to resolve ambiguity.
@@ -210,12 +211,20 @@ for clarity or to resolve ambiguity.
 The "in <parent>" clause is useful for specifying the parent container
 when renaming nested elements like attributes or references.
 
+A single name after "to" is the new name as written, even when a
+variable has that name. Anything else is a JjEL expression, evaluated
+for each execution with the forall variables and let bindings in
+scope; it must give a non-empty string that is a valid name. To use a
+variable's value alone, write it as an expression: x + "".
+
 EXAMPLES:
   rename Person to Human
   rename class Person to Human
   rename attribute oldAttr in Person to newAttr
   rename reference items in Order to orderItems
   rename MyClass.oldAttr to newAttr
+  rename Foo to "Bar"
+  forall c in classes do rename c to "Abstract_" + c.name
 `,
         set: `
 SET Command

@@ -1483,7 +1483,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>This causes the vertex to have different positions according to the view currently appied to it.</div>}*/
     storeSize!: boolean;
     __info_of__storeSize: Info = {isNode: true, type: ShortAttribETypes.EBoolean, label:"bind sizes to view",
-        txt: "Active: the node position depends from the view currently displayed.Inactive: it depends from the graph."}
+        txt: "Active: the node position depends on the view currently displayed.Inactive: it depends on the graph."}
 
     lazySizeUpdate!: boolean;
     __info_of__lazySizeUpdate: Info = {isNode: true, type: ShortAttribETypes.EBoolean, txt: <div>If true updates the node position only when the drag action is finished. (best performance)</div>}

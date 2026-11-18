@@ -48,9 +48,10 @@ describe('let statement with prompt() — comma bug fix', () => {
         expect(letStmt.type).toBe('LetStatement');
         expect(letStmt.bindings).toHaveLength(1);
         expect(letStmt.bindings[0].name).toBe('$p');
-        // JjEL delegation wraps prompt() as a JjelExpression (function call),
-        // not a JjTL-specific PromptExpression — both are valid representations
-        expect(letStmt.bindings[0].value.type).toBe('JjelExpression');
+        // JjEL delegation turns prompt() back into the JjTL PromptExpression, so the
+        // executor opens the dialog on both paths (P-2026-10-31-1910); as a plain
+        // JjEL function call it evaluated to null, 'prompt' not defined
+        expect(letStmt.bindings[0].value.type).toBe('PromptExpression');
     });
 });
 

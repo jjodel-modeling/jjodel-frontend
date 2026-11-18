@@ -533,7 +533,9 @@ describe('OCL-isms produce helpful errors', () => {
     test('oclIsTypeOf produces specific error', () => {
         const result = parseExpression('x.oclIsTypeOf(Y)');
         expect(result.errors.length).toBeGreaterThan(0);
-        expect(result.errors[0].message).toContain("'expr is Type'");
+        // The exact-class test, not `is`, which includes subclasses (P-2026-11-13-1246).
+        expect(result.errors[0].message).toContain("'expr.instanceOf.name == \"Type\"'");
+        expect(result.errors[0].message).not.toContain("'expr is Type'");
         expect(result.errors[0].message).toContain('oclIsTypeOf');
     });
 

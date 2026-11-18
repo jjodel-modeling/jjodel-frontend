@@ -4,19 +4,53 @@ import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
+import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, splitSizes, type BesidePanel } from '../scripts/refactoringBeside';
+import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
 import { JjtlTransformation, TransformationAST } from '../../jjtl/types';
 import { MetamodelElement } from '../../jjtl/views/MetamodelTreeView';
 import type { ExecutionResult } from '../../jjtl/executor';
+import type { RunRecord } from '../../jjtl/components/sourceSelection';
 
 @RuntimeAccessible('DockManager')
 class DockManager {
     static cname = "DockManager";
     static dock: DockLayout|null;
+
+    // The canvases shown side by side and the active one (multi-tab L6c, P-2026-11-08-1855).
+    static canvasSplit: CanvasSplit = NO_CANVAS_SPLIT;
+    private static canvasSplitListeners = new Set<() => void>();
+
+    static subscribeCanvasSplit = (listener: () => void): (() => void) => {
+        DockManager.canvasSplitListeners.add(listener);
+        return () => { DockManager.canvasSplitListeners.delete(listener); };
+    };
+
+    static getCanvasSplit = (): CanvasSplit => DockManager.canvasSplit;
+
+    private static setCanvasSplit(next: CanvasSplit): void {
+        if (next === DockManager.canvasSplit) return;
+        DockManager.canvasSplit = next;
+        DockManager.canvasSplitListeners.forEach(listener => listener());
+    }
+
+    /** Re-reads the split from the dock: the same rows the split's SCSS matches, and the editor each panel shows. A Refactoring split is none. */
+    static refreshCanvasSplit = (): void => {
+        const box = document.querySelector('.not-strip > .dock-layout > .dock-hbox');
+        const beside = !box || !!box.querySelector(':scope > .dock-panel .script-tab--beside');
+        const shown = beside ? [] : [...box.querySelectorAll(':scope > .dock-panel.dock-style-models')]
+            .map(panel => panel.querySelector<HTMLElement>('.dock-tabpane-active .editor-v2'));
+        const panes = shown.every((pane): pane is HTMLElement => pane !== null) ? shown as HTMLElement[] : [];
+        DockManager.setCanvasSplit(reconcileCanvasSplit(DockManager.canvasSplit, panes));
+    };
+
+    static activateCanvasPane(pane: HTMLElement): void {
+        DockManager.setCanvasSplit(activateCanvasPane(DockManager.canvasSplit, pane));
+    }
 
     /**
      * Close a tab by its ID
@@ -67,6 +101,8 @@ class DockManager {
         if (!entityType || entityType === 'metamodel' || entityType === 'model') {
             // Metamodel/Model tabs use the entity ID directly
             tabIds.push(entityId);
+            // ...and its further tabs (R-MT-9), wherever they were docked.
+            tabIds.push(...layoutTabIds(DockManager.dock.getLayout()).filter(id => id !== entityId && modelOfTabId(id) === entityId));
             // Also close any documentation tab for this model
             tabIds.push(`doc_${entityId}`);
             // ...and its instance manager, which is a second tab on the same
@@ -194,19 +230,21 @@ class DockManager {
     }
 
     /**
-     * Show the canvas tab of `modelId` in the dock panel right of the tab `besideTabId`
+     * Show the canvas tab `tabId` (a model id, or the id of a further tab on a model, R-MT-24) in the dock panel right of the tab `besideTabId`
      * (P-2026-10-25-0020, the Refactoring tab beside its target): raise it there when it already is,
      * move it there when it is open elsewhere, open it there otherwise, and split `besideTabId`'s
      * panel to the right, the editor taking `ratio` of the width, when there is no panel to its right.
      * Never a second instance of the tab. Returns false when the dock cannot place it (the tab is
      * floating, maximized or nested, no such model, consumer mode for a metamodel).
      */
-    static openBeside(besideTabId: string, modelId: string, ratio: number): boolean {
+    static openBeside(besideTabId: string, tabId: string, ratio: number, viewpointId?: string | null): boolean {
         const dock = DockManager.dock;
-        if (!dock || !besideTabId || !modelId) return false;
+        if (!dock || !besideTabId || !tabId) return false;
+        const modelId = modelOfTabId(tabId);
         const model = (store.getState() as any).idlookup?.[modelId];
         if (model?.className !== 'DModel') return false;
         if (isConsumerMode() && model.isMetamodel) return false;
+        if (tabId !== modelId && model.isMetamodel) return false;
         try {
             const layout = dock.getLayout();
             if (layout?.dockbox?.mode !== 'horizontal' || layout.maxbox?.children?.length) return false;
@@ -215,14 +253,14 @@ class DockManager {
                 id: c.id as string,
                 tabIds: 'tabs' in c ? c.tabs.map(t => t.id as string) : [],
             }));
-            const action = besideAction(panels, besideTabId, modelId);
+            const action = besideAction(panels, besideTabId, tabId);
             if (action.kind === 'unavailable') return false;
             const target = children.find(c => c.id === action.panelId);
             if (!target || !('tabs' in target)) return false;
-            const open = () => dock.find(modelId) as TabData | undefined;
-            const fresh = () => (model.isMetamodel ? TabDataMaker.metamodel(model) : TabDataMaker.model(model));
+            const open = () => dock.find(tabId) as TabData | undefined;
+            const fresh = () => (model.isMetamodel ? TabDataMaker.metamodel(model) : TabDataMaker.model(model, { tabId, viewpointId }));
             switch (action.kind) {
-                case 'activate': dock.updateTab(modelId, null as any, true); return true;
+                case 'activate': dock.updateTab(tabId, null as any, true); return true;
                 case 'move-into': dock.dockMove(open() as TabData, target, 'middle'); return true;
                 case 'open-into': dock.dockMove(fresh(), target, 'middle'); return true;
                 case 'split-move': dock.dockMove(open() as TabData, target, 'right'); break;
@@ -245,6 +283,36 @@ class DockManager {
             console.error('[DockManager] openBeside:', error);
             return false;
         }
+    }
+
+    /**
+     * A further tab on the M1 model `modelId`, on `viewpointId` (null: abstract syntax), or the model's
+     * first tab when none is open (R-MT-9). No second tab on a metamodel: it owns no tab viewpoint.
+     */
+    static async openModelTab(modelId: string, viewpointId: string | null): Promise<void> {
+        const tab = DockManager.makeModelTab(modelId, viewpointId);
+        if (tab) await DockManager.open('models', tab);
+    }
+
+    /**
+     * The same tab in a panel right of the editor panel's active tab (R-MT-24). When the dock cannot
+     * place it there (`openBeside` false) it opens as a new tab, on the same viewpoint.
+     */
+    static openModelTabBeside(modelId: string, viewpointId: string | null): void {
+        const tab = DockManager.makeModelTab(modelId, viewpointId);
+        if (!tab) return;
+        const editorPanel = DockManager.dock?.getLayout()?.dockbox?.children?.[0] as PanelData | undefined;
+        const besideId = editorPanel?.activeId;
+        if (besideId && DockManager.openBeside(besideId, tab.id as string, 0.5, viewpointId)) return;
+        void DockManager.open('models', tab);
+    }
+
+    private static makeModelTab(modelId: string, viewpointId: string | null): TabData | null {
+        const dock = DockManager.dock;
+        const model = (store.getState() as any).idlookup?.[modelId];
+        if (!dock || model?.className !== 'DModel' || model.isMetamodel) return null;
+        const tabId = nextModelTabId(modelId, layoutTabIds(dock.getLayout()));
+        return TabDataMaker.model(model, { tabId, viewpointId });
     }
 
     /** The share of the width the tab `besideTabId`'s panel takes from it and the panel to its right; null when there is none. */
@@ -429,6 +497,7 @@ class DockManager {
      * @param availableModels - Optional list of models available for transformation execution
      * @param existingModelNames - Optional list of existing model names (to prevent duplicates)
      * @param onExecuteTransformation - Optional callback when transformation is executed
+     * @param getLastRun - Optional getter for the record of the last run of this transformation
      */
     static openTransformation(
         transformation: JjtlTransformation,
@@ -439,7 +508,8 @@ class DockManager {
         getTargetMetamodel?: () => MetamodelElement[],
         availableModels?: ModelOption[],
         existingModelNames?: string[],
-        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<ExecutionResult | void>
+        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST, includedModelIds?: string[]) => Promise<ExecutionResult | void>,
+        getLastRun?: () => RunRecord | null
     ): void {
         // console.log('[DockManager] openTransformation called', {
         //     transformationId: transformation?.id,
@@ -503,7 +573,8 @@ class DockManager {
             existingModelNames: existingModelNames || [],
             onSave: explicitSave,
             onCodeChange: debouncedSync,
-            onExecuteTransformation: onExecuteTransformation
+            onExecuteTransformation: onExecuteTransformation,
+            getLastRun: getLastRun
         });
 
         try {

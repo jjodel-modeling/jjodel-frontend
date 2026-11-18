@@ -1,6 +1,7 @@
 import React from 'react';
 import { Select, Input, Toggle, PRESERVED_CHIP } from '../../../ui';
-import type { FieldSegment } from '../ir/irTypes';
+import { TextStyleField } from './TextStyleField';
+import type { FieldSegment, TextStyle } from '../ir/irTypes';
 
 const KIND_OPTIONS = [
     { value: 'name', label: 'Name' },
@@ -34,6 +35,33 @@ export function applyValueEditable(
     return rest;
 }
 
+/**
+ * The literal segment after a text edit: only `text` changes. A persisted `style` (R-VP-20) and any
+ * other key keep their place; rebuilding the segment from scratch dropped them on the first keystroke.
+ */
+export function applyLiteralText(
+    segment: Extract<FieldSegment, { kind: 'literal' }>,
+    text: string,
+): Extract<FieldSegment, { kind: 'literal' }> {
+    return { ...segment, text };
+}
+
+/**
+ * The literal segment after a style edit (R-VP-20): only `style` changes. `undefined` (the popover's
+ * reset, or every axis cleared) drops the KEY, so the literal falls back to the row's style and
+ * round-trips byte-identical to one authored without a style.
+ */
+export function applyLiteralStyle(
+    segment: Extract<FieldSegment, { kind: 'literal' }>,
+    style: TextStyle | undefined,
+): Extract<FieldSegment, { kind: 'literal' }> {
+    if (style === undefined) {
+        const { style: _dropped, ...rest } = segment;
+        return rest;
+    }
+    return { ...segment, style };
+}
+
 export interface FieldSegmentEditorProps {
     segment: FieldSegment;
     onChange: (segment: FieldSegment) => void;
@@ -41,7 +69,7 @@ export interface FieldSegmentEditorProps {
 
 /**
  * Editor for a single FieldSegment (a cell of a compartment row): kind +
- * kind-specific field. `literal` gets a text Input; `value` exposes the boolean
+ * kind-specific field. `literal` gets a text Input and its own TextStyle; `value` exposes the boolean
  * `editable` flag, read as the runtime reads it (`!== false`: absent edits, so absent
  * reads ON; the widget-object variant is read-only and round-trips verbatim — phase
  * B2b); `name`/`type` have no sub-fields.
@@ -59,10 +87,18 @@ export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment,
             />
 
             {segment.kind === 'literal' && (
-                <Input
-                    value={segment.text}
-                    onChange={(e) => onChange({ kind: 'literal', text: e.target.value })}
-                />
+                <>
+                    <Input
+                        value={segment.text}
+                        onChange={(e) => onChange(applyLiteralText(segment, e.target.value))}
+                    />
+                    {/* The literal's own style, over the row's (R-VP-20). The other kinds
+                        carry no style of their own: they take the row's. */}
+                    <TextStyleField
+                        value={segment.style}
+                        onChange={(style) => onChange(applyLiteralStyle(segment, style))}
+                    />
+                </>
             )}
 
             {segment.kind === 'value' && (

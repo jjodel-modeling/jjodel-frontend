@@ -33,6 +33,13 @@
  * Wired by the bridge since lane C1 (R-SIM-69); `NO_SIM_ACTIONS` stays the
  * oracle of a run with no action role bound.
  *
+ * In the DCN action mode (`{ dcn: true }` to `compileAction(s)`, R-DCN-12) a
+ * target may be a slot, `self.battery := e`: its receiver evaluates to an
+ * element and the assignment carries `slot: true`, so the core can tell it from
+ * a state attribute. Locality does not judge a slot, and no slot is folded
+ * before the run. The core does not apply slot writes yet: one reaching
+ * `netStep.ts` halts `undeclared` (lane L4.4).
+ *
  * Pure: JjEL, the shared diagnostics of `jjelTriState.ts`, the subset checker
  * and the guard context.
  */
@@ -41,7 +48,7 @@ import { parseAction } from '../../jjel/parser';
 import { JjelEvaluator, isJjelObject } from '../../jjel/evaluator';
 import { isBitVector } from '../../jjel/evaluator/context';
 import type { EvaluationContext, JjelValue, JjelWarning } from '../../jjel/evaluator';
-import type { JjelAction, JjelExpression } from '../../jjel/types/ast';
+import type { JjelAction, JjelActionParseOptions, JjelExpression } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { describeType, firstAbsence } from '../jjelTriState';
 import { buildGuardContext, toJjelStateAccess } from './guardContext';
@@ -60,20 +67,27 @@ export interface CompiledAction {
     readonly defect: string | null;
 }
 
-/** `node.[a]`: the target is the site's presentation, recognized by syntax (R-SIM-42). */
+/** `node.[a]`: the target is the site's presentation, recognized by syntax (R-SIM-42). A slot target never is. */
 function onNode(action: JjelAction): boolean {
+    if (action.target.type !== 'StateAccess') return false;
     const object = action.target.object;
     return object.type === 'Identifier' && object.name === STATE_RESERVED.presentationRoot;
 }
 
+/**
+ * An assignment of the oracle. `slot: true` marks a slot write of the DCN
+ * action mode (R-DCN-12); a state assignment carries no `slot` field.
+ */
+export type ActionAssignment = SimAssignment & { readonly slot?: true };
+
 /** Path B, as for guards (`guardEvaluator.ts`): no context at construction, so no builtins. */
 const EVALUATOR = new JjelEvaluator();
 
-/** One action, `null` when blank (`undefined`, `null`, whitespace): no action. */
-export function compileAction(source: string | null | undefined): CompiledAction | null {
+/** One action, `null` when blank (`undefined`, `null`, whitespace): no action. `options.dcn` admits slot targets. */
+export function compileAction(source: string | null | undefined, options?: JjelActionParseOptions): CompiledAction | null {
     const text = source ?? '';
     if (text.trim() === '') return null;
-    const parsed = parseAction(text);
+    const parsed = parseAction(text, options);
     if (parsed.errors.length > 0 || !parsed.action) {
         const e = parsed.errors[0];
         return { source: text, action: null, defect: e ? `${e.line}:${e.column} ${e.message}` : 'no action produced' };
@@ -89,10 +103,10 @@ export function compileAction(source: string | null | undefined): CompiledAction
 }
 
 /** The `0..*` actions of a site, in order, blanks dropped. */
-export function compileActions(sources: ReadonlyArray<string | null | undefined>): CompiledAction[] {
+export function compileActions(sources: ReadonlyArray<string | null | undefined>, options?: JjelActionParseOptions): CompiledAction[] {
     const out: CompiledAction[] = [];
     for (const source of sources) {
-        const c = compileAction(source);
+        const c = compileAction(source, options);
         if (c) out.push(c);
     }
     return out;
@@ -162,11 +176,13 @@ export type TargetJudgement =
 /**
  * The target of `c` at `site`, judged as the run's `evaluateAction` would
  * resolve it: `node.[a]` is the site; a path that reads neither σ nor the
- * event is evaluated once over the frozen M, with `self` the site.
+ * event is evaluated once over the frozen M, with `self` the site. A slot
+ * target is the run's: it names no state attribute to judge.
  */
 export function judgeActionTarget(c: CompiledAction, site: ActionSite, snapshot: SimSnapshot): TargetJudgement {
     if (c.action === null) return { kind: 'run' };
     const { target } = c.action;
+    if (target.type === 'SlotTarget') return { kind: 'run' };
     if (onNode(c.action)) return { kind: 'folded', target: { element: site.element, attr: target.attribute, onNode: true } };
     if (dependsOnStep(target.object)) return { kind: 'run' };
     const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event: null });
@@ -193,10 +209,11 @@ export function foldActionTarget(c: CompiledAction, site: ActionSite, snapshot: 
 /** One action at one site: its assignment, or why there is none. */
 function evaluateAction(
     c: CompiledAction, site: ActionSite, ctx: EvaluationContext, declared: CompiledNet['declared'],
-): SimAssignment | string {
+): ActionAssignment | string {
     if (c.action === null || c.defect !== null) return c.defect ?? 'no action produced';
     const { target, value } = c.action;
     const attr = target.attribute;
+    const slot = target.type === 'SlotTarget';
 
     // The element: the site for `node`, recognized by syntax (R-SIM-42); otherwise the path over the frozen M.
     const isNode = onNode(c.action);
@@ -209,15 +226,15 @@ function evaluateAction(
         element = id;
     }
 
-    // Locality (R-SIM-18): an undeclared target is the core's to refuse.
-    const decl = declared.get(element)?.get(attr);
+    // Locality (R-SIM-18): an undeclared target is the core's to refuse. A slot is no state attribute.
+    const decl = slot ? undefined : declared.get(element)?.get(attr);
     if (decl?.space === 'semantic' && isNode) return `'${attr}' is a semantic attribute: node.[${attr}] assigns presentation only`;
     if (decl?.space === 'presentation' && !isNode) return `'${attr}' is a presentation attribute: only node.[${attr}] assigns it`;
 
     const rhs = evaluate(value, ctx);
     if (!rhs.ok) return rhs.why;
     if (!isSimValue(rhs.value)) return `the value is ${describeType(rhs.value)}, not a boolean, a number or a string`;
-    return { element, attr, value: rhs.value };
+    return slot ? { element, attr, value: rhs.value, slot: true } : { element, attr, value: rhs.value };
 }
 
 /**
@@ -238,7 +255,7 @@ export function makeActionOracle(
         if (ctx === null) {
             return { kind: 'defect', detail: `'${list[0].source}': the site ${site.element} or the event has no handle in the snapshot` };
         }
-        const assignments: SimAssignment[] = [];
+        const assignments: ActionAssignment[] = [];
         for (const c of list) {
             const out = evaluateAction(c, site, ctx, net.declared);
             if (typeof out === 'string') return { kind: 'defect', detail: `'${c.source}': ${out}` };

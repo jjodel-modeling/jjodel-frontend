@@ -104,6 +104,15 @@ describe('create instance', () => {
         expect(codes(plan.errors)).toEqual(['ABSTRACT_CLASS', 'SINGLETON_CLASS', 'HANDLE_IN_USE']);
         expect(plan.created.map((c) => c.name)).toEqual(['S']);
     });
+
+    it('refuses a name a root or a contained instance holds (NAME_CONFLICT, #938), naming the holder', async () => {
+        const plan = await planEffects('create instance of State "M"\ncreate instance of State "A" in M.states', world());
+        expect(plan.created).toEqual([]);
+        expect(plan.errors).toMatchObject([
+            { line: 1, code: 'NAME_CONFLICT', message: "An instance named 'M' already exists: Machine (m)" },
+            { line: 2, code: 'NAME_CONFLICT', message: "An instance named 'A' already exists: State (a)" },
+        ]);
+    });
 });
 
 describe('set an attribute', () => {
@@ -244,5 +253,86 @@ describe('read only', () => {
         const before = JSON.stringify(w);
         await planEffects('create instance of State "S" in M.states\nset A.next = null\ndelete M\nrename B to "C"', w);
         expect(JSON.stringify(w)).toBe(before);
+    });
+});
+
+describe('lists and enumeration literals on attributes (R-TXT-25 (2), P-2026-11-02-0651)', () => {
+    /** The world above, with an enum-typed single and many attribute on State. */
+    function moodWorld(): PlanWorld {
+        const w = world();
+        const mood = { name: 'Mood', literals: ['happy', 'sad'] };
+        w.classes.State.attributes.push({ name: 'mood', upper: 1, enumeration: mood }, { name: 'moods', upper: UNBOUNDED, enumeration: mood });
+        return w;
+    }
+
+    it('previews a list on a many-valued attribute as one feature carrying every value (dies on `values` dropped)', async () => {
+        const plan = await planEffects('set B.tags = ["a", "b"]\nset B.moods = [happy, Mood.sad]\nset B.tags = []', moodWorld());
+        expect(plan.errors).toEqual([]);
+        expect(plan.features).toEqual([
+            { line: 1, owner: 'B', ownerId: 'b', feature: 'tags', value: null, many: true, values: ['a', 'b'] },
+            { line: 2, owner: 'B', ownerId: 'b', feature: 'moods', value: null, many: true, values: ['happy', 'sad'] },
+            { line: 3, owner: 'B', ownerId: 'b', feature: 'tags', value: null, many: true, values: [] },
+        ]);
+    });
+
+    it('previews an enumeration literal by name as its name, and a single value with no `values`', async () => {
+        const plan = await planEffects('set B.mood = sad\nset B.mood = Mood::happy', moodWorld());
+        expect(plan.features.map((f) => [f.value, 'values' in f])).toEqual([['sad', false], ['happy', false]]);
+    });
+
+    it('refuses a list on a single-valued attribute and an unknown literal, as the executor does', async () => {
+        const list = await planEffects('set B.name = ["x"]', moodWorld());
+        expect(list.features).toEqual([]);
+        expect(list.error).toMatchObject({ line: 1, code: 'LIST_ON_SINGLE_VALUED' });
+        const unknown = await planEffects('set B.mood = angry', moodWorld());
+        expect(unknown.error).toMatchObject({ line: 1, code: 'UNKNOWN_LITERAL', message: "'angry' is not a literal of the enumeration Mood (happy, sad)" });
+        expect((await planEffects('set B.name = happy', moodWorld())).error).toMatchObject({ code: 'TYPE_MISMATCH' });
+    });
+
+    it('a list at M2 stays an error (it was a parse error before lists)', async () => {
+        const m2: PlanWorld['m2'] = {
+            id: 'mm', name: 'MM', defaultParent: 'pkg',
+            elements: [{ id: 'pkg', name: 'mmpkg', kind: 'Package', father: 'mm' }, { id: 'cState', name: 'State', kind: 'Class', father: 'pkg', abstract: false, extends: [] }],
+        };
+        const plan = await planEffects('set State.name = ["x"]', { ...moodWorld(), elements: [], level: 'M2', m2 });
+        expect(plan.features).toEqual([]);
+        expect(plan.error).toMatchObject({ line: 1, code: 'LIST_NOT_SUPPORTED' });
+    });
+});
+
+describe('M1 move (P-2026-11-03-1225)', () => {
+    /** The world of the other tests, with a second machine and every instance listed by the model (R-NEST-1). */
+    const moveWorld = (): PlanWorld => {
+        const w = world();
+        return {
+            ...w,
+            elements: [
+                ...w.elements.map((e) => ({ ...e, listed: true })),
+                { id: 'm2', name: 'M2', className: 'Machine', root: true, listed: true, references: { states: [] } },
+            ],
+        };
+    };
+
+    it('`+=` of a child into another containment slot moves it: the old slot no longer holds it (mutant: putIn leaves the old slot)', async () => {
+        const plan = await planEffects('set M2.states += A\nset M.states -= A', moveWorld());
+        expect(plan.references[0]).toMatchObject({ line: 1, operator: '+=', targetId: 'a', movedFrom: { owner: 'm', feature: 'states' } });
+        expect(plan.error).toMatchObject({ line: 2, code: 'NOT_LINKED' });
+    });
+
+    it('`=` on a single-valued containment moves the child too', async () => {
+        const plan = await planEffects('set M2.initial = A\nset M2.states += A', moveWorld());
+        expect(plan.references[0]).toMatchObject({ operator: '=', targetId: 'a', movedFrom: { owner: 'm', feature: 'states' } });
+        expect(plan.error).toBeNull();
+    });
+
+    it('a write that does not move carries no origin: a root, or the same slot', async () => {
+        const plan = await planEffects('set M2.states += B', moveWorld());
+        expect(plan.references[0].movedFrom).toBeUndefined();
+    });
+
+    it('`-=` of a listed child takes it to the top level, as the executor does (instance.ts:1335 isListedAtRoot; mutant: guard on root)', async () => {
+        const plan = await planEffects('set M.states -= A\nset M2.states += A', moveWorld());
+        expect(plan.error).toBeNull();
+        expect(plan.references[1].movedFrom).toBeUndefined();
     });
 });

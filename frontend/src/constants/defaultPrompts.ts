@@ -145,6 +145,10 @@ delete reference refName in ClassName
 # Rename elements
 rename class OldName to NewName
 rename attribute oldAttr to newAttr in ClassName
+forall c in classes such that c.isAbstract do rename c to "Abstract_" + c.name
+
+# Repeat a command for every combination of several variables (a, b in S: both range over S)
+forall c in classes, x in c.attributes such that x.name == "id" do delete x
 \`\`\`
 
 #### MANDATORY RULES FOR JJSCRIPT
@@ -237,7 +241,7 @@ create instance of ClassName "instanceName" in parentName.containmentReference
 \`\`\`
 - The \`of\` keyword is mandatory.
 - **Containment rule**: in the context, a reference marked \`"containment": true\` owns its targets. An instance of a class that the metamodel reaches through such a reference is created INSIDE its container, with \`in parentName.containmentReference\` — never at the root, and never attached afterwards with \`set parentName.containmentReference = ...\` or \`+= ...\`. The reference name after the dot is mandatory. The container line comes AFTER the line that creates the parent.
-- Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`.
+- Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`. The name must not be held by another instance of the model: \`create instance\` refuses it.
 - **Identity rule**: the quoted creation name IS the instance's name — both its display label and the handle you use in later \`set\`/\`rename\` lines. Do NOT emit \`set <inst>.name = "..."\`: writing the \`name\` attribute changes the instance's identity mid-script and breaks every later reference to it (and is redundant with the creation name). Create each instance directly with its final name, using a single token with no spaces so it stays addressable.
 - **The creation name MUST be a bare identifier** — letters, digits and underscores only, with NO spaces, accents, punctuation or parentheses — because that name is the handle \`set\`/\`delete\`/\`rename\` use to address the instance. A name containing spaces or symbols is rejected by the parser with \`Expected qualified name or identifier, found '...'\`. Turn any descriptive label into such a token (e.g. \`"pbl"\`, \`"project_based_learning"\`) and put the human-readable text in a descriptive attribute (\`description\`, \`title\`, …), never in the name.
   - WRONG: \`create instance of Methodology "Apprendimento basato su progetti (PBL)"\` — the later \`set "Apprendimento basato su progetti (PBL)".description = "..."\` fails.

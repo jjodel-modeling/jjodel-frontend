@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useCallback, useEffect, useRef} from "react";
 import {connect} from "react-redux";
 import {
     DModel,
@@ -26,6 +26,7 @@ import { installCanvasExportListener, findActiveCanvas } from "../../../services
 import { EditorSwitch } from "./EditorSwitch";
 import { resolveVertexLayoutWrite, type VertexLayoutSource } from "../../editor-v2/viewpoint/layout/vertexLayout";
 import { getActiveLayoutKey } from "../../editor-v2/viewpoint/layout/vertexLayoutAdapter";
+import DockManager from "../DockManager";
 
 // File > Export Canvas: one listener for the whole app and for the canvas of every tab, metamodel and model,
 // installed when this module loads (TabDataMaker imports it at startup). It replaces a per-tab listener that read a
@@ -145,6 +146,8 @@ function MetamodelTabComponent(props: AllProps) {
         }
     }, [model, graph]);
 
+    // A missing metamodel is gone (deleted, or its creation undone): its tabs close, as ModelTab's.
+    useEffect(() => { if (!model) DockManager.closeTabsForEntity(props.modelid, 'metamodel'); }, [!model]);
     if (!model) return(<>closed tab</>);
     if (!graph) {
         const graphid = Constructors.DGraph_makeID(model.id);

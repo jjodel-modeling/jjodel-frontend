@@ -39,6 +39,7 @@ vi.mock('@xyflow/react', async (importOriginal) => {
         ...actual,
         EdgeLabelRenderer: ({ children }: { children?: unknown }) => createElement(Fragment, null, children as never),
         useReactFlow: () => ({ setEdges: () => {}, getNodes: () => [] }),
+        useStoreApi: () => ({}),
         useInternalNode: () => undefined,
         useEdges: () => [],
     };

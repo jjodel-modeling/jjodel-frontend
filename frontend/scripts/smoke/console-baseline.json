@@ -33,11 +33,6 @@
       "empty-metamodel-tab": 2,
       "advanced-mode": 2
     },
-    "error|init_dash": {
-      "empty-project": 1,
-      "empty-metamodel-tab": 1,
-      "advanced-mode": 1
-    },
     "error|at renderWithHooks (<URL>) wrong project setup in navbar {projectid: null, project: undefined}": {
       "empty-project": 2,
       "empty-metamodel-tab": 2,

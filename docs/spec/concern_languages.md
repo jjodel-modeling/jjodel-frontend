@@ -111,6 +111,20 @@ JjTL (declarative)       JjScript (imperative)
 - **Static type checking** JjEL/JjTL: assente.
 - **Helper system di JjTL**: espansione (parametri, tipo di ritorno enforced).
 
+### Dynamic classification in JjEL (DCN, planned, not implemented)
+
+Written 2026-11-06 for the `dcn` front (R-DCN-7, R-DCN-12; spec `claude_spec_2026-11-06_dcn_metamodel_simulation.md`; discovery `discovery_2026-11-06_dcn_foundations.md` §4). It fixes what lanes L3.2, L3.3 and L3.4 implement; no lane starts before these lines.
+
+**`self.in(V::D)`.** True when the dynamic class `D` of the viewpoint `V` is active for the receiver. It is the only DCN construct in JjEL.
+
+- *Against «no `oclIsTypeOf`».* The rule bans OCL type tests on the linguistic type of an object. `in` tests something else: whether the receiver's current slot values satisfy the invariant of a dynamic class, a derived, value-level fact (R-DCN-2). The closest OCL operation is `oclIsInState`, which JjEL does not adopt either: `in` takes a qualified viewpoint and class, not a state machine state, and has no `ocl` prefix. The rule stands; `in` is not an exception to it.
+- *`::`.* A JjEL token with one use, the qualified name `V::D` as the single argument of `in`. It is not JjScript's `Enum::Lit` and does not name enumeration literals in JjEL. `V` and `D` are names resolved in the receiver's static class and its generalization closure (viewpoints are inherited, R-DCN-17); an unknown name is a parse-time diagnostic when the metamodel is at hand, an `exception` verdict otherwise.
+- *`in` with any other argument* stays an ordinary member call, as it parses today (`MEMBER_NAME_TYPES`). Only a call whose single argument is a qualified name becomes the `ClassificationTest` node.
+- *Evaluation.* Through a `classification` accessor on the evaluation context, the way `.[x]` goes through `stateAccess`. In a DCN run the nucleus binds it to σ. Outside a run (validation rules, the Console, viewpoints) it is bound to the model's own slot values and computes the same derivation: the classification is a function of the values, so it has a meaning on M too. Where nothing binds it, evaluation throws and the tri-state reports `exception`.
+- *Not an access guard.* `self.in(D')` is a test. Access to dormant slots is checked statically by W1 (spec §5, R-DCN-3); nothing at run time hides a dormant slot from an expression that W1 accepted.
+
+**Slot syntax in the DCN nucleus (R-DCN-12).** Guards, invariants, preconditions and watches read slots by feature name, `self.battery`, through handles the nucleus backs with σ; outside a run the same expression reads the model. Operation and monitor bodies write `self.battery := e` in a DCN action mode: the target is a slot of the receiver, the write goes to σ, never to the model, and assignments of one body are parallel and read the previous state (R-SIM-17). This is a deliberate exception to the `.[x]` rule of R-SIM-18 for the DCN nucleus only: in the Petri nucleus and in every other context `self.x := e` stays refused, and engine state stays `.[x]`. The action grammar of R-SIM-40 gains a member target only under the DCN action mode, selected by the nucleus, never by the text.
+
 ### Decisioni in tensione (da rivedere)
 
 - **`allowCrossExtend` (UI/JjEL) vs `allowCrossReference` (D-layer)**: mapping inline con commento. Debito tecnico tracciato.

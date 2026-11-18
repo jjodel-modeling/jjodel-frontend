@@ -189,6 +189,12 @@ export interface RenameArgs {
     newName: string;
     /** Optional element type for explicit syntax: "rename class OldName to NewName" */
     elementType?: ElementType;
+    /**
+     * R-FA-9: the JjEL expression after `to`/`as` when it is not a single name, evaluated per
+     * execution (`commands/rename.ts`). When present, `newName` holds the same source text and is
+     * not the name the element receives.
+     */
+    newNameExpr?: string;
 }
 
 // SET command
@@ -328,6 +334,12 @@ export interface QualifiedName {
     segments: string[];           // ['Package', 'SubPackage', 'Class']
     member?: string;              // Optional member access: 'attributeName'
     raw: string;                  // Original string: 'Package::SubPackage::Class.attributeName'
+    /**
+     * Id of the element `segments[0]` denotes, set by `forall` on a command's `target` when the
+     * iteration variable is a model element (R-FA-10). The resolvers look it up by id, never by
+     * name, so homonyms do not make it ambiguous; a miss is a miss.
+     */
+    elementId?: string;
 }
 
 // ============================================

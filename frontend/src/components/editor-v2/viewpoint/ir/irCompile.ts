@@ -553,12 +553,16 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
                     default: return '';
                 }
             };
+        } else if (l.source.from === 'expression') {
+            const slot = l.source.slot;
+            text = (ctx, id) => ctx.getExpressionText?.(id, slot) ?? '';
         } else {
             const t = l.source.text;
             text = () => t;
         }
         const editsName = labelEditsName(l);
         const compiled: CompiledLabel = { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
+        if (l.source.from === 'expression') compiled.expression = { caption: l.source.caption };
         // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
         // reads it. An inside label carries no anchor, even a stray persisted one.
         if (l.position === 'outside') compiled.anchor = resolveLabelAnchor(l.anchor);
@@ -700,6 +704,10 @@ function compileTextSource(src: TextSource | undefined, deps: Set<string>): Comp
             }
         };
     }
+    if (src.from === 'expression') {
+        const slot = src.slot;
+        return (ctx, id) => ctx.getExpressionText?.(id, slot) ?? '';
+    }
     const t = src.text;
     return () => t;
 }
@@ -718,7 +726,7 @@ function compileLabelText(labels: EdgeViewIR['edge']['labels'], deps: Set<string
     const template = labels?.template;
     if (!Array.isArray(template) || template.length === 0) return compileTextSource(labels?.center, deps);
     const parts = template.map(seg => ({
-        value: seg?.from === 'path' || seg?.from === 'intrinsic',
+        value: seg?.from === 'path' || seg?.from === 'intrinsic' || seg?.from === 'expression',
         text: compileTextSource(seg, deps) ?? (() => ''),
     }));
     return (ctx, id) => {

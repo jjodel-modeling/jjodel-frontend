@@ -75,6 +75,7 @@ export const BadgeListEditor: React.FC<BadgeListEditorProps> = ({ badges, featur
                                 features={features}
                                 featuresHint={featuresHint}
                                 classNames={classNames}
+                                rulesTable={{ valueNoun: 'icon' }}
                             />
                         </div>
 
@@ -97,6 +98,7 @@ export const BadgeListEditor: React.FC<BadgeListEditorProps> = ({ badges, featur
                                 features={features}
                                 featuresHint={featuresHint}
                                 classNames={classNames}
+                                rulesTable={{ valueNoun: 'visibility' }}
                             />
                         </div>
 

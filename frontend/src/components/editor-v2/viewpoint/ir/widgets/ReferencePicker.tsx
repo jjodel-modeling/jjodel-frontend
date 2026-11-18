@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { computeListStyle } from '../../../components/InlineObjectSelect';
-import { metaclassLetter } from './ReferenceWidget';
+import { metaclassLetter, unnamedReferenceLabels } from './ReferenceWidget';
 import { optionSlot, optionSlotClass } from '../../../../../jjform';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 
@@ -59,6 +59,10 @@ export function ReferencePicker(props: ReferencePickerProps) {
         for (const g of options) {
             for (const o of g.options) out.push({ value: o.value, label: o.label, group: multiGroup ? g.label : undefined });
         }
+        // An unnamed target arrives labelled with its id (`validTargetsFor` refuses a blank
+        // row). Taken here, on the unfiltered list, so that searching does not renumber it.
+        const unnamed = unnamedReferenceLabels(out.map(c => c.value));
+        out.forEach((c, i) => { c.label = unnamed[i] ?? c.label; });
         return out;
     }, [options, multiGroup]);
 

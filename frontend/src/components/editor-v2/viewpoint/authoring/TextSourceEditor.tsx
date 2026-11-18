@@ -15,6 +15,7 @@ const FROM_OPTIONS = [
     { value: 'intrinsic', label: 'Intrinsic property' },
     { value: 'path', label: 'Feature path' },
     { value: 'literal', label: 'Literal text' },
+    { value: 'expression', label: 'Expression slot' },
 ];
 
 const INTRINSIC_OPTIONS = [
@@ -22,6 +23,15 @@ const INTRINSIC_OPTIONS = [
     { value: 'metaclassName', label: 'metaclass name' },
     { value: 'qualifiedName', label: 'name : Metaclass' },
 ];
+
+type ExpressionSource = Extract<TextSource, { from: 'expression' }>;
+
+/** The source with `caption` replaced, or dropped when empty; the other keys spread, never rebuilt. */
+export const withCaption = (source: ExpressionSource, caption: string): ExpressionSource => {
+    if (caption !== '') return { ...source, caption };
+    const { caption: _dropped, ...rest } = source;
+    return rest;
+};
 
 /**
  * Editor for a TextSource: intrinsic property | feature path | literal text.
@@ -40,6 +50,8 @@ export const TextSourceEditor: React.FC<TextSourceEditorProps> = ({
             onChange({ from: 'path', expr: source.from === 'path' ? source.expr : '' });
         } else if (from === 'literal') {
             onChange({ from: 'literal', text: source.from === 'literal' ? source.text : '' });
+        } else if (from === 'expression') {
+            onChange({ from: 'expression', slot: source.from === 'expression' ? source.slot : '' });
         } else {
             onChange({ from: 'intrinsic', prop: source.from === 'intrinsic' ? source.prop : 'name' });
         }
@@ -68,6 +80,25 @@ export const TextSourceEditor: React.FC<TextSourceEditorProps> = ({
                     value={source.text}
                     disabled={disabled}
                     onChange={(e) => onChange({ from: 'literal', text: e.target.value })}
+                />
+            )}
+
+            {source.from === 'expression' && (
+                <Input
+                    value={source.slot}
+                    disabled={disabled}
+                    placeholder="Slot feature name"
+                    onChange={(e) => onChange({ ...source, slot: e.target.value })}
+                />
+            )}
+
+            {/* Caption of an expression source (P-2026-11-11-2140): optional, an emptied field drops the key. */}
+            {source.from === 'expression' && (
+                <Input
+                    value={source.caption ?? ''}
+                    disabled={disabled}
+                    placeholder="Caption (optional)"
+                    onChange={(e) => onChange(withCaption(source, e.target.value))}
                 />
             )}
 

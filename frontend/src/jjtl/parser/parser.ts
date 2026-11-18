@@ -49,6 +49,7 @@ import {
     JjelExpressionWrapperAST,
 } from '../types';
 import { parseExpression as parseJjEL } from '../../jjel/parser';
+import type { JjelExpression } from '../../jjel/types/ast';
 
 export class JjtlParser {
     private tokens: Token[] = [];
@@ -86,6 +87,7 @@ export class JjtlParser {
 
         const mappings: ClassMappingAST[] = [];
         const helpers: HelperAST[] = [];
+        const rules: ClassMappingAST[] = [];
 
         while (!this.isAtEnd()) {
             this.skipNewlines();
@@ -93,6 +95,10 @@ export class JjtlParser {
 
             if (this.check(TokenType.HELPER)) {
                 helpers.push(this.helper());
+            } else if (this.isCalledRuleStart()) {
+                rules.push(this.calledRule());
+            } else if (this.isLazyRuleStart()) {
+                rules.push(this.lazyRule());
             } else if (this.check(TokenType.IDENTIFIER)) {
                 mappings.push(this.classMapping());
             } else {
@@ -107,11 +113,83 @@ export class JjtlParser {
             targetMetamodel,
             mappings,
             helpers,
+            ...(rules.length > 0 ? { rules } : {}),
             location: this.makeLocation(startToken, this.previous()),
         };
     }
 
-    // classMapping = sourcePattern ("," sourcePattern)* "->" IDENTIFIER multiplicity? condition? mappingBody?
+    // `rule`, `lazy` and `unique` are contextual: the lexer lowercases before its keyword
+    // lookup, so as keywords they would take a class `Rule` or a feature `unique` away
+    // from every saved transformation. They are read by value, at the top level only.
+    private isContextual(offset: number, word: string): boolean {
+        const token = this.tokens[this.current + offset];
+        return !!token && token.type === TokenType.IDENTIFIER && token.value === word;
+    }
+
+    private tokenTypeAt(offset: number): TokenType | undefined {
+        return this.tokens[this.current + offset]?.type;
+    }
+
+    // `[unique] rule NAME (`: a source class called `rule` is followed by an alias or `->`,
+    // never `(`; one called `unique` with alias `rule` is followed by `->`, never a name.
+    private isCalledRuleStart(): boolean {
+        const at = this.isContextual(0, 'unique') ? 1 : 0;
+        return this.isContextual(at, 'rule')
+            && this.tokenTypeAt(at + 1) === TokenType.IDENTIFIER
+            && this.tokenTypeAt(at + 2) === TokenType.LPAREN;
+    }
+
+    // `lazy S ...` or `unique lazy S ...`. A source class called `lazy` keeps the form
+    // `lazy -> T`; with an alias (`lazy l -> T`) it now reads as a lazy rule on `l`.
+    private isLazyRuleStart(): boolean {
+        if (this.isContextual(0, 'unique')) {
+            return this.isContextual(1, 'lazy') && this.tokenTypeAt(2) === TokenType.IDENTIFIER;
+        }
+        return this.isContextual(0, 'lazy') && this.tokenTypeAt(1) === TokenType.IDENTIFIER;
+    }
+
+    // calledRule = ["unique"] "rule" IDENTIFIER "(" [param ("," param)*] ")" ruleTail
+    // param      = IDENTIFIER [":" IDENTIFIER]
+    private calledRule(): ClassMappingAST {
+        const startToken = this.advance(); // 'unique' or 'rule'
+        const unique = startToken.value === 'unique';
+        if (unique) this.advance(); // 'rule'
+        const ruleName = this.consume(TokenType.IDENTIFIER, "Expected rule name").value;
+        this.consume(TokenType.LPAREN, "Expected '('");
+        const parameters: ParameterAST[] = [];
+        if (!this.check(TokenType.RPAREN)) {
+            do {
+                const paramToken = this.consume(TokenType.IDENTIFIER, "Expected parameter name");
+                let paramType = '';
+                if (this.match(TokenType.COLON)) {
+                    paramType = this.consume(TokenType.IDENTIFIER, "Expected parameter type").value;
+                }
+                parameters.push({
+                    type: 'Parameter',
+                    name: paramToken.value,
+                    paramType,
+                    location: this.makeLocation(paramToken, this.previous()),
+                });
+            } while (this.match(TokenType.COMMA));
+        }
+        this.consume(TokenType.RPAREN, "Expected ')'");
+        return this.ruleTail(startToken, [], { ruleKind: 'called', ruleName, parameters, ...(unique ? { unique } : {}) });
+    }
+
+    // lazyRule = ["unique"] "lazy" IDENTIFIER [IDENTIFIER] ruleTail
+    private lazyRule(): ClassMappingAST {
+        const startToken = this.advance(); // 'unique' or 'lazy'
+        const unique = startToken.value === 'unique';
+        if (unique) this.advance(); // 'lazy'
+        const className = this.consume(TokenType.IDENTIFIER, "Expected source class name").value;
+        let alias: string | undefined;
+        if (this.check(TokenType.IDENTIFIER)) {
+            alias = this.advance().value;
+        }
+        return this.ruleTail(startToken, [{ className, alias }], { ruleKind: 'lazy', ...(unique ? { unique } : {}) });
+    }
+
+    // classMapping = sourcePattern ("," sourcePattern)* ruleTail
     // sourcePattern = IDENTIFIER [IDENTIFIER]
     private classMapping(): ClassMappingAST {
         const startToken = this.peek();
@@ -127,6 +205,31 @@ export class JjtlParser {
             }
             sources.push({ className, alias });
         } while (this.match(TokenType.COMMA));
+
+        return this.ruleTail(startToken, sources, {});
+    }
+
+    // ruleTail = "->" IDENTIFIER multiplicity? condition? mappingBody?
+    //          | "=" expression                     (a delegating rule, slice B)
+    private ruleTail(
+        startToken: Token,
+        sources: SourcePatternAST[],
+        kind: Partial<ClassMappingAST>,
+    ): ClassMappingAST {
+        if (this.match(TokenType.EQUALS)) {
+            const result = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.NEWLINE])
+                : this.expression();
+            return {
+                type: 'ClassMapping',
+                sources,
+                targetClass: '',
+                body: [],
+                ...kind,
+                result,
+                location: this.makeLocation(startToken, this.previous()),
+            };
+        }
 
         this.consume(TokenType.ARROW, "Expected '->'");
 
@@ -160,6 +263,7 @@ export class JjtlParser {
             targetMultiplicity,
             condition,
             body,
+            ...kind,
             location: this.makeLocation(startToken, this.previous()),
         };
     }
@@ -484,22 +588,42 @@ export class JjtlParser {
         };
     }
 
-    // forAllMapping = "forall" IDENT "in" expression ("such" "that" expression)? objectCreationDirect
+    // forAllMapping = "forall" forAllBinding ("," forAllBinding)* ("such" "that" expression)? objectCreationDirect
+    // forAllBinding = IDENT ("," IDENT)* "in" expression
     private forAllMapping(): ForAllMappingAST {
         const startToken = this.consume(TokenType.FORALL, "Expected 'forall'");
 
-        const variable = this.consume(TokenType.IDENTIFIER, "Expected iteration variable name").value;
+        const bindings: Array<{ variable: string; collection: ExpressionAST }> = [];
+        do {
+            const names: Token[] = [this.consume(TokenType.IDENTIFIER, "Expected iteration variable name")];
+            while (this.match(TokenType.COMMA)) {
+                names.push(this.consume(TokenType.IDENTIFIER, "Expected iteration variable name"));
+            }
+            this.consume(TokenType.IN, "Expected 'in' after forall variable");
 
-        this.consume(TokenType.IN, "Expected 'in' after forall variable");
+            // Parse collection expression — stops at SUCH, ARROW or COMMA (not expression operators)
+            const collection = this.forAllCollection();
+            for (const name of names) {
+                if (bindings.some(b => b.variable === name.value)) {
+                    throw this.error(name, `'${name.value}' is bound twice in the same forall`);
+                }
+                bindings.push({ variable: name.value, collection });
+            }
+            // After a collection a comma continues the bindings: `forall q in xs, r in ys`.
+        } while (this.match(TokenType.COMMA));
 
-        // Parse collection expression — stops naturally at SUCH or ARROW (not expression operators)
-        const collection = this.expression();
+        const { variable, collection } = bindings[0];
 
         // Optional filter: 'such that' condition
         let filter: ExpressionAST | undefined;
         if (this.match(TokenType.SUCH)) {
             this.consume(TokenType.THAT, "Expected 'that' after 'such'");
-            filter = this.expression();
+            // Delegate to JjEL like `where` and `:=`, so `exists`, `implies` and
+            // the rest of JjEL parse here too. The filter ends at the `->` of the
+            // creation, which JjEL never uses.
+            filter = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.ARROW, TokenType.NEWLINE])
+                : this.expression();
         }
 
         // Required: object creation -> Type { ... }
@@ -527,10 +651,24 @@ export class JjtlParser {
             type: 'ForAllMapping',
             variable,
             collection,
+            ...(bindings.length > 1 ? { bindings } : {}),
             filter,
             objectCreation,
             location: this.makeLocation(startToken, this.previous()),
         };
+    }
+
+    /**
+     * The collection of a forall, up to the forall's own stop tokens: `such`,
+     * `->`, the comma that continues the bindings (R-FA-5) and the end of the
+     * line. Without the source text it is the legacy expression. With it, JjEL
+     * is its only parser, as for `where`, `:=` and `such that`
+     * (P-2026-11-03-1135): it reads what the legacy parser cannot, an object
+     * literal among them (P-2026-11-02-2345).
+     */
+    private forAllCollection(): ExpressionAST {
+        if (this.source === undefined) return this.expression();
+        return this.parseJjELExpression([TokenType.SUCH, TokenType.ARROW, TokenType.COMMA, TokenType.NEWLINE]);
     }
 
     // conversion = valueMapping ("," valueMapping)* | expression (":" valueMapping ("," valueMapping)*)?
@@ -662,12 +800,14 @@ export class JjtlParser {
      */
     private parseJjELExpression(
         boundaryTokens: TokenType[],
-    ): JjelExpressionWrapperAST {
+    ): ExpressionAST {
         const startToken = this.peek();
         const collectedTokens: Token[] = [];
         let braceDepth = 0;
         let parenDepth = 0;
         let bracketDepth = 0;
+        // `if`s collected at depth 0 still waiting for their `else`
+        let openIfs = 0;
 
         while (!this.isAtEnd()) {
             const current = this.peek();
@@ -713,8 +853,18 @@ export class JjtlParser {
                     && current.type !== TokenType.RPAREN
                     && current.type !== TokenType.LBRACKET
                     && current.type !== TokenType.RBRACKET) {
+                    // A conditional may continue with `else` on the next line,
+                    // as on the legacy path (ifThenElse): the newlines are
+                    // skipped only when an ELSE follows them and an `if`
+                    // collected so far still waits for it.
+                    if (current.type === TokenType.NEWLINE && openIfs > 0 && this.isElseAfterNewlines()) {
+                        this.skipNewlines();
+                        continue;
+                    }
                     break;
                 }
+                if (current.type === TokenType.IF) openIfs++;
+                if (current.type === TokenType.ELSE && openIfs > 0) openIfs--;
             }
 
             collectedTokens.push(this.advance());
@@ -753,11 +903,85 @@ export class JjtlParser {
             throw this.error(startToken, 'Failed to parse JjEL expression');
         }
 
-        return {
+        const wrapper: JjelExpressionWrapperAST = {
             type: 'JjelExpression',
             expression: jjelResult.expression,
             location: this.makeLocation(startToken, collectedTokens[collectedTokens.length - 1]),
         };
+        return this.interactiveFromJjel(wrapper, startToken) ?? wrapper;
+    }
+
+    /**
+     * `prompt`, `confirm` and `input` as the whole delegated expression become
+     * the JjTL interactive nodes the legacy path builds, so the executor opens
+     * their dialog (evaluateExpressionAsync) on both paths. Their arguments
+     * stay JjEL expressions; JjEL itself knows none of the three.
+     */
+    private interactiveFromJjel(wrapper: JjelExpressionWrapperAST, startToken: Token): ExpressionAST | undefined {
+        const kind = startToken.type;
+        if (kind !== TokenType.PROMPT && kind !== TokenType.CONFIRM && kind !== TokenType.INPUT) return undefined;
+        const call = wrapper.expression;
+        if (call.type !== 'FunctionCall') return undefined;
+        const args = call.args;
+        const location = wrapper.location;
+        const wrap = (expression: JjelExpression): JjelExpressionWrapperAST => ({ type: 'JjelExpression', expression, location });
+        const fail = (message: string): undefined => {
+            this.errors.push({ message, line: startToken.line, column: startToken.column });
+            return undefined;
+        };
+
+        if (kind === TokenType.PROMPT) {
+            // prompt(message, Type [, default]) or prompt(message, default)
+            if (args.length < 2 || args.length > 3) {
+                return fail("prompt expects (message, Type), (message, Type, default) or (message, default)");
+            }
+            const typeArg = args[1];
+            if (args.length === 3 && typeArg.type !== 'Identifier') {
+                return fail("Expected type reference (e.g. EString, EInt, EBoolean)");
+            }
+            const typeRef = typeArg.type === 'Identifier' ? typeArg.name : undefined;
+            const node: PromptExpressionAST = {
+                type: 'PromptExpression',
+                message: wrap(args[0]),
+                typeRef: typeRef ?? 'EString',
+                location,
+            };
+            const defaultArg = typeRef !== undefined ? args[2] : args[1];
+            if (defaultArg) node.defaultValue = wrap(defaultArg);
+            return node;
+        }
+
+        if (kind === TokenType.CONFIRM) {
+            if (args.length !== 1) return fail("confirm expects one argument, the message");
+            const node: ConfirmExpressionAST = { type: 'ConfirmExpression', message: wrap(args[0]), location };
+            return node;
+        }
+
+        // input(message, "type" [, default | [options]])
+        if (args.length < 2 || args.length > 3) {
+            return fail("input expects (message, \"type\") or (message, \"type\", default)");
+        }
+        const typeArg = args[1];
+        if (typeArg.type !== 'Literal' || typeof typeArg.value !== 'string') return fail("Expected input type");
+        const inputType = typeArg.value.toLowerCase() as InputType;
+        if (!['string', 'number', 'boolean', 'date', 'select'].includes(inputType)) {
+            this.errors.push({
+                message: `Invalid input type: "${inputType}". Expected: string, number, boolean, date, select`,
+                line: startToken.line,
+                column: startToken.column,
+            });
+        }
+        const node: InputExpressionAST = { type: 'InputExpression', message: wrap(args[0]), inputType, location };
+        if (args.length === 3) {
+            if (inputType === 'select') {
+                const options = args[2];
+                if (options.type !== 'ArrayLiteral') return fail("Expected '[' for array");
+                node.options = options.elements.map(wrap);
+            } else {
+                node.defaultValue = wrap(args[2]);
+            }
+        }
+        return node;
     }
 
     /**
@@ -1355,7 +1579,7 @@ export class JjtlParser {
     // INTERACTIVE EXPRESSIONS
     // ============================================
 
-    // promptExpression = "prompt" "(" expression "," IDENTIFIER ("," expression)? ")"
+    // promptExpression = "prompt" "(" expression "," ( IDENTIFIER ("," expression)? | expression ) ")"
     private promptExpression(): PromptExpressionAST {
         const startToken = this.consume(TokenType.PROMPT, "Expected 'prompt'");
         this.consume(TokenType.LPAREN, "Expected '(' after 'prompt'");
@@ -1363,11 +1587,20 @@ export class JjtlParser {
         const message = this.expression();
 
         this.consume(TokenType.COMMA, "Expected ',' after prompt message");
-        const typeToken = this.consume(TokenType.IDENTIFIER, "Expected type reference (e.g. EString, EInt, EBoolean)");
-        const typeRef = typeToken.value;
 
+        // prompt(message, Type [, default]), or prompt(message, default) as in
+        // SPEC §3.5: a bare identifier followed by ',' or ')' is the type.
+        const next = this.peekNext();
+        const typed = this.check(TokenType.IDENTIFIER)
+            && (next?.type === TokenType.COMMA || next?.type === TokenType.RPAREN);
+        let typeRef = 'EString';
         let defaultValue: ExpressionAST | undefined;
-        if (this.match(TokenType.COMMA)) {
+        if (typed) {
+            typeRef = this.advance().value;
+            if (this.match(TokenType.COMMA)) {
+                defaultValue = this.expression();
+            }
+        } else {
             defaultValue = this.expression();
         }
 

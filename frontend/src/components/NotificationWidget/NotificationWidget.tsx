@@ -1,130 +1,174 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isConsumerMode } from '../environment/consumerMode';
+import { JjodelEvents } from '../../events/registry';
+import {
+  claimAutomaticTip,
+  currentNotice,
+  dismissNotice,
+  fetchPosts,
+  loadTipsPrefs,
+  nextTip,
+  saveTipsPrefs,
+  type NotificationPost,
+} from './noticesStore';
+import { TipsBrowserModal } from './TipsBrowserModal';
 import './notification-widget.scss';
 
-interface NotificationPost {
-  id: string;
-  category: 'system-notice' | 'tip';
-  title?: string;
-  message: string;
-  priority?: 'warning' | 'info' | 'success' | 'error';
+const CARD_GAP_PX = 16;
+
+const NOTICE_ICONS: Record<string, string> = {
+  warning: 'bi-exclamation-triangle-fill',
+  info: 'bi-info-circle-fill',
+  success: 'bi-check-circle-fill',
+  error: 'bi-x-circle-fill',
+};
+
+function visibleElement(selector: string): HTMLElement | null {
+  return Array.from(document.querySelectorAll<HTMLElement>(selector)).find(el => el.offsetWidth > 0) ?? null;
 }
 
-interface APIResponse {
-  posts: NotificationPost[];
-}
-
-interface QuickTipsState {
-  seen: Record<string, number>;
-  pauseUntil: number | null;
-}
-
-// The host depends on the Cloudflare account's workers.dev subdomain and must change with it (the AI proxy in types/jodie.ts lives on the same subdomain).
-const API_URL = 'https://jjodel-notifications.alfonso99.workers.dev';
-
-const TIP_HIDE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
-
-function loadTipsState(): QuickTipsState {
-  try {
-    const raw = localStorage.getItem('jjodel-quick-tips-state');
-    if (!raw) return { seen: {}, pauseUntil: null };
-    const parsed = JSON.parse(raw);
+// Offsets, not the rect: the button scales on hover, and the card must not move with it.
+function measureTipsCard(): { left: number; bottom: number } {
+  const viewportHeight = document.documentElement.clientHeight;
+  const jodie = visibleElement('button.jodie-minimized');
+  if (jodie) {
     return {
-      seen: parsed?.seen && typeof parsed.seen === 'object' ? parsed.seen : {},
-      pauseUntil: typeof parsed?.pauseUntil === 'number' ? parsed.pauseUntil : null,
+      left: jodie.offsetLeft + jodie.offsetWidth + CARD_GAP_PX,
+      bottom: viewportHeight - (jodie.offsetTop + jodie.offsetHeight),
     };
-  } catch {
-    return { seen: {}, pauseUntil: null };
   }
+  const rail = visibleElement('aside.editor-v2-palette') ?? visibleElement('.leftbar');
+  const statusBar = visibleElement('.app-statusbar');
+  return {
+    left: Math.max(rail?.getBoundingClientRect().right ?? 0, 0) + CARD_GAP_PX,
+    bottom: (statusBar ? viewportHeight - statusBar.getBoundingClientRect().top : 0) + CARD_GAP_PX,
+  };
 }
 
-function saveTipsState(state: QuickTipsState): void {
-  try {
-    localStorage.setItem('jjodel-quick-tips-state', JSON.stringify(state));
-  } catch {
-    // localStorage full or disabled: silent noop
+const BANNER_INSET_PX = 8;
+
+// The docked Jjodie takes the right edge of the viewport; 0 when it is not docked.
+function dockWidth(): number {
+  return parseFloat(getComputedStyle(document.body).getPropertyValue('--jj-jodie-dock-width')) || 0;
+}
+
+/** The top of the work area: the canvas column in the editor, the content column on the dashboard. */
+function measureBanner(): { left: number; top: number; width: number } {
+  const viewportWidth = document.documentElement.clientWidth;
+  const panes = Array.from(document.querySelectorAll<HTMLElement>('.editor-v2__main'))
+    .filter(el => el.offsetWidth > 0)
+    .map(el => el.getBoundingClientRect());
+  let left: number;
+  let right: number;
+  let top: number;
+  if (panes.length > 0) {
+    const palette = visibleElement('aside.editor-v2-palette')?.getBoundingClientRect();
+    const toolbar = visibleElement('.editor-v2-toolbar')?.getBoundingClientRect();
+    const panel = visibleElement('.properties-tree-overlay')?.getBoundingClientRect();
+    left = Math.max(Math.min(...panes.map(r => r.left)), palette?.right ?? 0);
+    right = Math.min(Math.max(...panes.map(r => r.right)), panel?.left ?? viewportWidth, viewportWidth - dockWidth());
+    top = toolbar?.bottom ?? Math.min(...panes.map(r => r.top));
+  } else {
+    const column = visibleElement('.dash-content')?.getBoundingClientRect();
+    left = Math.max(column?.left ?? 0, 0);
+    right = Math.min(column?.right ?? viewportWidth, viewportWidth - dockWidth());
+    top = column?.top ?? visibleElement('nav.appbar')?.getBoundingClientRect().bottom ?? 0;
   }
+  return { left: left + BANNER_INSET_PX, top: top + BANNER_INSET_PX, width: Math.max(right - left - 2 * BANNER_INSET_PX, 0) };
 }
 
-function getUnseenTips(allTips: NotificationPost[], state: QuickTipsState, now: number): NotificationPost[] {
-  return allTips.filter(t => {
-    const seenAt = state.seen[t.id];
-    return seenAt === undefined || (now - seenAt) >= TIP_HIDE_WINDOW_MS;
-  });
+/** Runs measure while active, again on resize, on the rail and dock variables and on layout changes. */
+function useMeasured<T>(active: boolean, measure: () => T): T | null {
+  const [value, setValue] = useState<T | null>(null);
+
+  useLayoutEffect(() => {
+    if (!active) {
+      setValue(null);
+      return;
+    }
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const next = measure();
+      setValue(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    // The Jjodie button and the rails mount late and move with `body:has(...)` rules, so a
+    // route change alone says nothing; the variables are published as inline styles.
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['style', 'class'],
+    });
+    window.addEventListener('resize', schedule);
+    document.addEventListener('transitionend', schedule, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', schedule);
+      document.removeEventListener('transitionend', schedule, true);
+    };
+  }, [active, measure]);
+
+  return value;
 }
 
-// Pause is honored only if every tip in the current payload has a recent seen entry.
-// A new tip (no seen entry) implicitly breaks the pause so it appears immediately.
-function isPauseActive(allTips: NotificationPost[], state: QuickTipsState, now: number): boolean {
-  if (state.pauseUntil === null || now >= state.pauseUntil) return false;
-  const allSeenRecently = allTips.every(t => {
-    const seenAt = state.seen[t.id];
-    return seenAt !== undefined && (now - seenAt) < TIP_HIDE_WINDOW_MS;
-  });
-  return allSeenRecently;
-}
-
-export const NotificationWidget: React.FC = () => {
+const NoticesAndTips: React.FC = () => {
   // Templates page: no Quick tip (handoff §2.4, P-2026-10-19-1616); system notices stay.
   const onTemplatesPage = /^\/templates(\/|$)/.test(useLocation().pathname);
   const [posts, setPosts] = useState<NotificationPost[]>([]);
-  const [isVisible, setIsVisible] = useState(true);
-  const [tipsQueue, setTipsQueue] = useState<NotificationPost[]>([]);
-  const [queueIndex, setQueueIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('jjodel-dismissed-notifications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [dismissCount, setDismissCount] = useState(0);
+  const [showTips, setShowTips] = useState(() => loadTipsPrefs().showTips);
+  const [currentTip, setCurrentTip] = useState<NotificationPost | null>(null);
 
-  // Fetch notifications from API
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch(API_URL);
-        const data: APIResponse = await res.json();
-        setPosts(data.posts || []);
-      } catch (err) {
-        console.error('Failed to fetch notifications:', err);
-      } finally {
-        setIsLoading(false);
-      }
+    let live = true;
+    fetchPosts().then(next => {
+      if (live) setPosts(next);
+    });
+    return () => {
+      live = false;
     };
-
-    fetchNotifications();
   }, []);
 
-  // Save dismissed to localStorage
   useEffect(() => {
-    localStorage.setItem('jjodel-dismissed-notifications', JSON.stringify(dismissedIds));
-  }, [dismissedIds]);
+    const onPrefsChanged = () => {
+      const on = loadTipsPrefs().showTips;
+      setShowTips(on);
+      if (!on) setCurrentTip(null);
+    };
+    window.addEventListener(JjodelEvents.TIPS_PREFS_CHANGED, onPrefsChanged);
+    return () => window.removeEventListener(JjodelEvents.TIPS_PREFS_CHANGED, onPrefsChanged);
+  }, []);
 
-  const tips = useMemo(() => posts.filter(p => p.category === 'tip'), [posts]);
+  const onAuthPage = window.location.hash.includes('auth');
+  // dismissCount re-reads the dismissals in localStorage.
+  const notice = useMemo(() => currentNotice(posts), [posts, dismissCount]);
 
-  // Build the queue of unseen-or-stale tips after fetch.
-  // Re-runs whenever the payload changes (e.g. new tip appears in Notion).
+  // #168 J7 (D4): no Quick tip in the stand-alone consumer; system notices stay. A tip skipped
+  // here is not claimed, so it is not marked as seen and the developer still gets it.
+  // The same holds on the Templates page and behind a notice, which has precedence (R-NT-4).
+  const tipAllowed = !isConsumerMode() && !onTemplatesPage && !onAuthPage && showTips && !notice;
+
   useEffect(() => {
-    if (tips.length === 0) return;
-    const now = Date.now();
-    const state = loadTipsState();
+    if (!tipAllowed || currentTip) return;
+    const tip = claimAutomaticTip(posts);
+    if (tip) setCurrentTip(tip);
+  }, [tipAllowed, posts, currentTip]);
 
-    if (isPauseActive(tips, state, now)) {
-      setTipsQueue([]);
-      return;
-    }
-
-    setTipsQueue(getUnseenTips(tips, state, now));
-    setQueueIndex(0);
-  }, [tips]);
+  const tipVisible = tipAllowed && currentTip !== null;
+  const tipPosition = useMeasured(tipVisible, measureTipsCard);
+  const bannerPosition = useMeasured(notice !== null && !onAuthPage, measureBanner);
 
   // Signal to other components (like Jjodie FAB) when the widget is actually visible
+  const isActuallyVisible = !onAuthPage && (notice !== null || tipVisible);
   useEffect(() => {
-    const shouldShow = isVisible && posts.length > 0 && !isLoading;
-    const hasSystemNotice = posts.filter(p => p.category === 'system-notice' && !dismissedIds.includes(p.id)).length > 0;
-    const hasTipToShow = !isConsumerMode() && !onTemplatesPage && tipsQueue.length > 0 && queueIndex < tipsQueue.length;
-    const isActuallyVisible = shouldShow && (hasSystemNotice || hasTipToShow);
-
     if (isActuallyVisible) {
       document.body.setAttribute('data-notification-visible', 'true');
     } else {
@@ -134,124 +178,52 @@ export const NotificationWidget: React.FC = () => {
     return () => {
       document.body.removeAttribute('data-notification-visible');
     };
-  }, [isVisible, posts, isLoading, dismissedIds, tipsQueue, queueIndex, onTemplatesPage]);
+  }, [isActuallyVisible]);
 
   // Hide widget on auth page
-  if (window.location.hash.includes('auth')) return null;
-
-  // Separate by category
-  const systemNotices = posts
-    .filter(p => p.category === 'system-notice')
-    .filter(p => !dismissedIds.includes(p.id));
-
-  // Determine what to show
-  const hasSystemNotice = systemNotices.length > 0;
-  const currentNotice = systemNotices[0];
-  const currentTip = tipsQueue.length > 0 && queueIndex < tipsQueue.length ? tipsQueue[queueIndex] : null;
+  if (onAuthPage) return null;
 
   const dismissSystemNotice = (id: string) => {
-    setDismissedIds(prev => [...prev, id]);
+    dismissNotice(id);
+    setDismissCount(count => count + 1);
   };
 
-  const handleNext = () => {
-    const current = tipsQueue[queueIndex];
-    if (!current) return;
-    const now = Date.now();
-    const state = loadTipsState();
-    state.seen[current.id] = now;
-
-    const wasLast = queueIndex >= tipsQueue.length - 1;
-    if (wasLast) {
-      state.pauseUntil = now + TIP_HIDE_WINDOW_MS;
-      saveTipsState(state);
-      setTipsQueue([]);
-    } else {
-      saveTipsState(state);
-      setQueueIndex(queueIndex + 1);
-    }
-  };
-
-  // Closing on the last tip starts the pause; closing mid-queue just hides for now,
-  // so the remaining tips reappear next mount.
-  const handleClose = () => {
-    const current = tipsQueue[queueIndex];
-    if (!current) {
-      setTipsQueue([]);
-      return;
-    }
-    const now = Date.now();
-    const state = loadTipsState();
-    state.seen[current.id] = now;
-
-    const wasLast = queueIndex >= tipsQueue.length - 1;
-    if (wasLast) {
-      state.pauseUntil = now + TIP_HIDE_WINDOW_MS;
-    }
-    saveTipsState(state);
-    setTipsQueue([]);
-  };
-
-  const getPriorityIcon = (priority?: string) => {
-    switch (priority) {
-      case 'warning': return 'bi-exclamation-triangle-fill';
-      case 'info': return 'bi-info-circle-fill';
-      case 'success': return 'bi-check-circle-fill';
-      case 'error': return 'bi-x-circle-fill';
-      default: return 'bi-bell-fill';
-    }
-  };
-
-  // Don't render if loading, not visible, or no posts
-  if (isLoading || !isVisible || posts.length === 0) return null;
+  const bannerLevel = notice?.priority && NOTICE_ICONS[notice.priority] ? notice.priority : 'info';
 
   // SYSTEM NOTICE
-  if (hasSystemNotice && currentNotice) {
+  if (notice && bannerPosition) {
     return (
-      <div className={`notification-widget priority-${currentNotice.priority || 'info'}`}>
-        <div className="notification-header">
-          <div className="notification-header-label">
-            <i className={`bi ${getPriorityIcon(currentNotice.priority)}`} />
-            <span>System Notice</span>
-          </div>
-          <button className="notification-close" onClick={() => dismissSystemNotice(currentNotice.id)}>
-            <i className="bi bi-x-lg" />
-          </button>
-        </div>
-        <div className="notification-content">
-          {currentNotice.title && (
-            <h4 className="notification-title">{currentNotice.title}</h4>
-          )}
-          <p className="notification-message">{currentNotice.message}</p>
-        </div>
+      <div className={`notice-banner notice-banner--${bannerLevel}`} role="status" style={bannerPosition}>
+        <i className={`bi ${NOTICE_ICONS[bannerLevel]} notice-banner__icon`} aria-hidden="true" />
+        <span className="notice-banner__text" title={notice.message}>
+          {notice.title && <span className="notice-banner__title">{notice.title}</span>}
+          {notice.message}
+        </span>
+        <button type="button" className="notice-banner__close" aria-label="Dismiss notice" onClick={() => dismissSystemNotice(notice.id)}>
+          <i className="bi bi-x-lg" aria-hidden="true" />
+        </button>
       </div>
     );
   }
 
   // TIPS
-  // #168 J7 (D4): no Quick tip in the stand-alone consumer; system notices stay. A tip skipped here
-  // is not marked as seen (only Next and close do that), so the developer still gets it.
-  // The same holds on the Templates page.
-  if (!isConsumerMode() && !onTemplatesPage && tipsQueue.length > 0 && currentTip) {
+  if (tipVisible && tipPosition && currentTip) {
     return (
-      <div className="notification-widget is-tip">
-        <div className="notification-header">
-          <div className="notification-header-label">
-            <div className="tip-icon-wrapper">
-              <i className="bi bi-lightbulb-fill" />
-            </div>
-            <span>Quick Tip</span>
-          </div>
-          <button className="notification-close" onClick={handleClose}>
-            <i className="bi bi-x-lg" />
+      <div className="tips-card" role="status" style={tipPosition}>
+        <div className="tips-card__header">
+          <i className="bi bi-lightbulb tips-card__icon" aria-hidden="true" />
+          <span className="tips-card__label">Tip</span>
+          <button type="button" className="tips-card__close" aria-label="Close tip" onClick={() => setCurrentTip(null)}>
+            <i className="bi bi-x-lg" aria-hidden="true" />
           </button>
         </div>
-        <div className="notification-content">
-          <p className="notification-message">{currentTip.message}</p>
-        </div>
-        <div className="notification-footer">
-          <span className="tip-counter">Tip {queueIndex + 1} of {tipsQueue.length}</span>
-          <button className="tip-next-btn" onClick={handleNext}>
-            Next <i className="bi bi-arrow-right" />
+        <p className="tips-card__message">{currentTip.message}</p>
+        <div className="tips-card__footer">
+          <button type="button" className="tips-card__off" onClick={() => saveTipsPrefs({ showTips: false })}>
+            Turn off tips
+          </button>
+          <button type="button" className="tips-card__next" onClick={() => setCurrentTip(nextTip(posts))}>
+            Next tip
           </button>
         </div>
       </div>
@@ -260,5 +232,12 @@ export const NotificationWidget: React.FC = () => {
 
   return null;
 };
+
+export const NotificationWidget: React.FC = () => (
+  <>
+    <NoticesAndTips />
+    <TipsBrowserModal />
+  </>
+);
 
 export default NotificationWidget;

@@ -5,6 +5,9 @@
  *
  *   node frontend/scripts/lane-usage.mjs <Prompt-ID> [--json] [--write]
  *   node frontend/scripts/lane-usage.mjs --all [--json]
+ *   node frontend/scripts/lane-usage.mjs --objective <ID> [--json]
+ * Objective totals require explicit links, session identity and reconciled inputs;
+ * absent architect provenance and overlapping intervals remain incomplete.
  *
  * For one lane: the model of the first and last run, the runs, the tier; the
  * tokens per model and per class of the main session and, apart, of the
@@ -25,6 +28,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFil
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readObjective } from './lane-objective.mjs';
 
 const ROOT = process.env.JJODEL_LANES || join(homedir(), '.jjodel-lanes');
 const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
@@ -77,12 +81,12 @@ function addClasses(into, u) {
  */
 function apiCalls(events) {
     const calls = new Map();
-    for (const e of events) {
+    for (const { event: e, session } of sessionEvents(events)) {
         if (e.type !== 'assistant' || !e.message || !e.message.usage) continue;
         const model = e.message.model || 'unknown';
         if (model === '<synthetic>') continue;
-        const key = e.message.id || 'event-' + calls.size;
-        calls.set(key, { model, sub: Boolean(e.parent_tool_use_id), usage: e.message.usage });
+        const key = JSON.stringify([session, e.message.id || 'event-' + calls.size]);
+        calls.set(key, { session, model, sub: Boolean(e.parent_tool_use_id), usage: e.message.usage });
     }
     return [...calls.values()];
 }
@@ -107,13 +111,85 @@ function reading(e) {
     };
 }
 
-/** outputTokens per model of the last result event: cumulative over resumes, subagents included; null without a result. */
-function resultOutput(events) {
-    const results = events.filter((e) => e.type === 'result' && e.modelUsage);
-    if (results.length === 0) return null;
+/** Preserve session boundaries; old logs with no identity retain one legacy scope. */
+export function sessionEvents(events) {
+    let current = null;
+    return events.map(event => {
+        if (event.type === 'system' && event.subtype === 'init') current = event.session_id || event.sessionId || null;
+        return { event, session: event.session_id || event.sessionId || current || 'legacy' };
+    });
+}
+
+/** Final cumulative result per distinct session, including resumes only once. */
+export function sessionResults(events) {
+    const latest = new Map();
+    const expected = new Set();
+    for (const { event: e, session } of sessionEvents(events)) {
+        if ((e.type === 'system' && e.subtype === 'init') || e.type === 'assistant') expected.add(session);
+        if (e.type !== 'result' || e.origin?.kind === 'task-notification' || (e.num_turns === 0 && !e.result)) continue;
+        expected.add(session);
+        latest.set(session, e);
+    }
+    return { latest, expected };
+}
+
+/** Sum final session output; missing counters in any session stay unknown. */
+export function resultOutput(events) {
+    const { latest, expected } = sessionResults(events);
+    if (!expected.size || [...expected].some(s => !latest.get(s)?.modelUsage)) return null;
     const out = {};
-    for (const [m, u] of Object.entries(results[results.length - 1].modelUsage)) out[m] = u.outputTokens ?? null;
+    for (const e of latest.values()) for (const [m, u] of Object.entries(e.modelUsage)) {
+        if (!Number.isSafeInteger(u.outputTokens) || u.outputTokens < 0) return null;
+        out[m] = (out[m] || 0) + u.outputTokens;
+        if (!Number.isSafeInteger(out[m])) return null;
+    }
     return out;
+}
+
+/** Require stream input to agree with final CLI counters before an objective claims complete observed usage. */
+function inputReconciles(events) {
+    const { latest, expected } = sessionResults(events);
+    if (!expected.size || expected.has('legacy')) return false;
+    const sums = new Map();
+    const streamKeys = ['input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens'];
+    const cliKeys = ['inputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens'];
+    for (const c of apiCalls(events)) {
+        const value = sums.get(c.session) || [0, 0, 0];
+        for (let i = 0; i < streamKeys.length; i++) {
+            const n = c.usage[streamKeys[i]] ?? 0;
+            if (!Number.isSafeInteger(n) || n < 0) return false;
+            value[i] += n;
+        }
+        sums.set(c.session, value);
+    }
+    for (const session of expected) {
+        const models = latest.get(session)?.modelUsage;
+        if (!models || !Object.keys(models).length) return false;
+        for (let i = 0; i < cliKeys.length; i++) {
+            const values = Object.values(models).map(u => u[cliKeys[i]]);
+            if (values.some(n => !Number.isSafeInteger(n) || n < 0)) return false;
+            const n = values.reduce((a, b) => a + b, 0);
+            if (!Number.isSafeInteger(n) || n !== (sums.get(session) || [0, 0, 0])[i]) return false;
+        }
+    }
+    return true;
+}
+
+/** Runtime is invocation work, not wall time to acceptance; notifications are not invocations. */
+function runtime(events) {
+    let ms = 0;
+    let count = 0;
+    const seen = new Set();
+    for (const { event: e, session } of sessionEvents(events)) {
+        if (e.type !== 'result' || e.origin?.kind === 'task-notification' || (e.num_turns === 0 && !e.result)) continue;
+        const key = e.uuid ? JSON.stringify([session, e.uuid]) : null;
+        if (key && seen.has(key)) continue;
+        if (key) seen.add(key);
+        if (!Number.isFinite(e.duration_ms) || e.duration_ms < 0) return null;
+        ms += e.duration_ms;
+        count++;
+    }
+    return count ? ms : null;
 }
 
 const diff = (a, b) => (typeof a === 'number' && typeof b === 'number' ? Math.round((b - a) * 1e6) / 1e6 : null);
@@ -221,6 +297,9 @@ export function laneUsage(id, intervals) {
         main,
         subagents,
         resultOutput: resultOutput(events),
+        sessions: [...sessionResults(events).expected],
+        runtimeMs: runtime(events),
+        inputReconciled: inputReconciles(events),
         context: {
             calls: series.length,
             max: series.length ? Math.max(...series) : null,
@@ -243,6 +322,64 @@ export function laneUsage(id, intervals) {
         architectUnreadable: arch.state === 'unreadable',
         skippedLines,
     };
+}
+
+/** An explicit objective, with incomplete/overlapping accounting never presented as a complete total. */
+export function objectiveUsage(id) {
+    const objective = readObjective(ROOT, id);
+    if (!objective.links.length) throw new Error('objective has no linked lanes: ' + id);
+    const lanes = [];
+    const issues = [];
+    const owners = new Map();
+    let tokens = 0;
+    let runtimeMs = 0;
+    let architectTokens = 0;
+    const architectIntervals = [];
+    for (const link of objective.links) {
+        let u;
+        try { u = laneUsage(link.lane, new Map()); } catch (err) {
+            issues.push({ lane: link.lane, code: 'missing_lane_usage', detail: err.message });
+            continue;
+        }
+        lanes.push({ ...link, usage: summary(u) });
+        for (const session of u.sessions) {
+            if (session === 'legacy') issues.push({ lane: link.lane, code: 'session_identity_missing' });
+            else if (owners.has(session)) issues.push({ lane: link.lane, code: 'duplicate_session', session, other: owners.get(session) });
+            else owners.set(session, link.lane);
+        }
+        if (u.skippedLines) issues.push({ lane: link.lane, code: 'unreadable_events' });
+        if (!u.inputReconciled) issues.push({ lane: link.lane, code: 'input_not_reconciled' });
+        const input = total(u.main).input + total(u.main).cacheRead + total(u.main).cacheCreation +
+            total(u.subagents).input + total(u.subagents).cacheRead + total(u.subagents).cacheCreation;
+        if (!u.resultOutput) issues.push({ lane: link.lane, code: 'output_missing' });
+        else tokens += input + Object.values(u.resultOutput).reduce((a, b) => a + b, 0);
+        if (u.runtimeMs === null) issues.push({ lane: link.lane, code: 'runtime_missing' });
+        else runtimeMs += u.runtimeMs;
+        // A delta alone has no interval/provenance and cannot prove a disjoint architect contribution.
+        let a = null;
+        try { a = JSON.parse(readFileSync(join(ROOT, link.lane, 'architect.json'), 'utf8')); } catch { /* absent stays unknown */ }
+        const start = typeof a?.launch?.at === 'number' ? a.launch.at : Date.parse(a?.launch?.at);
+        const end = typeof a?.close?.at === 'number' ? a.close.at : Date.parse(a?.close?.at);
+        const d = u.architect?.delta;
+        if (!a?.chat || !a?.model || typeof a?.source !== 'string' || !a.source.trim() || !Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
+            !Number.isSafeInteger(d?.totalIn) || d.totalIn < 0 || !Number.isSafeInteger(d?.output) || d.output < 0) {
+            issues.push({ lane: link.lane, code: 'architect_coverage_missing' });
+        } else {
+            if (architectIntervals.some(v => v.chat === a.chat && start < v.end && end > v.start)) issues.push({ lane: link.lane, code: 'architect_overlap' });
+            architectIntervals.push({ chat: a.chat, start, end });
+            architectTokens += d.totalIn + d.output;
+        }
+    }
+    const technicalIssues = issues.filter(i => !i.code.startsWith('architect_') && i.code !== 'runtime_missing');
+    if (!Number.isSafeInteger(tokens) || tokens < 0) technicalIssues.push({ code: 'invalid_counter' });
+    const complete = lanes.length === objective.links.length;
+    const technicalTokens = complete && !technicalIssues.length ? tokens : null;
+    const architectComplete = complete && !issues.some(i => i.code.startsWith('architect_')) && Number.isSafeInteger(architectTokens);
+    return { objective, lanes, technicalTokens,
+        runtimeMs: complete && !issues.some(i => ['runtime_missing', 'duplicate_session', 'session_identity_missing'].includes(i.code)) ? runtimeMs : null,
+        architectTokens: architectComplete ? architectTokens : null,
+        totalTokens: technicalTokens !== null && architectComplete ? technicalTokens + architectTokens : null,
+        coverage: technicalTokens === null ? 'partial' : 'observed', issues: [...issues, ...technicalIssues.filter(i => i.code === 'invalid_counter')] };
 }
 
 /** The classes of every model of a block, summed. */
@@ -314,7 +451,7 @@ function allText(list, missing) {
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     const out = rows.map((r) => r.map((v, c) => v.padEnd(widths[c])).join('  ').trimEnd());
     if (missing) out.push(`${missing} lane folders without log.jsonl left out`);
-    out.push('output*: modelUsage of the last result event, all models of the lane; the other classes: main calls only');
+    out.push('output*: final modelUsage per distinct session, all models of the lane; the other classes: main calls only');
     out.push('arch: the architect\'s totalIn + output over the lane (architect.json), open while the chat has not closed it, n/a without the file');
     out.push(OVERLAP_NOTE);
     return out.join('\n') + '\n';
@@ -326,6 +463,12 @@ function fail(message, code = 1) {
 }
 
 function main(argv) {
+    if (argv[0] === '--objective') {
+        if (!argv[1] || argv.slice(2).some(a => a !== '--json')) return fail('usage: lane-usage.mjs --objective <ID> [--json]', 2);
+        try { process.stdout.write(JSON.stringify(objectiveUsage(argv[1]), null, 2) + '\n'); }
+        catch (err) { fail(err.message); }
+        return;
+    }
     const flags = new Set(argv.filter((a) => a.startsWith('--')));
     const ids = argv.filter((a) => !a.startsWith('--'));
     const unknown = [...flags].filter((f) => !['--all', '--json', '--write'].includes(f));

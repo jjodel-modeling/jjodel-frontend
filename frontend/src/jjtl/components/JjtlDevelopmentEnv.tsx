@@ -23,6 +23,8 @@ import { SystemEvents, JjodelEvents } from '../../events/registry';
 import '../styles/jjtl.scss';
 import { getGrammarRuleAtPosition } from '../utils/astToGrammar';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
+import { formatNestedUnwritten, type NestedMaterializationReport } from '../../components/project/nestedMaterialization';
+import { formatRunWarnings } from './runWarnings';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
@@ -49,8 +51,11 @@ export interface JjtlDevelopmentEnvProps {
     onExecuteTransformation?: (
         sourceModelId: string,
         outputModelName: string,
-        ast: import('../types').TransformationAST
+        ast: import('../types').TransformationAST,
+        includedModelIds?: string[]
     ) => Promise<import('../executor').ExecutionResult | void>;
+    /** Reads the record of the last run of this transformation */
+    getLastRun?: () => import('./sourceSelection').RunRecord | null;
 }
 
 type BottomPanelTab = 'problems' | 'trace' | 'output';
@@ -81,6 +86,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     onSave,
     onCodeChange,
     onExecuteTransformation,
+    getLastRun,
 }) => {
     // State
     const [code, setCode] = useState(initialCode);
@@ -267,12 +273,38 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         setOutputMessages([]);
     }, []);
 
+    // Nested objects of the last run, reported by ProjectEditor once STEP 8 has written their
+    // attributes, seconds after the result: how many were created, every one that was not placed,
+    // with its path, and the attribute values that were not written.
+    useEffect(() => {
+        const MAX_LISTED = 20;
+        const handler = (e: Event) => {
+            const report = (e as CustomEvent<NestedMaterializationReport>).detail;
+            if (!report) return;
+            const notPlaced = report.unplaced.reduce((n, u) => n + u.count, 0);
+            addOutputMessage(`Nested objects in "${report.modelName}": ${report.created} created, ${notPlaced} not placed.`);
+            for (const u of report.unplaced.slice(0, MAX_LISTED)) {
+                addOutputMessage(`Not placed: ${u.path}${u.className ? ' (' + u.className + ')' : ''}, `
+                    + `${u.count} object(s): ${u.reason}`);
+            }
+            if (report.unplaced.length > MAX_LISTED) {
+                addOutputMessage(`... and ${report.unplaced.length - MAX_LISTED} more, listed in the browser console.`);
+            }
+            // Attribute values of the created objects that were not written (#482).
+            const unwritten = formatNestedUnwritten(report);
+            if (unwritten) addOutputMessage(unwritten);
+        };
+        window.addEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);
+        return () => window.removeEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);
+    }, [addOutputMessage]);
+
     // Handle actual transformation execution from dialog
-    const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string) => {
+    const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string, includedModelIds: string[] = []) => {
         // Clear previous output and start logging
         clearOutput();
         addOutputMessage('Starting transformation execution...');
         addOutputMessage(`Source model: ${sourceModelId}`);
+        if (includedModelIds.length > 0) addOutputMessage(`Also included: ${includedModelIds.join(', ')}`);
         addOutputMessage(`Output model: ${outputModelName}`);
 
         // console.log('[JjtlDevelopmentEnv] handleExecuteTransformation called');
@@ -316,7 +348,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 addOutputMessage(`Processing ${currentAst.mappings?.length || 0} mappings...`);
                 const startTime = performance.now();
                 // console.log('[JjtlDevelopmentEnv] Calling onExecuteTransformation...');
-                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
+                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst, includedModelIds);
                 const executionTimeMs = Math.round(performance.now() - startTime);
                 // console.log('[JjtlDevelopmentEnv] onExecuteTransformation returned:', {
                 //     hasResult: !!result,
@@ -335,6 +367,8 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                     } else {
                         addOutputMessage(`Transformation failed: ${result.errors.join(', ')}`);
                     }
+                    // #520: the run's warnings (#445 among them), capped; all of them are in the Trace tab.
+                    for (const line of formatRunWarnings(result.warnings)) addOutputMessage(line);
                 } else {
                     console.warn('[JjtlDevelopmentEnv] No result returned from onExecuteTransformation');
                     addOutputMessage('Transformation completed (no result returned).');
@@ -899,6 +933,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 targetMetamodelName={targetMetamodelName}
                 availableModels={availableModels}
                 existingModelNames={existingModelNames}
+                getLastRun={getLastRun}
             />
         </div>
     );

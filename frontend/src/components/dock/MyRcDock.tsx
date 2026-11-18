@@ -19,6 +19,7 @@ import { JjodelEvents } from '../../events/registry';
 import $ from "jquery";
 import {BoxData, LayoutData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
+import { modelOfTabId } from "../abstract/tabs/modelTabId";
 import "./DockManagerStyles.scss";
 
 // needs to be class component because needs setState() to be called externally
@@ -591,14 +592,14 @@ export class PinnableDock extends DockLayout{
     } else if (activeId.startsWith('vp_')) {
         editorType = 'viewpoint';
     } else {
-        const rawModel = store.getState().idlookup[activeId] as any;
+        const rawModel = store.getState().idlookup[modelOfTabId(activeId)] as any;
         editorType = rawModel?.className === 'DModel'
             ? (rawModel.isMetamodel ? 'metamodel' : 'model')
             : 'summary';
     }
 
     window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-        detail: { editorType, modelId: activeId }
+        detail: { editorType, modelId: modelOfTabId(activeId) }
     }));
 }
 

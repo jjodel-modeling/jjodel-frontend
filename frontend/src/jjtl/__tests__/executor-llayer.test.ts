@@ -277,11 +277,14 @@ describe('ForAll with resolved object collections', () => {
             variable: 'a',
             collection: { type: 'Identifier', name: 'attributes', location: LOC },
             filter: {
-                // a.isPublic (or just isPublic since item properties are promoted)
-                type: 'Identifier',
-                name: 'isPublic',
+                // a.isPublic: the filter sees the loop variables only, item properties are
+                // promoted in the body (SPEC.md §3.3); the unqualified form never passed
+                // while this file failed at import, until P-2026-11-03-1402.
+                type: 'MemberAccess',
+                object: { type: 'Identifier', name: 'a', location: LOC },
+                property: 'isPublic',
                 location: LOC,
-            },
+            } as any,
             objectCreation: {
                 type: 'ObjectCreation',
                 targetClass: 'Column',

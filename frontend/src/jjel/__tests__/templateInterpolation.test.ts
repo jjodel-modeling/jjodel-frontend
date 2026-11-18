@@ -395,4 +395,26 @@ describe('readObserver: member reads report (target, property, value)', () => {
         const { reads } = observed('xs.map(x => x.name)', { xs: [a, b] });
         expect(reads).toEqual([[a, 'name', 'a'], [b, 'name', 'b']]);
     });
+
+    it('o["width"] reports as o.width does (R-TXT-6; mutant: the index path not observed)', () => {
+        const o = { id: 'o1', width: 4 };
+        const dot = observed('o.width', { o });
+        const index = observed('o["width"]', { o });
+        expect(index).toEqual(dot);
+        expect(index).toEqual({ value: 4, reads: [[o, 'width', 4]] });
+    });
+
+    it('a computed string key reports too', () => {
+        const o = { id: 'o1', width: 4 };
+        expect(observed('o["wid" + "th"]', { o })).toEqual({ value: 4, reads: [[o, 'width', 4]] });
+    });
+
+    it('an array index, a missing key and a non-string key report nothing and return as before', () => {
+        const a = { name: 'a' };
+        const o = { id: 'o1', width: 4, 0: 'zero' };
+        expect(observed('xs[0]', { xs: [a] })).toEqual({ value: a, reads: [] });
+        expect(observed('o["nosuch"]', { o })).toEqual({ value: null, reads: [] });
+        expect(observed('o[0]', { o })).toEqual({ value: 'zero', reads: [] });
+        expect(observed('o[true]', { o })).toEqual({ value: null, reads: [] });
+    });
 });

@@ -1,9 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { linkLane, recordVerdict } from '../../lane-objective.mjs';
 
 // lane-usage.mjs run as a child process, the way the chat runs it (P11), against a
 // copy of the fixture lanes in a temporary JJODEL_LANES. started.txt and the
@@ -49,6 +50,70 @@ function run(...args: string[]) {
 }
 
 const usage = (id: string) => JSON.parse(run(id, '--json').stdout);
+
+describe('fresh sessions and objective totals', () => {
+    const id = 'P-2026-11-11-1100';
+    const other = 'P-2026-11-11-1101';
+    const init = (session: string) => ({ type: 'system', subtype: 'init', session_id: session, model: 'fixture' });
+    const call = (session: string, message: string, input: number) => ({ type: 'assistant', session_id: session,
+        message: { id: message, model: 'fixture', usage: { input_tokens: input, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 1 } } });
+    const result = (session: string, output: number, input = 10) => ({ type: 'result', session_id: session, duration_ms: 100,
+        modelUsage: { fixture: { inputTokens: input, outputTokens: output, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 } } });
+    function fixture(events: unknown[], pid = id) {
+        mkdirSync(join(root, pid), { recursive: true });
+        writeFileSync(join(root, pid, 'log.jsonl'), events.map(e => JSON.stringify(e)).join('\n') + '\n');
+    }
+
+    test('two sessions add final output; resumed cumulative results and repeated message IDs are not double-counted', () => {
+        try {
+            fixture([init('one'), call('one', 'same', 10), result('one', 5), init('one'), call('one', 'second', 10), result('one', 10, 20),
+                init('two'), call('two', 'same', 10), result('two', 20)]);
+            const u = usage(id);
+            expect(u.resultOutput).toEqual({ fixture: 30 });
+            expect(u.main.fixture.calls).toBe(3);
+            expect(u.main.fixture.input).toBe(30);
+            expect(u.sessions).toEqual(['one', 'two']);
+            expect(u.runtimeMs).toBe(300);
+        } finally { rmSync(join(root, id), { recursive: true, force: true }); }
+    });
+
+    test('a new session with no result keeps output unknown rather than carrying old output forward', () => {
+        try {
+            fixture([init('one'), call('one', 'first', 10), result('one', 10), init('two'), call('two', 'second', 10)]);
+            expect(usage(id).resultOutput).toBeNull();
+        } finally { rmSync(join(root, id), { recursive: true, force: true }); }
+    });
+
+    test('objective spans sessions and lanes; acceptance is explicit and absent architect data is not zero', () => {
+        try {
+            fixture([init('one'), call('one', 'a', 10), result('one', 10), init('two'), call('two', 'b', 10), result('two', 20)]);
+            fixture([init('three'), call('three', 'c', 10), result('three', 5)], other);
+            linkLane(root, { objective: 'accounting', lane: id, kind: 'implementation', actor: 'test', evidence: 'fixture' });
+            linkLane(root, { objective: 'accounting', lane: other, kind: 'continuation', parent: id, actor: 'test', evidence: 'fixture' });
+            const read = () => JSON.parse(run('--objective', 'accounting', '--json').stdout);
+            expect(read()).toMatchObject({ technicalTokens: 65, runtimeMs: 300, architectTokens: null, totalTokens: null, objective: { state: 'open' } });
+            const arch = (start: number, end: number) => ({ schema: 1, chat: 'architect', model: 'fixture', source: 'transcript:fixture',
+                launch: { at: start }, close: { at: end }, delta: { totalIn: 10, output: 5 } });
+            writeFileSync(join(root, id, 'architect.json'), JSON.stringify(arch(1000, 2000)));
+            writeFileSync(join(root, other, 'architect.json'), JSON.stringify(arch(1500, 2500)));
+            expect(read().architectTokens).toBeNull();
+            expect(read().issues.some((i: any) => i.code === 'architect_overlap')).toBe(true);
+            writeFileSync(join(root, other, 'architect.json'), JSON.stringify(arch(2000, 2500)));
+            expect(read()).toMatchObject({ architectTokens: 30, totalTokens: 95 });
+            fixture([init('three'), call('three', 'c', 10), result('three', 5, 100)], other);
+            expect(read().technicalTokens).toBeNull();
+            expect(read().issues.some((i: any) => i.code === 'input_not_reconciled')).toBe(true);
+            fixture([init('three'), call('three', 'c', 10), result('three', 5)], other);
+            recordVerdict(root, { objective: 'accounting', type: 'accept', actor: 'reviewer', evidence: 'smoke:passed' });
+            expect(read().objective.state).toBe('accepted');
+            fixture([init('one'), call('one', 'a', 10), result('one', 10)], other);
+            expect(read()).toMatchObject({ technicalTokens: null, runtimeMs: null, coverage: 'partial' });
+            expect(read().issues.some((i: any) => i.code === 'duplicate_session')).toBe(true);
+        } finally {
+            for (const pid of [id, other, '_objectives']) rmSync(join(root, pid), { recursive: true, force: true });
+        }
+    });
+});
 
 describe('lane-usage: one lane', () => {
     test('kills "the first init only": model first and last, runs and tier', () => {

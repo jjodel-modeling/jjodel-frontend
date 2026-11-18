@@ -96,9 +96,13 @@ class TransactionStatus{
     hasBegun: boolean = false;
     hasAborted: boolean = false;
     transactionDepthLevel: number = 0;
+    // fired actions whose async dispatch (Action.fire) has not run yet: out of the buffer, not in the store
+    dispatchesInFlight: number = 0;
 }
 let t = new TransactionStatus();
 windoww.transactionStatus = t;
+
+export function dispatchesInFlight(): number { return t.dispatchesInFlight; }
 
 export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
@@ -298,6 +302,9 @@ export class Action extends RuntimeAccessibleClass {
     subType?: string; //?
     private stack?: string[];
     skipCollaborative?: boolean;
+    // Not a user edit: _reducer skips the undo history bookkeeping for it (R-MT-20). Read on the dispatched
+    // action only, so it has no effect on an action batched inside a TRANSACTION.
+    noUndo?: boolean;
     protected constructor(field: string, value: any, subType?: string, skipCollaborative: boolean = false) {
         super();
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
@@ -346,7 +353,8 @@ export class Action extends RuntimeAccessibleClass {
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
             // console.log('firing action:', printobj);
-            setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
+            t.dispatchesInFlight++;
+            setTimeout(()=>{ t.dispatchesInFlight--; storee.dispatch({...this}); }, 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
             /*
             // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
             PerformanceMetrics.countRender('Action_dispatch');

@@ -101,10 +101,16 @@ describe('subset checker at compile time', () => {
         expect(out.kind === 'defect' && out.detail).toMatch(/^E-NODE: /);
     });
 
+    it('`is` on the transition is kind-of and raises no diagnostic (P-2026-11-13-1305)', () => {
+        expect(compileGuard('self is Transition').diagnostics).toEqual([]);
+        expect(run('self is Transition')).toEqual({ kind: 'true' });
+        expect(run('self is Door')).toEqual({ kind: 'false' });
+    });
+
     it('warnings and not-verifiable diagnostics do not block: the guard runs', () => {
-        const isGuard = compileGuard('self is Transition');
-        expect(isGuard.diagnostics.map(d => d.code)).toEqual(['W-IS']);
-        expect(run('self is Transition')).toEqual({ kind: 'false' });
+        const nullCmp = compileGuard('self.requires?.count < 5');
+        expect(nullCmp.diagnostics.map(d => d.code)).toEqual(['W-NULLCMP']);
+        expect(run('self.requires?.count < 5')).toEqual({ kind: 'true' });
         const div = compileGuard('self.count / 2 == 1');
         expect(div.diagnostics.map(d => d.code)).toEqual(['T-DIV']);
         expect(run('self.count / 2 == 1')).toEqual({ kind: 'true' });
@@ -187,7 +193,7 @@ describe('the tri-state matches validation on the same text and bindings (R-SIM-
         ['self.nope == 1', 'defect:absent-identifier'],
         ['unknownX == 1', 'defect:absent-identifier'],
         ['unknownX', 'defect:absent-identifier'],
-        ['false and unknownX', 'defect:absent-identifier'],
+        ['false and unknownX', 'false'],
         ['self.count + 1', 'defect:non-boolean'],
         ['dup == 1', 'false'],
         ['x?.p == true', 'false'],
@@ -210,32 +216,28 @@ describe('the tri-state matches validation on the same text and bindings (R-SIM-
     });
 });
 
-describe('the rewrites the checker suggests for the eager idiom (ruling 1)', () => {
-    function suggestion(src: string): string {
-        const d = compileGuard(src).diagnostics.find(x => x.code === 'E-EAGER');
-        expect(d).toBeDefined();
-        return d!.message.split('Write: ')[1];
-    }
-
-    it('and-form: the rewrite is false without a door and true with a locked one, and passes the checker', () => {
+describe('the null-guard idioms evaluate directly: and/or short-circuit (P-2026-11-13-1246)', () => {
+    it('and-form: false without a door, true with a locked one, and passes the checker', () => {
         const idiom = 'self.requires != null and self.requires.locked';
-        const rewrite = suggestion(idiom);
-        expect(rewrite).toBe('if self.requires != null then self.requires.locked else false');
-        expect(compileGuard(rewrite).diagnostics).toEqual([]);
-        expect(run(rewrite, 'o_t1')).toEqual({ kind: 'false' });
-        expect(run(rewrite, 'o_t2')).toEqual({ kind: 'true' });
+        expect(compileGuard(idiom).diagnostics).toEqual([]);
+        expect(run(idiom, 'o_t1')).toEqual({ kind: 'false' });
+        expect(run(idiom, 'o_t2')).toEqual({ kind: 'true' });
     });
 
-    it('control: the implies form is not the rewrite of the and-form (true without a door)', () => {
+    it('control: the implies form is not the and-form (true without a door)', () => {
         expect(run('self.requires != null implies self.requires.locked', 'o_t1')).toEqual({ kind: 'true' });
     });
 
-    it('or-form: the rewrite is true without a door, and passes the checker', () => {
-        const rewrite = suggestion('self.requires == null or self.requires.locked');
-        expect(rewrite).toBe('self.requires != null implies self.requires.locked');
-        expect(compileGuard(rewrite).diagnostics).toEqual([]);
-        expect(run(rewrite, 'o_t1')).toEqual({ kind: 'true' });
-        expect(run(rewrite, 'o_t2')).toEqual({ kind: 'true' });
+    it('or-form: true without a door, true with a locked one', () => {
+        const idiom = 'self.requires == null or self.requires.locked';
+        expect(compileGuard(idiom).diagnostics).toEqual([]);
+        expect(run(idiom, 'o_t1')).toEqual({ kind: 'true' });
+        expect(run(idiom, 'o_t2')).toEqual({ kind: 'true' });
+    });
+
+    it('the event guard, with no event: the and-form is false, the or-form is true', () => {
+        expect(run('event != null and event.name == "e"')).toEqual({ kind: 'false' });
+        expect(run('event == null or event.name == "e"')).toEqual({ kind: 'true' });
     });
 });
 
@@ -335,5 +337,19 @@ describe('guards read σ through the adapter, on the Petri core', () => {
             const out = candidates(net, start, oracle({ u: text })).evaluated.find(e => e.transition === 'u')!.outcome;
             expect([text, out.kind, out.kind === 'defect' && out.reason]).toEqual([text, 'defect', 'exception']);
         }
+    });
+});
+
+describe('forall / exists over several variables (R-FA, P-2026-11-02-1330)', () => {
+    it('exists over two variables is a verdict', () => {
+        expect(run('exists a, b in Transition.instances | a != b and a.count + b.count == 7')).toEqual({ kind: 'true' });
+        expect(run('exists a in Transition.instances, b in Door.instances | a.requires == b and a.count == 2')).toEqual({ kind: 'false' });
+    });
+
+    it('a forall over two variables as the whole guard is the subset defect E-FORALL, never a value', () => {
+        const out = run('forall a, b in Transition.instances such that a != b');
+        expect(out).toMatchObject({ kind: 'defect', reason: 'subset' });
+        expect(out.kind === 'defect' && out.detail).toMatch(/^E-FORALL/);
+        expect(run('(forall a, b in Transition.instances such that a != b).isEmpty')).toEqual({ kind: 'false' });
     });
 });

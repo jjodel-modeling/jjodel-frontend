@@ -126,7 +126,7 @@ For the vending machine, write four transitions:
 
 t1 and t2 are siblings, so t2's `else` means "the credit would reach 50". `Idle` is an `InitialState`, `Ready` a `State`.
 
-Some constructs are rejected in guards because a model checker could not translate them: `node`, function calls, `with … do`, `if` without `else`, and `x != null and x.p`, because JjEL evaluates both sides of `and`. Write `if x != null then x.p else false`. The [guard subset](simulation-semantics.md#the-guard-subset) lists the codes.
+Some constructs are rejected in guards because a model checker could not translate them: `node`, function calls, `with … do` and `if` without `else`. The null guard `x != null and x.p` is fine: JjEL's `and` and `or` short-circuit, so `x.p` is not read when `x` is null. The [guard subset](simulation-semantics.md#the-guard-subset) lists the codes.
 
 ## State attributes
 

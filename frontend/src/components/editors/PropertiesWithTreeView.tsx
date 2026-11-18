@@ -176,6 +176,55 @@ interface PropertiesWithTreeViewProps {
     mode: 'floating';
 }
 
+/**
+ * The canvas's dock panel: the first child of the main dock box, where `DockManager.open` puts every editor tab.
+ */
+const CANVAS_PANEL = '.not-strip > .dock-layout > .dock-hbox > :first-child';
+
+/**
+ * How far the canvas's dock panel stops short of the window's right edge, in px (P-2026-10-24-1515).
+ *
+ * The rail is a side of the canvas. With one dock panel the canvas reaches the window's edge and this is 0, so the
+ * rail keeps the stylesheet's `right: 0` and nothing changes. When another panel is docked to the right of the canvas
+ * (the code generator's tab), the rail moves left by that panel's width and covers the canvas only. The insets this
+ * component publishes are relative to the canvas, so they do not change. Measured on the panel (ResizeObserver), on
+ * the dock box's children (MutationObserver: a split added or removed) and on window resizes.
+ */
+function useCanvasPanelGap(active: boolean): number {
+    const [gap, setGap] = useState(0);
+    useEffect(() => {
+        if (!active) {
+            setGap(0);
+            return;
+        }
+        let panel: Element | null = null;
+        const measure = () => {
+            const next = document.querySelector(CANVAS_PANEL);
+            if (next !== panel) {
+                if (panel) resize.unobserve(panel);
+                panel = next;
+                if (panel) resize.observe(panel);
+            }
+            const edge = document.documentElement.clientWidth;
+            const raw = panel ? Math.round(edge - panel.getBoundingClientRect().right) : 0;
+            // A pixel or two is the panel's own border against the edge, not a panel beside it.
+            setGap(raw > 2 ? raw : 0);
+        };
+        const resize = new ResizeObserver(measure);
+        const children = new MutationObserver(measure);
+        const box = document.querySelector('.not-strip > .dock-layout > .dock-hbox');
+        if (box) children.observe(box, { childList: true });
+        window.addEventListener('resize', measure);
+        measure();
+        return () => {
+            resize.disconnect();
+            children.disconnect();
+            window.removeEventListener('resize', measure);
+        };
+    }, [active]);
+    return gap;
+}
+
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
     // `| null` in the type parameter, not just in the initial value: the callback ref
     // below writes `.current`, and the one-argument overload of `useRef` hands back a
@@ -751,6 +800,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const railShouldShow = overlayActive && !bothCollapsed;
     const [railMounted, setRailMounted] = useState(railShouldShow);
     const [railOpen, setRailOpen] = useState(railShouldShow);
+    const canvasGap = useCanvasPanelGap(isFloating && railMounted);
 
     /**
      * What the column shows WHILE it is leaving.
@@ -1100,7 +1150,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             ? (railMounted && createPortal(
                 <div
                     className={`properties-tree-overlay${railOpen ? '' : ' properties-tree-overlay--collapsed'}`}
-                    style={{ width: `${overlayWidth}px` }}
+                    style={canvasGap > 0 ? { width: `${overlayWidth}px`, right: `${canvasGap}px` } : { width: `${overlayWidth}px` }}
                 >
                     {splitPanel}
                 </div>,

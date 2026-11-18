@@ -78,6 +78,7 @@ export enum JjelTokenType {
     // PUNCTUATION
     // ============================================
     COLON = 'COLON',             // :
+    DOUBLE_COLON = 'DOUBLE_COLON',   // :: (only in self.in(V::D), R-DCN-7)
     ASSIGN = 'ASSIGN',           // := (action mode only, R-SIM-40)
     PIPE = 'PIPE',               // | (alias for 'such that')
     COMMA = 'COMMA',             // ,

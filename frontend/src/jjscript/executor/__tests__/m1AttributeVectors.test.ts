@@ -48,7 +48,7 @@ vi.mock('../../../model/logicWrapper/nameUniqueness', () => ({
     m2KindOf: () => 'class',
 }));
 
-vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined }));
+vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined, dispatchesInFlight: () => 0 }));
 
 import { parse } from '../../parser/parser';
 import { executeSetInstance } from '../commands/instance';
@@ -171,9 +171,9 @@ describe('`=` with a list replaces the whole vector (#211)', () => {
         expect(wholeWrites('s0_tags')).toEqual([[]]);
     });
 
-    it('a list on a single-valued attribute: MULTIPLICITY_EXCEEDED, nothing written', async () => {
+    it('a list on a single-valued attribute: LIST_ON_SINGLE_VALUED (R-TXT-25 (2)), nothing written', async () => {
         const r = await set('set Scenario_0.title = ["x"]');
-        expect(codeOf(r)).toBe('MULTIPLICITY_EXCEEDED');
+        expect(codeOf(r)).toBe('LIST_ON_SINGLE_VALUED');
         expect(r.errors![0].suggestion).toBe('Write one value: set Scenario_0.title = <value>');
         nothingWritten();
     });

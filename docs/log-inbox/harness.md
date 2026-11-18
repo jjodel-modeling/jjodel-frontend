@@ -6,6 +6,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-07 — probe: a hook sets the session title (P-2026-11-07-1830)
+**Prompt**: probe whether `SessionStart` / `UserPromptSubmit` hooks can set the Claude Code session title for a lane (startup, resume, file-driven); fast lane, measure only, chat `C-2026-11-07-1824`
+**Files touched**: `docs/discovery/discovery_2026-11-07_session_title_hook_probe.md`, `docs/log-inbox/harness.md`; probe files outside the repo in `/tmp/title-probe/`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: claude 2.1.314: the hook title is stored (custom-title + agent-name in the session JSONL) at startup and resume, in `-p` and in the lane-run form; file-driven works. Sidebar display unverified, Alfonso's check. Details in the discovery report.
+**Prompt document name**: 2026-11-07 18:30
 
 ## 2026-10-13 — chore(harness): the typecheck baseline is zero in the norms and the merge templates, RC-48 (P-2026-10-12-2002)
 **Prompt**: `claude_2026-10-12_2002_prompt_typecheck_zero_s3_gate_at_zero.md`, full lane (more than 3 files; governance files), one phase, director Juri (chat `C-2026-10-12-1955`), lane 3/3 of `chain-P-2026-10-12-2000` in the worktree `jjodel-tc0` on `fix/typecheck-baseline-zero`, started by `lane-run start` after the chain stopped on slice 2's question: the baseline stops being a number, five edits of text the prompt quotes, one regeneration, the decision row RC-48.
@@ -988,3 +1000,69 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
 **Notes**: 4790, warm caches, 20 s busy loop, load 4-13: /api error "" on 5/5 (cold 8.0 s, then 0.5-0.8 s). Old timeout not reproduced at that load; loop stall in the cold round measured instead: max 0.49 s new, 6.6 s on the HEAD copy (4791). /api/attention primes trunk Status before attentionOf. Mutation bench (4 mutants, all red) in the commit message. 4700 agent untouched.
 **Prompt document name**: 2026-10-22 12:10
+
+## 2026-11-01 — ticket: criticalZone.test.ts fails inside lanes started with a critical-zone go-ahead
+**Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` (or wherever the critical-zone hook test lives) fails 4 cases whenever it runs inside a lane started with `--critical-zone-goahead`: the lane's environment carries `JJODEL_CRITICAL_ZONE_GOAHEAD`, and the hook spawned by the test inherits it, so the "ask"/"deny" expectations see a granted go-ahead. Measured by P-2026-11-01-1605 on 2026-11-01: 4 failures on the branch and on trunk `052746160` with the variable set; 70/70 with the variable unset.
+
+Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead variable) from the child environment unless a case sets it on purpose, so vitest baselines inside critical-zone lanes match the ones outside.
+**Priority**: low
+**Found in**: P-2026-11-01-1605
+
+## 2026-11-02 — test(hooks): criticalZone spawns drop an inherited go-ahead (P-2026-11-02-0645)
+**Prompt**: Ticket #393: inside a lane started with --critical-zone-goahead the hook spawned by criticalZone.test.ts inherits JJODEL_CRITICAL_ZONE_GOAHEAD and 4 ask/deny cases fail. Strip the variable from the child environment in the test file only, keep the cases that set it on purpose, prove with the variable unset and set plus a mutation, gates, close the ticket.
+**Files touched**: frontend/scripts/hooks/__tests__/criticalZone.test.ts (3c54c9d3f); docs/log-inbox/harness.md, docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. criticalZone.test.ts 70/70 with the variable unset and with JJODEL_CRITICAL_ZONE_GOAHEAD=P-2026-11-02-0645; check:scripts PASS, typecheck and typecheck:scripts exit 0 (neither covers scripts/hooks/__tests__)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Closes ticket #393 (2026-11-01, found in P-2026-11-01-1605). runScript lives in hookRunner.ts, shared by seven test files and left untouched: a local runZone deletes the variable from process.env around the synchronous spawn and restores it. Mutation (delete commented out): set 66/70, the 4 RC-19 bypass cases red; unset 70/70.
+**Prompt document name**: 2026-11-02 06:45
+
+## 2026-11-02 — merge: criticalzone-test-env into alfonso-frontend-jjtl (P-2026-11-02-0723)
+**Prompt**: Bring `criticalzone-test-env` at ad09563f7 (criticalZone hook tests drop an inherited go-ahead, 3c54c9d3f, ticket #393) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14).
+**Files touched**: merge commit 34bb2c30c (`frontend/scripts/hooks/__tests__/criticalZone.test.ts`, `docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md`, this inbox); `docs/prompts/claude_2026-11-02_0723_prompt_merge_criticalzone-test-env.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (test-only change; chat GO 2026-11-02)
+**Notes**: Gates on 34bb2c30c: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk; hook tests 21 files, 967 = trunk = branch (no new test); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Zero conflicts, no union. Lane board untouched. Step 6 names 81e0aafdf as reset target; the real pre-merge tip was bce1f3ef5 (template fix owed).
+**Prompt document name**: 2026-11-02 07:23
+
+## 2026-11-02 — ticket: Merge prompt template names the wrong reset target when check:addonly fails
+**Ticket**: The merge prompt that `lane-run merge ... --launch` generated for P-2026-11-02-0723 (criticalzone-test-env into alfonso-frontend-jjtl) named `81e0aafdf` in its step 6 as the reset point if `check:addonly` fails. `81e0aafdf` is the closure commit of the previous merge (P-2026-11-02-0656). The real pre-merge tip was `bce1f3ef5`, the commit that adds the merge prompt itself, so a reset to `81e0aafdf` would also drop the merge prompt's own commit. It had no effect because the gate passed; the merge session noticed and reported it.
+
+Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
+**Priority**: low
+**Found in**: P-2026-11-02-0723
+
+## 2026-11-08 — ticket: lane-run merge gives the same Prompt-ID to two chats in the same minute
+**Ticket**: Two chats launched `lane-run merge --direct` in the same minute (18:34 on 2026-11-07) and both merges got Prompt-ID P-2026-11-07-1834: textual-f1e-names (chat C-2026-11-03-1037, merge adf6c9629) and oi-s3b (instance-of chat, merge e5add4d95). The two prompt files were committed one after the other (02abdd3ff, 8eda5e601) and lane-run accepted both.
+
+Effect: the lane folder ~/.jjodel-lanes/P-2026-11-07-1834/ was taken by the second merge. The first merge's gate summary (result.json, vitest logs) was overwritten, `lane-run status` reported the other merge's outcome (blocked), and the first merge had to be closed by hand without its gate record (e91177c3b).
+
+Expected: `lane-run merge` refuses, or moves to the next free minute, when docs/prompts/ or ~/.jjodel-lanes/ already holds the Prompt-ID, as `lane-run start` does for a taken folder.
+
+Workaround until fixed: before acting on a merge result, read the merge commit's subject, not only the lane folder.
+**Priority**: medium
+**Found in**: P-2026-11-07-1834
+
+## 2026-11-08 — ticket: lane-run merge template: rollback reset names the commit before the prompt commit
+**Ticket**: The merge prompt template of `lane-run merge` writes a step-6 rollback `git reset --hard <sha>` that names the commit before the true pre-merge tip, so it would also drop the merge prompt commit. Seen in P-2026-11-08-1247 (sha 3d0cc984d instead of af51a3094). The rollback was not triggered.
+**Priority**: medium
+**Found in**: P-2026-11-08-1247
+
+## 2026-11-08 — ticket: smoke: the first run after a cold Vite start times out on page.goto
+**Ticket**: In three lanes of 2026-11-08 (P-2026-11-08-1313, P-2026-11-08-1800, P-2026-11-08-1759) the first npm run smoke after a fresh Vite start went RED with 30 s page.goto timeouts during setup (waiting for the first state, for example the New Project button), and the next run on the same, now warm, server went GREEN 12/0/3. The control tree in 1313 was green on its single cold run, so the cause is not proven. Expected: the smoke either warms the server (one throwaway page load before the first timed state) or gives the first page.goto a longer timeout, so a cold Vite does not read as a regression.
+**Priority**: low
+**Found in**: P-2026-11-08-1759
+
+## 2026-11-11 — ticket: handoff seal refuses section headings with a suffix
+**Ticket**: handoffBody in frontend/scripts/lane-run.mjs (HANDOFF_SECTIONS, around line 1447) matches section headings exactly (^## Name\s*\n). Lane P-2026-11-11-1925 wrote ## Decisions taken (unattended) and ## Evidence (all read at HEAD ...), so lane-run handoff refused to seal (handoff needs a nonempty section) and the project chat had to rename the headings by hand twice before resume --fresh. Fix: accept a parenthesised suffix after the section name, or have the context-ceiling hook template the exact headings.
+**Priority**: low
+**Found in**: P-2026-11-11-1925

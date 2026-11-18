@@ -28,6 +28,7 @@ import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
 import ActivityLogger from '../../services/ActivityLogger';
+import {importJjodelFiles, requireStoredProject} from './jjodelImport';
 import { ActivityType } from '../../types/activity';
 import {
     extractMegamodelFromProjectJson,
@@ -256,9 +257,9 @@ class ProjectsApi {
 
 
     /**
-     * `clone` makes the import a gallery clone (P-2026-10-18-1800): the project takes `name` as it is, without the
-     * import's « copy» suffix, and the call resolves once the project is stored, with its new id. Without it, `name`
-     * stays unused, as the file drop that passes the file's name expects.
+     * Resolves once the project is stored, with its new id; rejects if its transaction did not store it
+     * (P-2026-11-08-2015). `clone` makes the import a gallery clone (P-2026-10-18-1800): the project takes `name` as it
+     * is, without the import's « copy» suffix. Without it, `name` stays unused.
      */
     static async importFromText(content: string, name: string = '', date: number = Date.now(), clone?: { clonedFrom: string }): Promise<DProject['id']> {
         const json = JSON.parse(content) as Record<string, unknown>;
@@ -277,6 +278,8 @@ class ProjectsApi {
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
+        // Not project.id: until duplicateProject succeeds that is the file's own id, which the store may hold already.
+        let storedId: DProject['id'] | undefined;
         const done = TRANSACTION('import project', async ()=>{
             // console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;
@@ -302,29 +305,32 @@ class ProjectsApi {
             if (U.isOffline()) Offline.import(project);
             else await Online.import(project);
             CreateElementAction.new(project);
+            storedId = project.id;
             })
-        if (clone) await done;
-        return project.id;
+        await done;
+        // Depth rests at 1 and the interval of reducer.ts flushes it, so the actions are still pending here. This is
+        // one tick of that interval, so an aborted import cannot abort the next one; Action.fire dispatches in a
+        // setTimeout 0, so the store is current only after one of ours.
+        COMMIT(undefined, false);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return requireStoredProject(storedId, store.getState().projects);
         }
 
 
     static import() {
-        const reader = new FileReader();
-        reader.onload = async e => {
-            const content = String(e.target?.result);
-            try {
-                await ProjectsApi.importFromText(content);
-            } catch (e) {
-                U.alert('e', 'Invalid File.', 'Something went wrong ...');
+        // Its own input: the one of U.fileRead cannot take several files.
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.jjodel';
+        input.multiple = true;
+        input.onchange = async () => {
+            if (!input.files?.length) return;
+            const results = await importJjodelFiles(input.files, ProjectsApi.importFromText);
+            for (const result of results) {
+                if (!result.ok) U.alert('e', 'Invalid File.', 'Something went wrong ...');
             }
-        }
-
-        let extensions = ['.jjodel'];
-        U.fileRead((e: unknown, files?: FileList | null, fileContents?: string[]) => {
-            if (!files?.length) return;
-            const file = files[0];
-            reader.readAsText(file);
-        }, extensions, true);
+        };
+        input.click();
         // U.resetState();
     }
 

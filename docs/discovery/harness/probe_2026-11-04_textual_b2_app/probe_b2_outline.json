@@ -1,0 +1,770 @@
+[
+ {
+  "case": "demoESM",
+  "objects": 10,
+  "unnamed": 7,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 2,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Initial > block > item(transitions, kw transitions) > block > item(transitions) > Transition": 3,
+   "State > block > item(transitions, kw transitions) > block > item(transitions) > Transition": 1
+  },
+  "singles": {
+   "Transition.nextState": "kw nextState, path-ref",
+   "Transition.event": "kw event, name-ref",
+   "Transition.guard": "kw guard, value"
+  },
+  "unnamedLabels": [
+   {
+    "id": "Pointer1793747144933_USER_33",
+    "cls": "Initial",
+    "C1": "Initial[0]",
+    "C2": "Initial[0]",
+    "C3": "Initial[0]",
+    "C4": "Initial[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "Pointer1793747144934_USER_48",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition coin",
+    "C4feature": "event"
+   },
+   {
+    "id": "Pointer1793747144934_USER_53",
+    "cls": "Transition",
+    "C1": "Transition \"model.[paid]\"",
+    "C2": "Transition[1]",
+    "C3": "Transition State[0]",
+    "C4": "Transition push",
+    "C4feature": "event"
+   },
+   {
+    "id": "Pointer1793747144937_USER_63",
+    "cls": "Transition",
+    "C1": "Transition Terminal[0]",
+    "C2": "Transition[2]",
+    "C3": "Transition Terminal[0]",
+    "C4": "Transition stop",
+    "C4feature": "event"
+   },
+   {
+    "id": "Pointer1793747144933_USER_36",
+    "cls": "State",
+    "C1": "State[0]",
+    "C2": "State[0]",
+    "C3": "State[0]",
+    "C4": "State[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "Pointer1793747144935_USER_58",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition push",
+    "C4feature": "event"
+   },
+   {
+    "id": "Pointer1793747144933_USER_39",
+    "cls": "Terminal",
+    "C1": "Terminal[0]",
+    "C2": "Terminal[0]",
+    "C3": "Terminal[0]",
+    "C4": "Terminal[0]",
+    "C4feature": ""
+   }
+  ],
+  "text": "Initial {\n  transitions {\n    Transition {\n      effect [\"model.[coins] := model.[coins] + 1\"]\n      nextState Initial[0]\n      event coin\n    }\n    Transition {\n      guard \"model.[paid]\"\n      effect [\"model.[coins] := 0\"]\n      nextState State[0]\n      event push\n    }\n    Transition {\n      nextState Terminal[0]\n      event stop\n    }\n  }\n}\nState {\n  transitions {\n    Transition {\n      nextState Initial[0]\n      event push\n    }\n  }\n}\nTerminal {}\nEvent coin {}\nEvent push {}\nEvent stop {}"
+ },
+ {
+  "case": "library, plain",
+  "objects": 10,
+  "unnamed": 0,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Library > block > item(books, kw books) > block > item(books) > Book": 6,
+   "Library > block > item(members, kw members) > block > item(members) > Member": 3
+  },
+  "singles": {
+   "Book.genre": "kw genre, literal",
+   "Book.year": "kw year, value",
+   "Book.borrowedBy": "kw borrowedBy, name-ref"
+  },
+  "unnamedLabels": [],
+  "text": "Library city {\n  books {\n    Book book0 {\n      genre FICTION\n    }\n    Book book1 {\n      genre SCIENCE\n      year 1901\n      borrowedBy reader1\n    }\n    Book book2 {\n      genre POETRY\n    }\n    Book book3 {\n      genre HISTORY\n      year 1903\n    }\n    Book book4 {\n      genre FICTION\n      borrowedBy reader1\n    }\n    Book book5 {\n      genre SCIENCE\n      year 1905\n    }\n  }\n  members {\n    Member reader0 {}\n    Member reader1 {}\n    Member reader2 {}\n  }\n}"
+ },
+ {
+  "case": "library, annotated",
+  "objects": 10,
+  "unnamed": 0,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Library > block > item(books, kw books) > block > item(books, kw prose) > block > item(books) > Book": 3,
+   "Library > block > item(books, kw books) > block > item(books, kw verse) > block > item(books) > Book": 1,
+   "Library > block > item(books, kw books) > block > item(books, kw nonfiction) > block > item(books) > Book": 2,
+   "Library > block > item(members, kw patrons) > block > item(members) > Member": 3
+  },
+  "singles": {
+   "Book.genre": "no keyword, literal",
+   "Book.borrowedBy": "kw borrowedBy, name-ref",
+   "Book.year": "kw year, value"
+  },
+  "unnamedLabels": [],
+  "text": "Library city {\n  books {\n    prose {\n      Book book0 {\n        FICTION\n      }\n      Book book4 {\n        FICTION\n        borrowedBy reader1\n      }\n      Book book3 {\n        HISTORY\n        year 1903\n      }\n    }\n    verse {\n      Book book2 {\n        POETRY\n      }\n    }\n    nonfiction {\n      Book book1 {\n        SCIENCE\n        year 1901\n        borrowedBy reader1\n      }\n      Book book5 {\n        SCIENCE\n        year 1905\n      }\n    }\n  }\n  patrons {\n    Member reader0 {}\n    Member reader1 {}\n    Member reader2 {}\n  }\n}"
+ },
+ {
+  "case": "library, lines",
+  "objects": 10,
+  "unnamed": 0,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Library > block > item(books, kw books) > block > item(books) > Book": 6,
+   "Library > block > item(members, kw members) > block > item(members) > Member": 3
+  },
+  "singles": {
+   "Book.genre": "no keyword, literal",
+   "Book.year": "kw year, value",
+   "Book.borrowedBy": "kw by, name-ref"
+  },
+  "unnamedLabels": [],
+  "text": "shelf city {\n  books {\n    Book FICTION titled book0\n    Book SCIENCE year 1901 by reader1 titled book1\n    Book POETRY titled book2\n    Book HISTORY year 1903 titled book3\n    Book FICTION by reader1 titled book4\n    Book SCIENCE year 1905 titled book5\n  }\n  members {\n    Member reader0\n    Member reader1\n    Member reader2\n  }\n}"
+ },
+ {
+  "case": "turnstile, plain",
+  "objects": 10,
+  "unnamed": 7,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 2,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Initial > block > item(transitions, kw transitions) > block > item(transitions) > Transition": 3,
+   "State > block > item(transitions, kw transitions) > block > item(transitions) > Transition": 1
+  },
+  "singles": {
+   "Transition.nextState": "kw nextState, path-ref",
+   "Transition.event": "kw event, name-ref",
+   "Transition.guard": "kw guard, value"
+  },
+  "unnamedLabels": [
+   {
+    "id": "locked",
+    "cls": "Initial",
+    "C1": "Initial[0]",
+    "C2": "Initial[0]",
+    "C3": "Initial[0]",
+    "C4": "Initial[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "tc",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition coin",
+    "C4feature": "event"
+   },
+   {
+    "id": "tp",
+    "cls": "Transition",
+    "C1": "Transition \"model.[paid]\"",
+    "C2": "Transition[1]",
+    "C3": "Transition State[0]",
+    "C4": "Transition push",
+    "C4feature": "event"
+   },
+   {
+    "id": "ts",
+    "cls": "Transition",
+    "C1": "Transition Terminal[0]",
+    "C2": "Transition[2]",
+    "C3": "Transition Terminal[0]",
+    "C4": "Transition stop",
+    "C4feature": "event"
+   },
+   {
+    "id": "unlocked",
+    "cls": "State",
+    "C1": "State[0]",
+    "C2": "State[0]",
+    "C3": "State[0]",
+    "C4": "State[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "tu",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition push",
+    "C4feature": "event"
+   },
+   {
+    "id": "off",
+    "cls": "Terminal",
+    "C1": "Terminal[0]",
+    "C2": "Terminal[0]",
+    "C3": "Terminal[0]",
+    "C4": "Terminal[0]",
+    "C4feature": ""
+   }
+  ],
+  "text": "Initial {\n  transitions {\n    Transition {\n      effect [\"model.[coins] := model.[coins] + 1\"]\n      nextState Initial[0]\n      event coin\n    }\n    Transition {\n      guard \"model.[paid]\"\n      effect [\"model.[coins] := 0\"]\n      nextState State[0]\n      event push\n    }\n    Transition {\n      nextState Terminal[0]\n      event stop\n    }\n  }\n}\nState {\n  transitions {\n    Transition {\n      nextState Initial[0]\n      event push\n    }\n  }\n}\nTerminal {}\nEvent coin {}\nEvent push {}\nEvent stop {}"
+ },
+ {
+  "case": "turnstile, annotated",
+  "objects": 10,
+  "unnamed": 7,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 2,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Initial > block > item(transitions) > item(transitions) > Transition": 3,
+   "State > block > item(transitions) > item(transitions) > Transition": 1
+  },
+  "singles": {
+   "Transition.nextState": "kw to, path-ref",
+   "Transition.event": "no keyword, name-ref",
+   "Transition.guard": "kw guard, value"
+  },
+  "unnamedLabels": [
+   {
+    "id": "locked",
+    "cls": "Initial",
+    "C1": "Initial[0]",
+    "C2": "Initial[0]",
+    "C3": "Initial[0]",
+    "C4": "Initial[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "tc",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition coin",
+    "C4feature": "(event)"
+   },
+   {
+    "id": "tp",
+    "cls": "Transition",
+    "C1": "Transition \"model.[paid]\"",
+    "C2": "Transition[1]",
+    "C3": "Transition State[0]",
+    "C4": "Transition push",
+    "C4feature": "(event)"
+   },
+   {
+    "id": "ts",
+    "cls": "Transition",
+    "C1": "Transition Terminal[0]",
+    "C2": "Transition[2]",
+    "C3": "Transition Terminal[0]",
+    "C4": "Transition stop",
+    "C4feature": "(event)"
+   },
+   {
+    "id": "unlocked",
+    "cls": "State",
+    "C1": "State[0]",
+    "C2": "State[0]",
+    "C3": "State[0]",
+    "C4": "State[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "tu",
+    "cls": "Transition",
+    "C1": "Transition Initial[0]",
+    "C2": "Transition[0]",
+    "C3": "Transition Initial[0]",
+    "C4": "Transition push",
+    "C4feature": "(event)"
+   },
+   {
+    "id": "off",
+    "cls": "Terminal",
+    "C1": "Terminal[0]",
+    "C2": "Terminal[0]",
+    "C3": "Terminal[0]",
+    "C4": "Terminal[0]",
+    "C4feature": ""
+   }
+  ],
+  "text": "Initial {\n  Transition {\n    effect [\"model.[coins] := model.[coins] + 1\"]\n    to Initial[0]\n    coin\n  }\n  Transition {\n    guard \"model.[paid]\"\n    effect [\"model.[coins] := 0\"]\n    to State[0]\n    push\n  }\n  Transition {\n    to Terminal[0]\n    stop\n  }\n}\nState {\n  Transition {\n    to Initial[0]\n    push\n  }\n}\nTerminal {}\nEvent coin {}\nEvent push {}\nEvent stop {}"
+ },
+ {
+  "case": "garage, c-like",
+  "objects": 13,
+  "unnamed": 2,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Car > block > item(engine, kw engine) > block > item(engine) > Engine": 1,
+   "Car > block > item(wheels, kw wheels) > block > item(wheels) > Wheel": 3,
+   "Wheel > block > item(bolts, kw bolts) > block > item(bolts) > Bolt": 3,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Wheel": 1,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Car": 1
+  },
+  "singles": {
+   "Car.speed": "kw speed, value",
+   "Car.best": "kw best, path-ref",
+   "Car.tow": "kw tow, name-ref",
+   "Car.eng": "kw eng, path-ref",
+   "Engine.power": "kw power, value",
+   "Engine.note": "kw note, value",
+   "Wheel.size": "kw size, value",
+   "Wheel.pair": "kw pair, path-ref",
+   "Gear.wheel": "kw wheel, name-ref"
+  },
+  "unnamedLabels": [
+   {
+    "id": "e1",
+    "cls": "Engine",
+    "C1": "Engine 90",
+    "C2": "Engine[0]",
+    "C3": "Engine[0]",
+    "C4": "Engine 90",
+    "C4feature": "power"
+   },
+   {
+    "id": "e0",
+    "cls": "Engine",
+    "C1": "Engine 0",
+    "C2": "Engine[0]",
+    "C3": "Engine[0]",
+    "C4": "Engine 0",
+    "C4feature": "power"
+   }
+  ],
+  "text": "Car alpha {\n  speed 1.5\n  colors [Red, blue]\n  marks [3, 1]\n  engine {\n    Engine {\n      power 90\n      note \"line1\\nline2 \\\"q\\\"\"\n    }\n  }\n  wheels {\n    Wheel w {\n      size 16\n      bolts {\n        Bolt b {}\n        Bolt b {}\n      }\n    }\n    Wheel w {\n      size 17\n    }\n  }\n  spare {\n    Wheel \"it's \\\"odd\\\"\" {\n      size 1\n    }\n    Car inner {\n      tow alpha\n    }\n  }\n  best Car[0].wheels[0]\n  tow beta\n  eng Car[0].engine[0]\n}\nCar beta {\n  wheels {\n    Wheel v {\n      bolts {\n        Bolt v {}\n      }\n      pair Car[0].wheels[0].bolts[0]\n    }\n  }\n  best Car[0].wheels[1]\n  tow inner\n  eng Engine[0]\n}\nGear w {\n  wheel v\n}\nEngine {\n  power 0\n}"
+ },
+ {
+  "case": "garage, lower",
+  "objects": 13,
+  "unnamed": 2,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 0,
+   "C3": 0,
+   "C4": 0
+  },
+  "shapes": {
+   "Car > block > item(engine, kw engine) > block > item(engine) > Engine": 1,
+   "Car > block > item(wheels, kw wheels) > block > item(wheels) > Wheel": 3,
+   "Wheel > block > item(bolts, kw bolts) > block > item(bolts) > Bolt": 3,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Wheel": 1,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Car": 1
+  },
+  "singles": {
+   "Car.speed": "kw speed, value",
+   "Car.best": "kw best, path-ref",
+   "Car.tow": "kw tow, name-ref",
+   "Car.eng": "kw eng, path-ref",
+   "Engine.power": "kw power, value",
+   "Engine.note": "kw note, value",
+   "Wheel.size": "kw size, value",
+   "Wheel.pair": "kw pair, path-ref",
+   "Gear.wheel": "kw wheel, name-ref"
+  },
+  "unnamedLabels": [
+   {
+    "id": "e1",
+    "cls": "Engine",
+    "C1": "engine 90",
+    "C2": "engine[0]",
+    "C3": "engine[0]",
+    "C4": "engine 90",
+    "C4feature": "power"
+   },
+   {
+    "id": "e0",
+    "cls": "Engine",
+    "C1": "engine 0",
+    "C2": "engine[0]",
+    "C3": "engine[0]",
+    "C4": "engine 0",
+    "C4feature": "power"
+   }
+  ],
+  "text": "car alpha {\n  speed 1.5\n  colors [red, blue]\n  marks [3, 1]\n  engine {\n    engine {\n      power 90\n      note \"line1\\nline2 \\\"q\\\"\"\n    }\n  }\n  wheels {\n    wheel w {\n      size 16\n      bolts {\n        bolt b {}\n        bolt b {}\n      }\n    }\n    wheel w {\n      size 17\n    }\n  }\n  spare {\n    wheel \"it's \\\"odd\\\"\" {\n      size 1\n    }\n    car inner {\n      tow alpha\n    }\n  }\n  best car[0].wheels[0]\n  tow beta\n  eng car[0].engine[0]\n}\ncar beta {\n  wheels {\n    wheel v {\n      bolts {\n        bolt v {}\n      }\n      pair car[0].wheels[0].bolts[0]\n    }\n  }\n  best car[0].wheels[1]\n  tow inner\n  eng engine[0]\n}\ngear w {\n  wheel v\n}\nengine {\n  power 0\n}"
+ },
+ {
+  "case": "library, plain, names cleared",
+  "objects": 10,
+  "unnamed": 10,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 2,
+   "C2": 2,
+   "C3": 6,
+   "C4": 2
+  },
+  "duplicateSiblings": {
+   "C1": 4,
+   "C2": 4,
+   "C3": 2,
+   "C4": 4
+  },
+  "shapes": {
+   "Library > block > item(books, kw books) > block > item(books) > Book": 6,
+   "Library > block > item(members, kw members) > block > item(members) > Member": 3
+  },
+  "singles": {
+   "Book.genre": "kw genre, literal",
+   "Book.year": "kw year, value",
+   "Book.borrowedBy": "kw borrowedBy, path-ref"
+  },
+  "unnamedLabels": [
+   {
+    "id": "lib",
+    "cls": "Library",
+    "C1": "Library[0]",
+    "C2": "Library[0]",
+    "C3": "Library[0]",
+    "C4": "Library[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "b0",
+    "cls": "Book",
+    "C1": "Book FICTION",
+    "C2": "Book FICTION",
+    "C3": "Book[0]",
+    "C4": "Book FICTION",
+    "C4feature": "genre"
+   },
+   {
+    "id": "b1",
+    "cls": "Book",
+    "C1": "Book SCIENCE",
+    "C2": "Book SCIENCE",
+    "C3": "Book Library[0].members[1]",
+    "C4": "Book SCIENCE",
+    "C4feature": "genre"
+   },
+   {
+    "id": "b2",
+    "cls": "Book",
+    "C1": "Book POETRY",
+    "C2": "Book POETRY",
+    "C3": "Book[2]",
+    "C4": "Book POETRY",
+    "C4feature": "genre"
+   },
+   {
+    "id": "b3",
+    "cls": "Book",
+    "C1": "Book HISTORY",
+    "C2": "Book HISTORY",
+    "C3": "Book[3]",
+    "C4": "Book HISTORY",
+    "C4feature": "genre"
+   },
+   {
+    "id": "b4",
+    "cls": "Book",
+    "C1": "Book FICTION",
+    "C2": "Book FICTION",
+    "C3": "Book Library[0].members[1]",
+    "C4": "Book FICTION",
+    "C4feature": "genre"
+   },
+   {
+    "id": "b5",
+    "cls": "Book",
+    "C1": "Book SCIENCE",
+    "C2": "Book SCIENCE",
+    "C3": "Book[5]",
+    "C4": "Book SCIENCE",
+    "C4feature": "genre"
+   },
+   {
+    "id": "m0",
+    "cls": "Member",
+    "C1": "Member[0]",
+    "C2": "Member[0]",
+    "C3": "Member[0]",
+    "C4": "Member[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "m1",
+    "cls": "Member",
+    "C1": "Member[1]",
+    "C2": "Member[1]",
+    "C3": "Member[1]",
+    "C4": "Member[1]",
+    "C4feature": ""
+   },
+   {
+    "id": "m2",
+    "cls": "Member",
+    "C1": "Member[2]",
+    "C2": "Member[2]",
+    "C3": "Member[2]",
+    "C4": "Member[2]",
+    "C4feature": ""
+   }
+  ],
+  "text": "Library {\n  books {\n    Book {\n      genre FICTION\n    }\n    Book {\n      genre SCIENCE\n      year 1901\n      borrowedBy Library[0].members[1]\n    }\n    Book {\n      genre POETRY\n    }\n    Book {\n      genre HISTORY\n      year 1903\n    }\n    Book {\n      genre FICTION\n      borrowedBy Library[0].members[1]\n    }\n    Book {\n      genre SCIENCE\n      year 1905\n    }\n  }\n  members {\n    Member {}\n    Member {}\n    Member {}\n  }\n}"
+ },
+ {
+  "case": "garage, c-like, names cleared",
+  "objects": 13,
+  "unnamed": 13,
+  "parseErrors": 0,
+  "sameAsParse": true,
+  "changedAfterReverse": {
+   "C1": 6,
+   "C2": 8,
+   "C3": 10,
+   "C4": 6
+  },
+  "duplicateSiblings": {
+   "C1": 0,
+   "C2": 2,
+   "C3": 2,
+   "C4": 0
+  },
+  "shapes": {
+   "Car > block > item(engine, kw engine) > block > item(engine) > Engine": 1,
+   "Car > block > item(wheels, kw wheels) > block > item(wheels) > Wheel": 3,
+   "Wheel > block > item(bolts, kw bolts) > block > item(bolts) > Bolt": 3,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Wheel": 1,
+   "Car > block > item(spare, kw spare) > block > item(spare) > Car": 1
+  },
+  "singles": {
+   "Car.speed": "kw speed, value",
+   "Car.best": "kw best, path-ref",
+   "Car.tow": "kw tow, path-ref",
+   "Car.eng": "kw eng, path-ref",
+   "Engine.power": "kw power, value",
+   "Engine.note": "kw note, value",
+   "Wheel.size": "kw size, value",
+   "Wheel.pair": "kw pair, path-ref",
+   "Gear.wheel": "kw wheel, path-ref"
+  },
+  "unnamedLabels": [
+   {
+    "id": "c1",
+    "cls": "Car",
+    "C1": "Car 1.5",
+    "C2": "Car[0]",
+    "C3": "Car Car[0].wheels[0]",
+    "C4": "Car 1.5",
+    "C4feature": "speed"
+   },
+   {
+    "id": "e1",
+    "cls": "Engine",
+    "C1": "Engine 90",
+    "C2": "Engine[0]",
+    "C3": "Engine[0]",
+    "C4": "Engine 90",
+    "C4feature": "power"
+   },
+   {
+    "id": "w1",
+    "cls": "Wheel",
+    "C1": "Wheel 16",
+    "C2": "Wheel[0]",
+    "C3": "Wheel[0]",
+    "C4": "Wheel 16",
+    "C4feature": "size"
+   },
+   {
+    "id": "b1",
+    "cls": "Bolt",
+    "C1": "Bolt[0]",
+    "C2": "Bolt[0]",
+    "C3": "Bolt[0]",
+    "C4": "Bolt[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "b2",
+    "cls": "Bolt",
+    "C1": "Bolt[1]",
+    "C2": "Bolt[1]",
+    "C3": "Bolt[1]",
+    "C4": "Bolt[1]",
+    "C4feature": ""
+   },
+   {
+    "id": "w2",
+    "cls": "Wheel",
+    "C1": "Wheel 17",
+    "C2": "Wheel[1]",
+    "C3": "Wheel[1]",
+    "C4": "Wheel 17",
+    "C4feature": "size"
+   },
+   {
+    "id": "w3",
+    "cls": "Wheel",
+    "C1": "Wheel 1",
+    "C2": "Wheel[0]",
+    "C3": "Wheel[0]",
+    "C4": "Wheel 1",
+    "C4feature": "size"
+   },
+   {
+    "id": "c3",
+    "cls": "Car",
+    "C1": "Car Car[0]",
+    "C2": "Car[1]",
+    "C3": "Car Car[0]",
+    "C4": "Car Car[0]",
+    "C4feature": "tow"
+   },
+   {
+    "id": "c2",
+    "cls": "Car",
+    "C1": "Car Car[0].wheels[1]",
+    "C2": "Car[1]",
+    "C3": "Car Car[0].wheels[1]",
+    "C4": "Car Car[0].wheels[1]",
+    "C4feature": "best"
+   },
+   {
+    "id": "w4",
+    "cls": "Wheel",
+    "C1": "Wheel Car[0].wheels[0].bolts[…",
+    "C2": "Wheel[0]",
+    "C3": "Wheel Car[0].wheels[0].bolts[…",
+    "C4": "Wheel Car[0].wheels[0].bolts[…",
+    "C4feature": "pair"
+   },
+   {
+    "id": "b3",
+    "cls": "Bolt",
+    "C1": "Bolt[0]",
+    "C2": "Bolt[0]",
+    "C3": "Bolt[0]",
+    "C4": "Bolt[0]",
+    "C4feature": ""
+   },
+   {
+    "id": "g1",
+    "cls": "Gear",
+    "C1": "Gear Car[1].wheels[0]",
+    "C2": "Gear[0]",
+    "C3": "Gear Car[1].wheels[0]",
+    "C4": "Gear Car[1].wheels[0]",
+    "C4feature": "wheel"
+   },
+   {
+    "id": "e0",
+    "cls": "Engine",
+    "C1": "Engine 0",
+    "C2": "Engine[0]",
+    "C3": "Engine[0]",
+    "C4": "Engine 0",
+    "C4feature": "power"
+   }
+  ],
+  "text": "Car {\n  speed 1.5\n  colors [Red, blue]\n  marks [3, 1]\n  engine {\n    Engine {\n      power 90\n      note \"line1\\nline2 \\\"q\\\"\"\n    }\n  }\n  wheels {\n    Wheel {\n      size 16\n      bolts {\n        Bolt {}\n        Bolt {}\n      }\n    }\n    Wheel {\n      size 17\n    }\n  }\n  spare {\n    Wheel {\n      size 1\n    }\n    Car {\n      tow Car[0]\n    }\n  }\n  best Car[0].wheels[0]\n  tow Car[1]\n  eng Car[0].engine[0]\n}\nCar {\n  wheels {\n    Wheel {\n      bolts {\n        Bolt {}\n      }\n      pair Car[0].wheels[0].bolts[0]\n    }\n  }\n  best Car[0].wheels[1]\n  tow Car[0].spare[1]\n  eng Engine[0]\n}\nGear {\n  wheel Car[1].wheels[0]\n}\nEngine {\n  power 0\n}"
+ }
+]

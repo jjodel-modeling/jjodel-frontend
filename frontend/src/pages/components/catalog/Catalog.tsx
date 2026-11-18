@@ -17,6 +17,7 @@ type ChildrenType = {
     projects?: any;
     children?: any;
     onNewProject?: () => void;
+    onImportFile?: () => void;
 };
 
 
@@ -659,7 +660,7 @@ const Catalog = (props: ChildrenType) => {
     return (
         <>
             {hasNoProjects ? (
-                <EmptyDashboard onNewProject={props.onNewProject || (() => {})} />
+                <EmptyDashboard onNewProject={props.onNewProject || (() => {})} onImportFile={props.onImportFile} />
             ) : (
                 <>
                     {/* Dev Mode Label for Project Grid */}

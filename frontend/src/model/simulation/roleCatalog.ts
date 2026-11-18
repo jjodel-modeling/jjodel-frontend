@@ -17,6 +17,15 @@
  * attributes, a plain id for one and a JSON array string for two or more
  * (`roleValues`, `encodeRoleValues`), so a saved single value reads as a
  * one-element list and every bag that binds one attribute stays as it was.
+ * Operation and Body of the dcn group are `multi` too: a class holds its
+ * operations in more than one reference, and a body sits on more than one class.
+ *
+ * The `dcn` group (R-DCN-8, P-2026-11-07-0941) holds the roles of the profile
+ * «Dynamic classification»: a static class, its viewpoints, their dynamic
+ * classes with an invariant each, operations, monitors, and the two flags of a
+ * viewpoint. Instance-of is not a role: the classifier of an instance is the
+ * R-OI binding (`ontoBindings`), which the nucleus reads. `dcnStcFromRoles`
+ * (dcn/dcnRoles.ts) resolves the group; no run reads it yet.
  *
  * Pure data: no React, no store.
  */
@@ -28,11 +37,15 @@ export const ROLE_IDS = [
     'trigger', 'event', 'eventIdentifier',
     'guard', 'action', 'entry', 'exit', 'stateAttributes',
     'stateOutput', 'transitionOutput',
+    'staticClass', 'viewpoints', 'dynamicClasses', 'invariant', 'operation', 'precondition', 'body',
+    'redefines', 'monitor', 'overlapping', 'complete',
+    'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+    'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
 ] as const;
 
 export type RoleId = typeof ROLE_IDS[number];
 
-export type RoleGroup = 'general' | 'controlFlow' | 'petri' | 'events' | 'data' | 'output';
+export type RoleGroup = 'general' | 'controlFlow' | 'petri' | 'events' | 'data' | 'output' | 'dcn';
 
 /**
  * What a role binds. `int` is a value, not a pointer (`simBound`, a digit
@@ -175,6 +188,89 @@ const DESCRIPTORS: { readonly [K in RoleId]: Omit<RoleDescriptor, 'id'> } = {
     transitionOutput: {
         group: 'output', key: 'simTransitionOutput', kind: 'attribute', dependsOn: ['transition'], label: 'Transition output',
         description: 'The attribute of a transition read as the output of its firing.',
+    },
+    // The dcn group (R-DCN-8). Overlapping and Complete are boolean attributes bound with the plain
+    // `attribute` kind: the binding does not check their type.
+    staticClass: {
+        group: 'dcn', key: 'simStaticClass', kind: 'class', dependsOn: [], label: 'Static class',
+        description: 'The metaclass whose instances are the objects classified at run time.',
+    },
+    viewpoints: {
+        group: 'dcn', key: 'simViewpoints', kind: 'reference', dependsOn: ['staticClass'], label: 'Viewpoints',
+        description: 'The reference from a static class to its viewpoints.',
+    },
+    dynamicClasses: {
+        group: 'dcn', key: 'simDynamicClasses', kind: 'reference', dependsOn: ['viewpoints'], label: 'Dynamic classes',
+        description: 'The reference from a viewpoint to its dynamic classes.',
+    },
+    invariant: {
+        group: 'dcn', key: 'simInvariant', kind: 'expressionAttribute', dependsOn: ['dynamicClasses'], label: 'Invariant',
+        description: 'The Expression attribute of a dynamic class that holds while an object is in it.',
+    },
+    operation: {
+        group: 'dcn', key: 'simOperation', kind: 'reference', dependsOn: ['staticClass'], label: 'Operation', multi: true,
+        description: 'The reference from a class to its operations, the invocations of a run.',
+    },
+    precondition: {
+        group: 'dcn', key: 'simPrecondition', kind: 'expressionAttribute', dependsOn: ['operation'], label: 'Precondition',
+        description: 'The Expression attribute of an operation that must hold for it to be invoked.',
+    },
+    body: {
+        group: 'dcn', key: 'simBody', kind: 'actionListAttribute', dependsOn: ['operation'], label: 'Body', multi: true,
+        description: 'The Action attribute of an operation, run when it is invoked.',
+    },
+    redefines: {
+        group: 'dcn', key: 'simRedefines', kind: 'reference', dependsOn: ['operation'], label: 'Redefines',
+        description: 'The reference from an operation to the static-class operation it redefines.',
+    },
+    monitor: {
+        group: 'dcn', key: 'simMonitor', kind: 'reference', dependsOn: ['dynamicClasses'], label: 'Monitor',
+        description: 'The reference from a dynamic class to its monitors, run at every tick while it is active.',
+    },
+    overlapping: {
+        group: 'dcn', key: 'simOverlapping', kind: 'attribute', dependsOn: ['viewpoints'], label: 'Overlapping',
+        description: 'The boolean attribute of a viewpoint that lets several of its classes be active together.',
+    },
+    complete: {
+        group: 'dcn', key: 'simComplete', kind: 'attribute', dependsOn: ['viewpoints'], label: 'Complete',
+        description: 'The boolean attribute of a viewpoint that requires every state to fall in one of its classes.',
+    },
+    // The coherence constraints (R-DCN-28, spec §3), all optional. `dcnCoherenceFromRoles` (dcn/dcnRoles.ts) reads them.
+    coherence: {
+        group: 'dcn', key: 'simCoherence', kind: 'class', dependsOn: ['staticClass'], label: 'Coherence constraint',
+        description: 'The metaclass whose instances are the coherence constraints of a model.',
+    },
+    coherenceContext: {
+        group: 'dcn', key: 'simCoherenceContext', kind: 'reference', dependsOn: ['coherence'], label: 'Context',
+        description: 'The reference from a coherence constraint to the static class it applies to.',
+    },
+    coherencePointwise: {
+        group: 'dcn', key: 'simCoherencePointwise', kind: 'expressionAttribute', dependsOn: ['coherence'], label: 'Pointwise',
+        description: 'The Expression attribute of a coherence constraint that must hold in every single state.',
+    },
+    coherencePattern: {
+        group: 'dcn', key: 'simCoherencePattern', kind: 'reference', dependsOn: ['coherence'], label: 'Pattern',
+        description: 'The reference from a coherence constraint to its trajectory pattern.',
+    },
+    persistenceCondition: {
+        group: 'dcn', key: 'simPersistenceCondition', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Persistence condition',
+        description: 'The Expression attribute of a bounded persistence pattern: the condition that may not persist.',
+    },
+    persistenceBound: {
+        group: 'dcn', key: 'simPersistenceBound', kind: 'intAttribute', dependsOn: ['coherencePattern'], label: 'Persistence bound',
+        description: 'The integer attribute of a bounded persistence pattern: its k, in committed steps.',
+    },
+    responseTrigger: {
+        group: 'dcn', key: 'simResponseTrigger', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Response trigger',
+        description: 'The Expression attribute of a bounded response pattern: the condition that asks for the response.',
+    },
+    responseResponse: {
+        group: 'dcn', key: 'simResponseResponse', kind: 'expressionAttribute', dependsOn: ['coherencePattern'], label: 'Response',
+        description: 'The Expression attribute of a bounded response pattern: the condition that answers the trigger.',
+    },
+    responseBound: {
+        group: 'dcn', key: 'simResponseBound', kind: 'intAttribute', dependsOn: ['coherencePattern'], label: 'Response bound',
+        description: 'The integer attribute of a bounded response pattern: its k, in committed steps.',
     },
 };
 

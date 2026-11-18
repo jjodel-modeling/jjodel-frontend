@@ -117,11 +117,11 @@ async function closeTip(page: Page): Promise<void> {
     for (let pass = 0; pass < 3; pass++) {
         await wait(page, 1500);
         // A DOM click: in the editor the banner sits under the right panel, where a pointer click cannot reach it.
-        await page.evaluate(`document.querySelectorAll('.notification-widget.is-tip .notification-close, .donation-banner__close').forEach((b) => b.click())`);
-        await poll(page, `!document.querySelector('.notification-widget.is-tip') && !document.querySelector('.donation-banner')`, 5000);
+        await page.evaluate(`document.querySelectorAll('.tips-card__close, .donation-banner__close').forEach((b) => b.click())`);
+        await poll(page, `!document.querySelector('.tips-card') &&!document.querySelector('.donation-banner')`, 5000);
         await poll(page, `document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity)`, 5000);
     }
-    meas('before the screenshot', await page.evaluate(`({ mode: localStorage.getItem('jjodel.interfaceMode'), toggle: [...document.querySelectorAll('button')].filter((b) => /^(Basic|Advanced)$/.test((b.textContent || '').trim())).map((b) => b.textContent.trim() + ':' + b.className + ':' + b.getAttribute('aria-pressed')).join(' | '), popups: document.querySelectorAll('.notification-widget.is-tip, .donation-banner').length })`));
+    meas('before the screenshot', await page.evaluate(`({ mode: localStorage.getItem('jjodel.interfaceMode'), toggle: [...document.querySelectorAll('button')].filter((b) => /^(Basic|Advanced)$/.test((b.textContent || '').trim())).map((b) => b.textContent.trim() + ':' + b.className + ':' + b.getAttribute('aria-pressed')).join(' | '), popups: document.querySelectorAll('.tips-card, .donation-banner').length })`));
 }
 
 /** Where the title row and the content below it start, and the shell's padding: the Projects page is the reference. */

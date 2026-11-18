@@ -14,11 +14,31 @@ import { checkNameShape, nameShapeMessage } from './nameShape';
 // The syntax checks of the Expression and Action types (R-SIM-44). JjEL's parser is pure (its
 // lexer, AST types and reserved list), so this stays a module without the joiner.
 import { parseExpressionStrict, parseAction } from '../../jjel/parser';
+// The dcn roles of the metamodel's bag (R-DCN-12): a DCN body is parsed in the DCN action mode.
+import { ROLE_CATALOG } from '../simulation/roleCatalog';
+import { decodeProfile, inferCustomProfile } from '../simulation/profileCodec';
+import { dcnStcFromRoles } from '../simulation/dcn/dcnRoles';
 
 /** `Defaults.Pointer_EXPRESSION` and `Defaults.Pointer_ACTION` (R-SIM-44), as literals: `Defaults` is
  *  reached through the joiner, which this module does not import. */
 const EXPRESSION_TYPE_ID = 'Pointer_EXPRESSION';
 const ACTION_TYPE_ID = 'Pointer_ACTION';
+
+/**
+ * The attribute ids bound to the dcn `body` role (operation and monitor bodies), read as a run reads
+ * the metamodel's bag (`runBag`, `DcnProblemSync`): the keys of the roles its profile turns off
+ * dropped, then `dcnStcFromRoles`. Empty when the bag binds no dcn role closure.
+ */
+function dcnBodyAttributeIds(metamodel: LModel): Set<string> {
+    const raw = (metamodel as any)?.__raw?._state;
+    if (!raw || typeof raw !== 'object') return new Set();
+    const encoded = raw.simProfile;
+    const profile = (encoded === undefined || encoded === null || encoded === '' ? null : decodeProfile(encoded))
+        ?? inferCustomProfile(raw).profile;
+    const bag: Record<string, unknown> = { ...raw };
+    for (const d of ROLE_CATALOG) if (d.key !== null && profile.modes[d.id].mode === 'off') delete bag[d.key];
+    return new Set(dcnStcFromRoles(bag)?.body ?? []);
+}
 
 /**
  * Pure function: validates whether a model conforms to its metamodel.
@@ -34,6 +54,7 @@ export function validateConformance(
     try {
         const objects: LObject[] = model.objects || [];
         const mmClasses: LClass[] = metamodel.classes || [];
+        const dcnBodies = dcnBodyAttributeIds(metamodel);
 
         // Build a map of metamodel class names for quick lookup
         const mmClassByName = new Map<string, LClass>();
@@ -70,9 +91,11 @@ export function validateConformance(
             // Severity is 'warning', not 'error': this is Jjodel well-formedness, not a
             // violation against the metamodel, and it must not turn an otherwise conformant
             // model into 'errors'.
+            // A nameless object (name '', its identity slot written empty) is a legal state
+            // (R-TXT-45, R-TXT-46 D3): no missing_name. undefined/null still report it.
             try {
                 const nameVerdict = checkNameShape(objName);
-                if (nameVerdict !== 'ok') {
+                if (nameVerdict !== 'ok' && objName !== '') {
                     violations.push({
                         objectId: objId,
                         objectName: objName,
@@ -174,9 +197,18 @@ export function validateConformance(
                 // so a required-but-empty slot looked "present". Same raw-read fallback chain
                 // as the other checks. Presence semantics: at least one raw value that is not
                 // null/undefined/'' — 0 and false ARE values, not absences; the name slot gets
-                // no special fallback.
+                // no special fallback, except when never written (below).
+                // Exception, #656 (R-TXT-58): the identity slot never written (raw first value
+                // null/undefined, `[]` included) reads as get_values reads it (LModelElement.tsx, the
+                // EString case): the owner's initialName, then data.name. A slot written '' stays
+                // nameless (R-TXT-45) and is judged on raw like any other.
+                const isIdentity = attr.name?.toLowerCase() === 'name' && attr.type?.name === 'EString'
+                    && attr.upperBound === 1;
+                const ownerRaw = (obj as any).__raw;
                 const hasValue = feats.some(f => {
                     const rawVals = (f as any).__raw?.values;
+                    if (isIdentity && Array.isArray(rawVals) && (rawVals[0] === null || rawVals[0] === undefined)
+                        && (ownerRaw?.initialName || ownerRaw?.name)) return true;
                     const vals = Array.isArray(rawVals)
                         ? rawVals
                         : (Array.isArray(f.values)
@@ -251,7 +283,7 @@ export function validateConformance(
                                     const r = parseExpressionStrict(text);
                                     parsed = r.expression !== null; errors = r.errors;
                                 } else {
-                                    const r = parseAction(text);
+                                    const r = parseAction(text, dcnBodies.has(attr.id) ? { dcn: true } : undefined);
                                     parsed = r.action !== null; errors = r.errors;
                                 }
                                 typeOk = parsed && errors.length === 0;

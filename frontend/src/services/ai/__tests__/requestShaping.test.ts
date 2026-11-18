@@ -597,4 +597,43 @@ describe('carried from AIProviderService', () => {
         expect(await unreachable.test()).toEqual({ success: false, failure: FailureCatalog.NETWORK, error: 'Cannot reach api.anthropic.com (network or CORS).' });
         expect(down.calls).toHaveLength(1);
     });
+
+    // P-2026-10-30-1215: a Claude reply whose first block is not text (adaptive thinking runs by default
+    // on the current models) returned undefined, and the chat crashed on render.
+    const claudeAnswer = (body: object) => {
+        const { fn } = mockFetch(() => json(200, {
+            id: 'm1', type: 'message', role: 'assistant', model: 'm', stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 }, ...body,
+        }));
+        return new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: fn }).chat(CONVERSATION);
+    };
+    const openAIAnswer = (choice: object) => {
+        const { fn } = mockFetch(() => json(200, { id: 'c1', object: 'chat.completion', created: 0, model: 'm', choices: [{ index: 0, ...choice }] }));
+        return new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn }).chat(CONVERSATION);
+    };
+
+    it('Claude: joins the text blocks in order, skipping a leading thinking block', async () => {
+        expect(await claudeAnswer({
+            stop_reason: 'end_turn',
+            content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'text', text: 'one ' }, { type: 'text', text: 'two' }],
+        })).toBe('one two');
+    });
+
+    it('Claude: no text block throws naming stop_reason and the block types', async () => {
+        await expect(claudeAnswer({ stop_reason: 'refusal', content: [{ type: 'redacted_thinking', data: 'x' }] }))
+            .rejects.toThrow(/stop_reason=refusal.*redacted_thinking/);
+    });
+
+    it('Claude: an empty content array throws instead of returning an empty reply', async () => {
+        await expect(claudeAnswer({ stop_reason: 'refusal', content: [] })).rejects.toThrow(/stop_reason=refusal/);
+    });
+
+    it('OpenAI-compatible: null content throws naming finish_reason and the refusal', async () => {
+        await expect(openAIAnswer({ finish_reason: 'stop', message: { role: 'assistant', content: null, refusal: 'I cannot help with that.' } }))
+            .rejects.toThrow(/finish_reason=stop.*I cannot help with that\./);
+    });
+
+    it('OpenAI-compatible: a tool-call-only reply throws naming finish_reason', async () => {
+        await expect(openAIAnswer({ finish_reason: 'tool_calls', message: { role: 'assistant', content: null, tool_calls: [] } }))
+            .rejects.toThrow(/finish_reason=tool_calls/);
+    });
 });

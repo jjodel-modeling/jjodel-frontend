@@ -29,11 +29,15 @@
  * cautela: mentre nessuno sorveglia la firma la freschezza non e' garantita, e per
  * R-VAL-18 un pallino di cui non si garantisce la freschezza non c'e'. Conseguenza
  * accettata e dichiarata: riaprendo la tab l'esito va rilanciato.
+ *
+ * Solo all'ultimo smontaggio sul modello (`acquireProducerMount`, multi-tab L4b): finche'
+ * un'altra tab sullo stesso modello resta montata, la firma e' ancora sorvegliata.
  */
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useSelector } from 'react-redux';
 import type { DState } from '../../../joiner';
+import { acquireProducerMount } from './registry';
 import {
     buildValidationSignature, getFreshness, markStaleIfFresh, resetFreshness, subscribe,
     type ValidationFreshness,
@@ -71,7 +75,7 @@ export function ValidationFreshnessSync({ modelid }: Props) {
 
     useEffect(() => {
         if (!modelid) return;
-        return () => { resetFreshness(modelid); };
+        return acquireProducerMount('validation', modelid, () => resetFreshness(modelid));
     }, [modelid]);
 
     return null;

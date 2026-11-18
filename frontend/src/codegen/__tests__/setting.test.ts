@@ -9,8 +9,9 @@
  * toggled in Settings that mounts the pill without a reload, is the probe's (scripts/probe/codegen-panel.ts).
  * Mutations each test kills are in its name; the bench is in the commit body.
  *
- * The build flag (P-2026-10-12-0012): every test but the last describe runs a build that carries it,
- * `vi.stubEnv('VITE_CODEGEN', 'true')`; the last runs one that does not, as 3.1 and vitest do by default.
+ * The build flag (P-2026-10-12-0012): every test but the last two describes runs a build that carries it,
+ * `vi.stubEnv('VITE_CODEGEN', 'true')`; the flag-off cases run one that does not, as 3.1 and vitest do by default.
+ * From 3.2 (P-2026-11-15-1730) the setting is on unless the key holds `'false'`, and available in Advanced mode only.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,8 +19,10 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JjodelEvents } from '../../events/registry';
 import {
-    CODEGEN_SETTING_KEY, codePillVisible, getCodegenEnabled, setCodegenEnabled, subscribeCodegenEnabled, useCodegenEnabled,
+    CODEGEN_SETTING_KEY, codegenAvailable, codePillVisible, generatorEntries, getCodegenEnabled, setCodegenEnabled,
+    subscribeCodegenEnabled, useCodegenEnabled,
 } from '../setting';
+import { DEFAULT_GENERATOR_ID, DEFAULT_GENERATOR_NAME, decodeGenerators } from '../engine/generatorCodec';
 
 function fakeStorage(initial: Record<string, string> = {}): Storage {
     const m = new Map(Object.entries(initial));
@@ -52,28 +55,28 @@ afterEach(() => {
     vi.resetModules();
 });
 
-describe('getCodegenEnabled (kills: default on; any value but "true" read as on)', () => {
-    it('is off with no key, and with every value but "true"', () => {
-        expect(getCodegenEnabled()).toBe(false);
-        for (const v of ['false', '', '1', 'TRUE', 'yes']) {
-            localStorage.setItem(CODEGEN_SETTING_KEY, v);
-            expect(getCodegenEnabled()).toBe(false);
-        }
-        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+describe('getCodegenEnabled (kills: default off; a value but "false" read as off)', () => {
+    it('is on with no key, and with every value but "false"', () => {
         expect(getCodegenEnabled()).toBe(true);
+        for (const v of ['true', '', '1', 'TRUE', 'yes', 'FALSE']) {
+            localStorage.setItem(CODEGEN_SETTING_KEY, v);
+            expect(getCodegenEnabled()).toBe(true);
+        }
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(getCodegenEnabled()).toBe(false);
     });
 
-    it('is off with no storage at all, and with a storage that throws', () => {
+    it('is on with no storage at all, off with a storage that throws (kills: no storage read as off; catch dropped)', () => {
         vi.stubGlobal('localStorage', undefined);
-        expect(getCodegenEnabled()).toBe(false);
+        expect(getCodegenEnabled()).toBe(true);
         vi.stubGlobal('localStorage', { getItem: () => { throw new Error('denied'); } });
         expect(getCodegenEnabled()).toBe(false);
     });
 
     it('reads the key jjodel.experimental.codegen (kills: another key)', () => {
         expect(CODEGEN_SETTING_KEY).toBe('jjodel.experimental.codegen');
-        localStorage.setItem('jjodel.experimental.codegen', 'true');
-        expect(getCodegenEnabled()).toBe(true);
+        localStorage.setItem('jjodel.experimental.codegen', 'false');
+        expect(getCodegenEnabled()).toBe(false);
     });
 });
 
@@ -119,9 +122,9 @@ describe('useCodegenEnabled', () => {
     const Probe = () => React.createElement('span', null, String(useCodegenEnabled()));
 
     it('renders the stored setting (kills: hook reading a constant)', () => {
-        expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>false</span>');
-        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
         expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>true</span>');
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>false</span>');
     });
 
     it('hands React a subscription that fires on the change and a snapshot that reads it (kills: hook not subscribed)', async () => {
@@ -140,17 +143,17 @@ describe('useCodegenEnabled', () => {
         });
         vi.resetModules();
         const fresh = await import('../setting');
-        expect(fresh.useCodegenEnabled()).toBe(false);
+        expect(fresh.useCodegenEnabled()).toBe(true);
         expect(subscribe).not.toBeNull();
         const onChange = vi.fn();
         const off = subscribe!(onChange);
-        fresh.setCodegenEnabled(true);
-        expect(onChange).toHaveBeenCalledTimes(1);
-        expect(snapshot!()).toBe(true);
-        off();
         fresh.setCodegenEnabled(false);
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(snapshot!()).toBe(false);
+        off();
+        fresh.setCodegenEnabled(true);
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(snapshot!()).toBe(true);
     });
 });
 
@@ -197,6 +200,67 @@ describe('codePillVisible', () => {
         expect(codePillVisible(true, false, lookup(STORED), 'LOOSE', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'MISSING', true)).toBe(false);
     });
+
+    it('shows in Basic mode when the metamodel holds only genGenerators, on M1 and M2 (kills: genGenerators not read)', () => {
+        const GENS = { genGenerators: '{"v":1,"generators":[{"id":"g1","name":"doc","files":[],"target":"none","templates":[]}]}' };
+        expect(codePillVisible(true, false, lookup(GENS), 'M', true)).toBe(true);
+        expect(codePillVisible(true, false, lookup(GENS), 'MM', false)).toBe(true);
+        expect(codePillVisible(false, false, lookup(GENS), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '' }), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '', genTemplates: '' }), 'MM', false)).toBe(false);
+        expect(codePillVisible(true, false, lookup(GENS), 'LOOSE', true)).toBe(false);
+    });
+});
+
+describe('generatorEntries (R-GEN-42, P-2026-10-24-0004)', () => {
+    const TEMPLATES = '{"v":1,"templates":[{"name":"main","params":[],"body":"\\"x\\""}]}';
+    const GENS = JSON.stringify({ v: 1, generators: [
+        { id: 'g1', name: 'doc', files: [], target: 'none', templates: [] },
+        { id: 'default', name: 'Main JS' },
+        { id: 'g2', name: 'html', files: [], target: 'none', templates: [] },
+    ] });
+    const lookup = (state?: Record<string, unknown>) => ({ MM: { className: 'DModel', id: 'MM', ...(state ? { _state: state } : {}) } });
+
+    it('is empty with neither key, an empty key, or no metamodel (kills: a Default row on a metamodel with nothing)', () => {
+        expect(generatorEntries(lookup(), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ simEnabled: true }), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ genTemplates: '', genGenerators: '' }), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ genTemplates: TEMPLATES }), 'MISSING')).toEqual([]);
+    });
+
+    it('gives the default alone, named Default, with templates and no genGenerators (kills: default missing)', () => {
+        expect(generatorEntries(lookup({ genTemplates: TEMPLATES }), 'MM')).toEqual([{ id: 'default', name: 'Default' }]);
+        expect(DEFAULT_GENERATOR_ID).toBe('default');
+        expect(DEFAULT_GENERATOR_NAME).toBe('Default');
+    });
+
+    it('puts the default first under its stored name, the others after in their order (kills: non-default names dropped; default not first)', () => {
+        const rows = generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: GENS }), 'MM');
+        expect(rows).toEqual([{ id: 'default', name: 'Main JS' }, { id: 'g1', name: 'doc' }, { id: 'g2', name: 'html' }]);
+        // The codec lists the same generators in the same order: the bar and the tab's selector agree.
+        expect(decodeGenerators(TEMPLATES, GENS).generators.map(g => ({ id: g.id, name: g.name }))).toEqual(rows);
+        // genGenerators alone, the default unnamed in it: still first, named Default.
+        const only = JSON.stringify({ v: 1, generators: [{ id: 'g1', name: 'doc', files: [], target: 'none', templates: [] }] });
+        expect(generatorEntries(lookup({ genGenerators: only }), 'MM')).toEqual([{ id: 'default', name: 'Default' }, { id: 'g1', name: 'doc' }]);
+    });
+
+    it('returns the default on a key that does not parse or has no version 1 and no list (kills: parse error throws instead of returning the default; version not checked)', () => {
+        const v2 = JSON.stringify({ v: 2, generators: [{ id: 'g1', name: 'doc' }] });
+        for (const bad of ['{not json', '[]', v2, '{"v":1}', 'null']) {
+            expect(() => generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: bad }), 'MM')).not.toThrow();
+            expect(generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: bad }), 'MM')).toEqual([{ id: 'default', name: 'Default' }]);
+        }
+    });
+
+    it('drops a row with no id, no name or a taken id, as the codec does (kills: unnamed row listed; duplicate id listed)', () => {
+        const messy = JSON.stringify({ v: 1, generators: [
+            null, { name: 'noid' }, { id: 'g1', name: '' }, { id: 'g1', name: 'doc', files: [], target: 'none', templates: [] },
+            { id: 'g1', name: 'again', files: [], target: 'none', templates: [] }, { id: 'default', name: '' },
+        ] });
+        const rows = generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: messy }), 'MM');
+        expect(rows).toEqual([{ id: 'default', name: 'Default' }, { id: 'g1', name: 'doc' }]);
+        expect(decodeGenerators(TEMPLATES, messy).generators.map(g => ({ id: g.id, name: g.name }))).toEqual(rows);
+    });
 });
 
 describe('a build without the flag (kills: flag ignored; flag read once at import; any non-empty value read as on)', () => {
@@ -211,5 +275,44 @@ describe('a build without the flag (kills: flag ignored; flag read once at impor
         }
         vi.stubEnv('VITE_CODEGEN', 'true');
         expect(getCodegenEnabled()).toBe(true);
+    });
+});
+
+describe('available in Advanced mode by default (3.2, P-2026-11-15-1730; kills: mode ignored; default off; "false" ignored; flag ignored)', () => {
+    // `advanced` stands for the Redux root `state.advanced` every caller reads; the pill takes the same value first.
+    const available = (advanced: boolean) => codegenAvailable(getCodegenEnabled(), advanced);
+    const pillOnStored = (advanced: boolean) => codePillVisible(
+        available(advanced), advanced,
+        { MM: { id: 'MM', _state: { genTemplates: '{"v":1,"templates":[]}' } }, M: { id: 'M', instanceof: 'MM' } }, 'M', true,
+    );
+
+    it('flag off: unavailable in Advanced mode, with no key and with "true"', () => {
+        vi.stubEnv('VITE_CODEGEN', undefined);
+        expect(available(true)).toBe(false);
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+        expect(available(true)).toBe(false);
+        expect(pillOnStored(true)).toBe(false);
+    });
+
+    it('Basic mode: unavailable with no key and with "true", and the pill hidden on a metamodel with templates', () => {
+        expect(available(false)).toBe(false);
+        expect(pillOnStored(false)).toBe(false);
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+        expect(available(false)).toBe(false);
+        expect(pillOnStored(false)).toBe(false);
+    });
+
+    it('Advanced mode with no key: available, the pill shown', () => {
+        expect(localStorage.getItem(CODEGEN_SETTING_KEY)).toBeNull();
+        expect(available(true)).toBe(true);
+        expect(pillOnStored(true)).toBe(true);
+    });
+
+    it('Advanced mode with "false" stored: unavailable, the pill hidden', () => {
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'false');
+        expect(available(true)).toBe(false);
+        expect(pillOnStored(true)).toBe(false);
+        setCodegenEnabled(true);
+        expect(available(true)).toBe(true);
     });
 });

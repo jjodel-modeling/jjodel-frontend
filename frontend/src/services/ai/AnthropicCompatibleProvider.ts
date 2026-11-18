@@ -78,7 +78,14 @@ export class AnthropicCompatibleProvider extends BaseProvider {
             ...(req.system ? { system: req.system } : {}),
             messages: this.messages(req, modelId),
         }, { signal: req.signal });
-        return message.content.map(block => (block.type === 'text' ? block.text : '')).join('');
+        // The reply may open with non-text blocks (adaptive thinking runs by default on the current
+        // models): join the text blocks, and fail loudly when there is none (P-2026-10-30-1215).
+        const blocks = Array.isArray(message.content) ? message.content : [];
+        const texts = blocks.flatMap(block => (block?.type === 'text' && typeof block.text === 'string' ? [block.text] : []));
+        if (!texts.length) {
+            throw new Error(`${this.name} returned no text (stop_reason=${message.stop_reason}, blocks: ${blocks.map(b => b?.type).join(', ') || 'none'})`);
+        }
+        return texts.join('');
     }
 
     protected async *stream(modelId: string, req: ChatRequest): AsyncIterable<string> {

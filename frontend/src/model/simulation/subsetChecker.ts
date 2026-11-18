@@ -11,17 +11,13 @@
  *   not expect.
  * - `not-verifiable`: the guard runs and simulates; the exporter will refuse it.
  *
- * ── The eager `and`/`or` (option (a), ruling 1) ──────────────────────────────
+ * ── The null-guard idiom and `and`/`or` ──────────────────────────────────────
  *
- * The evaluator evaluates both operands of `and` and `or`
- * (`jjel/evaluator/evaluator.ts`, `evaluateBinary`), against `jjel/SPEC.md`.
- * So the null-guard idiom `x != null and x.p` throws when `x` is null, and
- * `x == null or x.p` throws where it should be true. The evaluator is not
- * changed here (R-SIM-15: its lane); the checker rejects the idiom and gives
- * the rewrite that short-circuits: `if … then … else false` for `and`,
- * `implies` for `or`. The rewrites keep their meaning if `and`/`or` ever
- * short-circuit. `x != null implies x.p` is NOT the rewrite of the `and` form:
- * it is true on null.
+ * `and` and `or` short-circuit (`jjel/evaluator/evaluator.ts`, `evaluateBinary`,
+ * as `jjel/SPEC.md` says): `x != null and x.p` is false and `x == null or x.p`
+ * is true when `x` is null. The checker used to reject the idiom (E-EAGER,
+ * ruling 1) while the evaluator evaluated both operands; since
+ * P-2026-11-13-1246 it accepts it.
  *
  * ── Scope of the analysis ────────────────────────────────────────────────────
  *
@@ -36,12 +32,14 @@
  * Pure: types from JjEL only.
  */
 
-import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
+import type { ASTLocation, JjelExpression, ObjectLiteralExpr } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { literalArgument } from './stateAttributesCodec';
 
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
+// TODO: cleanup -- 'E-EAGER' stays in the union for callers; it is no longer raised (P-2026-11-13-1246).
+// TODO: cleanup -- 'W-IS' stays in the union for callers; it is no longer raised: `is` is kind-of (P-2026-11-13-1305).
 export type SubsetCode =
     | 'E-NODE' | 'E-DATA' | 'E-SHADOW' | 'E-EAGER' | 'E-NOELSE' | 'E-FORALL' | 'E-VALUE' | 'E-WITH' | 'E-CALL'
     | 'W-NULLCMP' | 'W-TRUTHY' | 'W-IS'
@@ -87,6 +85,7 @@ export const NOT_VERIFIABLE_METHODS: ReadonlySet<string> = new Set([
 const NOT_VERIFIABLE_BITVECTOR_METHODS: ReadonlySet<string> = new Set(['toVerilog']);
 
 const SEVERITY: Record<SubsetCode, SubsetSeverity> = {
+    // TODO: cleanup -- 'E-EAGER' is no longer raised (and/or short-circuit, P-2026-11-13-1246).
     'E-NODE': 'error', 'E-DATA': 'error', 'E-SHADOW': 'error', 'E-EAGER': 'error', 'E-NOELSE': 'error',
     'E-FORALL': 'error', 'E-VALUE': 'error', 'E-WITH': 'error', 'E-CALL': 'error',
     'W-NULLCMP': 'warning', 'W-TRUTHY': 'warning', 'W-IS': 'warning',
@@ -95,24 +94,24 @@ const SEVERITY: Record<SubsetCode, SubsetSeverity> = {
 
 const ORDERING = new Set(['<', '<=', '>', '>=']);
 const ARITHMETIC = new Set(['+', '-', '*', '/', '%']);
-/** Constructs below `or` in precedence (`jjel/parser/parser.ts` grammar): quoted after `implies`, they need parentheses. */
-const LOOSE = new Set(['IfThenElse', 'ForAll', 'Exists', 'WithDo', 'NullCoalesce', 'Implies']);
 
 interface Walk {
     readonly out: SubsetDiagnostic[];
     readonly source?: string;
+    readonly dcn?: boolean;
+}
+
+/**
+ * The mode of the checker. `dcn`: the DCN nucleus's guards and outputs
+ * (R-DCN-7), where `x.in(V::D)` is a classification test answered by the
+ * nucleus and exported as a DEFINE (spec §9); outside it the test is E-CALL.
+ */
+export interface SubsetOptions {
+    readonly dcn?: boolean;
 }
 
 function report(w: Walk, code: SubsetCode, message: string, at: JjelExpression): void {
     w.out.push({ code, severity: SEVERITY[code], message, ...(at.location ? { location: at.location } : {}) });
-}
-
-/** The source text of `e`, or `null` when the source or the offsets are missing. */
-function textOf(w: Walk, e: JjelExpression): string | null {
-    const s = e.location?.start.offset;
-    const t = e.location?.end.offset;
-    if (w.source === undefined || s === undefined || t === undefined || t < s) return null;
-    return w.source.slice(s, t);
 }
 
 /** A syntactically non-boolean operand, converted by truthiness where a boolean is expected. */
@@ -130,10 +129,12 @@ function isNullSafe(e: JjelExpression): boolean {
     return e.type === 'NullSafeMemberAccess' || e.type === 'NullSafeMethodCall';
 }
 
+// TODO: cleanup (orphaned when E-EAGER stopped being raised, P-2026-11-13-1246)
 function isNullLiteral(e: JjelExpression): boolean {
     return e.type === 'Literal' && e.value === null;
 }
 
+// TODO: cleanup (orphaned when E-EAGER stopped being raised, P-2026-11-13-1246)
 /** A navigation path: a name followed by `.p`, `?.p` or a literal `[i]`. */
 function isPath(e: JjelExpression): boolean {
     switch (e.type) {
@@ -144,6 +145,7 @@ function isPath(e: JjelExpression): boolean {
     }
 }
 
+// TODO: cleanup (orphaned when E-EAGER stopped being raised, P-2026-11-13-1246)
 function samePath(a: JjelExpression, b: JjelExpression): boolean {
     if (a.type === 'Identifier' && b.type === 'Identifier') return a.name === b.name;
     if ((a.type === 'MemberAccess' && b.type === 'MemberAccess')
@@ -157,6 +159,7 @@ function samePath(a: JjelExpression, b: JjelExpression): boolean {
     return false;
 }
 
+// TODO: cleanup (orphaned when E-EAGER stopped being raised, P-2026-11-13-1246)
 function rootName(p: JjelExpression): string | null {
     switch (p.type) {
         case 'Identifier': return p.name;
@@ -165,30 +168,7 @@ function rootName(p: JjelExpression): string | null {
     }
 }
 
-function printPath(p: JjelExpression): string {
-    switch (p.type) {
-        case 'Identifier': return p.name;
-        case 'MemberAccess': return `${printPath(p.object)}.${p.property}`;
-        case 'NullSafeMemberAccess': return `${printPath(p.object)}?.${p.property}`;
-        case 'IndexAccess': return `${printPath(p.object)}[${JSON.stringify(p.index.type === 'Literal' ? p.index.value : null)}]`;
-        default: return '…';
-    }
-}
-
-/** The operands of a chain of the same logical operator, `a and b and c` as [a, b, c]. */
-function flatten(e: JjelExpression, op: 'and' | 'or'): JjelExpression[] {
-    if (e.type === 'Binary' && e.operator === op) return [...flatten(e.left, op), ...flatten(e.right, op)];
-    return [e];
-}
-
-/** `P != null` (for `and`) or `P == null` (for `or`), either side: the path P, or null. */
-function nullTestedPath(t: JjelExpression, test: '!=' | '=='): JjelExpression | null {
-    if (t.type !== 'Binary' || t.operator !== test) return null;
-    if (isNullLiteral(t.right) && isPath(t.left)) return t.left;
-    if (isNullLiteral(t.left) && isPath(t.right)) return t.right;
-    return null;
-}
-
+// TODO: cleanup (orphaned when E-EAGER stopped being raised, P-2026-11-13-1246)
 /** The direct subexpressions of `e`, with the names each one binds. */
 function children(e: JjelExpression): Array<[JjelExpression, readonly string[]]> {
     switch (e.type) {
@@ -210,6 +190,7 @@ function children(e: JjelExpression): Array<[JjelExpression, readonly string[]]>
         case 'IndexAccess': return [[e.object, []], [e.index, []]];
         case 'ObjectLiteral': return e.entries.map(x => [x.value, []] as [JjelExpression, string[]]);
         case 'StateAccess': return [[e.object, []]];
+        case 'ClassificationTest': return [[e.object, []]];
         default: {
             const never: never = e;
             return never;
@@ -217,41 +198,10 @@ function children(e: JjelExpression): Array<[JjelExpression, readonly string[]]>
     }
 }
 
-/**
- * `e` navigates through `p` with `.` or a method call, which throw on null.
- * `?.` and `[i]` do not throw and do not count. A scope that rebinds the root
- * name of `p` is not searched: there the name is another variable.
- */
-function navigatesThrough(e: JjelExpression, p: JjelExpression, root: string): boolean {
-    if ((e.type === 'MemberAccess' || e.type === 'MethodCall') && samePath(e.object, p)) return true;
-    for (const [child, binds] of children(e)) {
-        if (binds.includes(root)) continue;
-        if (navigatesThrough(child, p, root)) return true;
-    }
-    return false;
-}
-
-/** The eager idiom (ruling 1): the path the left operand null-tests and the right one navigates. */
-function eagerIdiom(b: BinaryExpr & { operator: 'and' | 'or' }): { path: JjelExpression; alone: boolean } | null {
-    const conjuncts = flatten(b.left, b.operator);
-    for (const t of conjuncts) {
-        const path = nullTestedPath(t, b.operator === 'and' ? '!=' : '==');
-        const root = path ? rootName(path) : null;
-        if (path && root && navigatesThrough(b.right, path, root)) return { path, alone: conjuncts.length === 1 };
-    }
-    return null;
-}
-
-function eagerMessage(w: Walk, b: BinaryExpr & { operator: 'and' | 'or' }, idiom: { path: JjelExpression; alone: boolean }): string {
-    const p = printPath(idiom.path);
-    const right = textOf(w, b.right) ?? '…';
-    const left = textOf(w, b.left) ?? '…';
-    const head = `\`${b.operator}\` evaluates both operands: when ${p} is null the right operand throws, and the guard is a defect.`;
-    if (b.operator === 'and') return `${head} Write: if ${left} then ${right} else false`;
-    const r = LOOSE.has(b.right.type) ? `(${right})` : right;
-    return idiom.alone
-        ? `${head} Write: ${p} != null implies ${r}`
-        : `${head} Write: not (${left}) implies ${r}`;
+/** `{ x: x, y: y, … }`: the record a forall over several variables yields without a projection. */
+function isVariableRecord(e: JjelExpression): e is ObjectLiteralExpr {
+    return e.type === 'ObjectLiteral' && e.entries.length > 1
+        && e.entries.every(x => x.value.type === 'Identifier' && x.value.name === x.key);
 }
 
 function checkBinder(w: Walk, name: string, at: JjelExpression): void {
@@ -292,9 +242,6 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
                 }
             }
             if (e.operator === 'and' || e.operator === 'or') {
-                const b = e as BinaryExpr & { operator: 'and' | 'or' };
-                const idiom = eagerIdiom(b);
-                if (idiom) report(w, 'E-EAGER', eagerMessage(w, b, idiom), e);
                 truthy(w, e.left, `\`${e.operator}\``, e);
                 truthy(w, e.right, `\`${e.operator}\``, e);
             }
@@ -334,7 +281,6 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             plain(e.right);
             return;
         case 'IsType':
-            report(w, 'W-IS', '`is` is false on model instances: write `self.instanceOf == ' + e.targetType + '`.', e);
             plain(e.expression);
             return;
         case 'Implies':
@@ -358,7 +304,9 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             checkBinder(w, e.variable, e);
             plain(e.collection);
             if (e.filter) within(e.filter, [e.variable]);
-            if (e.projection) within(e.projection, [e.variable]);
+            // The record `{ x: x, y: y }` of a forall over several variables is an element, not a verdict (R-FA-3).
+            if (e.projection && isVariableRecord(e.projection)) e.projection.entries.forEach(x => within(x.value, [e.variable]));
+            else if (e.projection) within(e.projection, [e.variable]);
             return;
         case 'Exists':
             checkBinder(w, e.variable, e);
@@ -383,6 +331,10 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             // Reading state is exportable (R-SIM-30); `node.[x]` is E-NODE through its object.
             plain(e.object);
             return;
+        case 'ClassificationTest':
+            if (!w.dcn) report(w, 'E-CALL', `\`in(${e.viewpoint}::${e.dynamicClass})\` tests a dynamic class, and a classification has no translation here (R-DCN-7).`, e);
+            plain(e.object);
+            return;
         default: {
             const never: never = e;
             return never;
@@ -391,12 +343,14 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
 }
 
 /**
- * The diagnostics of a parsed guard, in the order of a pre-order walk. `source`,
- * when given, lets the rewrite of E-EAGER quote the author's text.
+ * The diagnostics of a parsed guard, in the order of a pre-order walk. `source`
+ * is no longer read (it quoted the author's text in the E-EAGER rewrite, no
+ * longer raised); `options.dcn` accepts `x.in(V::D)` (`SubsetOptions`).
  */
-export function checkGuardSubset(expr: JjelExpression, source?: string): SubsetDiagnostic[] {
-    const w: Walk = { out: [], source };
-    if (expr.type === 'ForAll') {
+export function checkGuardSubset(expr: JjelExpression, source?: string, options?: SubsetOptions): SubsetDiagnostic[] {
+    const w: Walk = { out: [], source, dcn: options?.dcn === true };
+    // A forall over several variables is `(forall x in A : …).flatten()` (R-FA-6): a collection as well.
+    if (expr.type === 'ForAll' || (expr.type === 'MethodCall' && expr.method === 'flatten' && expr.args.length === 0 && expr.object.type === 'ForAll')) {
         report(w, 'E-FORALL', '`forall` returns a collection, never a verdict: write `coll.all(x => …)` or `exists x in coll | …`.', expr);
     }
     walk(w, expr, new Set(), false);

@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
 import {
     Select,
+    Input,
     NumberInput,
     Toggle,
     ColorPicker,
@@ -14,14 +15,15 @@ import {
     PathBuilder,
     PredicateBuilder,
     FormSection,
+    ListEditor,
     forPredicateKind,
     type PathBuilderFeatures,
 } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
-import { validateIR } from '../ir/irValidate';
+import { validateIR, VALID_CURVE_VALUES, VALID_LABEL_PLACEMENTS } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
 import { CONTAINER_ENDPOINT } from '../ir/irTypes';
-import type { EdgeViewIR, TextSource, EdgeTermination, Conditional } from '../ir/irTypes';
+import type { EdgeViewIR, EdgeCurve, TextSource, TextStyle, EdgeTermination, Conditional } from '../ir/irTypes';
 import { TERMINATION_OPTION_GROUPS, endLabelParts, withEndLabelPart } from '../../edges/edgeEndGlyphs';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import {
@@ -44,6 +46,7 @@ import {
     type EdgeNature,
 } from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
+import { TextStyleField } from './TextStyleField';
 import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
@@ -119,6 +122,14 @@ const ROUTING_OPTIONS = [
 // Slice E (P-2026-09-30-1810): grouped (Arrows, UML, ER, Petri), the seven ends of before in their order and
 // wording, the seven new ones slotted in; the list lives in edgeEndGlyphs, where it is tested.
 const TERMINATION_OPTIONS = TERMINATION_OPTION_GROUPS;
+// R-VP-22: the closed vocabulary of `edge.curve`, read from the validator so the menu cannot offer a value it
+// refuses. The routing path is the Select's empty option, as Manhattan is for Routing: it drops the key.
+const CURVE_LABELS: Record<EdgeCurve, string> = { arc: 'Arc' };
+const CURVE_OPTIONS = VALID_CURVE_VALUES.map((c) => ({ value: c, label: CURVE_LABELS[c] }));
+// E-21 (P-2026-11-11-2140): the vocabulary of `edge.labels.placement`, read from the validator. 'auto' is NOT listed:
+// it is the absent default and the Select's empty option, as Manhattan is for Routing, and choosing it drops the key.
+const PLACEMENT_LABELS: Record<string, string> = { above: 'Above the line', below: 'Below the line' };
+const PLACEMENT_OPTIONS = VALID_LABEL_PLACEMENTS.filter((p) => p !== 'auto').map((p) => ({ value: p, label: PLACEMENT_LABELS[p] }));
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -155,7 +166,7 @@ const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
  * patched immutably; on each user edit it is validated eagerly (inline ErrorText)
  * and, when valid, committed after a debounce via `view.ir = draft` (whole-object
  * replace → recompile → live preview through UnifiedEdge's gated branch, E0).
- * Fields not touched here (object-as-edge source/target, persistWaypoints)
+ * Fields not touched here (object-as-edge source/target)
  * round-trip verbatim because the whole cloned ir is written back.
  *
  * Matching is authored inline (source metaclass / reference / predicate / priority)
@@ -501,6 +512,100 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         }
     };
 
+    // --- curve (R-VP-22) ---
+    // Absent = the routing path; a value outside the vocabulary reads as absent, as the renderer does, and is
+    // left in the draft for the validator to name. Only the empty option drops the key.
+    const curve = (VALID_CURVE_VALUES as readonly unknown[]).includes(draft.edge.curve) ? draft.edge.curve! : '';
+    const setCurve = (next: string) => {
+        if ((VALID_CURVE_VALUES as readonly string[]).includes(next)) {
+            patchEdge({ curve: next as EdgeCurve });
+        } else {
+            const edge = { ...draft.edge };
+            delete edge.curve;
+            patch({ ...draft, edge });
+        }
+    };
+
+    /**
+     * One key of `edge.labels` set or dropped (R-VP-20 template and style): the siblings are spread, never
+     * rebuilt, and `labels` itself goes when left empty, as the centre label and the end labels do.
+     */
+    const setLabelsKey = <K extends keyof NonNullable<EdgeViewIR['edge']['labels']>>(
+        key: K,
+        value: NonNullable<EdgeViewIR['edge']['labels']>[K] | undefined,
+    ) => {
+        const labels = { ...draft.edge.labels };
+        if (value === undefined) delete labels[key];
+        else labels[key] = value;
+        if (Object.keys(labels).length === 0) {
+            const edge = { ...draft.edge };
+            delete edge.labels;
+            patch({ ...draft, edge });
+        } else {
+            patchEdge({ labels });
+        }
+    };
+
+    // --- label template (R-VP-20) ---
+    // The validator refuses an empty template, so removing the last segment drops the key: absent and empty are
+    // the same «no template», and the centre source applies again.
+    const template = draft.edge.labels?.template ?? [];
+    const setTemplate = (next: TextSource[]) => setLabelsKey('template', next.length > 0 ? next : undefined);
+    const removeTemplateSegment = (idx: number) => {
+        const n = [...template];
+        n.splice(idx, 1);
+        setTemplate(n);
+    };
+    const moveTemplateSegment = (idx: number, delta: number) => {
+        const j = idx + delta;
+        if (j < 0 || j >= template.length) return;
+        const n = [...template];
+        [n[idx], n[j]] = [n[j], n[idx]];
+        setTemplate(n);
+    };
+    const replaceTemplateSegment = (idx: number, seg: TextSource) => {
+        const n = [...template];
+        n[idx] = seg;
+        setTemplate(n);
+    };
+
+    // --- label placement (E-21) ---
+    // Absent = auto, read as the empty option with an explicit 'auto' and any value outside the vocabulary, which
+    // stays in the draft for the validator to name. The empty option drops the key.
+    const savedPlacement = draft.edge.labels?.placement;
+    const placement = savedPlacement === 'above' || savedPlacement === 'below' ? savedPlacement : '';
+    const setPlacement = (next: string) => setLabelsKey('placement', next === 'above' || next === 'below' ? next : undefined);
+
+    // --- view label (E-10) ---
+    // The IR label of the view, as the vertex panel's; an emptied field drops the key, so absent stays absent.
+    const setViewLabel = (text: string) => {
+        if (text !== '') {
+            patch({ ...draft, label: text });
+            return;
+        }
+        const next = { ...draft };
+        delete next.label;
+        patch(next);
+    };
+
+    // --- persist waypoints (E-26) ---
+    // Absent = true (the compile's `?? true`): the Toggle reads it so and writes the key only when flipped;
+    // Reset drops it.
+    const persistWaypoints = draft.edge.persistWaypoints !== false;
+    const setPersistWaypoints = (next: boolean | undefined) => {
+        if (next !== undefined) {
+            patchEdge({ persistWaypoints: next });
+            return;
+        }
+        const edge = { ...draft.edge };
+        delete edge.persistWaypoints;
+        patch({ ...draft, edge });
+    };
+
+    // --- label style (R-VP-20, TextStyle addendum TS3) ---
+    // `undefined` (the field's Reset, or every axis cleared) drops the key: the label gets its box back.
+    const setLabelStyle = (style: TextStyle | undefined) => setLabelsKey('style', style);
+
     // --- label center ---
     const hasCenterLabel = draft.edge.labels?.center !== undefined;
     const setHasCenterLabel = (checked: boolean) => {
@@ -509,7 +614,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         } else {
             // Drop `center`; if `labels` is left empty drop the whole key too, so the
             // ir is byte-identical to a view authored without a center label. A
-            // `placement` (not authored here) survives.
+            // `placement` survives.
             const labels = { ...draft.edge.labels };
             delete labels.center;
             if (Object.keys(labels).length === 0) {
@@ -546,6 +651,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 featuresHint={FEATURES_HINT}
                 classNames={classNames}
                 allowConditional={advanced}
+                rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: end === 'sourceEnd' ? 'source end' : 'target end' }}
             />
         );
     };
@@ -813,6 +919,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line color' }}
                 />
             </div>
             <div className="jj-field">
@@ -825,6 +932,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line width' }}
                 />
             </div>
             <div className="jj-field">
@@ -843,6 +951,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'line dash' }}
                 />
             </div>
             <div className="jj-field">
@@ -858,6 +967,40 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         On Direct and Bezier the segment handles disappear and no waypoint is created;
                         the ones already saved are kept and become visible again with Manhattan.
                     </HelpText>
+                )}
+            </div>
+            <div className="jj-field">
+                <label className="jj-field-label">Curve</label>
+                <Select
+                    options={CURVE_OPTIONS}
+                    placeholder="Routing path (default)"
+                    value={curve}
+                    onChange={(e) => setCurve(e.target.value)}
+                />
+                {curve === 'arc' && (
+                    <HelpText>
+                        An arc runs between the centres of its two handles and wins over the routing: straight when
+                        it is the only edge between its nodes, bowed when another one runs the other way, a loop over
+                        the top of the node for a self-loop.
+                    </HelpText>
+                )}
+            </div>
+            <div className="jj-field">
+                <Toggle
+                    checked={persistWaypoints}
+                    onChange={setPersistWaypoints}
+                    label="Save the layout"
+                    size="xs"
+                />
+                {draft.edge.persistWaypoints === undefined ? (
+                    <HelpText icon={false}>Default: the waypoints and side pins set on the canvas are saved.</HelpText>
+                ) : (
+                    <Button variant="ghost" size="sm" onClick={() => setPersistWaypoints(undefined)}>
+                        Reset
+                    </Button>
+                )}
+                {!persistWaypoints && (
+                    <HelpText>The waypoints and side pins set on the canvas last for the session only.</HelpText>
                 )}
             </div>
 
@@ -878,6 +1021,14 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
 
             {/* ─────────── Text ─────────── */}
             <div style={body('ir-text')}>
+
+            {/* View label (IR label field, distinct from the DViewElement name), as the vertex panel's */}
+            <FormSection title="General" divider={false}>
+            <div className="jj-field">
+                <label className="jj-field-label">Label</label>
+                <Input value={draft.label ?? ''} onChange={(e) => setViewLabel(e.target.value)} />
+            </div>
+            </FormSection>
 
             {/* Label center */}
             <FormSection title="Label" divider={false}>
@@ -904,6 +1055,48 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         : 'Without a label the edge keeps its default label (the reference name).'}</HelpText>
                 )}
             </div>
+            <div className="jj-field">
+                <label className="jj-field-label">Template</label>
+                <ListEditor<TextSource>
+                    items={template}
+                    onRemove={removeTemplateSegment}
+                    onMove={moveTemplateSegment}
+                    onAdd={() => setTemplate([...template, newCenterSource()])}
+                    addLabel="Add segment"
+                    emptyHint="No template: the center label applies."
+                    itemLabel={(seg, i) => `Segment #${i + 1} — ${seg.from}`}
+                    renderItem={(seg, i) => (
+                        <TextSourceEditor
+                            source={seg}
+                            features={features}
+                            disabledHint={FEATURES_HINT}
+                            onChange={(s) => replaceTemplateSegment(i, s)}
+                        />
+                    )}
+                />
+                {template.length > 0 && (
+                    <HelpText>The segments are concatenated and win over the center label. A value that resolves empty draws nothing and takes the literal right before it along.</HelpText>
+                )}
+            </div>
+            <div className="jj-field">
+                <label className="jj-field-label">Placement</label>
+                <Select
+                    options={PLACEMENT_OPTIONS}
+                    placeholder="Auto (default)"
+                    value={placement}
+                    onChange={(e) => setPlacement(e.target.value)}
+                />
+            </div>
+            <TextStyleField
+                value={draft.edge.labels?.style}
+                onChange={setLabelStyle}
+                features={features}
+                featuresHint={FEATURES_HINT}
+                classNames={classNames}
+            />
+            {draft.edge.labels?.style !== undefined && (
+                <HelpText icon={false}>With a style the label drops its box for a halo; its color applies to the text only, the ends keep the line color.</HelpText>
+            )}
             </FormSection>
 
             {/* End labels (slice E, Advanced): a multiplicity and a role at each end */}

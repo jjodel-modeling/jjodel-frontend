@@ -2,15 +2,16 @@
  * codegen-panel probe (P-2026-10-10-1825, P-2026-10-10-2027): the experimental setting, the lazy mount and the code
  * panel with its navigable origin, in the app (R-GEN-2, R-GEN-5, R-GEN-12, R-GEN-14; discovery §E.4, §I.5).
  *
- * Phase off (fresh context, Advanced mode, the setting never written). For each of the four demo scenes
+ * Phase off (fresh context, Advanced mode, the setting turned off: from 3.2 it is on by default in Advanced mode,
+ * P-2026-11-15-1730, so the context writes `'false'` once before the first load). For each of the four demo scenes
  * (fixtures/scene_{1..4}_*.jjodel): import, open the M1 tab, measure every node box of its pane keyed by the element's
  * name, then write the scene's Simulation profile and open the Simulation panel. Over the whole phase, requests whose
  * path matches `/src/codegen/(?!setting)` are counted: 0 expected. Control: `/src/codegen/setting.ts` itself is
  * requested (the listener sees the directory). No `.codegen-pill` anywhere.
  * With CGP_BEFORE (the JSON of a run on the base tree, CGP_PHASE=base), every node box equals the base's, 0 px.
  *
- * Phase on (fresh context, DemoESM with its Extended state machine profile). Settings (Ctrl+,) → Advanced → the
- * «Code generation» checkbox; the pill appears with no reload, 8px right of the Simulation chip, on its centre line,
+ * Phase on (fresh context, the setting turned off as above, DemoESM with its Extended state machine profile). Settings
+ * (Ctrl+,) → Advanced → the «Textual notation and code generation» checkbox of the «Code generation» group; the pill appears with no reload, 8px right of the Simulation chip, on its centre line,
  * and no generator module is requested until it is pressed. Then, through the panel's own controls:
  *   - two templates written (`main`, `state`), saved in the metamodel's `genTemplates`;
  *   - Output: the text expected for DemoESM, no error; for every span with a model origin, a click makes the vertex of
@@ -265,6 +266,8 @@ async function newContext(browser: Awaited<ReturnType<typeof chromium.launch>>):
     const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
     await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
     await seed(ctx, true);
+    // Off at start, once per tab so the Settings click of phase on survives a reload (P-2026-11-15-1730).
+    await ctx.addInitScript(() => { if (!sessionStorage.getItem('cgp.started')) { sessionStorage.setItem('cgp.started', '1'); localStorage.setItem('jjodel.experimental.codegen', 'false'); } });
     const page = await ctx.newPage();
     const requests: string[] = [];
     const errors: string[] = [];
@@ -334,21 +337,21 @@ try {
         const pane = PANE(ids.m1);
         check('on: no pill before the setting', await page.evaluate(`document.querySelectorAll('.codegen-pill').length`) === 0, '');
 
-        // Settings → Advanced → Code generation.
+        // Settings → Advanced → Code generation → Textual notation and code generation.
         await page.keyboard.press('Control+,');
         await poll(page, `!!document.querySelector('.unified-settings-modal.visible')`, 10000);
         await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-nav-item')].find((b) => b.textContent.trim() === 'Advanced')`));
         await wait(page, 600);
         const box = await page.evaluate(String.raw`(() => {
-          const label = [...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Code generation'));
+          const label = [...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Textual notation and code generation'));
           if (!label) return null;
           const group = label.closest('.settings-group');
           const input = label.querySelector('input');
           const r = group.getBoundingClientRect();
           return { checked: input.checked, title: (group.querySelector('.settings-label') || {}).textContent, x: r.x, y: r.y, w: r.width, h: r.height };
         })()`) as any;
-        check('on: Settings → Advanced holds «Code generation» under «Experimental», unchecked', !!box && box.title === 'Experimental' && box.checked === false, JSON.stringify(box));
-        await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Code generation')).querySelector('input')`));
+        check('on: Settings → Advanced holds «Textual notation and code generation» under «Code generation», unchecked', !!box && box.title === 'Code generation' && box.checked === false, JSON.stringify(box));
+        await page.evaluate(CLICK(`[...document.querySelectorAll('.settings-checkbox')].find((l) => (l.textContent || '').includes('Textual notation and code generation')).querySelector('input')`));
         await wait(page, 400);
         const stored = await page.evaluate(`localStorage.getItem('jjodel.experimental.codegen')`);
         check('on: the checkbox writes the key', stored === 'true', `${stored}`);

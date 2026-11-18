@@ -6,22 +6,53 @@
  * no migration, no VersionFixer step, as for `simSource` (R-SIM-10). The shape
  * comes from `simArc` (R-SIM-31(4)).
  *
+ * The dcn group (P-2026-11-07-0941) came after user profiles were stored. A
+ * control-flow or Petri profile holds its roles as `DCN_OFF`: the decoder fills
+ * them in when they are missing and the encoder leaves them out, so a profile
+ * stored before the group re-encodes to the same string. The coherence roles
+ * (P-2026-11-09-0124) came after dcn user profiles were stored: one without them
+ * holds them as `COHERENCE_OFF`, filled and left out the same way.
+ *
  * Pure: nothing here reads or writes the store.
  */
 
 import { ROLE_CATALOG, ROLE_IDS, roleDescriptor } from './roleCatalog';
 import type { RoleId } from './roleCatalog';
 import {
-    CONTROL_FLOW_DERIVED, EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, closureRoles, isSystemProfileId, systemProfile,
+    CONTROL_FLOW_DERIVED, DCN_OFF, EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, closureRoles, isSystemProfileId, systemProfile,
 } from './simProfiles';
 import type { ProfileConstraint, ProfileShape, RoleMode, SimProfile } from './simProfiles';
 
-const SHAPES: readonly string[] = ['controlFlow', 'petri'] satisfies ProfileShape[];
+const SHAPES: readonly string[] = ['controlFlow', 'petri', 'dcn'] satisfies ProfileShape[];
 const CONSTRAINTS: readonly string[] = ['noEpsilon', 'deterministic', 'singleToken'] satisfies ProfileConstraint[];
 
-/** The `simProfile` value: the id for a system profile, the JSON otherwise. */
+/** A role of the dcn group under a shape that hides it, as every such profile holds it. */
+function isDcnOff(shape: unknown, role: RoleId, mode: unknown): boolean {
+    if (shape === 'dcn' || roleDescriptor(role).group !== 'dcn' || !isRecord(mode)) return false;
+    return mode.mode === DCN_OFF.mode && mode.reason === DCN_OFF.reason && Object.keys(mode).length === 2;
+}
+
+const COHERENCE_ROLES: ReadonlySet<RoleId> = new Set<RoleId>([
+    'coherence', 'coherenceContext', 'coherencePointwise', 'coherencePattern',
+    'persistenceCondition', 'persistenceBound', 'responseTrigger', 'responseResponse', 'responseBound',
+]);
+
+const COHERENCE_OFF: Extract<RoleMode, { mode: 'off' }> = { mode: 'off', reason: 'Off in a profile saved before coherence constraints' };
+
+/** A coherence role of a dcn profile stored before those roles, as the decoder fills it. */
+function isCoherenceOff(shape: unknown, role: RoleId, mode: unknown): boolean {
+    if (shape !== 'dcn' || !COHERENCE_ROLES.has(role) || !isRecord(mode)) return false;
+    return mode.mode === COHERENCE_OFF.mode && mode.reason === COHERENCE_OFF.reason && Object.keys(mode).length === 2;
+}
+
+/** The `simProfile` value: the id for a system profile, the JSON otherwise, without the `DCN_OFF` and `COHERENCE_OFF` roles. */
 export function encodeProfile(profile: SimProfile): string {
-    return profile.system && isSystemProfileId(profile.id) ? profile.id : JSON.stringify(profile);
+    if (profile.system && isSystemProfileId(profile.id)) return profile.id;
+    const modes: Partial<Record<RoleId, RoleMode>> = {};
+    for (const [r, m] of Object.entries(profile.modes) as Array<[RoleId, RoleMode]>) {
+        if (!isDcnOff(profile.shape, r, m) && !isCoherenceOff(profile.shape, r, m)) modes[r] = m;
+    }
+    return JSON.stringify({ ...profile, modes });
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -82,7 +113,10 @@ export function decodeProfile(value: unknown): SimProfile | null {
     if (!isRecord(modes)) return null;
     const decoded = {} as Record<RoleId, RoleMode>;
     for (const r of ROLE_IDS) {
-        const mode = readMode(modes[r]);
+        // A control-flow or Petri profile stored before the dcn group, or written without its DCN_OFF roles.
+        const mode = modes[r] === undefined && shape !== 'dcn' && roleDescriptor(r).group === 'dcn' ? DCN_OFF
+            : modes[r] === undefined && shape === 'dcn' && COHERENCE_ROLES.has(r) ? COHERENCE_OFF
+            : readMode(modes[r]);
         if (!mode) return null;
         decoded[r] = mode;
     }
@@ -138,14 +172,14 @@ function boundOf(raw: unknown): number {
  * derived as in the system profiles otherwise: the genre is not the shape
  * (R-SIM-56). As in the system profiles, Event is derived from Trigger when
  * Trigger is bound, and in Petri Initial is off. A set key the profile does
- * not read is listed in `ignoredKeys`: a key of the other shape's group,
- * Initial in Petri, and a role whose dependency ended up off. The result
+ * not read is listed in `ignoredKeys`: a key of the other shape's group or of
+ * the dcn group (`DCN_OFF`: «Custom» is never of the dcn shape), Initial in Petri, and a role whose dependency ended up off. The result
  * always validates.
  */
 export function inferCustomProfile(bag: Readonly<Record<string, unknown>>): InferredProfile {
     const shape: ProfileShape = isSet(bag, 'simArc') ? 'petri' : 'controlFlow';
     const closure = new Set<RoleId>(closureRoles(shape));
-    const other = OTHER_SHAPE_GROUP[shape];
+    const hidden = OTHER_SHAPE_GROUP[shape];
     const modes = {} as Record<RoleId, RoleMode>;
     const ignored = new Set<RoleId>();
 
@@ -158,7 +192,10 @@ export function inferCustomProfile(bag: Readonly<Record<string, unknown>>): Infe
             modes[d.id] = EDIT;
         } else if (!set) {
             modes[d.id] = NOT_BOUND;
-        } else if (d.group === other) {
+        } else if (d.group === 'dcn') {
+            modes[d.id] = DCN_OFF;
+            ignored.add(d.id);
+        } else if (hidden.includes(d.group)) {
             modes[d.id] = { mode: 'off', reason: shape === 'controlFlow' ? 'Compiled from control flow' : 'Not used by the Petri shape' };
             ignored.add(d.id);
         } else if (shape === 'petri' && d.id === 'initial') {

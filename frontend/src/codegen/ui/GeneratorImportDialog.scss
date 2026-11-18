@@ -1,0 +1,65 @@
+// GeneratorImportDialog — the import dialog on the ConfirmDialog frame (P-2026-10-30-1515).
+
+.codegen-import__content {
+    width: 560px;
+    text-align: left;
+}
+
+.codegen-import__problems {
+    max-height: 30vh;
+    overflow: auto;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.codegen-import__problem {
+    padding: 4px 8px;
+    border-left: 3px solid var(--color-border-secondary);
+    margin-bottom: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    &--error {
+        border-left-color: var(--color-error);
+        background: var(--color-error-subtle);
+    }
+
+    &--warning {
+        border-left-color: var(--color-warning);
+        background: var(--color-warning-muted);
+    }
+
+    &--note {
+        color: var(--color-text-secondary);
+    }
+}
+
+.codegen-import__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.codegen-import__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.codegen-import__name {
+    font-weight: 600;
+}
+
+.codegen-import__count {
+    color: var(--color-text-secondary);
+}
+
+.codegen-import__select {
+    margin-left: auto;
+    font-size: 13px;
+}

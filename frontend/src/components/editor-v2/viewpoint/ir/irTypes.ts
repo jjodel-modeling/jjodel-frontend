@@ -96,7 +96,10 @@ export type EdgeCurve = 'arc';
 export type TextSource =
     | { from: 'path'; expr: PathExpr }
     | { from: 'literal'; text: string }
-    | { from: 'intrinsic'; prop: 'name' | 'metaclassName' | 'qualifiedName' };
+    | { from: 'intrinsic'; prop: 'name' | 'metaclassName' | 'qualifiedName' }
+    /** The text the metamodel's expression binding prints for the slot named `slot` of the object (R-EXP-2);
+     *  `caption` is the small heading of a vertex label, ignored on an edge. Empty with no valid binding. */
+    | { from: 'expression'; slot: string; caption?: string };
 
 /** Font family tokens mapped to design-system CSS vars at render:
  *  'sans' -> var(--font-sans), 'mono' -> var(--font-mono). */
@@ -1084,6 +1087,8 @@ export interface CompiledLabel {
     anchor?: LabelAnchor;
     /** Text direction of a `header` label (R-GV-5); set only when the label declares a known one. */
     orientation?: LabelOrientation;
+    /** Set on a label of the `expression` source only: it draws wrapped, monospace and clamped (R-EXP-2). */
+    expression?: { caption?: string };
 }
 
 export interface CompiledBadge {

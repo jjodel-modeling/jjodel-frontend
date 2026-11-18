@@ -13,6 +13,7 @@ import { isConsumerMode } from '../environment/consumerMode';
 import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
+import { modelOfTabId } from "./tabs/modelTabId";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
@@ -372,10 +373,12 @@ function DockComponent(props: AllProps) {
         // (it doesn't preserve React props on title elements). Fall back to
         // the JjOM lookup to determine the editor type from the model itself.
         let resolvedEditorType: string | null = tabType;
+        // A further tab on a model has its own id (R-MT-9); the model is what the listeners ask for.
+        const activeModelId = modelOfTabId(activeId);
         if (!resolvedEditorType && activeId) {
             try {
                 const state = store.getState();
-                const model = (state as any).idlookup?.[activeId];
+                const model = (state as any).idlookup?.[activeModelId];
                 if (model) {
                     resolvedEditorType = model.isMetamodel ? 'metamodel' : 'model';
                 }
@@ -386,7 +389,7 @@ function DockComponent(props: AllProps) {
 
         if (resolvedEditorType === 'metamodel' || resolvedEditorType === 'model') {
             window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-                detail: { editorType: resolvedEditorType, modelId: activeId }
+                detail: { editorType: resolvedEditorType, modelId: activeModelId }
             }));
         }
 

@@ -1,3 +1,6 @@
+// TODO: cleanup, the widget markup these first rules styled is gone (P-2026-11-08-2340).
+// .notification-header stays regardless: it also reaches .jjscript-success-notification.
+
 /* ============================================
    NOTIFICATION WIDGET
    Per notification-widget-spec.md
@@ -106,66 +109,313 @@
 }
 
 /* ============================================
-   TIP STYLE
+   TIPS CARD (R-NT-4)
+   left and bottom are measured from the Jjodie button (NotificationWidget.tsx)
    ============================================ */
 
-.notification-widget.is-tip {
-  .notification-header {
-    border-bottom: none;
-    background: transparent;
-    padding: 16px 16px 12px;
-  }
+.tips-card {
+  position: fixed;
+  width: 300px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  z-index: var(--z-dropdown);
 }
 
-.tip-icon-wrapper {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #FEF3C7;
+.tips-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tips-card__icon {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.tips-card__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.tips-card__close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  i {
-    color: #F59E0B;
-    font-size: 16px;
-  }
-}
-
-.notification-footer {
-  padding: 12px 16px;
-  background: #fafbfc;
-  border-top: 1px solid #f1f5f9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tip-counter {
-  font-size: 11px;
-  color: #9CA3AF;
-}
-
-.tip-next-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #475569;
-  background: #ffffff;
-  border: 1px solid #e2e4e8;
-  border-radius: 6px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 150ms ease;
 
   &:hover {
-    background: #f1f5f9;
-    border-color: #d0d3d8;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
   }
 
   i {
     font-size: 12px;
   }
+}
+
+.tips-card__message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.tips-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tips-card__off {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+}
+
+.tips-card__next {
+  padding: 4px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-hover);
+  }
+}
+
+.tips-card button:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 1px;
+}
+
+/* ============================================
+   ANNOUNCEMENT BANNER (R-NT-4)
+   left, top and width are measured from the work area (NotificationWidget.tsx)
+   ============================================ */
+
+.notice-banner {
+  position: fixed;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  // Under the navbar (z-index 950), whose menus open over the top of the work area.
+  z-index: 940;
+}
+
+// Dashboard: the banner lies over the content column, so the column makes room for it
+// (the banner's 8px top inset, its 40px and an 8px gap below).
+body:has(.notice-banner) .dash-content::before {
+  content: '';
+  display: block;
+  flex: none;
+  height: 56px;
+}
+
+.notice-banner--info {
+  background: var(--color-info-bg);
+  border-color: var(--color-info-muted);
+
+  .notice-banner__icon { color: var(--color-info); }
+}
+
+.notice-banner--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-muted);
+
+  .notice-banner__icon { color: var(--color-warning); }
+}
+
+.notice-banner--success {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-muted);
+
+  .notice-banner__icon { color: var(--color-success); }
+}
+
+.notice-banner--error {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-muted);
+
+  .notice-banner__icon { color: var(--color-error); }
+}
+
+.notice-banner__icon {
+  flex: none;
+  font-size: 14px;
+}
+
+.notice-banner__text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice-banner__title {
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.notice-banner__close {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}
+
+/* ============================================
+   TIPS BROWSER (Help menu)
+   ============================================ */
+
+.tips-browser-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: var(--z-modal);
+}
+
+.tips-browser {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+}
+
+.tips-browser__header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border-secondary);
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  i {
+    color: var(--color-text-secondary);
+  }
+}
+
+.tips-browser__close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.tips-browser__list {
+  margin: 0;
+  padding: 8px 16px;
+  list-style: none;
+  overflow-y: auto;
+
+  li {
+    padding: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  li + li {
+    border-top: 1px solid var(--color-border-secondary);
+  }
+}
+
+.tips-browser__empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }

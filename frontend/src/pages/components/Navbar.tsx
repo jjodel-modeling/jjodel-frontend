@@ -37,6 +37,7 @@ import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
+import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -106,7 +107,7 @@ export function createM2(project: LProject, name0?: string) {
  *  `name0` (P-2026-10-19-1618): the name typed in the New model dialog. Kept when unique among
  *  `metamodel.models`, otherwise the same ending-number rule as the auto name applies to it;
  *  `DModel.new` then makes it unique among every model and metamodel (` (n)`, nameLookup.ts). */
-export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string) {
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string): LModel {
     let name = (name0 && name0.trim()) || 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
@@ -125,6 +126,8 @@ export function createM1(project: LProject, metamodel: LModel, open: boolean = t
         entityId: dModel.id,
         entityName: name,
     });
+    // The created model (P-2026-11-02-0045): «New model from text» writes its objects into it.
+    return lModel;
 }
 interface NewDocumentButtonProps {
     project: LProject;
@@ -701,9 +704,10 @@ function NavbarComponent(props: AllProps) {
             const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
             if (!activeId) return null;
             const state = store.getState() as any;
-            const raw = state[activeId] || state.idlookup?.[activeId];
+            const modelId = modelOfTabId(activeId);
+            const raw = state[modelId] || state.idlookup?.[modelId];
             if (!raw) return null;
-            return { id: activeId, isModel: raw.isMetamodel === false };
+            return { id: modelId, isModel: raw.isMetamodel === false };
         } catch { return null; }
     }, []);
 
@@ -1694,6 +1698,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
         {name: 'divisor'},
         {name: 'What\'s New in Jjodel', function: ()=> open("https://github.com/jjodel-modeling/jjodel-frontend/releases"), icon: <i className="bi bi-bell" />},
+        {name: 'Tips', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.TIPS_BROWSER_OPEN)), icon: <i className="bi bi-lightbulb" />},
         {name: 'Homepage', function: ()=> open("https://jjodel.io"), icon: <i className="bi bi-house" />},
         {name: 'divisor'},
         {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
@@ -1722,7 +1727,7 @@ function NavbarComponent(props: AllProps) {
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
 
     // ─── Custom Tab Strip synced with DockManager ───
-    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean}>>([]);
+    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean}>>([]);
 
     // Sync tabs from DockManager on layout changes
     useEffect(() => {
@@ -1737,12 +1742,12 @@ function NavbarComponent(props: AllProps) {
                 const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
                 const state = store.getState();
 
-                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean };
+                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean };
                 const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {
                     const id = tab.id || '';
                     let title = '';
                     let type = 'project';
-                    const closable = tab.closable !== false;
+                    let closable = tab.closable !== false;
 
                     // Determine type and title from tab ID
                     if (id.startsWith('DockComponent_rightbar_')) {
@@ -1782,6 +1787,25 @@ function NavbarComponent(props: AllProps) {
                         // it rather than print a placeholder (the model branch's rule).
                         if (!rawModel) return null;
                         title = `${rawModel.name || 'Unnamed'} Instances`;
+                    } else if (id.startsWith('codegen_tpl_')) {
+                        // A generator tab (codegen, P-2026-10-25-1200), docked here when no canvas
+                        // was. This file is eager and imports no generator module: the tab carries
+                        // its title and its close (openTemplateEditor.ts). rc-dock's own close is
+                        // off on it, its close asks before dropping drafts, so the strip offers it.
+                        // A tab with no title (metamodel or generator gone) is a ghost.
+                        type = 'generator';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
+                        closable = true;
+                    } else if (id.startsWith('txt_')) {
+                        // A Text tab (R-TXT-23, P-2026-11-02-0040 and 0045): a model's text, or the text of a new
+                        // model. Its module is lazy, so the tab carries its title (openTextualTab.tsx); a tab with
+                        // no title (model or metamodel gone) is a ghost, as the generator's.
+                        type = 'textual';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1805,7 +1829,7 @@ function NavbarComponent(props: AllProps) {
                         // the backing DModel was deleted (or never existed) and the tab is
                         // a ghost: skip it instead of fabricating a placeholder "Unnamed M".
                         // Same existence-check pattern used in ProjectEditor.tsx:2343.
-                        const raw = (state as any)[id] || (state as any).idlookup?.[id];
+                        const raw = (state as any)[modelOfTabId(id)] || (state as any).idlookup?.[modelOfTabId(id)];
                         if (raw) {
                             title = raw.name || 'Unnamed';
                             type = raw.isMetamodel ? 'metamodel' : 'model';
@@ -1817,13 +1841,51 @@ function NavbarComponent(props: AllProps) {
                     return { id, title, type, active: id === activeId, closable };
                 }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
+                // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
+                // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
+                // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
+                // A model tab opened beside another (R-MT-24, P-2026-11-08-1608) the same way; the target of a Refactoring
+                // tab (`jjs_`, P-2026-10-25-0040) and a metamodel are not: that split has no entry of its own in the strip.
+                const besideModels = !String(activeId || '').startsWith('jjs_');
+                const walkBeside = (node: any): void => {
+                    if (!node || node === modelsPanel) return;
+                    if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
+                    const shown = node.activeId || node.tabs[0]?.id;
+                    node.tabs.forEach((tab: any) => {
+                        const id = tab.id || '';
+                        if (!id.startsWith('codegen_tpl_')) {
+                            const raw = besideModels ? ((state as any).idlookup?.[modelOfTabId(id)]) : null;
+                            if (raw?.className === 'DModel' && !raw.isMetamodel) {
+                                tabList.push({ id, title: raw.name || 'Unnamed', type: 'model', active: id === shown, closable: tab.closable !== false, beside: true });
+                            }
+                            return;
+                        }
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return;
+                        tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
+                    });
+                };
+                walkBeside(layout?.dockbox);
+
+                // Two tabs on one model read `<model> · <viewpoint>` (multi-tab L6c, P-2026-11-08-1855). A tab's viewpoint is its
+                // editor's state, and this strip reads it where the editor shows it; a tab with no editor mounted keeps the plain name.
+                const tabsPerModel = new Map<string, number>();
+                tabList.forEach(t => { if (t.type === 'model') tabsPerModel.set(modelOfTabId(t.id), (tabsPerModel.get(modelOfTabId(t.id)) || 0) + 1); });
+                tabList.forEach(t => {
+                    if (t.type !== 'model' || (tabsPerModel.get(modelOfTabId(t.id)) || 0) < 2) return;
+                    const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(t.id)}"]`);
+                    const viewpoint = pane?.querySelector('.toolbar-viewpoint-trigger__label')?.textContent?.trim();
+                    if (viewpoint) t.title = `${t.title} · ${viewpoint}`;
+                });
+
                 setOpenTabs(prev => {
                     if (prev.length === tabList.length && prev.every((t, i) =>
                         t.id === tabList[i].id &&
                         t.title === tabList[i].title &&
                         t.active === tabList[i].active &&
                         t.type === tabList[i].type &&
-                        t.closable === tabList[i].closable
+                        t.closable === tabList[i].closable &&
+                        t.beside === tabList[i].beside
                     )) {
                         // Same content, same length: keep previous reference to skip Navbar re-render.
                         // syncTabs runs every 1s via setInterval; during pan or any idle period
@@ -1868,14 +1930,23 @@ function NavbarComponent(props: AllProps) {
         }
     }, []);
 
-    const handleTabClick = useCallback((tabId: string) => {
+    const handleTabClick = useCallback((tabId: string, beside?: boolean) => {
         if (!DockManager.dock) return;
         DockManager.dock.updateTab(tabId, null, true);
+        // Beside the canvas the layout stays and focus goes to the tab's content (its first
+        // [tabindex] element), so its keyboard shortcuts apply (P-2026-10-25-1510).
+        if (beside) {
+            const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(tabId)}"]`);
+            (pane?.querySelector('[tabindex]') as HTMLElement | null)?.focus({ preventScroll: true });
+        }
     }, []);
 
     const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        DockManager.closeTab(tabId);
+        // A tab that asks before closing (a generator tab, P-2026-10-25-1200) closes through itself.
+        const docked: any = DockManager.dock?.find(tabId);
+        if (typeof docked?.requestClose === 'function') docked.requestClose();
+        else DockManager.closeTab(tabId);
     }, []);
 
     // Tab type badge letter or icon
@@ -1890,6 +1961,10 @@ function NavbarComponent(props: AllProps) {
             // that opens it from the project rail.
             case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
+            case 'generator': return { letter: '', icon: 'bi-code-slash', className: 'appbar-tab__badge--generator' };
+            // A Text tab (R-TXT-25 (4)): a model's text, so the model colour, as the manager's, with the glyph its
+            // own header shows.
+            case 'textual': return { letter: '', icon: 'bi-file-earmark-text', className: 'appbar-tab__badge--model' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1902,6 +1977,8 @@ function NavbarComponent(props: AllProps) {
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
             case 'manager': return 'Instance manager';
+            case 'generator': return 'Generator';
+            case 'textual': return 'Text';
             default: return '';
         }
     };
@@ -1925,6 +2002,12 @@ function NavbarComponent(props: AllProps) {
         tabsToShow.pop();
         tabsToShow.push(activeTab);
     }
+    // And a generator tab on screen beside the canvas, in place of the last tab not on screen.
+    visibleTabs.filter(t => t.beside && t.active && !tabsToShow.includes(t)).forEach(t => {
+        const off = tabsToShow.map(s => s.active).lastIndexOf(false);
+        if (off >= 0) tabsToShow.splice(off, 1);
+        tabsToShow.push(t);
+    });
 
     const [showOverflow, setShowOverflow] = useState(false);
     /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
@@ -2012,8 +2095,8 @@ function NavbarComponent(props: AllProps) {
                         return (
                             <button
                                 key={tab.id}
-                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
-                                onClick={() => handleTabClick(tab.id)}
+                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}${tab.beside ? ' appbar-tab--beside' : ''}`}
+                                onClick={() => handleTabClick(tab.id, tab.beside)}
                                 onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
                                     e.preventDefault();
                                     setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
@@ -2072,7 +2155,7 @@ function NavbarComponent(props: AllProps) {
                                             <button
                                                 key={tab.id}
                                                 className="appbar-tabs__overflow-item"
-                                                onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
+                                                onClick={() => { handleTabClick(tab.id, tab.beside); setShowOverflow(false); }}
                                             >
                                                 {(badge.letter || badge.icon) && (
                                                     <span className={`appbar-tab__badge ${badge.className}`}>

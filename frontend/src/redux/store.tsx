@@ -237,7 +237,6 @@ export class DState extends DPointerTargetable{
         else this.init_dashboard(store);
     }
     static init_dashboard(store?: DState): void {
-        console.error('init_dash');
     }
 
     static init_editor(store?: DState): void {

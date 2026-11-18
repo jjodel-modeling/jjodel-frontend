@@ -14,8 +14,12 @@
  * when the metamodel binds none. Its element lists are the pool's handles; `trigger`, `source`, `target`, `guard`
  * and `actions` are JjEL functions of one element. Then `target`, the active target profile, JavaScript in the
  * pilot (codegen/target/js/access.ts, R-GEN-16 provisional): its runtime, the initial state and the compiled net,
- * and the printer's guards, actions and equations; `null` with `stc`. The context's Text host and read observer are
- * an `OriginHost`.
+ * and the printer's guards, actions and equations; `null` with `stc`, and `null` when `target` is `none` (the
+ * generator's declared profile, R-GEN-33, R-GEN-34; `js` by default, today's behaviour). The context's Text host and
+ * read observer are an `OriginHost`.
+ *
+ * The class graph of `globals.classes` goes to the templates' registration, for the problems of templates dispatched
+ * on the metaclass of their first parameter (dispatch.ts, P-2026-10-31-1410).
  *
  * A generation has a budget (text.ts, R-GEN-28): 2000 ms and 1,000,000 output characters by default, `limits`
  * overrides them and the clock. When it trips, the result has no code and one error more than the template
@@ -31,6 +35,8 @@ import type { JjelValue } from '../../jjel';
 import { stcAccess } from '../stcAccess';
 import { jsTarget } from '../target/js/access';
 import type { StcElement, StcView } from '../stcAccess';
+import type { GeneratorTarget } from './generatorCodec';
+import { graphOfShells } from './dispatch';
 import { OriginHost, TemplateSources } from './origin';
 import { registerTemplates } from './templates';
 import type { TemplateRecord } from './templates';
@@ -79,6 +85,7 @@ export function generate(
     entry: string,
     args: readonly JjelValue[] = [],
     limits: GenerationLimits = {},
+    target: GeneratorTarget = 'js',
 ): GenerateResult {
     const handles = new Map<string, JjelValue>();
     const pool = globals.instances;
@@ -90,14 +97,14 @@ export function generate(
     }
     const view = stcAccess<JjelValue>(lookup, modelId, id => handles.get(id) ?? null);
 
-    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target: view ? jsTarget(globals, lookup, modelId) : null });
+    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target: view && target === 'js' ? jsTarget(globals, lookup, modelId) : null });
     const sources = new TemplateSources();
     const budget = new GenerationBudget(limits);
     const host = new OriginHost(lookup, sources, budget);
     ctx.textHost = host;
     ctx.readObserver = host.observe;
     const evaluator = new JjelEvaluator(ctx);
-    const set = registerTemplates(templates, ctx, evaluator, host, sources, budget);
+    const set = registerTemplates(templates, ctx, evaluator, host, sources, budget, graphOfShells(globals.classes));
 
     const errors: GenerateError[] = set.problems.map(p => ({ template: p.template, offset: p.offset, line: p.line, column: p.column, message: p.message }));
     let text = EMPTY_TEXT;

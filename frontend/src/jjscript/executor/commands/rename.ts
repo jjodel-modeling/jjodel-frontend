@@ -13,6 +13,9 @@ import { resolveTargetInProject, kindLabel, memberMissingMessage, TARGET_KINDS_B
 import { qualifiedNameToString, isValidIdentifier } from '../../parser/grammar';
 import { getProject } from '../utils';
 import { executeRenameInstance } from './instance';
+import { buildEvalContext } from './eval';
+import { jjelEval } from '../../../jjel';
+import type { JjelValue } from '../../../jjel';
 
 import {
     LProject
@@ -27,12 +30,20 @@ export async function executeRename(
     args: RenameArgs,
     context: ExecutionContext
 ): Promise<ExecutionResult> {
-    const { target, newName } = args;
-
     try {
         // Validate new name. Not at M1 (#175): an instance name is free, as `create instance of X "…"`
         // takes it, and executeRenameInstance refuses only an empty one.
         const instanceRename = args.elementType === 'instance' || context.level === 'M1';
+
+        // R-FA-9: a computed name is evaluated here, once per execution, and from now on the
+        // command is the literal rename to it.
+        if (args.newNameExpr !== undefined) {
+            const computed = evaluateNewName(args.newNameExpr, context, instanceRename);
+            if (typeof computed !== 'string') return computed;
+            args = { ...args, newName: computed, newNameExpr: undefined };
+        }
+        const { target, newName } = args;
+
         if (!instanceRename && !isValidIdentifier(newName)) {
             return {
                 success: false,
@@ -184,6 +195,46 @@ export async function executeRename(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+/**
+ * The name `newNameExpr` gives, over the variables the `forall` filter sees (`forall.ts`):
+ * the metamodel context, then `context.variables` (the forall variables, the `let` bindings).
+ * The result must be a non-empty string that is a legal name by the rule this command applies
+ * (an identifier at M2, any non-empty name for an instance); anything else is the command's error.
+ */
+function evaluateNewName(expr: string, context: ExecutionContext, instanceRename: boolean): string | ExecutionResult {
+    const refuse = (code: string, message: string): ExecutionResult => ({
+        success: false,
+        command: 'rename',
+        message,
+        errors: [{ code, message }]
+    });
+
+    let value: unknown;
+    try {
+        const variables: Record<string, JjelValue> = buildEvalContext(context);
+        for (const [key, v] of context.variables) variables[key] = v as JjelValue;
+        value = jjelEval(expr, variables);
+    } catch (error) {
+        return refuse('RENAME_EXPR_ERROR', `Cannot evaluate the new name '${expr}': ${(error as Error).message}`);
+    }
+
+    if (typeof value !== 'string' || value === '') {
+        return refuse('INVALID_NAME', `The new name '${expr}' gives ${describeValue(value)}, not a non-empty string`);
+    }
+    if (!instanceRename && !isValidIdentifier(value)) {
+        return refuse('INVALID_NAME', `The new name '${expr}' gives "${value}", which is not a valid identifier`);
+    }
+    return value;
+}
+
+function describeValue(value: unknown): string {
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+        return JSON.stringify(value);
+    }
+    return Array.isArray(value) ? 'a collection' : 'an object';
+}
 
 // `checkNameConflict` used to live here: a second, per-kind, case-insensitive rule,
 // applied on this path only. It was not narrowed or widened — it was REMOVED, and its

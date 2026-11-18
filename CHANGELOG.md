@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (`staging` at `3da1d6348`), which becomes 3.1.0.
+## [3.2.0-beta] - 2026-11-18
+
+Beta of 3.2.0: the trunk `alfonso-frontend-jjtl` on 2026-11-18, handed over for the merge into `staging`. It covers the work after the beta of 2026-10-18 (`staging` at `3da1d6348`), which became 3.1.0.
 
 ### Added
 
@@ -47,6 +49,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - A graphVertex container hides the edges it encloses (R-GV-18).
 - The simulator compiles triggers by position, and fuses fork and join.
 - A keyword is a valid member name after `.` and `?.` in JjEL.
+- JjEL: two references to the same model object are equal, whatever path produced them (`self.parent.father == self`); `contains`, `indexOf`, `distinct`, `distinctBy` and `groupBy` agree. A JjTL guard comparing source objects now holds (Families2Persons).
 - The Templates page keeps Advanced mode when you reach it from inside the app.
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).

@@ -91,3 +91,32 @@ describe('buildPlanWorld', () => {
         expect(plan.warnings.map((w) => w.code)).toEqual(['OPPOSITE_ONE_END']);
     });
 });
+
+describe('buildPlanWorld: enum-typed attributes (R-TXT-25 (2))', () => {
+    it('an attribute typed by an enumeration carries its name and literals in order; any other attribute none', () => {
+        const lookup = idlookup();
+        lookup.cState.attributes = ['aTags', 'aMood'];
+        lookup.aMood = { id: 'aMood', className: 'DAttribute', name: 'mood', type: 'eMood', upperBound: 1 };
+        lookup.eMood = { id: 'eMood', className: 'DEnumerator', name: 'Mood', father: 'pkg', literals: ['lHappy', 'lSad'] };
+        lookup.lHappy = { id: 'lHappy', className: 'DEnumLiteral', name: 'happy', father: 'eMood' };
+        lookup.lSad = { id: 'lSad', className: 'DEnumLiteral', name: 'sad', father: 'eMood' };
+        const state = buildPlanWorld(lookup, 'm').classes.State;
+        expect(state.attributes).toEqual([
+            { name: 'tags', upper: -1 },
+            { name: 'mood', upper: 1, enumeration: { name: 'Mood', literals: ['happy', 'sad'] } },
+            { name: 'name', upper: 1 },
+        ]);
+    });
+});
+
+describe('buildPlanWorld: listed elements (P-2026-11-03-1225)', () => {
+    it('an element the model lists in `objects` is listed, a contained one too (R-NEST-1); one the list misses is not', () => {
+        const lookup = idlookup();
+        const before = buildPlanWorld(lookup, 'm').elements.find((e) => e.id === 'o2')!;
+        expect(before.listed).toBe(false);
+        lookup.m.objects = ['o1', 'o2'];
+        const w = buildPlanWorld(lookup, 'm');
+        expect(w.elements.find((e) => e.id === 'o1')!.listed).toBe(true);
+        expect(w.elements.find((e) => e.id === 'o2')!.listed).toBe(true);
+    });
+});

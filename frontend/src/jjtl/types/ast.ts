@@ -27,6 +27,12 @@ export interface TransformationAST extends ASTNode {
     targetMetamodel: string;
     mappings: ClassMappingAST[];
     helpers: HelperAST[];
+    /**
+     * Called rules (`rule name(params) -> T`) and lazy rules (`[unique] lazy S -> T`),
+     * in declaration order (slice B, R-JTG-5, R-JTG-7). None of them takes part in
+     * pass-1 matching, so they are kept out of `mappings`.
+     */
+    rules?: ClassMappingAST[];
 }
 
 // A single source pattern in a class mapping: ClassName [alias]
@@ -45,6 +51,19 @@ export interface ClassMappingAST extends ASTNode {
     targetMultiplicity?: MultiplicityAST;
     condition?: ExpressionAST;
     body: MappingBodyItemAST[];
+    /** 'called' for `rule name(params) -> T`, 'lazy' for `[unique] lazy S -> T`; absent for a matched rule. */
+    ruleKind?: 'called' | 'lazy';
+    /** Name of a called rule. */
+    ruleName?: string;
+    /** Parameters of a called rule; `paramType` is '' when omitted, 'Env' for the environment parameter. */
+    parameters?: ParameterAST[];
+    /** `unique lazy` and `unique rule`: one target per (rule, arguments, environment). */
+    unique?: boolean;
+    /**
+     * A delegating rule (`... = expression`): it creates no target of its own and lowers to
+     * what `expression` lowers to. `targetClass` is '' and `body` empty.
+     */
+    result?: ExpressionAST;
 }
 
 // Union type for items that can appear in a mapping body
@@ -112,6 +131,12 @@ export interface ForAllMappingAST extends ASTNode {
     type: 'ForAllMapping';
     variable: string;
     collection: ExpressionAST;
+    // Every variable in order, set only when there is more than one
+    // (`forall q, r in xs` or `forall q in xs, r in ys`); variable/collection hold the first.
+    bindings?: Array<{
+        variable: string;
+        collection: ExpressionAST;
+    }>;
     filter?: ExpressionAST;
     objectCreation: ObjectCreationAST;
 }

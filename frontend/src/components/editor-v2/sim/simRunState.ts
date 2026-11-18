@@ -55,13 +55,18 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { isMarked, presentationOf, step } from '../../../model/simulation/netStep';
+import { isMarked, presentationOf } from '../../../model/simulation/netStep';
+import { nucleusOf } from './simNucleus';
 import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState';
+import { dcnRunOf } from './simDcnRuns';
+import { dcnNodeStateOf } from '../../../model/simulation/dcn/dcnCanvasState';
+import type { DcnNodeState } from '../../../model/simulation/dcn/dcnCanvasState';
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, SimState, SimStateAccess, SimValue, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import type { InputValue } from './simBridge';
+import type { SimNucleus } from './simNucleus';
 
 /** Who chose a step among two or more candidates (R-SIM-100): a click on the list, or a draw. */
 export type SimOrigin = 'user' | 'random';
@@ -80,6 +85,11 @@ export interface SimTraceStep {
 /** One started run of one model. */
 export interface SimRun {
     readonly net: CompiledNet;
+    /**
+     * DCN L4.1: what the run steps with, the replay, the single step, Play and the Clock's enabling test reading
+     * it; `startRun` sets the Petri nucleus of `net`, and a record without it steps with that one (`nucleusOf`).
+     */
+    readonly nucleus?: SimNucleus;
     /** `config.event` is always `null` here: every step consumes its input (spec §4.4). */
     readonly config: NetConfiguration;
     /** Set by a `halted` step, kept until Reset (R-SIM-29). */
@@ -258,6 +268,39 @@ export function getSimNodeState(objectId: string): SimNodeState | null {
     return null;
 }
 
+/** Per shown record, as `enabledCache` (simCanvasState.ts): a commit replaces the record, a view has its own. */
+const dcnNodeCache = new WeakMap<SimRun, Map<string, DcnNodeState | null>>();
+
+/** The card of an object on one shown record; `null` when the run is not DCN or the object is no instance of it. */
+function dcnNodeOf(record: SimRun, objectId: string): DcnNodeState | null {
+    const dcn = dcnRunOf(record.net);
+    if (!dcn) return null;
+    let byObject = dcnNodeCache.get(record);
+    if (byObject === undefined) {
+        byObject = new Map();
+        dcnNodeCache.set(record, byObject);
+    }
+    let node = byObject.get(objectId);
+    if (node === undefined) {
+        node = dcnNodeStateOf(dcn.model.model, dcn.nucleus, record.config.state, record.net.initial, objectId, dcn.nameOf);
+        byObject.set(objectId, node);
+    }
+    return node;
+}
+
+/**
+ * What the run card of a DCN instance shows (R-DCN-29), on the step its run
+ * shows (R-SIM-106), static slots against σ0. `null` when no run is DCN or knows
+ * the object as an instance. Read on the `'mark'` version, as `getSimNodeState`.
+ */
+export function getSimDcnNode(objectId: string): DcnNodeState | null {
+    for (const [modelId, r] of runs) {
+        const node = dcnNodeOf(shown(modelId, r), objectId);
+        if (node) return node;
+    }
+    return null;
+}
+
 /**
  * R-SIM-108: an element's presentation attribute on the configuration its run
  * shows, the viewed step's while one is shown, through the record the overlay
@@ -296,7 +339,13 @@ export function simReset(modelId: string, run: SimRun): void {
 export function withInputs(run: SimRun, values: readonly InputValue[]): SimRun {
     const given = new Map<string, SimValue>();
     for (const v of values) {
-        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) given.set(`${v.element}\u0000${v.attr}`, v.value);
+        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) {
+            given.set(`${v.element}\u0000${v.attr}`, v.value);
+        } else if (run.inputs?.get(v.element)?.some(i => i.element === v.element && i.attr === v.attr)) {
+            // A DCN argument (R-DCN-15): its element is the transition, `self` in the body is the instance; a slot of that name keeps σ.
+            const instance = run.net.transitions.find(t => t.id === v.element)?.origin[0];
+            if (instance !== undefined && !run.net.declared.get(instance)?.has(v.attr)) given.set(`${instance}\u0000${v.attr}`, v.value);
+        }
     }
     const over = (s: SimStateAccess): SimStateAccess => ({
         ...s,
@@ -325,10 +374,11 @@ export function configAt(run: SimRun, n: number): NetConfiguration | null {
     const kept = run.keptConfigs ?? [];
     const index = n - (m - kept.length) - 1;
     if (index >= 0) return kept[index];
-    let cfg: NetConfiguration = { state: run.net.initial, event: null };
+    const nucleus = nucleusOf(run);
+    let cfg: NetConfiguration = { state: nucleus.initial, event: null };
     for (const t of trace.slice(0, n)) {
         const given = t.inputs ? withInputs(run, t.inputs) : run;
-        const o = step(run.net, { state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
+        const o = nucleus.step({ state: cfg.state, event: t.event }, t.selector, given.guards, given.actions, run.derived);
         if (o.kind === 'inadmissible' || o.kind !== t.kind) return null;
         cfg = o.next;
     }

@@ -1,0 +1,19 @@
+# Textual syntax, step C lane C3a: the Pascal/Ada style and the style picker
+
+Prompt-ID: P-2026-11-04-0345
+Chat: C-2026-11-03-1037
+Front: codegen
+Status: eseguito 2026-11-04 · lane full · 0f6f7fa8b b4e6eae69 0349387ef 794041be3 · ceiling stop, closed by P-2026-11-04-0412 · verifica visiva della chat passata 2026-11-04 (RC-23, crops c3a-*); GO di Alfonso 2026-11-04 06:52 («go»)
+Lane: full (style catalog, record, printer and parser string handling)
+Depends: P-2026-11-04-0330 (report), R-TXT-40
+Worktree: ~/jjodel-w-textc, branch textual-c-notation (the same tree)
+Request: none (R-TXT-34 and R-TXT-16 (2): styles chosen from a catalog; R-TXT-40 D4, D5)
+
+Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
+
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit on top of 476dec9b7 and the tree is clean, otherwise stop with Outcome: blocked. Do not touch any CLAUDE.md 3.2 file, docs/decisions.md or the core; no new dependency. Every reply opens with [P-2026-11-04-0345 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. A question with a recommendation carries one line: Recommended: <one line>. No subagents, no background tasks except the foreground probe server. Never cat a gate or probe log: summary lines only, through node scripts/run-quiet.mjs LABEL -- CMD. One probe run per tool call; a probe result is valid only if its mtime follows the run. Commit after each numbered item is green, tests red first. Near the ceiling, commit and write a handoff.
+
+## COSA
+Follow §4.2 and lane C3a of docs/discovery/discovery_2026-11-04_textual_step_c.md, with R-TXT-40: (1) `PASCAL` from the probe into style.ts as a catalog entry beside C-like; the style check passes on it for every corpus case; (2) the optional `style` in the syntax annotations and in syntaxRecord.ts (absent means C-like; every stored record keeps its print, test it); (3) D4: a newline inside a string under a doubling style prints as `'line1'#10'line2'` and the lexer reads it back; garage round-trips byte for byte in Pascal; (4) byte-identical print-parse-print per style on the whole corpus, and a style switch leaves the model unchanged (measured by the diff being empty); the tolerant corpus mutants still never apply in Pascal; (5) the style picker in the Text tab: a small control in the tab bar (design tokens, Bootstrap Icons only), writing the record in one undo step, the EBNF tab following; the app never wrote the record so far (`writeTextualSyntax` without callers): wire it here with a test. First, replace the partner folder path in docs/discovery/harness/probe_2026-11-04_textual_c_notation.test.ts (lines 6 and 42) with a neutral `PROTO` path read from an environment variable, no company name (the repo is public).
+
+Mutation bench on the lexer change and the record. Gates, one tool call each, from frontend/: npx tsc --noEmit; full npx vitest run (3 files red at import are the baseline); npm run build; npm run check:docs; npm run check:codegen-lazy in both modes. In the app, on a free port, keystrokes on demoESM and the library example: switch to Pascal, the text and the EBNF follow, an edit applies, one Undo, switch back; a string with a newline on the library. Say which steps are keystrokes and which setup is a direct write. Crops of every visible change, light theme, device scale 1, Quick tip closed, in ~/.jjodel-lanes/P-2026-11-04-0345/; they go to Alfonso. Log entry (Notes under 500 characters) and Status flip left uncommitted (RC-17). Stop the probe server. No indentation style (C3b), no operators (C1), no form (C2). No push, no merge. Public repo: name no partner company. Final message: what was verified and how, Decisions taken (unattended), Decisions awaiting Alfonso, then the Outcome.

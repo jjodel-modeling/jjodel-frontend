@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {connect} from "react-redux";
 import {
     DModel,
@@ -18,12 +18,16 @@ import {
 } from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { EditorSwitch } from "./EditorSwitch";
+import DockManager from "../DockManager";
 
 
 function ModelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
 
+    // A tab is only opened on an existing model, so a missing one is gone: deleted, or its creation
+    // undone (R-TXT-25 (1)). Its tabs close as a delete closes them, instead of printing «closed tab».
+    useEffect(() => { if (!model) DockManager.closeTabsForEntity(props.modelid, 'model'); }, [!model]);
     if (!model) return(<>closed tab</>);
     if (!graph) {
         const graphid = Constructors.DGraph_makeID(model.id);
@@ -40,12 +44,16 @@ function ModelTabComponent(props: AllProps) {
     // is no longer mounted — EditorSwitch renders the flow editor only.
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu graph={graphid}/>
-        <EditorSwitch modelid={model.id} />
+        <EditorSwitch modelid={model.id} tabId={props.tabId} initialViewpointId={props.initialViewpointId} />
     </div>);
 }
 interface OwnProps {
     modelid: Pointer<DModel, 1, 1, LModel>,
     metamodelid?: Pointer<DModelElement, 1, 1, LModelElement>,
+    /** The dock id of this tab when it is not the model's first (R-MT-9). */
+    tabId?: string,
+    /** The viewpoint this tab starts on, null for abstract syntax. Omitted: as EditorSwitch decides. */
+    initialViewpointId?: string | null,
 }
 interface StateProps { model: LModel, graph?: LGraph }
 interface DispatchProps { }

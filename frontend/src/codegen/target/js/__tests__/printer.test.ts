@@ -95,16 +95,24 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(printed('T1 == event')).toContain('$E("t1")');
     });
 
-    it('Binary `and` evaluates both operands: a throwing right side throws (mutant: short-circuit `&&`)', () => {
-        const { jjel, js } = both('model.[b] > 0 and model.[zzz] > 0');
-        expect(jjel.kind).toBe('throw');
-        expect(js.kind).toBe('throw');
+    it('Binary `and` short-circuits: a false left side skips a throwing right side (mutant: eager `$and`)', () => {
+        expect(agreed('model.[b] > 0 and model.[zzz] > 0')).toBe(false);
     });
 
-    it('Binary `or` evaluates both operands: a throwing right side throws (mutant: short-circuit `||`)', () => {
-        const { jjel, js } = both('model.[a] > 0 or model.[zzz] > 0');
-        expect(jjel.kind).toBe('throw');
-        expect(js.kind).toBe('throw');
+    it('Binary `or` short-circuits: a true left side skips a throwing right side (mutant: eager `$or`)', () => {
+        expect(agreed('model.[a] > 0 or model.[zzz] > 0')).toBe(true);
+    });
+
+    it('Binary `and`/`or`: a left side that does not decide reaches the throwing right side (mutant: right side never run)', () => {
+        for (const source of ['model.[a] > 0 and model.[zzz] > 0', 'model.[b] > 0 or model.[zzz] > 0']) {
+            const { jjel, js } = both(source);
+            expect([jjel.kind, js.kind], source).toEqual(['throw', 'throw']);
+        }
+    });
+
+    it('Binary `and`/`or`: the null guard on a transition with nothing required (mutant: eager `$and`/`$or`)', () => {
+        expect(agreed('self.requires != null and self.requires.count > model.[a]')).toBe(false);
+        expect(agreed('self.requires == null or self.requires.count > model.[a]')).toBe(true);
     });
 
     it('Binary `and`/`or` answer by truthiness, not by type', () => {
@@ -215,8 +223,8 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(agreed('model.[b] implies model.[zzz]')).toBe(true);
     });
 
-    it('IsType on M folds (W-IS stays a warning)', () => {
-        expect(agreed('(self is Transition) == model.[f]')).toBe(false);
+    it('IsType on M folds to the evaluator\'s answer, kind-of on instances (P-2026-11-13-1305)', () => {
+        expect(agreed('(self is Transition) == model.[f]')).toBe(true);
     });
 
     it('ArrayLiteral of state reads keeps its order and its elements', () => {
@@ -227,11 +235,21 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(agreed('exists c in self.children | c.[k] > 1')).toBe(true);
         expect(agreed('exists c in self.children | c.[k] > 5')).toBe(false);
         expect(agreed('exists c in T2.children | c.[k] > 5')).toBe(false);
-        expect(agreed('exists c in self.children | c.[k] > 0 or c.[zzz]')).toEqual({ throws: true });
+        // or short-circuits (P-2026-11-13-1246): the unknown attribute is read only when the left side is false.
+        expect(agreed('exists c in self.children | c.[k] > 0 or c.[zzz]')).toBe(true);
+        expect(agreed('exists c in self.children | c.[k] > 5 or c.[zzz]')).toEqual({ throws: true });
     });
 
     it('ForAll and Lambda over M fold whole', () => {
         expect(agreed('(forall c in self.children : c.weight).size() == model.[a]')).toBe(true);
+    });
+
+    it('several variables (R-FA, P-2026-11-02-1330): exists expands nested, forall folds, both equal to the evaluator', () => {
+        expect(agreed('exists c, d in self.children | c != d and c.[k] + d.[k] == 3')).toBe(true);
+        expect(agreed('exists c, d in self.children | c.[k] + d.[k] == 5')).toBe(false);
+        expect(agreed('exists c in self.children, d in T2.children | c.[k] > 0')).toBe(false);
+        expect(agreed('(forall c, d in self.children such that c != d : c.weight).size() == model.[a]')).toBe(true);
+        expect(agreed('(forall c, d in self.children : c.weight + d.weight).size() == 4')).toBe(true);
     });
 
     it('StateAccess reads the attribute, then the derived value (mutant: derived fallback dropped)', () => {
@@ -271,7 +289,6 @@ describe('refusals, with their code', () => {
         ['node.[x] > 0', 'E-NODE'],
         ['data.count > model.[a]', 'E-DATA'],
         ['self.children.any(self => self.[k] > 0)', 'E-SHADOW'],
-        ['self.requires != null and self.requires.count > model.[a]', 'E-EAGER'],
         ['if model.[f] then true', 'E-NOELSE'],
         ['forall c in self.children such that c.[k] > 0', 'E-FORALL'],
         ['{a: model.[a]} == null', 'E-VALUE'],
@@ -283,6 +300,8 @@ describe('refusals, with their code', () => {
         ['model.[s].toUpper() == "X"', 'P-STEP'],
         ['self.children.filter(c => c.[k] > 0).size() > 0', 'P-STEP'],
         ['(forall c in self.children such that c.[k] > 0 : c).size() > 0', 'P-STEP'],
+        ['forall c, d in self.children such that c.[k] > d.[k]', 'E-FORALL'],
+        ['(forall c, d in self.children such that c.[k] > d.[k]).size() > 0', 'P-STEP'],
         ['(model.[a] is Integer)', 'P-STEP'],
         ['[1, 2][model.[a]] == 1', 'P-STEP'],
         ['nope == model.[a]', 'P-ABSENT'],
@@ -308,7 +327,7 @@ describe('refusals, with their code', () => {
         }
     });
 
-    it('a warning of the subset checker is not a refusal: W-TRUTHY, W-NULLCMP, W-IS are printed', () => {
+    it('a warning of the subset checker is not a refusal: W-TRUTHY, W-NULLCMP are printed, and `is`', () => {
         expect(guardRefusals('model.[a] and model.[f]')).toEqual([]);
         expect(guardRefusals('self.requires?.count < model.[a]')).toEqual([]);
         expect(guardRefusals('(self is Transition) == model.[f]')).toEqual([]);
@@ -492,7 +511,7 @@ describe('the id table in the context (R-GEN-17, P-2026-10-11-1052)', () => {
     });
 
     it('tokens and marked read a place through the table', () => {
-        expect(printedNamed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, $ID.P), 0), $marked(state, $ID.Q))');
+        expect(printedNamed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, $ID.P), 0), () => $marked(state, $ID.Q))');
     });
 
     it('the actions write their targets through the table', () => {
@@ -522,7 +541,7 @@ describe('the id table in the context (R-GEN-17, P-2026-10-11-1052)', () => {
     it('without the table the printer prints what it printed before (mutant: an absent table read as an empty one)', () => {
         expect(printed('model.[a] > 0')).toBe('$gt($read(state, "M", "a"), 0)');
         expect(printed('T1 == event')).toBe('$eq($E("t1"), $E(event))');
-        expect(printed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, "P"), 0), $marked(state, "Q"))');
+        expect(printed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, "P"), 0), () => $marked(state, "Q"))');
         const out = printedActions(['model.[a] := 1']);
         expect(out.ok && out.code).toBe('const $v0 = $value(1);\nreturn $apply(state, [["M", "a", $v0]]);');
     });

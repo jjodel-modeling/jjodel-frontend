@@ -41,6 +41,8 @@ export interface ModelArtifact {
         transformationId: string
         sourceModelId: string
         timestamp: number
+        /** The models included besides the primary, in run order. Absent when there were none, and on older records. */
+        includedModelIds?: string[]
     } | null
 }
 
@@ -207,6 +209,34 @@ export function inferMegamodelEdges(artifacts: ProjectArtifacts): MegamodelEdge[
                 target,
                 type: 'instanceInputOf',
                 origin: 'derived',
+            })
+        }
+    }
+
+    // instanceInputOf of the included models (R-JTG-35). After the loop above, so that a pair
+    // already drawn for a primary keeps that edge; a pair is drawn once however many runs include it.
+    const drawn = new Set(edges.map(e => e.id))
+    for (const model of artifacts.models) {
+        const genInfo = model.generatedBy
+        if (!genInfo?.includedModelIds) continue
+        const transformation = transformationIndex.get(genInfo.transformationId)
+        if (!transformation) continue
+
+        for (const includedId of genInfo.includedModelIds) {
+            const included = modelIndex.get(includedId)
+            if (!included) continue  // included model no longer in the project — skip
+
+            const id = `derived_${included.id}_instanceInputOf_${transformation.id}`
+            if (drawn.has(id)) continue
+            drawn.add(id)
+
+            edges.push({
+                id,
+                source: { id: included.id, type: 'model', name: included.name },
+                target: { id: transformation.id, type: 'transformation', name: transformation.name },
+                type: 'instanceInputOf',
+                origin: 'derived',
+                metadata: { included: true },
             })
         }
     }

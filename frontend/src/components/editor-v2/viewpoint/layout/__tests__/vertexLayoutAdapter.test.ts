@@ -15,7 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../../joiner', () => ({ store: { getState: () => ({}) } }));
 
-import { ABSTRACT_SYNTAX_LAYOUT_KEY, getLayoutKeyOf } from '../vertexLayoutAdapter';
+import { ABSTRACT_SYNTAX_LAYOUT_KEY, getLayoutKeyFor, getLayoutKeyOf } from '../vertexLayoutAdapter';
 
 const VP = 'Pointer_vp_exclusive';
 const DECO = 'Pointer_vp_decorative';
@@ -70,5 +70,29 @@ describe('getLayoutKeyOf', () => {
         for (const active of [VP, DECO, null, '', undefined]) {
             expect(typeof getLayoutKeyOf(state(active))).toBe('string');
         }
+    });
+});
+
+/**
+ * `getLayoutKeyFor` — the same answer for a viewpoint the caller names (R-LAY-19, multi-tab L2):
+ * a canvas asks for the key of ITS viewpoint, not of the root's.
+ */
+describe('getLayoutKeyFor', () => {
+    it('returns the same key as getLayoutKeyOf when vpId is the root viewpoint', () => {
+        for (const active of [VP, DECO, null, '', undefined, 'Pointer_deleted']) {
+            expect(getLayoutKeyFor(state(active), active as any)).toBe(getLayoutKeyOf(state(active)));
+        }
+    });
+
+    it('returns the key of vpId, not of the root, when the two differ', () => {
+        expect(getLayoutKeyFor(state(null), VP)).toBe(VP);
+        expect(getLayoutKeyFor(state(VP), null)).toBe(ABSTRACT_SYNTAX_LAYOUT_KEY);
+        expect(getLayoutKeyFor(state(VP), DECO)).toBe(ABSTRACT_SYNTAX_LAYOUT_KEY);
+        expect(getLayoutKeyFor(state(DECO), VP)).toBe(VP);
+    });
+
+    it('falls back to abstract syntax on an unknown id or a missing state', () => {
+        expect(getLayoutKeyFor(state(VP), 'Pointer_deleted')).toBe(ABSTRACT_SYNTAX_LAYOUT_KEY);
+        expect(getLayoutKeyFor(undefined, VP)).toBe(ABSTRACT_SYNTAX_LAYOUT_KEY);
     });
 });

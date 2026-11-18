@@ -20,6 +20,7 @@ import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bind
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { withDerivedEventRole } from '../../../model/simulation/netCompile';
+import { dcnStcFromRoles } from '../../../model/simulation/dcn/dcnRoles';
 import type { BoundEstimate } from './modelMarkings';
 
 // ---------------------------------------------------------------------------
@@ -172,6 +173,20 @@ export function invalidEngineRoles(roles: Roles): string[] {
     if (!bound) return [];
     const ok = /^\s*\d+\s*$/.test(bound) && Number(bound) >= 1;
     return ok ? [] : [`${labelOf('simBound')} (a whole number ≥ 1)`];
+}
+
+/** The nucleus a run of the bag starts: the Petri core, the DCN one, or none. */
+export type RunEngine = 'petri' | 'dcn';
+
+/**
+ * The rule of `startRun` (simBridge.ts), Petri first: `petri` when the engine
+ * roles are complete and valid, else `dcn` when `dcnBag` (the bag as the run
+ * reads it, profile applied) closes the dcn roles (`dcnStcFromRoles`), else
+ * `null`. The run controls show exactly when this is not `null`.
+ */
+export function runEngine(roles: Roles, dcnBag: Readonly<Record<string, unknown>> | undefined): RunEngine | null {
+    if (missingEngineRoles(roles).length === 0 && invalidEngineRoles(roles).length === 0) return 'petri';
+    return dcnStcFromRoles(dcnBag) !== null ? 'dcn' : null;
 }
 
 /** Where the missing roles are to be set: the metamodel by name, or a generic fallback. */

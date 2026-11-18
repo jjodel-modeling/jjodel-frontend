@@ -205,6 +205,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     featuresHint={featuresHint}
                     classNames={classNames}
                     allowConditional={allowConditional}
+                    rulesTable={{ valueNoun: 'visibility' }}
                 />
             </div>
 

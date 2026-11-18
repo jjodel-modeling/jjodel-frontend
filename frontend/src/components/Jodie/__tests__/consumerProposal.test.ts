@@ -247,6 +247,10 @@ describe('failureText', () => {
         const create = read('create instance of Scenario "s"').steps[0];
         expect(failureText(create, err('SINGLETON_CLASS'), w)).toBe('There can be only one Scenario, and it already exists.');
         expect(failureText(create, err('HANDLE_IN_USE'), w)).toBe('This proposal creates two elements called "s".');
+        // #938: a refused create names the instance it would have created, not `undefined`.
+        expect(failureText(create, err('NAME_CONFLICT'), w)).toBe('Another element is already called "s".');
+        const rename = read('rename instance Antonio to "arch"').steps[0];
+        expect(failureText(rename, err('NAME_CONFLICT'), w)).toBe('Another element is already called "arch".');
     });
 });
 

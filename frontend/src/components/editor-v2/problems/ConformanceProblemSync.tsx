@@ -37,6 +37,8 @@ import {
     registerProblem,
     markResolved,
     clearProblem,
+    getProblemIdsOwnedBy,
+    acquireProducerMount,
     type NodeProblem,
 } from './registry';
 
@@ -117,12 +119,16 @@ export function ConformanceProblemSync({ modelid, graphId }: Props) {
     }, [result, graphId]);
 
     // Full cleanup on unmount (editor / model closed): drop our entries outright
-    // so nothing stale bleeds into the next model.
+    // so nothing stale bleeds into the next model. Only when the last editor on the
+    // model lets go (multi-tab L4b): another tab on it keeps its badges. The last
+    // instance also drops the entries owned by the model that it did not write itself.
     useEffect(() => {
-        return () => {
+        if (!modelid) return;
+        return acquireProducerMount(CONFORMANCE_KIND, modelid, () => {
             for (const id of ownedIds.current) clearProblem(id);
-        };
-    }, []);
+            for (const id of getProblemIdsOwnedBy(CONFORMANCE_KIND, modelid)) clearProblem(id);
+        });
+    }, [modelid]);
 
     return null;
 }

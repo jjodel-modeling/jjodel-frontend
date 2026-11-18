@@ -231,7 +231,8 @@ describe('operators', () => {
         );
         expect(defect('if sbits(4, 1) then 1 else 2')).toMatch(/x != sbits\(4, 0\)/);
         expect(defect('bits(8, 1) and true')).toMatch(/^'and' needs booleans/);
-        expect(defect('true or bits(8, 1)')).toMatch(/^'or' needs booleans/);
+        expect(defect('false or bits(8, 1)')).toMatch(/^'or' needs booleans/);
+        expect(ev('true or bits(8, 1)')).toBe(true);
         expect(defect('bits(1, 1) implies true')).toMatch(/no truth value/);
         expect(defect('Boolean(bits(1, 1))')).toMatch(/no truth value/);
         expect(defect('exists v in [bits(1, 1)] such that v')).toMatch(/no truth value/);

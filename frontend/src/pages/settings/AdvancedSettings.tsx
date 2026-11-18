@@ -85,14 +85,15 @@ export function AdvancedSettings(props: SettingProps) {
                 </label>
             </div>
 
-            {/* Experimental (R-GEN-2): off by default; with it off no module of the generator loads. Shown only in a
+            {/* Code generation (R-GEN-2): on by default in Advanced mode from 3.2 (P-2026-11-15-1730); the user can
+                turn it off, which stores 'false'. The box shows the user's choice, not the mode. Shown only in a
                 build with VITE_CODEGEN=true (P-2026-10-12-0012): 3.1 ships without it. */}
             {CODEGEN_BUILD && (
                 <>
                     <div className="settings-divider" />
 
                     <div className="settings-group">
-                        <label className="settings-label">Experimental</label>
+                        <label className="settings-label">Code generation</label>
 
                         <label className="settings-checkbox">
                             <input
@@ -101,8 +102,8 @@ export function AdvancedSettings(props: SettingProps) {
                                 onChange={(e) => setCodegenEnabled(e.target.checked)}
                             />
                             <div className="checkbox-content">
-                                <span className="checkbox-label">Code generation</span>
-                                <span className="checkbox-description">Show the Code panel in the model editor: templates over the metamodel, generated text linked to the model</span>
+                                <span className="checkbox-label">Textual notation and code generation</span>
+                                <span className="checkbox-description">In Advanced mode, show the textual notation of models and the Code panel: templates over the metamodel, generated text linked to the model</span>
                             </div>
                         </label>
                     </div>

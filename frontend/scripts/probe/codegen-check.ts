@@ -1,28 +1,30 @@
 /**
- * codegen-check probe (P-2026-10-11-1053): the oracle's «Check» in the Code panel (R-GEN-11, R-GEN-17), on the two
- * lecture examples of codegen/examples/.
+ * codegen-check probe (P-2026-10-11-1053): the oracle's «Check» (R-GEN-11, R-GEN-17), on the two lecture examples of
+ * codegen/examples/. Ported to the generator tab of slice G3 by P-2026-10-24-0045 (R-GEN-40): the pill opens the
+ * default generator's tab, Check is a mode of its right pane, Preview is live (no Generate), Run is a mode of its own,
+ * and the template is edited in the tab's list and Monaco editor. Same assertions, new path.
  *
  * Fresh context, Advanced mode, the experimental setting on. For each example, loaded as the S6 probe loads it
  * (codegen-oracle.ts; its page-side helpers copied here, that probe is not imported):
  *   - the scene is imported, the producer-consumer built in a new model by the README's JjScript, the fixture's bags
  *     (roles, `genTemplates`, declarations) written with the `state` setter, ids remapped by name; no scenario yet;
- *   - the Code panel opens from its pill, Output: with no stored scenario the scenario select and «Check» are
- *     disabled and Check's tooltip reads `Record a scenario in the simulator first.`; Run is not (crop
+ *   - the pill opens the generator tab, mode Check: with no stored scenario the scenario select and «Check» are
+ *     disabled and Check's tooltip reads `Record a scenario in the simulator first.`; Run (mode Run) is not (crop
  *     check_disabled.png, turnstile);
  *   - two scenarios are stored on the model: the fixture's, and its first three steps under another name; the select
  *     lists both, in that order, with no reload;
- *   - Generate; the second scenario selected, «Check» passes on 3 steps under its name; the first selected, it passes
+ *   - the second scenario selected, «Check» passes on 3 steps under its name; the first selected, it passes
  *     on all its steps under its name (crop check_pass.png, turnstile). The Timeout field set to 1 ms, «Check» fails
  *     with the runner's timeout: the field's value reaches the oracle;
- *   - the S6 mutation, by editing a template in the Templates tab: the `main` template's string gains a last
+ *   - the S6 mutation, by editing a template in the tab's list and editor, then Save: the `main` template's string gains a last
  *     statement that swaps one postset place of the fixture's transition at load time (the README's mutation, in
- *     the generated program's own TRANSITIONS table, so it does not depend on how ids are printed); Generate,
- *     «Check»: the divergence line names the fixture's step and transition, the differing places are listed with
+ *     the generated program's own TRANSITIONS table, so it does not depend on how ids are printed); «Check»: the divergence line names the fixture's step and transition, the differing places are listed with
  *     their values, and the origin link selects the transition on the canvas and links exactly its spans (crop
  *     check_divergence.png, turnstile).
- * The row of «Run» keeps its height in every state: no result, pass, divergence, disabled.
+ * The row of «Check» keeps its height in every state: no result, pass, divergence, disabled.
  *
- * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-11-1053/crops/ (CGC_CROPS), with their sizes printed.
+ * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-11-1053/crops/ (CGC_CROPS), with their sizes printed: the box of
+ * the tab's right pane.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-check.ts \
  *         --port 3092 --id P-2026-10-11-1053
@@ -186,6 +188,8 @@ const STORE_SCENARIOS = (ex: Example, m1Id: string, map: Record<string, string>,
 })()`;
 
 const PANE = (m1Id: string) => `(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]'))`;
+/** The CSS selector of the default generator's tab of a metamodel (R-GEN-40). */
+const TAB_CSS = (mmId: string) => `[role="tabpanel"][aria-labelledby$="-tab-codegen_tpl_${mmId}"]`;
 const CLICK = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return { found: false }; el.click(); return { found: true }; })()`;
 const BOX = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`;
 
@@ -196,7 +200,7 @@ const STATE = (panel: string) => String.raw`(() => {
   if (!row) return null;
   const select = row.querySelector('select[aria-label="Scenario"]');
   const buttons = [...row.querySelectorAll('button')];
-  const run = row.querySelector('.codegen-panel__button--primary');
+  const run = row.querySelector('.codegen-panel__button--primary');  // the row's own primary: Check in mode Check
   const chk = buttons.find((b) => /^Check(ing)?$/.test(b.textContent.trim()));
   const pass = p.querySelector('.codegen-panel__result--pass');
   const bad = p.querySelector('.codegen-panel__result--error');
@@ -216,8 +220,8 @@ const STATE = (panel: string) => String.raw`(() => {
 })()`;
 
 /** Select a scenario by name in the panel's select, as a user picks it. */
-async function chooseScenario(page: Page, pane: string, name: string) {
-    const handle = await page.evaluateHandle(`${pane}.querySelector('.codegen-panel__run select[aria-label="Scenario"]')`);
+async function chooseScenario(page: Page, panel: string, name: string) {
+    const handle = await page.evaluateHandle(`${panel}.querySelector('.codegen-panel__run select[aria-label="Scenario"]')`);
     await (handle.asElement() as any).selectOption({ label: name });
 }
 
@@ -293,27 +297,32 @@ for (const name of NAMES) {
     check(`${name}: the model has no stored scenario yet`, installed.scenarios === null, String(installed.scenarios));
     const appId = (fid: string) => installed.map[fid] ?? fid;
 
-    // The model's editor, then the Code panel from its pill, on Output.
+    // The model's editor, then the generator tab from its pill, mode Check.
     await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(m1)})); })()`);
     const pane = PANE(m1);
     await poll(page, `(() => { const p = ${pane}; return !!p && p.querySelectorAll('.react-flow__node').length > 0; })()`, 60000);
     await wait(page, 2000);
     check(`${name}: the Code pill is on the model's editor`, !!(await poll(page, `!!(${pane} && ${pane}.querySelector('.codegen-pill button'))`, 30000)), '');
     await page.evaluate(CLICK(`${pane}.querySelector('.codegen-pill button')`));
-    const panel = `${pane}.querySelector('.codegen-panel')`;
-    check(`${name}: the pill opens the panel`, !!(await poll(page, `!!(${panel})`, 60000)), '');
-    const tab = (label: string) => page.evaluate(CLICK(`[...${panel}.querySelectorAll('.codegen-panel__tab')].find((b) => b.textContent.trim() === '${label}')`));
-    await tab('Output');
+    const tabCss = TAB_CSS(loaded.mm);
+    const tabEl = `document.querySelector('${tabCss} .codegen-tpl')`;
+    const panel = `document.querySelector('${tabCss} .codegen-pane')`;
+    check(`${name}: the pill opens the generator tab`, !!(await poll(page, `!!(${panel})`, 60000)), '');
+    const mode = (label: string) => page.evaluate(CLICK(`[...${panel}.querySelectorAll('.codegen-pane__modes button')].find((b) => b.textContent.trim() === '${label}')`));
+    const timeout = page.locator(`${tabCss} .codegen-panel__timeout input`);
+    await mode('Run');
     await poll(page, `!!(${panel}.querySelector('.codegen-panel__code'))`, 30000);
+    const runOff = await page.evaluate(`(() => { const b = ${panel}.querySelector('.codegen-panel__run .codegen-panel__button--primary'); return b ? b.disabled : null; })()`);
+    await mode('Check');
     await wait(page, 500);
 
     // No stored scenario: the select and «Check» are off, Check says why; Run is not.
     const off = await page.evaluate(STATE(panel)) as any;
-    r.disabled = off;
-    note(`${name}: no scenario`, off);
+    r.disabled = { ...off, runDisabled: runOff };
+    note(`${name}: no scenario`, r.disabled);
     check(`${name}: with no stored scenario the select and Check are disabled, Check's tooltip reads «${NO_SCENARIO}», Run is enabled`,
-        !!off && off.select?.disabled === true && off.check?.disabled === true && off.check?.title === NO_SCENARIO && off.run?.disabled === false,
-        JSON.stringify(off));
+        !!off && off.select?.disabled === true && off.check?.disabled === true && off.check?.title === NO_SCENARIO && runOff === false,
+        JSON.stringify(r.disabled));
     const rowHeight = off?.rowHeight ?? 0;
     const pBox = await page.evaluate(BOX(panel)) as any;
     if (crops && pBox) await crop(page, 'check_disabled.png', pBox);
@@ -326,60 +335,62 @@ for (const name of NAMES) {
         !!listed && JSON.stringify(listed.select.options) === JSON.stringify([ex.scenario.name, prefix]) && listed.check?.disabled === false && listed.check?.title !== NO_SCENARIO,
         JSON.stringify(listed?.select ?? null));
 
-    // Generate; the first three steps, then the whole scenario: both pass, each under its own name and count.
-    await page.locator('.codegen-panel__timeout input').fill('10000');
-    await page.locator('.codegen-panel__timeout input').blur();
-    await page.evaluate(CLICK(`[...${panel}.querySelectorAll('.codegen-panel__button')].find((b) => b.textContent.trim() === 'Generate')`));
-    await wait(page, 500);
-    await chooseScenario(page, pane, prefix);
+    // Preview is live; the first three steps, then the whole scenario: both pass, each under its own name and count.
+    await timeout.fill('10000');
+    await timeout.blur();
+    await chooseScenario(page, panel, prefix);
     const short = await clickCheck(page, panel);
     r.passShort = short;
     note(`${name}: Check on «${prefix}»`, short);
     check(`${name}: Check passes on the selected scenario «${prefix}», 3 steps`,
         short?.pass?.text === `Agrees with the simulator on 3 steps · ${prefix}`, JSON.stringify(short?.pass ?? short?.error ?? null));
-    await chooseScenario(page, pane, ex.scenario.name);
+    await chooseScenario(page, panel, ex.scenario.name);
     const full = await clickCheck(page, panel);
     r.passFull = full;
     note(`${name}: Check on «${ex.scenario.name}»`, full);
     const n = ex.scenario.steps.length;
     check(`${name}: Check passes on «${ex.scenario.name}», ${n} steps`,
         full?.pass?.text === `Agrees with the simulator on ${n} steps · ${ex.scenario.name}`, JSON.stringify(full?.pass ?? full?.error ?? null));
-    check(`${name}: the row of Run keeps its height with a pass shown`, !!full && full.rowHeight === rowHeight && full.select.height === full.run.height && full.check.height === full.run.height,
-        `${rowHeight} -> ${full?.rowHeight}; select ${full?.select?.height}, check ${full?.check?.height}, run ${full?.run?.height}`);
+    check(`${name}: the row of Check keeps its height with a pass shown`, !!full && full.rowHeight === rowHeight && full.select.height === full.run.height && full.check.height === full.run.height,
+        `${rowHeight} -> ${full?.rowHeight}; select ${full?.select?.height}, check ${full?.check?.height}, primary ${full?.run?.height}`);
     if (crops && pBox) await crop(page, 'check_pass.png', (await page.evaluate(BOX(panel))) as any);
 
     // The field's timeout reaches the oracle: at 1 ms the run is stopped.
-    await page.locator('.codegen-panel__timeout input').fill('1');
+    await timeout.fill('1');
     const timed = await clickCheck(page, panel);
     r.timeout = timed;
     note(`${name}: Check at 1 ms`, timed?.error ?? timed?.pass ?? null);
     check(`${name}: at a 1 ms Timeout, Check reports the runner's timeout`,
         timed?.error?.head === 'The program did not run' && /^timeout: The run did not finish in 1 ms/.test(timed?.error?.lines?.[0] ?? ''), JSON.stringify(timed?.error ?? timed?.pass ?? null));
-    await page.locator('.codegen-panel__timeout input').fill('10000');
-    await page.locator('.codegen-panel__timeout input').blur();
+    await timeout.fill('10000');
+    await timeout.blur();
 
-    // The S6 mutation, written in the `main` template through the Templates tab.
+    // The S6 mutation, written in the `main` template through the tab's list and Monaco editor, then Save.
     const m = ex.mutation;
     const swap = { transition: appId(m.transition), from: appId(m.from), to: appId(m.to) };
-    await tab('Templates');
-    await poll(page, `!!(${panel}.querySelector('.codegen-panel__item'))`, 10000);
-    await page.evaluate(CLICK(`[...${panel}.querySelectorAll('.codegen-panel__item')].find((b) => b.querySelector('.codegen-panel__item-name').textContent === 'main')`));
-    await wait(page, 300);
-    const textarea = page.locator('.codegen-panel__editor textarea');
-    const body = await textarea.inputValue();
+    await page.evaluate(CLICK(`[...${tabEl}.querySelectorAll('.codegen-tpl__item')].find((b) => b.querySelector('.codegen-tpl__item-name').textContent === 'main')`));
+    await wait(page, 500);
+    const EDITOR = String.raw`(async () => {
+      const j = await import('/src/joiner/index.ts');
+      const host = ${tabEl}.querySelector('.codegen-tpl__monaco');
+      return j.monaco.editor.getEditors().find((e) => host && host.contains(e.getDomNode())) || null;
+    })()`;
+    const body = await page.evaluate(`${EDITOR}.then((e) => (e ? e.getValue() : ''))`) as string;
     const mutated = mutatedBody(body, swap);
     check(`${name}: the main template is one string the mutation can extend`, mutated !== null, body.slice(-40));
     if (mutated === null) continue;
-    await textarea.fill(mutated);
-    await page.locator('.codegen-panel__editor .codegen-panel__button--primary').click();
-    await wait(page, 500);
-    await tab('Output');
-    await poll(page, `!!(${panel}.querySelector('.codegen-panel__code'))`, 30000);
-    await page.evaluate(CLICK(`[...${panel}.querySelectorAll('.codegen-panel__button')].find((b) => b.textContent.trim() === 'Generate')`));
-    await wait(page, 500);
+    await page.evaluate(`${EDITOR}.then((e) => { e.setValue(${JSON.stringify(mutated)}); })`);
+    await wait(page, 300);
+    await page.evaluate(CLICK(`${tabEl}.querySelector('.codegen-tpl__actions .codegen-tpl__button--primary')`));
+    await wait(page, 1000);
     const genErrors = await page.evaluate(`[...${panel}.querySelectorAll('.codegen-panel__error')].map((e) => e.textContent)`) as string[];
-    check(`${name}: the mutated templates generate with no error`, genErrors.length === 0, genErrors.slice(0, 3));
-    await chooseScenario(page, pane, ex.scenario.name);
+    await mode('Preview');
+    await wait(page, 500);
+    const previewErrors = await page.evaluate(`[...${panel}.querySelectorAll('.codegen-panel__error')].map((e) => e.textContent)`) as string[];
+    check(`${name}: the mutated templates generate with no error`, genErrors.length === 0 && previewErrors.length === 0, [...genErrors, ...previewErrors].slice(0, 3));
+    await mode('Check');
+    await wait(page, 300);
+    await chooseScenario(page, panel, ex.scenario.name);
     const bad = await clickCheck(page, panel);
     r.divergence = bad;
     note(`${name}: Check after the mutation`, bad?.error ?? bad?.pass ?? null);
@@ -397,7 +408,7 @@ for (const name of NAMES) {
         !!bad?.error && delta(fromName) === -1 && delta(toName) === 1 && bad.error.lines.length <= 6, JSON.stringify(bad?.error?.lines ?? null));
     check(`${name}: the origin link names the transition, at a line of the text`,
         bad?.error?.link === trName && /^line \d+ · /.test(bad?.error?.at ?? ''), JSON.stringify({ at: bad?.error?.at, link: bad?.error?.link }));
-    check(`${name}: the row of Run keeps its height with a divergence shown`, !!bad && bad.rowHeight === rowHeight, `${rowHeight} -> ${bad?.rowHeight}`);
+    check(`${name}: the row of Check keeps its height with a divergence shown`, !!bad && bad.rowHeight === rowHeight, `${rowHeight} -> ${bad?.rowHeight}`);
     if (crops && pBox) await crop(page, 'check_divergence.png', (await page.evaluate(BOX(panel))) as any);
 
     // The origin link selects the transition: its vertex (or, drawn as an edge, its source and the outline), and links its spans.
@@ -405,7 +416,7 @@ for (const name of NAMES) {
       const p = ${panel};
       const pane = ${pane};
       p.querySelector('.codegen-panel__result--error .codegen-panel__link').click();
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 1500));
       const lk = window.windoww.store.getState().idlookup;
       const selected = [...pane.querySelectorAll('.react-flow__node.selected')].map((n) => (lk[n.getAttribute('data-id')] || {}).model || n.getAttribute('data-id'));
       const linked = [...p.querySelectorAll('.code-span--linked')].map((s) => s.getAttribute('data-origin-id'));

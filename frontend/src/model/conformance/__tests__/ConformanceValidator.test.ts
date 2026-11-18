@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { validateConformance } from '../ConformanceValidator';
+import { encodeRoleValues } from '../../simulation/roleCatalog';
+import { encodeProfile } from '../../simulation/profileCodec';
+import { systemProfile } from '../../simulation/simProfiles';
 
 // ------------------------------------------------------------------
 // Fixtures. validateConformance is a pure function that only performs
@@ -699,6 +702,54 @@ describe('CHECK 2 — missing_required_attr (raw presence)', () => {
 });
 
 // ==================================================================
+// CHECK 2 — a never-written identity slot (#656, R-TXT-58)
+// The identity slot (name : EString, single) is read as the core's get_values reads it: raw `[]`
+// (never written) falls back to the owner's initialName, then data.name; raw `[""]` (written
+// empty) stays nameless (R-TXT-45) and is still flagged.
+// ==================================================================
+describe('CHECK 2 — never-written identity slot (#656)', () => {
+    function identity(raw: any[], owner: AnyObj) {
+        const a = attr({ id: 'n', name: 'name', lowerBound: 1, type: { name: 'EString' } });
+        const C = klass({ id: 'C', name: 'Module', allAttributes: [a] });
+        const o = obj({ id: 'o', name: owner.name, instanceof: C, __raw: owner,
+            features: [val('n', { value: owner.initialName || owner.name, __raw: { values: raw } })] });
+        return types(run([o], [C]));
+    }
+
+    it('console create `create instance of C "x"`: slot [], initialName x → clean', () => {
+        expect(identity([], { name: 'x', initialName: 'x' })).not.toContain('missing_required_attr');
+    });
+
+    it('canvas create (auto-name): slot [], initialName Module_0 → clean', () => {
+        expect(identity([], { name: 'Module_0', initialName: 'Module_0' })).not.toContain('missing_required_attr');
+    });
+
+    it('old saved model: slot [], data.name only → clean on load', () => {
+        expect(identity([], { name: 'old1' })).not.toContain('missing_required_attr');
+    });
+
+    it('a slot written [""] stays nameless and is flagged, whatever the owner names', () => {
+        expect(identity([''], { name: 'x', initialName: 'x' })).toContain('missing_required_attr');
+    });
+
+    it('a never-written slot on an owner with no name at all is still flagged', () => {
+        expect(identity([], { name: '', initialName: '' })).toContain('missing_required_attr');
+    });
+
+    it('a written name is unchanged', () => {
+        expect(identity(['h'], { name: 'h', initialName: 'Module_0' })).not.toContain('missing_required_attr');
+    });
+
+    it('a never-written non-identity required EString is still flagged', () => {
+        const a = attr({ id: 'l', name: 'label', lowerBound: 1, type: { name: 'EString' } });
+        const C = klass({ id: 'C', name: 'Module', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'x', instanceof: C, __raw: { name: 'x', initialName: 'x' },
+            features: [val('l', { __raw: { values: [] } })] });
+        expect(types(run([o], [C]))).toContain('missing_required_attr');
+    });
+});
+
+// ==================================================================
 // CHECK 12 — missing_name / invalid_name_format
 // Re-hosted from the `Naming error view` of the seeded `Default Validation`
 // viewpoint, inert since the classic shutdown (Fase 5a).
@@ -706,9 +757,16 @@ describe('CHECK 2 — missing_required_attr (raw presence)', () => {
 describe('CHECK 12 — name shape', () => {
     const C = klass({ id: 'C', name: 'Person' });
 
-    it('flags an object with no name', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+    it('flags an object with no name read at all (undefined)', () => {
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         expect(types(res)).toContain('missing_name');
+    });
+
+    it("does not flag a nameless object, name '' (R-TXT-45, R-TXT-46 D3)", () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        expect(types(res)).not.toContain('missing_name');
+        expect(types(res)).not.toContain('invalid_name_format');
+        expect(res.status).toBe('conformant');
     });
 
     it('flags a name that does not begin with a letter', () => {
@@ -728,18 +786,18 @@ describe('CHECK 12 — name shape', () => {
     });
 
     it('is a warning, so a name problem alone never reports errors', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         expect(res.status).toBe('warnings');
     });
 
     it('runs before CHECK 1, so an unnamed orphan is told both things', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: undefined })], []);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: undefined })], []);
         expect(types(res)).toContain('missing_name');
         expect(types(res)).toContain('orphan_object');
     });
 
     it('attaches the violation to the object, with the id as fallback label', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         const v = res.violations.find((x: AnyObj) => x.violationType === 'missing_name')!;
         expect(v.objectId).toBe('o1');
         expect(v.message).toContain('o1');
@@ -815,5 +873,63 @@ describe('CHECK 3 — Expression and Action', () => {
 
     it('control: EString keeps accepting the same text', () => {
         expect(flagged({ id: 'Pointer_ESTRING', name: 'EString' }, 'a +')).toBe(false);
+    });
+});
+
+// ==================================================================
+// CHECK 3 — DCN bodies in the DCN action mode (R-DCN-12), P-2026-11-08-0010.
+// The metamodel's bag binds the dcn roles under the dynamic-classification profile: an Action
+// attribute bound to the `body` role is parsed with `parseAction(text, { dcn: true })`. Every other
+// Action attribute, and every metamodel that binds no dcn role, as before.
+// ==================================================================
+describe('CHECK 3 — DCN bodies in the DCN action mode', () => {
+    const ACTION = { id: 'Pointer_ACTION', name: 'Action', className: 'DClass' };
+    const DCN_BAG = {
+        simProfile: encodeProfile(systemProfile('dynamicClassification')!),
+        simStaticClass: 'C_Static',
+        simViewpoints: 'R_viewpoints',
+        simDynamicClasses: 'R_classes',
+        simInvariant: 'A_invariant',
+        simOperation: encodeRoleValues(['R_ownedOperations']),
+        simBody: encodeRoleValues(['A_body', 'A_monBody']),
+    };
+    function withBody(attrId: string, value: unknown, bag: AnyObj | undefined) {
+        const a = attr({ id: attrId, name: 'body', type: ACTION, upperBound: -1 });
+        const C = klass({ id: 'C', name: 'Operation', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'rampUp', instanceof: C, features: [val(attrId, { __raw: { values: [value] } })] });
+        const model: AnyObj = { id: 'M', name: 'Model', objects: [o] };
+        const metamodel: AnyObj = { id: 'MM', name: 'MM', classes: [C], __raw: bag ? { _state: bag } : {} };
+        return validateConformance(model as any, metamodel as any);
+    }
+    const flagged = (attrId: string, value: unknown, bag: AnyObj | undefined) =>
+        types(withBody(attrId, value, bag)).includes('type_mismatch');
+
+    it('a DCN body bound to the body role is not a violation (operation and monitor)', () => {
+        expect(flagged('A_body', 'self.power := 0', DCN_BAG)).toBe(false);
+        expect(flagged('A_monBody', 'self.battery := self.battery - 1', DCN_BAG)).toBe(false);
+    });
+
+    it('the same text on a metamodel with no dcn role keeps its warning', () => {
+        expect(flagged('A_body', 'self.power := 0', undefined)).toBe(true);
+        expect(flagged('A_body', 'self.power := 0', {})).toBe(true);
+    });
+
+    it('an Action attribute not bound to the body role keeps the ordinary mode', () => {
+        expect(flagged('A_other', 'self.power := 0', DCN_BAG)).toBe(true);
+    });
+
+    it('the dcn roles off by profile: the ordinary mode, as runBag reads the bag', () => {
+        const { simProfile, ...custom } = DCN_BAG;
+        expect(flagged('A_body', 'self.power := 0', custom)).toBe(true);
+    });
+
+    it('the closure unmet: no dcn mode', () => {
+        const { simInvariant, ...partial } = DCN_BAG;
+        expect(flagged('A_body', 'self.power := 0', partial)).toBe(true);
+    });
+
+    it('a malformed DCN body is still a type_mismatch', () => {
+        expect(flagged('A_body', 'self.power := ', DCN_BAG)).toBe(true);
+        expect(flagged('A_body', 'self.[power] := 0 1', DCN_BAG)).toBe(true);
     });
 });

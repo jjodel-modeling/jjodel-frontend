@@ -1130,10 +1130,26 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
  * folds the entries since the mark with `composeUndoDeltas`. A nested begin only counts; an end without a
  * begin, and a group that pushed fewer than two entries, leave the history as it is.
  * The caller flushes the pending 300 ms COMMIT before calling end, or its deltas land after the group.
+ * The outermost end keeps the group's entry as the tail: while it is on top, a later write the legacy path
+ * would merge into it (a graph create of the sync) composes into it exactly, so one undo still removes every
+ * `idlookup` record (P-2026-11-06-2150, option (c)). A push, an undo, a redo and a begin clear the tail.
  */
 let undoGroup: { depth: number; user: Pointer<DUser>; mark: number } | null = null;
+let undoGroupTail: GObject | null = null;
+
+/**
+ * A canvas create (#682): the root arrays of the model elements a user makes. A delta that lengthens one is an act of
+ * its own, so it opens an entry even inside the merge window. What follows it from the same gesture (the sync's vertex,
+ * the append to a container's slots) composes into that entry exactly, so one undo removes every `idlookup` record.
+ */
+const UNDO_MODEL_ROOTS = ['objects', 'classs', 'enumerators', 'packages'];
+let undoCreateEntry: GObject | null = null;
+
+/** A delta that lengthens root `graphs` and writes none of these is a tab being opened, not an edit: see `_reducer`. */
+const UNDO_NOT_A_TAB_OPEN_ROOTS = [...UNDO_MODEL_ROOTS, 'models', 'm1models', 'm2models'];
 
 export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
+    undoGroupTail = null;
     if (undoGroup) { undoGroup.depth++; return; }
     undoGroup = { depth: 1, user, mark: statehistory[user]?.undoable.length ?? 0 };
 }
@@ -1145,6 +1161,7 @@ export function endUndoGroup(): void {
     const history = statehistory[user];
     if (!history) return;
     const start = Math.min(mark, history.undoable.length);
+    if (history.undoable.length - start === 1) undoGroupTail = history.undoable[start];
     if (history.undoable.length - start < 2) return;
     const grouped = history.undoable.splice(start);
     let merged: GObject = grouped[0];
@@ -1153,6 +1170,7 @@ export function endUndoGroup(): void {
     for (const d of grouped) U.arrayRemoveAll(statehistory.all.undoable, d);
     history.undoable.push(merged);
     statehistory.all.undoable.push(merged);
+    undoGroupTail = merged;
     while (history.undoable.length > MAX_HISTORY) history.undoable.shift();
     while (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
 }
@@ -1219,8 +1237,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
     const mergeTolerance = U.UpdatingTimer*1.5;
 
     switch (action.type) {
-        case UndoAction.type: return doUndoRedo(oldState, action, 'undo');
-        case RedoAction.type: return doUndoRedo(oldState, action, 'redo');
+        case UndoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'undo');
+        case RedoAction.type: undoGroupTail = null; return doUndoRedo(oldState, action, 'redo');
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
@@ -1259,6 +1277,9 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if (isOnlyTransientTopLevelChange(ret, oldState)) {
                 return ret;
             }
+            // An action that is not a user edit (the viewpoint write of a tab gaining focus, R-MT-20): no entry, no merge.
+            // A batch counts as one when every action in it is flagged; a batch mixing one with an edit keeps its entry.
+            if (action.noUndo || (action.className === 'CompositeAction' && (action as CompositeAction).actions?.length && (action as CompositeAction).actions.every((a) => a.noUndo))) return ret;
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
@@ -1273,11 +1294,17 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
             const allowMerge = true; // switch for debugging
-            let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);
+            const atGroupTail = !!undoGroupTail && pastDelta === undoGroupTail;
+            // A tab being opened: no entry, no merge. In the stack it would revert root `graphs` while its records stay,
+            // and the open tab would rebuild the graphs under new ids at every Undo below it.
+            if (!atGroupTail && (ret as GObject).graphs?.length > (oldState as GObject).graphs?.length && !UNDO_NOT_A_TAB_OPEN_ROOTS.some((k) => (delta as GObject)[k])) return ret;
+            const createsModelElement = !atGroupTail && UNDO_MODEL_ROOTS.some((k) => (ret as GObject)[k]?.length > (oldState as GObject)[k]?.length);
+            let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>, createsModelElement);
             // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
             let shouldMerge = !isRelevantChange;
             let debugMerge = true;
-            if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
+            const touchesGraph = (atGroupTail || !UNDO_MODEL_ROOTS.some((k) => (delta as GObject)[k])) && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs);
+            if (!shouldMerge && touchesGraph) shouldMerge = true;
             if (!pastDelta) shouldMerge = false;
 
             if (false && pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
@@ -1287,7 +1314,20 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 oldState, delta});
 
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
-            if (shouldMerge && allowMerge) {
+            if (shouldMerge && allowMerge && undoGroupTail && pastDelta === undoGroupTail) {
+                // A late write into a group's entry: compose in place (both history stacks hold the same object).
+                const composed = composeUndoDeltas(pastDelta, delta);
+                for (const k of Object.keys(pastDelta)) delete pastDelta[k];
+                Object.assign(pastDelta, composed);
+            }
+            else if (shouldMerge && allowMerge && pastDelta === undoCreateEntry && !delta.graphs) {
+                // The rest of a create's gesture: compose in place as above. Not a new graph: that is a tab being opened, and
+                // an undo that removed it would see the tab rebuild it as a new entry (R-UNDO-5 keeps the merge below).
+                const composed = composeUndoDeltas(pastDelta, delta);
+                for (const k of Object.keys(pastDelta)) delete pastDelta[k];
+                Object.assign(pastDelta, composed);
+            }
+            else if (shouldMerge && allowMerge) {
                 // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
                 //   of __jjisEmpty etc must not be done at this stage.
                 let gdelta: Dictionary<string, string[] | GObject> = {};
@@ -1327,6 +1367,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             else if (isRelevantChange) {
                 let user = (action as Action).sender;
+                undoGroupTail = null;
+                if (createsModelElement) undoCreateEntry = delta;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
                 if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
@@ -1341,11 +1383,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
     }
 }
 
-function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>): boolean {
+function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>, ignoreWindow: boolean = false): boolean {
     const mergeTolerance = U.UpdatingTimer*1.5;
 
     if (!U.userHasInteracted) return false;
-    if (pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance) return false;
+    if (pastDelta && !ignoreWindow && delta.timestamp - pastDelta.timestamp < mergeTolerance) return false;
     if (!statehistory.globalcanundostate) return false;
     if (Object.keys(delta).length === 1) {
         if ("dragging" in delta) return false;

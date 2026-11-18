@@ -27,6 +27,7 @@ import {
     IndexAccessExpr,
     ObjectLiteralExpr,
     StateAccessExpr,
+    ClassificationTestExpr,
     BinaryOperator,
     UnaryOperator
 } from '../types/ast';
@@ -54,6 +55,7 @@ import {
     getDateMethod,
     getDateConstructor
 } from './builtins';
+import { modelObjectsEqual } from './identity';
 import { joinWithTextHost } from './builtins/collections';
 import {
     BITVECTOR_METHOD_NAMES,
@@ -84,6 +86,46 @@ export class JjelEvaluationError extends Error {
 }
 
 /**
+ * The mark on an error thrown by a method call that failed (R-FA-12): the
+ * receiver, not null and not a model element, has no method of that name, or a
+ * method of the JjEL library threw. The error is the one JjEL throws without the
+ * mark, same object, class and message; the mark, a symbol-keyed property, holds
+ * the method name. JjTL reads it and stops the mapping.
+ */
+const METHOD_FAILURE = Symbol('jjelMethodFailure');
+
+/** Mark `e` as the failure of `method` and return it, to be thrown unchanged. */
+function asMethodFailure<E>(e: E, method: string): E {
+    if (e !== null && typeof e === 'object' && !(METHOD_FAILURE in e)) {
+        try {
+            (e as any)[METHOD_FAILURE] = method;
+        } catch {
+            // A frozen error is thrown unmarked.
+        }
+    }
+    return e;
+}
+
+/** The method whose failure `error` reports (R-FA-12), or undefined. */
+export function methodFailureOf(error: unknown): string | undefined {
+    return error !== null && typeof error === 'object' ? (error as any)[METHOD_FAILURE] : undefined;
+}
+
+/**
+ * Run a method of the JjEL library: what it throws is marked as the failure of
+ * `method` (R-FA-12) and thrown unchanged. Used for the methods that call no
+ * JjEL function, so that whatever they throw is theirs.
+ */
+function libraryMethod<T>(method: string, step: () => T): T {
+    try {
+        return step();
+    } catch (e) {
+        if (e instanceof JjelTimeoutError) throw e;
+        throw asMethodFailure(e, method);
+    }
+}
+
+/**
  * The evaluation ran past `EvaluationContext.deadline` (R-JJD-3). Not a
  * `JjelEvaluationError`: the expression is not wrong, it was stopped, and a
  * caller tells the two apart with `instanceof`.
@@ -98,14 +140,55 @@ export class JjelTimeoutError extends Error {
 /**
  * Run a step that may raise a bit-vector defect and rethrow it as a
  * JjelEvaluationError with the same message; any other error passes through.
+ * With `method`, the step is that library method and the defect is marked as
+ * its failure (R-FA-12).
  */
-function withBitVectorDefects<T>(step: () => T): T {
+function withBitVectorDefects<T>(step: () => T, method?: string): T {
     try {
         return step();
     } catch (e) {
-        if (e instanceof BitVectorDefect) throw new JjelEvaluationError(e.message);
+        if (e instanceof BitVectorDefect) {
+            const error = new JjelEvaluationError(e.message);
+            throw method === undefined ? error : asMethodFailure(error, method);
+        }
         throw e;
     }
+}
+
+/** The longest list `range` builds: a typo such as `range(1e9)` is an error, not a hung tab. */
+const RANGE_MAX_LENGTH = 1_000_000;
+
+/**
+ * `range(n)` is `[0, ..., n-1]`, `range(a, b)` is `[a, ..., b-1]`; empty when the
+ * end is not above the start. Integers only: anything else, and a wrong arity,
+ * is an error naming the function, never a truncation or a conversion.
+ */
+function makeRange(args: JjelValue[]): number[] {
+    if (args.length < 1 || args.length > 2) {
+        throw new JjelEvaluationError(`range() takes 1 or 2 integer arguments, got ${args.length}`);
+    }
+    for (const arg of args) {
+        if (typeof arg !== 'number' || !Number.isInteger(arg)) {
+            const got = arg === null ? 'null' : isBitVector(arg) ? 'a bit-vector' : Array.isArray(arg) ? 'a list' : typeof arg === 'number' ? `the non-integer ${arg}` : `a ${typeof arg}`;
+            throw new JjelEvaluationError(`range() takes integers, got ${got}`);
+        }
+    }
+    const start = args.length === 1 ? 0 : args[0] as number;
+    const end = args.length === 1 ? args[0] as number : args[1] as number;
+    if (end - start > RANGE_MAX_LENGTH) {
+        throw new JjelEvaluationError(`range() would build ${end - start} elements, above the limit of ${RANGE_MAX_LENGTH}`);
+    }
+    const out: number[] = [];
+    for (let i = start; i < end; i++) out.push(i);
+    return out;
+}
+
+/**
+ * Register the global `range` on `ctx`. The evaluator calls it on its own
+ * context; the JjTL executor evaluates in a context of its own and calls it there.
+ */
+export function registerRangeBuiltin(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('range', createFunction(['a', 'b'], makeRange));
 }
 
 /**
@@ -186,6 +269,9 @@ export class JjelEvaluator {
         this.context.registerBuiltin('Array', createFunction(['...values'], (args) => {
             return args;
         }));
+
+        // Like `bits`, a global: it shadows a context variable named `range`.
+        registerRangeBuiltin(this.context);
 
         // Bit-vector constructors (R-BV-5): the only bit-vector globals.
         registerBitVectorConstructors(this.context);
@@ -272,6 +358,8 @@ export class JjelEvaluator {
                 return this.evaluateObjectLiteral(expr, evalCtx);
             case 'StateAccess':
                 return this.evaluateStateAccess(expr, evalCtx);
+            case 'ClassificationTest':
+                return this.evaluateClassificationTest(expr, evalCtx);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }
@@ -290,6 +378,11 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateIdentifier(expr: IdentifierExpr, ctx: EvaluationContext): JjelValue {
+        // A shadowing binding (a JjTL helper parameter) wins over the builtin
+        if (ctx.shadowedBuiltins?.has(expr.name) && ctx.has(expr.name)) {
+            return ctx.get(expr.name)!;
+        }
+
         // Check for builtins first
         if (ctx.hasBuiltin(expr.name)) {
             return ctx.getBuiltin(expr.name)!;
@@ -351,6 +444,24 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateBinary(expr: BinaryExpr, ctx: EvaluationContext): JjelValue {
+        // `+` under a host that attributes its operands: the same order, the same value (R-GEN-10).
+        if (expr.operator === '+' && ctx.textHost?.evaluateConcat) {
+            return ctx.textHost.evaluateConcat(
+                expr,
+                () => this.evaluate(expr.left, ctx),
+                () => this.evaluate(expr.right, ctx),
+                (left, right) => this.applyBinaryOperator('+', left, right),
+            );
+        }
+
+        // `and`/`or` short-circuit (SPEC §Operators): a non-bit-vector left operand that decides
+        // the result leaves the right one unevaluated; otherwise both reach the usual path.
+        if (expr.operator === 'and' || expr.operator === 'or') {
+            const left = this.evaluate(expr.left, ctx);
+            if (!isBitVector(left) && this.isTruthy(left) === (expr.operator === 'or')) return expr.operator === 'or';
+            return this.applyBinaryOperator(expr.operator, left, this.evaluate(expr.right, ctx));
+        }
+
         const left = this.evaluate(expr.left, ctx);
         const right = this.evaluate(expr.right, ctx);
 
@@ -792,7 +903,7 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     private evaluateNullSafeMethodCall(expr: NullSafeMethodCallExpr, ctx: EvaluationContext): JjelValue {
@@ -803,24 +914,27 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     /**
      * Evaluate a standalone function call: name(args).
      * Resolves `name` first as a registered builtin, then as a bound function
      * value in the context. Throws if nothing callable is bound under that name.
+     * A name in `ctx.shadowedBuiltins` bound to a function is called before the
+     * builtin; bound to a value, it does not hide the builtin.
      */
     private evaluateFunctionCall(expr: FunctionCallExpr, ctx: EvaluationContext): JjelValue {
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
 
+        const bound = ctx.has(expr.name) ? ctx.get(expr.name) : undefined;
+        const callable = bound !== undefined && bound !== null && isJjelFunction(bound);
+        if (callable && ctx.shadowedBuiltins?.has(expr.name)) return bound.call(args, ctx);
+
         const builtin = ctx.getBuiltin(expr.name);
         if (builtin) return builtin.call(args, ctx);
 
-        const bound = ctx.has(expr.name) ? ctx.get(expr.name) : undefined;
-        if (bound !== undefined && bound !== null && isJjelFunction(bound)) {
-            return bound.call(args, ctx);
-        }
+        if (callable) return bound.call(args, ctx);
 
         throw new JjelEvaluationError(
             `Function '${expr.name}' is not defined`,
@@ -828,7 +942,7 @@ export class JjelEvaluator {
         );
     }
 
-    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext, expr?: JjelExpression): JjelValue {
         // Pedagogical error mirror of getProperty: catches the paren form
         // `obj.className()` on instances. Same redirection to `instanceOf.name`.
         if (
@@ -847,16 +961,23 @@ export class JjelEvaluator {
         if (Array.isArray(obj)) {
             // `join` from a context with a Text host (R-GEN-10); without one, the usual dispatch below.
             if (method === 'join' && ctx.textHost) {
+                const host = ctx.textHost;
+                if (host.evaluateJoin) return host.evaluateJoin(expr, obj, args[0], () => joinWithTextHost(obj, args[0], host));
                 return joinWithTextHost(obj, args[0], ctx.textHost);
             }
             const collectionMethod = getCollectionMethod(method);
             if (collectionMethod) {
                 // Check if first arg is a lambda (function)
                 const firstArg = args[0];
-                if (isJjelFunction(firstArg)) {
-                    return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)));
+                // `map` under a host that keeps each item's origin: the items `map` computes (R-GEN-10).
+                if (method === 'map' && isJjelFunction(firstArg) && ctx.textHost?.mapItems) {
+                    const host = ctx.textHost;
+                    return withBitVectorDefects(() => host.mapItems!(obj, item => firstArg.call([item], ctx)));
                 }
-                return withBitVectorDefects(() => collectionMethod(obj, ...args));
+                if (isJjelFunction(firstArg)) {
+                    return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)), method);
+                }
+                return withBitVectorDefects(() => collectionMethod(obj, ...args), method);
             }
         }
 
@@ -864,7 +985,7 @@ export class JjelEvaluator {
         if (isBitVector(obj)) {
             const bitVectorMethod = getBitVectorMethod(method);
             if (bitVectorMethod) {
-                return withBitVectorDefects(() => bitVectorMethod(obj, args));
+                return libraryMethod(method, () => withBitVectorDefects(() => bitVectorMethod(obj, args)));
             }
             if (args.length === 0 && (method === 'width' || method === 'signed')) {
                 return obj[method];
@@ -875,13 +996,13 @@ export class JjelEvaluator {
         if (typeof obj === 'string') {
             const stringMethod = getStringMethod(method);
             if (stringMethod) {
-                return stringMethod(obj, ...args);
+                return libraryMethod(method, () => stringMethod(obj, ...args));
             }
 
             // Date methods (strings can be ISO date strings)
             const dateMethod = getDateMethod(method);
             if (dateMethod) {
-                return dateMethod(obj, ...args);
+                return libraryMethod(method, () => dateMethod(obj, ...args));
             }
         }
 
@@ -889,7 +1010,7 @@ export class JjelEvaluator {
         if (typeof obj === 'number') {
             const numberMethod = getNumberMethod(method);
             if (numberMethod) {
-                return numberMethod(obj, ...args);
+                return libraryMethod(method, () => numberMethod(obj, ...args));
             }
         }
 
@@ -923,7 +1044,9 @@ export class JjelEvaluator {
             errorMsg += `. Available: ${availableMethods.slice(0, 8).join(', ')}${availableMethods.length > 8 ? '...' : ''}`;
         }
 
-        throw new JjelEvaluationError(errorMsg);
+        // A model element without the feature is a missing feature, not a failed method (R-FA-12).
+        const error = new JjelEvaluationError(errorMsg);
+        throw isJjelObject(obj) ? error : asMethodFailure(error, method);
     }
 
     /**
@@ -1004,7 +1127,9 @@ export class JjelEvaluator {
                 lambdaCtx.set(expr.params[i], args[i] ?? null);
             }
 
-            // Evaluate body
+            // Evaluate body, through a host that records it as a part (R-GEN-10)
+            const host = lambdaCtx.textHost;
+            if (host?.evaluatePart) return host.evaluatePart(expr.body, () => this.evaluate(expr.body, lambdaCtx));
             return this.evaluate(expr.body, lambdaCtx);
         });
     }
@@ -1114,7 +1239,11 @@ export class JjelEvaluator {
             const key = String(index);
             if (isBlockedMember(obj, key)) return null;
             const value = (obj as any)[key];
-            return typeof value === 'function' ? null : value ?? null;
+            if (typeof value === 'function') return null;
+            // A string key is observed as the member read `o.f` is, same guard
+            // and arguments, so reflective text keeps its origin (R-TXT-6).
+            if (typeof index === 'string' && key in obj) ctx.readObserver?.(obj, key, value ?? null);
+            return value ?? null;
         }
         return null;
     }
@@ -1156,6 +1285,26 @@ export class JjelEvaluator {
             throw new JjelEvaluationError(`'${expr.attribute}' is not a state attribute of ${(target as any).name ?? id}`, expr);
         }
         return value;
+    }
+
+    /**
+     * `x.in(V::D)` (R-DCN-7): whether dynamic class D of viewpoint V is active
+     * for what `x` evaluates to, asked of the context's classification hook.
+     * Without a hook it throws, and the tri-state reports `exception`. An
+     * answer that is not a boolean throws too: never coerced.
+     */
+    private evaluateClassificationTest(expr: ClassificationTestExpr, ctx: EvaluationContext): JjelValue {
+        const access = ctx.classification;
+        if (!access) {
+            throw new JjelEvaluationError(`${expr.viewpoint}::${expr.dynamicClass}: classification is not bound here`, expr);
+        }
+        const target = this.evaluate(expr.object, ctx);
+        const answer: unknown = access.isIn(target, expr.viewpoint, expr.dynamicClass);
+        if (typeof answer !== 'boolean') {
+            const got = answer === null ? 'null' : typeof answer;
+            throw new JjelEvaluationError(`${expr.viewpoint}::${expr.dynamicClass}: the classification answered ${got}, not a boolean`, expr);
+        }
+        return answer;
     }
 
     // ============================================
@@ -1230,6 +1379,10 @@ export class JjelEvaluator {
         if (isBitVector(a) || isBitVector(b)) {
             return isBitVector(a) && isBitVector(b) && bitVectorsEqual(a, b);
         }
+
+        // Model objects: identity of the underlying object, never a walk of the keys.
+        const sameModelObject = modelObjectsEqual(a, b);
+        if (sameModelObject !== undefined) return sameModelObject;
 
         if (typeof a !== typeof b) return false;
 

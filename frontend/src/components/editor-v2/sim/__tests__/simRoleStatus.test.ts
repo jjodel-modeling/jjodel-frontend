@@ -27,6 +27,7 @@ import {
     profileSummaryText,
     profileVerdict,
     ROLE_SPECS,
+    runEngine,
     SEMANTIC_TYPE_OPTIONS,
     semanticTypeCurrent,
     semanticTypePatch,
@@ -113,6 +114,35 @@ describe('invalidEngineRoles: the bound (R-SIM-23, R-SIM-37)', () => {
         for (const bad of ['0', '-1', '1.5', 'x', '2e1']) {
             expect(invalidEngineRoles({ ...CF, simBound: bad })).toEqual(['Bound (a whole number ≥ 1)']);
         }
+    });
+});
+
+/** The closure of the dcn shape (simProfiles.ts `closureRoles('dcn')`), each key on the one before. */
+const DCN_BAG: Record<string, unknown> = {
+    simStaticClass: 'C_Drone', simViewpoints: 'R_vp', simDynamicClasses: 'R_dc', simInvariant: 'A_inv',
+};
+
+describe('runEngine: the gate of the run controls, the rule of startRun (P-2026-11-08-0315)', () => {
+    it('a dcn-only bag is complete: the DCN nucleus, though every Petri engine role is missing', () => {
+        expect(missingEngineRoles({})).not.toEqual([]);
+        expect(runEngine({}, DCN_BAG)).toBe('dcn');
+    });
+
+    it('a bag with neither role set is not complete; nor is a dcn bag short of one closure key', () => {
+        expect(runEngine({}, undefined)).toBeNull();
+        expect(runEngine(DECLARATIVE, {})).toBeNull();
+        for (const key of Object.keys(DCN_BAG)) expect(runEngine({}, { ...DCN_BAG, [key]: '' })).toBeNull();
+    });
+
+    it('the Petri case is unchanged: complete and valid roles are the Petri core, with or without a dcn bag', () => {
+        for (const roles of [CF, PETRI]) {
+            expect(runEngine(roles, undefined)).toBe('petri');
+            expect(runEngine(roles, DCN_BAG)).toBe('petri');
+        }
+        // control: an invalid bound is not a Petri run, and falls to the dcn roles when they are bound
+        expect(runEngine({ ...CF, simBound: '0' }, undefined)).toBeNull();
+        expect(runEngine({ ...CF, simBound: '0' }, DCN_BAG)).toBe('dcn');
+        expect(runEngine({ ...CF, simNextState: undefined }, undefined)).toBeNull();
     });
 });
 

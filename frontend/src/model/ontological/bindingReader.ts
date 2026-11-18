@@ -15,13 +15,30 @@
  *   candidate's (a record with no feature container is the least specific). `null` when there is no candidate or no
  *   unique most specific one, as when a metaclass inherits from the owners of two records; `recordsFor` shows that.
  * - `instantiableClassifiers`: the M1 objects whose metaclass conforms to the owner of the feature container, abstract
- *   ones left out. A binding with no feature container cannot say which objects classify (the view does not carry the
- *   type of a reference), so it gives none.
+ *   ones left out, and with a `potency` role those of potency 0 too (R-OI-28). A binding with no feature container
+ *   cannot say which objects classify (the view does not carry the type of a reference), so it gives none.
  * - `featureClosure`: the features of a classifier, its own first and then the inherited ones, level by level over the
  *   generalization. A feature is listed once. A cycle is reported as data (the ids around it, the first repeated at
- *   the end) and not followed.
- * - `slotDiff`: for an instance, the features of its classifier's closure that have no slot, and the slots whose
- *   defining feature is not in the closure. Nothing is judged when the binding has no slot roles or the instance has no
+ *   the end) and not followed. With `featureSources` (R-DCN-10, R-DCN-17), every path is then applied from every
+ *   classifier of that closure, in closure order and then record order: each hop follows `referenceTargets`, the
+ *   targets of the last hop are features, listed after the own and inherited ones, each once. `dormantOwner` maps each
+ *   of them to the element the next-to-last hop reached (the dynamic class; the classifier for a one-hop path), and is
+ *   absent when the binding has no `featureSources`.
+ * - `typeChain`: the classifier of an object, the classifier of that one, and so on up to a root (no classifier) or
+ *   to the first repeat; a type cycle is reported as data (the ids around it, the first repeated at the end) and not
+ *   followed. `ontoLevel` is the length of that chain (R-OI-27): a root is level 0, its instances 1, and so on from the
+ *   top, so UML's classes are 0 and its instances 1. No role declares it.
+ * - `clabjectPotency` (R-OI-28): the value of the binding's `potency` attribute on the object when it holds an integer,
+ *   else its classifier's potency minus 1, never below 0; a root without a value, and every object of a binding without
+ *   the role, is unbounded (`Infinity`). `featurePotencyOf` (R-OI-26): the value of `featurePotency` on a feature, 1 when
+ *   it holds no integer or the binding has no such role.
+ * - `dueFeatures` (R-OI-26, exact level): the features an instance of a classifier holds slots for. With t1 the
+ *   classifier and t2, t3, ... its type chain, for k = 1, 2, ... every feature of the closure of t_k whose potency is k,
+ *   each once, unless k exceeds the potency of t_k (such a feature is never due). The closures' cycles come along, each
+ *   once. A binding without `featurePotency` walks nothing: the result is `featureClosure` of t1, so UML and the DCN
+ *   (R-DCN-3: dormant slots) read as before.
+ * - `slotDiff`: for an instance, the features due on it (`dueFeatures` of its classifier) that have no slot, and the
+ *   slots whose defining feature is not due. Nothing is judged when the binding has no slot roles or the instance has no
  *   classifier.
  */
 
@@ -46,6 +63,15 @@ export interface FeatureClosure {
     features: string[];
     /** Each cycle as the classifier ids around it, the first one repeated at the end. */
     cycles: string[][];
+    /** Each feature reached through a feature source, to the element that holds it; only with `featureSources`. */
+    dormantOwner?: Record<string, string>;
+}
+
+export interface TypeChain {
+    /** The classifier of the object, then the classifier of that one, up to a root or the first repeat. */
+    chain: string[];
+    /** The type cycle met, as the ids around it, the first one repeated at the end; `null` when none. */
+    cycle: string[] | null;
 }
 
 export interface OrphanSlot {
@@ -105,7 +131,8 @@ export function instantiableClassifiers(view: OntoReadView, binding: OntoBinding
     return modelObjectIds.filter(id => {
         const meta = view.metaclassOf(id);
         if (meta === undefined || !view.conformsTo(meta, owner)) return false;
-        return !(abstractFlag !== undefined && isTrue(view.attributeValue(id, abstractFlag)));
+        if (abstractFlag !== undefined && isTrue(view.attributeValue(id, abstractFlag))) return false;
+        return clabjectPotency(view, binding, id) >= 1;
     });
 }
 
@@ -116,6 +143,43 @@ function generalsOf(view: OntoReadView, binding: OntoBinding, classifierId: stri
     if (direct !== undefined) return view.referenceTargets(classifierId, direct);
     if (via === undefined || general === undefined) return [];
     return view.referenceTargets(classifierId, via).flatMap(link => view.referenceTargets(link, general));
+}
+
+/** Whether `classifierId` is `typeId` or specializes it at any depth, through the binding's generalization. */
+export function classifierConforms(view: OntoReadView, binding: OntoBinding, classifierId: string, typeId: string): boolean {
+    const visited = new Set<string>();
+    const queue = [classifierId];
+    while (queue.length > 0) {
+        const id = queue.shift()!;
+        if (id === typeId) return true;
+        if (visited.has(id)) continue;
+        visited.add(id);
+        queue.push(...generalsOf(view, binding, id));
+    }
+    return false;
+}
+
+/**
+ * The two instances in the order of the member ends of `associationId` when its ends accept their classifiers (R-OI-5),
+ * `null` when they do not or the association has not exactly two ends. The drag's direction wins when both orders fit.
+ * `link` gives the ends; `object` the classifier of an instance and the generalization of its classes; an end's type is
+ * read through `link`'s feature type or, a record without one, `object`'s (R-OI-8: the same relation).
+ */
+export function linkEnds(
+    view: OntoReadView, link: OntoBinding, object: OntoBinding, associationId: string, sourceId: string, targetId: string,
+): [string, string] | null {
+    const featureType = link.featureType ?? object.featureType;
+    if (link.featureContainer === undefined || featureType === undefined) return null;
+    const ends = view.referenceTargets(associationId, link.featureContainer);
+    if (ends.length !== 2) return null;
+    const [first, second] = ends.map(end => view.referenceTargets(end, featureType)[0]);
+    const source = view.referenceTargets(sourceId, object.typeReference)[0];
+    const target = view.referenceTargets(targetId, object.typeReference)[0];
+    if (first === undefined || second === undefined || source === undefined || target === undefined) return null;
+    const accepts = (classifier: string, type: string) => classifierConforms(view, object, classifier, type);
+    if (accepts(source, first) && accepts(target, second)) return [sourceId, targetId];
+    if (accepts(target, first) && accepts(source, second)) return [targetId, sourceId];
+    return null;
 }
 
 /** The feature closure of `classifierId`: see the module comment. */
@@ -148,7 +212,93 @@ export function featureClosure(view: OntoReadView, binding: OntoBinding, classif
         }
         level = next;
     }
-    return { features, cycles };
+    if (binding.featureSources === undefined) return { features, cycles };
+    const dormantOwner: Record<string, string> = {};
+    for (const classifier of visited) {
+        for (const { path } of binding.featureSources) {
+            let reached = [classifier];
+            for (const hop of path.slice(0, -1)) reached = reached.flatMap(id => view.referenceTargets(id, hop));
+            const last = path[path.length - 1];
+            for (const owner of reached) {
+                for (const f of view.referenceTargets(owner, last)) {
+                    if (seenFeatures.has(f)) continue;
+                    seenFeatures.add(f);
+                    features.push(f);
+                    dormantOwner[f] = owner;
+                }
+            }
+        }
+    }
+    return { features, cycles, dormantOwner };
+}
+
+/** The type chain of `objectId`: see the module comment. */
+export function typeChain(view: OntoReadView, binding: OntoBinding, objectId: string): TypeChain {
+    const path = [objectId];
+    for (let type = classifierOf(view, binding, objectId); type !== undefined; type = classifierOf(view, binding, type)) {
+        const at = path.indexOf(type);
+        if (at >= 0) return { chain: path.slice(1), cycle: [...path.slice(at), type] };
+        path.push(type);
+    }
+    return { chain: path.slice(1), cycle: null };
+}
+
+/** The ontological level of `objectId`, the length of its type chain: see the module comment. */
+export function ontoLevel(view: OntoReadView, binding: OntoBinding, objectId: string): number {
+    return typeChain(view, binding, objectId).chain.length;
+}
+
+/** An integer attribute value: a whole number, or a string of one; `undefined` for anything else (an unset value). */
+const integerOf = (v: unknown): number | undefined => {
+    if (typeof v === 'number') return Number.isInteger(v) ? v : undefined;
+    if (typeof v === 'string' && /^-?\d+$/.test(v.trim())) return Number(v.trim());
+    return undefined;
+};
+
+/** How many levels of instances `objectId` still admits: see the module comment. */
+export function clabjectPotency(view: OntoReadView, binding: OntoBinding, objectId: string): number {
+    if (binding.potency === undefined) return Infinity;
+    const holders = [objectId, ...typeChain(view, binding, objectId).chain];
+    for (let up = 0; up < holders.length; up++) {
+        const value = integerOf(view.attributeValue(holders[up], binding.potency));
+        if (value !== undefined) return Math.max(0, value - up);
+    }
+    return Infinity;
+}
+
+/** How many levels below its classifier `featureId` becomes a slot: see the module comment. */
+export function featurePotencyOf(view: OntoReadView, binding: OntoBinding, featureId: string): number {
+    if (binding.featurePotency === undefined) return 1;
+    return integerOf(view.attributeValue(featureId, binding.featurePotency)) ?? 1;
+}
+
+/** The features due as slots on an instance of `classifierId`: see the module comment. */
+export function dueFeatures(view: OntoReadView, binding: OntoBinding, classifierId: string): FeatureClosure {
+    if (binding.featurePotency === undefined) return featureClosure(view, binding, classifierId);
+    const features: string[] = [];
+    const seen = new Set<string>();
+    const cycles: string[][] = [];
+    const seenCycles = new Set<string>();
+    const dormantOwner: Record<string, string> | undefined = binding.featureSources !== undefined ? {} : undefined;
+    const types = [classifierId, ...typeChain(view, binding, classifierId).chain];
+    types.forEach((type, index) => {
+        const k = index + 1;
+        const closure = featureClosure(view, binding, type);
+        for (const cycle of closure.cycles) {
+            const key = cycle.join('\u0000');
+            if (seenCycles.has(key)) continue;
+            seenCycles.add(key);
+            cycles.push(cycle);
+        }
+        if (k > clabjectPotency(view, binding, type)) return;
+        for (const f of closure.features) {
+            if (seen.has(f) || featurePotencyOf(view, binding, f) !== k) continue;
+            seen.add(f);
+            features.push(f);
+            if (dormantOwner && closure.dormantOwner?.[f] !== undefined) dormantOwner[f] = closure.dormantOwner[f];
+        }
+    });
+    return dormantOwner ? { features, cycles, dormantOwner } : { features, cycles };
 }
 
 /** The missing features and the orphan slots of `instanceId`: see the module comment. */
@@ -157,7 +307,7 @@ export function slotDiff(view: OntoReadView, binding: OntoBinding, instanceId: s
     if (binding.slotContainer === undefined || binding.definingFeature === undefined) return none;
     const classifier = classifierOf(view, binding, instanceId);
     if (classifier === undefined) return none;
-    const { features, cycles } = featureClosure(view, binding, classifier);
+    const { features, cycles } = dueFeatures(view, binding, classifier);
     const inClosure = new Set(features);
     const covered = new Set<string>();
     const orphans: OrphanSlot[] = [];

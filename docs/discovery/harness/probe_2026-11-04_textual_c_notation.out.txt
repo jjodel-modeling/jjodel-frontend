@@ -1,0 +1,193 @@
+== setup: SyncRTL 38 classes, 1 enumeration
+
+== (1a) the print of today, C-like, no annotations
+arb3: objects 108, expression objects 77, roots 15, text lines 348, chars 7147, lines of expressions 221; Conj/Disj by arity (3 = 3+) {"Conj/1":3,"Conj/2":9,"Conj/3":4,"Conj/0":2}; with a same-class child 2
+arb3_rr: objects 240, expression objects 170, roots 26, text lines 867, chars 19176, lines of expressions 671; Conj/Disj by arity (3 = 3+) {"Conj/3":6,"Conj/2":17,"Disj/1":3,"Disj/2":3,"Conj/1":2,"Conj/0":2}; with a same-class child 2
+arb3_fixed: objects 168, expression objects 116, roots 24, text lines 597, chars 11792, lines of expressions 413; Conj/Disj by arity (3 = 3+) {"Conj/1":3,"Conj/2":12,"Conj/3":4,"Conj/0":2}; with a same-class child 2
+mc_w4_r4: objects 714, expression objects 492, roots 78, text lines 2622, chars 50830, lines of expressions 1900; Conj/Disj by arity (3 = 3+) {"Conj/2":22,"Disj/1":2,"Disj/2":2,"Conj/3":7,"Disj/3":4}; with a same-class child 0
+pf_w4_r4: objects 789, expression objects 545, roots 91, text lines 2870, chars 55312, lines of expressions 2058; Conj/Disj by arity (3 = 3+) {"Conj/2":25,"Disj/1":2,"Disj/2":2,"Conj/3":9,"Disj/3":4}; with a same-class child 0
+mc_w32_r32: objects 714, expression objects 492, roots 78, text lines 2622, chars 50880, lines of expressions 1900; Conj/Disj by arity (3 = 3+) {"Conj/2":22,"Disj/1":2,"Disj/2":2,"Conj/3":7,"Disj/3":4}; with a same-class child 0
+-- mc_w4_r4 output dmem_we, as printed today:
+Port dmem_we {
+      origin "Core:memory port"
+      type {
+        Bool {}
+      }
+      driver {
+        Conj {
+          ops {
+            Ref st {}
+            Disj {
+              ops {
+                Ref is_sw {}
+              }
+            }
+          }
+        }
+      }
+    }
+-- mc_w32_r32 input instr, as printed today:
+Port instr {
+      origin "Core:instruction port"
+      type {
+        Word {
+          width 32
+        }
+      }
+    }
+
+== (1b) BOOL with the operator annotation, as resolution and check see it today
+issue notice class And: the operator "&" is stored, not applied yet
+issue notice class Or: the operator "|" is stored, not applied yet
+issue notice class Imp: the operator "->" is stored, not applied yet
+issue notice class Not: the operator "!" is stored, not applied yet
+checkStyle findings (not ok): 20
+  error distinct-classes Model: the keyword "" starts 2 classes: Use, Lit
+  error distinct-classes Expr_: the keyword "" starts 2 classes: Use, Lit
+  notice annotations class And: the operator "&" is stored, not applied yet
+  notice annotations class Or: the operator "|" is stored, not applied yet
+  notice annotations class Imp: the operator "->" is stored, not applied yet
+  notice annotations class Not: the operator "!" is stored, not applied yet
+  error annotations rule Model: not LL(1): the repeated part can be empty
+  error annotations rule Model: not LL(1): "Sheet" can start two alternatives
+  error annotations rule Model: not LL(1): "Atom" can start two alternatives
+  error annotations rule Model: not LL(1): "Rule" can start two alternatives
+  error annotations rule Model: not LL(1): ID can start two alternatives
+  error annotations rule Model: not LL(1): 2 alternatives can be empty
+  error annotations rule Model: not LL(1): "Sheet", "Atom", "Rule", ID, STR, "@", "true", "false", "Not", "And", "Or", "Imp" can both start an alternative and follow the empty one
+  error annotations Use.atom: not LL(1): ID, STR, "@" can both start the optional part and follow it
+  error annotations Lit.value: not LL(1): "true", "false" can both start the optional part and follow it
+  error annotations And.ops: not LL(1): the repeated part can be empty
+  error annotations Or.ops: not LL(1): the repeated part can be empty
+  error annotations rule Expr_: not LL(1): ID can start two alternatives
+  error annotations rule Expr_: not LL(1): 2 alternatives can be empty
+  error annotations rule Expr_: not LL(1): ID, STR, "@", "true", "false", "Not", "And", "Or", "Imp" can both start an alternative and follow the empty one
+-- rule driver, printed with the record (operators stored, not applied):
+Rule driver {
+      {
+        And {
+          ops {
+            st
+            Or {
+              ops {
+                is_sw
+              }
+            }
+          }
+        }
+      }
+    }
+reparse: errors 18, reprint identical false, lines 130
+ebnf Rule  ::= "Rule" [name=NAME] "{" ["{" when=Expr_ "}"] "}" ;
+ebnf Use   ::= [atom=REF] ;
+ebnf And   ::= "And" "{" ["ops" "{" {ops+=Expr_} "}"] "}" ;
+ebnf Expr_ ::= Use | Lit | Not | And | Or | Imp ;
+the real tokenizer on "a -1": ID:a INT:-1 EOF:; on "a & b": ID:a ID:b EOF: errors unexpected character "&"
+
+== (1c) precedence climbing: round trip on BOOL and SyncRTL
+flat driver  st & or(is_sw)                     model kept true  reprint identical true
+flat guard   st & ld | !rdy                     model kept true  reprint identical true
+flat chain   st & ld & rdy                      model kept true  reprint identical true
+flat nested  (st & ld) & rdy                    model kept true  reprint identical true
+flat impR    st -> ld -> rdy                    model kept true  reprint identical true
+flat impL    (st -> ld) -> rdy                  model kept true  reprint identical true
+flat empty   and()                              model kept true  reprint identical true
+flat lit     true | !!st                        model kept true  reprint identical true
+fold driver  st & or(is_sw)                     model kept true  reprint identical true
+fold guard   st & ld | !rdy                     model kept true  reprint identical true
+fold chain   st & ld & rdy                      model kept false  reprint identical true  parsed as And(ops=[And(ops=[Use(atom=Atom(name="st")),Use(atom=Atom(name="ld"))]),Use(atom=Atom(name="rdy"))])
+fold nested  st & ld & rdy                      model kept true  reprint identical true
+fold impR    st -> ld -> rdy                    model kept true  reprint identical true
+fold impL    (st -> ld) -> rdy                  model kept true  reprint identical true
+fold empty   and()                              model kept true  reprint identical true
+fold lit     true | !!st                        model kept true  reprint identical true
+typed "st & (is_sw)"       model And(ops=[Use(atom=Atom(name="st")),Use(atom=Atom(name="is_sw"))])      minimal print "st & is_sw"           with the tree's parentheses "st & (is_sw)" (raw count reprint "st & (is_sw)")
+typed "st & or(is_sw)"     model And(ops=[Use(atom=Atom(name="st")),Or(ops=[Use(atom=Atom(name="is_sw") minimal print "st & or(is_sw)"       with the tree's parentheses "st & or(is_sw)" (raw count reprint "st & or(is_sw)")
+typed "((st)) | ld"        model Or(ops=[Use(atom=Atom(name="st")),Use(atom=Atom(name="ld"))])          minimal print "st | ld"              with the tree's parentheses "((st)) | ld" (raw count reprint "((st)) | ld")
+typed "(st & ld) & rdy"    model And(ops=[And(ops=[Use(atom=Atom(name="st")),Use(atom=Atom(name="ld"))] minimal print "(st & ld) & rdy"      with the tree's parentheses "(st & ld) & rdy" (raw count reprint "((st & ld)) & rdy")
+typed "st & (ld & rdy)"    model And(ops=[Use(atom=Atom(name="st")),And(ops=[Use(atom=Atom(name="ld")), minimal print "st & (ld & rdy)"      with the tree's parentheses "st & (ld & rdy)" (raw count reprint "st & ((ld & rdy))")
+typed "!(st)"              model Not(op=Use(atom=Atom(name="st")))                                      minimal print "!st"                  with the tree's parentheses "!(st)" (raw count reprint "!(st)")
+SyncRTL flat: expression roots 312, model kept 312, reprint identical 312, parse errors 0, chars of all expressions 14218
+SyncRTL fold: expression roots 312, model kept 269, reprint identical 312, parse errors 0, chars of all expressions 14206; first failure: arb3 sel_io.expr: req_io & !req_cpu & !req_dma
+-- mc_w4_r4 dmem_we.driver in the probe's notation: st & or(is_sw)
+-- mc_w4_r4 wire mem_addr.expr: Case([Arm(is_sw, a + imm_s)], a + imm_i)
+-- mc_w4_r4 longest wire expression (220 chars): Case([Arm(r_is_add, sa + sb), Arm(r_is_sub, sa - sb), Arm(r_is_xor, BitXor(sa, sb)), Arm(r_is_or, BitOr(sa, sb)), Arm(r_is_and, BitAnd(sa, sb)), Arm(r_is_addi, sa + r_imm_i), Arm(r_is_lw, dmem_rdata)], Const(0, Word(4)))
+
+== (1d) BOOL in block form: edits inside an expression, through planTextEdit
+retarget a Use: the text to edit was not found
+swap two operands: the text to edit was not found
+wrap an operand in Not: the text to edit was not found
+And into Or: the text to edit was not found
+delete one operand: the text to edit was not found
+
+== (2) T4b: ambiguous annotations, the messages of today
+two classes, one keyword:
+  error [distinct-classes] Model: the keyword "all" starts 2 classes: And, Or
+  error [distinct-classes] Expr_: the keyword "all" starts 2 classes: And, Or
+  error [annotations] rule Model: not LL(1): "all" can start two alternatives
+  error [annotations] rule Expr_: not LL(1): "all" can start two alternatives
+two positional containments:
+  error [annotations] Imp.left: not LL(1): "{", "{}" can both start the optional part and follow it
+a keyword that is a block token:
+  error [annotations] class Rule: the keyword "{" is not an identifier or ""
+an operator symbol that is a block token:
+  notice [annotations] class And: the operator "{" is stored, not applied yet
+two operators, one symbol:
+  notice [annotations] class And: the operator "&" is stored, not applied yet
+  notice [annotations] class Or: the operator "&" is stored, not applied yet
+a one-line class with an optional name:
+  error [annotations] class Sheet: Sheet has a containment: layout line not applied
+preview at 1000 objects, median of 15 (ms): derive 0.08, check 0.10, ebnf 0.02, print 3.43, total 3.64
+an unknown class id: error classes: no class has the id "C_X"
+
+== (3) T5: Pascal/Ada and the indentation stand-in on the corpus
+library, plain pascal: check errors 0; parse errors 0; model unchanged true; reprint byte-identical true; lines 32
+Library city begin
+  books begin
+    Book book0 begin
+      genre := FICTION;
+    end;
+    Book book1 begin
+      genre := SCIENCE;
+      year := 1901;
+      borrowedBy := reader1;
+library, plain pascal mutants 226: refused 225, applicable and unchanged 1, applicable and changed 0
+library, plain c-like mutants 130: refused 120, applicable and unchanged 1, applicable and changed 9
+library, plain indent: braces restored identical true; parse errors 0; model unchanged true; reprint byte-identical true; lines 23 (c-like 32)
+library, plain indent mutants 133 [refused, unchanged, changed]: {"trunc":[32,1,11],"delete":[35,0,9],"dedent":[22,0,0],"indent":[16,7,0]}
+turnstile, plain pascal: check errors 0; parse errors 0; model unchanged true; reprint byte-identical true; lines 31
+turnstile, plain pascal mutants 304: refused 276, applicable and unchanged 1, applicable and changed 27
+turnstile, plain c-like mutants 146: refused 143, applicable and unchanged 1, applicable and changed 2
+turnstile, plain indent: braces restored identical true; parse errors 0; model unchanged true; reprint byte-identical true; lines 23 (c-like 31)
+turnstile, plain indent mutants 146 [refused, unchanged, changed]: {"trunc":[48,1,4],"delete":[51,0,2],"dedent":[17,0,0],"indent":[19,4,0]}
+garage, c-like pascal: check errors 0; parse errors 6 first unterminated string at 8:15; model unchanged false; reprint byte-identical false; lines 54
+garage, c-like pascal mutants 470: refused 470, applicable and unchanged 0, applicable and changed 0
+garage, c-like c-like mutants 298: refused 290, applicable and unchanged 1, applicable and changed 7
+garage, c-like indent: braces restored identical true; parse errors 0; model unchanged true; reprint byte-identical true; lines 37 (c-like 53)
+garage, c-like indent mutants 298 [refused, unchanged, changed]: {"trunc":[77,1,36],"delete":[107,0,7],"dedent":[33,0,0],"indent":[27,10,0]}
+garage, lower pascal: check errors 0; parse errors 6 first unterminated string at 8:15; model unchanged false; reprint byte-identical false; lines 54
+garage, lower pascal mutants 470: refused 470, applicable and unchanged 0, applicable and changed 0
+garage, lower c-like mutants 298: refused 290, applicable and unchanged 1, applicable and changed 7
+garage, lower indent: braces restored identical false; parse errors 1; model unchanged false; reprint byte-identical true; lines 37 (c-like 53)
+garage, lower indent mutants 298 [refused, unchanged, changed]: {"trunc":[79,0,35],"delete":[114,0,0],"dedent":[32,0,1],"indent":[37,0,0]}
+bool, plain pascal: check errors 0; parse errors 0; model unchanged true; reprint byte-identical true; lines 168
+bool, plain pascal mutants 832: refused 831, applicable and unchanged 1, applicable and changed 0
+bool, plain c-like mutants 554: refused 544, applicable and unchanged 1, applicable and changed 9
+bool, plain indent: braces restored identical true; parse errors 0; model unchanged true; reprint byte-identical true; lines 96 (c-like 168)
+bool, plain indent mutants 447 [refused, unchanged, changed]: {"trunc":[48,1,79],"delete":[119,0,9],"dedent":[95,0,0],"indent":[75,21,0]}
+arb3 SyncRTL, plain pascal: check errors 0; parse errors 0; model unchanged true; reprint byte-identical true; lines 348
+arb3 SyncRTL, plain pascal mutants 1950: refused 1901, applicable and unchanged 1, applicable and changed 48
+arb3 SyncRTL, plain c-like mutants 1214: refused 1164, applicable and unchanged 1, applicable and changed 49
+arb3 SyncRTL, plain indent: braces restored identical true; parse errors 0; model unchanged true; reprint byte-identical true; lines 210 (c-like 348)
+arb3 SyncRTL, plain indent mutants 981 [refused, unchanged, changed]: {"trunc":[102,1,178],"delete":[229,0,52],"dedent":[209,0,0],"indent":[149,61,0]}
+-- library plain, c-like truncated after 6 lines:
+Library city {
+  books {
+    Book book0 {
+      genre FICTION
+    }
+    Book book1 {
+c-like: errors 3 (expected "}" to close the "{" at 6:16; found end of text), applicable false
+indent, same 6 lines: errors 0, applicable true, objects 3 of 10
+
+probe time 3555 ms

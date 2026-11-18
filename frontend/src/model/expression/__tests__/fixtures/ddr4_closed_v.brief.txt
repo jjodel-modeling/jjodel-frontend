@@ -1,0 +1,295 @@
+brief ddr4_closed_v
+
+params
+  tCK_ps = 1000
+  tRCD_ps = 2000
+  tRP_ps = 2000
+  tRAS_ps = 3000
+  tRC_ps = 5000
+  tWR_ps = 1000
+  tRTP_ps = 1000
+  tWTR_ps = 1000
+  tCCD_ps = 1000
+  tRFC_ps = 4000
+  tREFI_ps = 24000
+  CL = 2
+  CWL = 1
+  bl2 = 1
+  rtp_nck = 1
+  wtr_nck = 1
+  ccd_nck = 1
+  maxPostponed = 8
+  rb = 1
+  cb = 1
+  dw = 2
+  cw = 3
+  rw = 5
+
+derived (written out in full wherever used: the kernel has no named integer definitions)
+  D1 = max(max(max(max(max(max(max(max(max(max(ceil(tRC_ps / tCK_ps), ceil(tRFC_ps / tCK_ps)), ((CWL + bl2) + ceil(tWR_ps / tCK_ps))), ((CWL + bl2) + max(wtr_nck, ceil(tWTR_ps / tCK_ps)))), (((CL + bl2) + 2) - CWL)), (CL + bl2)), ceil(tRAS_ps / tCK_ps)), ceil(tRP_ps / tCK_ps)), ceil(tRCD_ps / tCK_ps)), max(rtp_nck, ceil(tRTP_ps / tCK_ps))), max(ccd_nck, ceil(tCCD_ps / tCK_ps)))
+
+picks DES ACT RD WR PRE REF
+
+requirements
+  require LEGAL_COMMAND as legal_command
+  require BANK_STATE as bank_state
+  require T_RCD as t_rcd
+  require T_RP as t_rp
+  require T_RAS as t_ras
+  require T_RC as t_rc
+  require T_WR as t_wr
+  require T_RTP as t_rtp
+  require T_WTR as t_wtr
+  require T_RTW as t_rtw
+  require T_CCD as t_ccd
+  require T_RFC as t_rfc
+  require REFRESH_DEADLINE as refresh_deadline
+  require AXI_MASTER as axi_master
+  require AXI_R_STABLE as axi_r_stable
+  require AXI_B_STABLE as axi_b_stable
+  require AXI_RESPONSE_MATCHES as axi_response_matches
+  require AXI_SINGLE_OUTSTANDING as axi_single_outstanding
+  require READ_RETURNS_LAST_WRITE as read_returns_last_write
+  require RESPONSE_LATENCY as response_latency (bound = 9)
+  require ACCEPT_LATENCY as accept_latency (bound = 4)
+
+library ddr4
+  items
+    DES: code = 0, cs_n = 1, act_n = 2, ras_n = 2, cas_n = 2, we_n = 2
+    ACT: code = 1, cs_n = 0, act_n = 0, ras_n = 2, cas_n = 2, we_n = 2
+    RD: code = 2, cs_n = 0, act_n = 1, ras_n = 1, cas_n = 0, we_n = 1
+    WR: code = 3, cs_n = 0, act_n = 1, ras_n = 1, cas_n = 0, we_n = 0
+    PRE: code = 4, cs_n = 0, act_n = 1, ras_n = 0, cas_n = 1, we_n = 0
+    REF: code = 5, cs_n = 0, act_n = 1, ras_n = 0, cas_n = 0, we_n = 1
+  patterns
+    observer for LEGAL_COMMAND BANK_STATE T_RCD T_RP T_RAS T_RC T_WR T_RTP T_WTR T_RTW T_CCD T_RFC REFRESH_DEADLINE READ_RETURNS_LAST_WRITE
+      monitor reg s_since_ACT: word<cw> reset D1
+          next = (is_ACT ? 1 : ((D1 <= s_since_ACT) ? D1 : (s_since_ACT + 1)))
+      monitor reg s_since_PRE: word<cw> reset D1
+          next = (is_PRE ? 1 : ((D1 <= s_since_PRE) ? D1 : (s_since_PRE + 1)))
+      monitor reg s_since_RD: word<cw> reset D1
+          next = (is_RD ? 1 : ((D1 <= s_since_RD) ? D1 : (s_since_RD + 1)))
+      monitor reg s_since_WR: word<cw> reset D1
+          next = (is_WR ? 1 : ((D1 <= s_since_WR) ? D1 : (s_since_WR + 1)))
+      monitor reg s_since_REF: word<cw> reset D1
+          next = (is_REF ? 1 : ((D1 <= s_since_REF) ? D1 : (s_since_REF + 1)))
+      monitor reg s_open: bool reset false
+          next = (is_ACT ? true : (is_PRE ? false : s_open))
+      monitor reg s_orow: word<rb> reset 0
+          next = (is_ACT ? row : s_orow)
+      for c over the picked items:
+        monitor wire is_{c}: bool = ((if c.cs_n < 2: (cs_n == bool(c.cs_n))) & (if c.act_n < 2: (act_n == bool(c.act_n))) & (if c.ras_n < 2: (ras_n == bool(c.ras_n))) & (if c.cas_n < 2: (cas_n == bool(c.cas_n))) & (if c.we_n < 2: (we_n == bool(c.we_n))))
+    observer for AXI_R_STABLE AXI_B_STABLE AXI_RESPONSE_MATCHES AXI_SINGLE_OUTSTANDING RESPONSE_LATENCY ACCEPT_LATENCY READ_RETURNS_LAST_WRITE AXI_MASTER
+      monitor reg s_pend: bool reset false
+          next = ((ar_hs | aw_hs) ? true : ((r_hs | b_hs) ? false : s_pend))
+      monitor reg s_pend_rd: bool reset false
+          next = (ar_hs ? true : (aw_hs ? false : s_pend_rd))
+      monitor wire ar_hs: bool = (arvalid & arready)
+      monitor wire aw_hs: bool = (awvalid & awready)
+      monitor wire w_hs: bool = (wvalid & wready)
+      monitor wire r_hs: bool = (rvalid & rready)
+      monitor wire b_hs: bool = (bvalid & bready)
+    pattern LEGAL_COMMAND
+      invar {req} = for c over the picked items: [is_{c}]
+    pattern BANK_STATE
+      invar {req} = ((is_ACT -> !s_open) & ((is_RD | is_WR) -> s_open) & (is_REF -> !s_open) & (s_open == @bank_open) & (s_orow == @bank_row) & (s_since_ACT == @since_ACT) & (s_since_PRE == @since_PRE) & (s_since_RD == @since_RD) & (s_since_WR == @since_WR) & (s_since_REF == @since_REF))
+    pattern T_RCD
+      invar {req} = ((is_RD | is_WR) -> (ceil(tRCD_ps / tCK_ps) <= s_since_ACT))
+    pattern T_RP
+      invar {req} = ((is_ACT | is_REF) -> (ceil(tRP_ps / tCK_ps) <= s_since_PRE))
+    pattern T_RAS
+      invar {req} = (is_PRE -> (ceil(tRAS_ps / tCK_ps) <= s_since_ACT))
+    pattern T_RC
+      invar {req} = (is_ACT -> (ceil(tRC_ps / tCK_ps) <= s_since_ACT))
+    pattern T_WR
+      invar {req} = (is_PRE -> (((CWL + bl2) + ceil(tWR_ps / tCK_ps)) <= s_since_WR))
+    pattern T_RTP
+      invar {req} = (is_PRE -> (max(rtp_nck, ceil(tRTP_ps / tCK_ps)) <= s_since_RD))
+    pattern T_WTR
+      invar {req} = (is_RD -> (((CWL + bl2) + max(wtr_nck, ceil(tWTR_ps / tCK_ps))) <= s_since_WR))
+    pattern T_RTW
+      invar {req} = (is_WR -> ((((CL + bl2) + 2) - CWL) <= s_since_RD))
+    pattern T_CCD
+      invar {req} = ((is_RD | is_WR) -> ((max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= s_since_RD) & (max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= s_since_WR)))
+    pattern T_RFC
+      invar {req} = ((is_ACT | is_RD | is_WR | is_PRE | is_REF) -> (ceil(tRFC_ps / tCK_ps) <= s_since_REF))
+    pattern REFRESH_DEADLINE
+      monitor reg s_rtimer: word<rw> reset 0
+          next = (s_tick ? 0 : (s_rtimer + 1))
+      monitor reg s_credit: word<5> reset maxPostponed
+          next = ((s_tick & !is_REF) ? (s_credit + 1) : ((!s_tick & is_REF) ? (s_credit - 1) : s_credit))
+      monitor wire s_tick: bool = ((ceil(tREFI_ps / tCK_ps) - 1) <= s_rtimer)
+      invar {req} = ((s_credit <= (maxPostponed + maxPostponed)) & (s_rtimer == @ref_timer) & (s_credit == (zext(@ref_owed, 5) + maxPostponed)) & @inv)
+    pattern AXI_R_STABLE
+      monitor reg s_rvalid_stall: bool reset false
+          next = (rvalid & !rready)
+      monitor reg s_rdata_prev: word<dw> (no reset)
+          next = rdata
+      invar {req} = (s_rvalid_stall -> (rvalid & (rdata == s_rdata_prev)))
+    pattern AXI_B_STABLE
+      monitor reg s_bvalid_stall: bool reset false
+          next = (bvalid & !bready)
+      invar {req} = (s_bvalid_stall -> bvalid)
+    pattern AXI_RESPONSE_MATCHES
+      invar {req} = ((rvalid -> (s_pend & s_pend_rd)) & (bvalid -> (s_pend & !s_pend_rd)) & !(rvalid & bvalid) & (s_pend == @busy) & (s_pend -> (s_pend_rd == @busy_read)))
+    pattern AXI_SINGLE_OUTSTANDING
+      invar {req} = ((aw_hs == w_hs) & ((ar_hs | aw_hs) -> !s_pend) & !(ar_hs & aw_hs) & (s_pend == @busy))
+    pattern AXI_MASTER
+      monitor reg h_arvalid_stall: bool reset false
+          next = (arvalid & !arready)
+      monitor reg h_araddr_prev: word<(rb + cb)> (no reset)
+          next = araddr
+      monitor reg h_awvalid_stall: bool reset false
+          next = (awvalid & !awready)
+      monitor reg h_awaddr_prev: word<(rb + cb)> (no reset)
+          next = awaddr
+      monitor reg h_wvalid_stall: bool reset false
+          next = (wvalid & !wready)
+      monitor reg h_wdata_prev: word<dw> (no reset)
+          next = wdata
+      assume {req}_arvalid = (h_arvalid_stall -> (arvalid & (araddr == h_araddr_prev)))
+      assume {req}_awvalid = (h_awvalid_stall -> (awvalid & (awaddr == h_awaddr_prev)))
+      assume {req}_wvalid = (h_wvalid_stall -> (wvalid & (wdata == h_wdata_prev)))
+    pattern RESPONSE_LATENCY
+      monitor reg s_resp_wait: word<6> reset 0
+          next = ((ar_hs | aw_hs) ? 1 : ((s_pend & !(rvalid | bvalid)) ? (((req.bound + 1) <= s_resp_wait) ? (req.bound + 1) : (s_resp_wait + 1)) : 0))
+      invar {req} = (s_resp_wait <= req.bound)
+    pattern ACCEPT_LATENCY
+      monitor reg s_acc_wait: word<6> reset 0
+          next = (((arvalid | (awvalid & wvalid)) & !(ar_hs | aw_hs) & !s_pend) ? (((req.bound + 1) <= s_acc_wait) ? (req.bound + 1) : (s_acc_wait + 1)) : 0)
+      invar {req} = (s_acc_wait <= req.bound)
+    pattern READ_RETURNS_LAST_WRITE
+      monitor reg chk: word<(rb + cb)> (no reset)
+          next = chk
+      monitor reg s_val: word<dw> reset 0
+          next = ((aw_hs & (awaddr == chk)) ? wdata : s_val)
+      monitor reg s_pend_chk: bool reset false
+          next = (ar_hs ? (araddr == chk) : s_pend_chk)
+      monitor reg s_mem_chk: word<dw> reset 0
+          next = ((is_WR & ({s_orow, col} == chk)) ? dq_out : s_mem_chk)
+      monitor reg s_rd_chk: bool reset false
+          next = (is_RD ? ({s_orow, col} == chk) : s_rd_chk)
+      monitor wire s_wr_chk_waiting: bool = (s_pend & !s_pend_rd & @write_waiting & (@req_addr == chk))
+      assume {req}_dram = (((s_since_RD == (CL + bl2)) & s_rd_chk) -> (dq_in == s_mem_chk))
+      invar {req} = (((rvalid & s_pend_chk) -> (rdata == s_val)) & (s_wr_chk_waiting ? (@req_wdata == s_val) : (s_mem_chk == s_val)) & ((s_pend & s_pend_rd) -> (s_pend_chk == (@req_addr == chk))) & (@read_waiting -> ((s_since_RD <= (CL + bl2)) & (s_rd_chk == s_pend_chk))))
+
+realization CLOSED_PAGE
+  in arvalid: bool
+  in araddr: word<(rb + cb)>
+  in awvalid: bool
+  in awaddr: word<(rb + cb)>
+  in wvalid: bool
+  in wdata: word<dw>
+  in rready: bool
+  in bready: bool
+  in dq_in: word<dw>
+  out arready: bool = (idle_ok & !(prio_wr & (awvalid & wvalid)))
+  out awready: bool = acc_wr
+  out wready: bool = acc_wr
+  out rvalid: bool = ((st == 5) & !wr_l)
+  out rdata: word<dw> = rd_l
+  out bvalid: bool = ((st == 5) & wr_l)
+  out cs_n: bool = case {
+        for c over the picked items where c.cs_n < 2: [(cmd == c.code) -> bool(c.cs_n)]
+        else: true }
+  out act_n: bool = case {
+        for c over the picked items where c.act_n < 2: [(cmd == c.code) -> bool(c.act_n)]
+        else: true }
+  out ras_n: bool = case {
+        for c over the picked items where c.ras_n < 2: [(cmd == c.code) -> bool(c.ras_n)]
+        else: true }
+  out cas_n: bool = case {
+        for c over the picked items where c.cas_n < 2: [(cmd == c.code) -> bool(c.cas_n)]
+        else: true }
+  out we_n: bool = case {
+        for c over the picked items where c.we_n < 2: [(cmd == c.code) -> bool(c.we_n)]
+        else: true }
+  out row: word<rb> = row_l
+  out col: word<cb> = col_l
+  out dq_out: word<dw> = wd_l
+  reg st: word<4> reset 0
+      next = case {
+        ((st == 0) & need_ref): (open ? 6 : 7)
+        ((st == 0) & acc): ((open & (orow == in_row)) ? 3 : (open ? 1 : 2))
+        ((st == 1) & ((cmd == 4) | !open)): 2
+        ((st == 2) & (cmd == 1)): 3
+        ((st == 3) & (cmd == 2)): 4
+        ((st == 3) & (cmd == 3)): 5
+        ((st == 4) & (d_since_RD == (CL + bl2))): 5
+        ((st == 5) & ((rvalid & rready) | (bvalid & bready))): 0
+        ((st == 6) & ((cmd == 4) | !open)): 7
+        ((st == 7) & (cmd == 5)): 0
+        (8 <= st): 0
+        else: st }
+  reg d_since_ACT: word<cw> reset D1
+      next = ((cmd == 1) ? 1 : ((D1 <= d_since_ACT) ? D1 : (d_since_ACT + 1)))
+  reg d_since_PRE: word<cw> reset D1
+      next = ((cmd == 4) ? 1 : ((D1 <= d_since_PRE) ? D1 : (d_since_PRE + 1)))
+  reg d_since_RD: word<cw> reset D1
+      next = ((cmd == 2) ? 1 : ((D1 <= d_since_RD) ? D1 : (d_since_RD + 1)))
+  reg d_since_WR: word<cw> reset D1
+      next = ((cmd == 3) ? 1 : ((D1 <= d_since_WR) ? D1 : (d_since_WR + 1)))
+  reg d_since_REF: word<cw> reset D1
+      next = ((cmd == 5) ? 1 : ((D1 <= d_since_REF) ? D1 : (d_since_REF + 1)))
+  reg open: bool reset false
+      next = ((cmd == 1) ? true : ((cmd == 4) ? false : open))
+  reg orow: word<rb> reset 0
+      next = ((cmd == 1) ? row_l : orow)
+  reg rtimer: word<rw> reset 0
+      next = (tick ? 0 : (rtimer + 1))
+  reg owed: word<4> reset 0
+      next = ((tick & !(cmd == 5)) ? (owed + 1) : ((!tick & (cmd == 5)) ? (owed - 1) : owed))
+  reg prio_wr: bool reset false
+      next = (acc_rd ? true : (acc_wr ? false : prio_wr))
+  reg row_l: word<rb> reset 0
+      next = (acc ? in_row : row_l)
+  reg col_l: word<cb> reset 0
+      next = (acc_rd ? araddr[(cb - 1):0] : (acc_wr ? awaddr[(cb - 1):0] : col_l))
+  reg wr_l: bool reset false
+      next = (acc ? acc_wr : wr_l)
+  reg wd_l: word<dw> reset 0
+      next = (acc_wr ? wdata : wd_l)
+  reg rd_l: word<dw> reset 0
+      next = (((st == 4) & (d_since_RD == (CL + bl2))) ? dq_in : rd_l)
+  reg close_pend: bool reset false
+      next = (((cmd == 2) | (cmd == 3)) ? true : ((cmd == 4) ? false : close_pend))
+  wire tick: bool = ((ceil(tREFI_ps / tCK_ps) - 1) <= rtimer)
+  wire need_ref: bool = !(owed == 0)
+  wire idle_ok: bool = ((st == 0) & !need_ref & !close_pend)
+  wire acc_rd: bool = (idle_ok & arvalid & !(prio_wr & (awvalid & wvalid)))
+  wire acc_wr: bool = (idle_ok & (awvalid & wvalid) & (prio_wr | !arvalid))
+  wire acc: bool = (acc_rd | acc_wr)
+  wire in_row: word<rb> = (acc_rd ? araddr[((rb + cb) - 1):cb] : awaddr[((rb + cb) - 1):cb])
+  wire can_act: bool = (!open & (ceil(tRP_ps / tCK_ps) <= d_since_PRE) & (ceil(tRC_ps / tCK_ps) <= d_since_ACT) & (ceil(tRFC_ps / tCK_ps) <= d_since_REF))
+  wire can_rd: bool = ((ceil(tRCD_ps / tCK_ps) <= d_since_ACT) & (((CWL + bl2) + max(wtr_nck, ceil(tWTR_ps / tCK_ps))) <= d_since_WR) & (max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= d_since_RD) & (max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= d_since_WR))
+  wire can_wr: bool = ((ceil(tRCD_ps / tCK_ps) <= d_since_ACT) & ((((CL + bl2) + 2) - CWL) <= d_since_RD) & (max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= d_since_RD) & (max(ccd_nck, ceil(tCCD_ps / tCK_ps)) <= d_since_WR))
+  wire can_pre: bool = (open & (ceil(tRAS_ps / tCK_ps) <= d_since_ACT) & (max(rtp_nck, ceil(tRTP_ps / tCK_ps)) <= d_since_RD) & (((CWL + bl2) + ceil(tWR_ps / tCK_ps)) <= d_since_WR) & (ceil(tRFC_ps / tCK_ps) <= d_since_REF))
+  wire can_ref: bool = (!open & (ceil(tRP_ps / tCK_ps) <= d_since_PRE) & (ceil(tRFC_ps / tCK_ps) <= d_since_REF))
+  wire cmd: word<3> = case {
+        ((st == 1) & can_pre): 4
+        ((st == 2) & can_act): 1
+        ((st == 3) & !wr_l & can_rd): 2
+        ((st == 3) & wr_l & can_wr): 3
+        ((st == 6) & can_pre): 4
+        ((st == 7) & can_ref): 5
+        ((st == 5) & need_ref & can_pre): 4
+        ((st == 5) & need_ref & can_ref): 5
+        (close_pend & can_pre & ((st == 0) | (st == 4) | (st == 5))): 4
+        else: 0 }
+  exposes
+    bank_open = open
+    bank_row = orow
+    ref_timer = rtimer
+    ref_owed = owed
+    busy = ((st == 1) | (st == 2) | (st == 3) | (st == 4) | (st == 5))
+    busy_read = !wr_l
+    since_ACT = d_since_ACT
+    since_PRE = d_since_PRE
+    since_RD = d_since_RD
+    since_WR = d_since_WR
+    since_REF = d_since_REF
+    req_addr = {row_l, col_l}
+    req_wdata = wd_l
+    write_waiting = (((st == 1) | (st == 2) | (st == 3)) & wr_l)
+    read_waiting = (st == 4)
+    inv = ((st <= 7) & ((st == 2) -> !open) & ((st == 7) -> !open) & ((st == 3) -> (open & (orow == row_l))) & ((st == 4) -> ((1 <= d_since_RD) & (d_since_RD <= (CL + bl2)))) & (owed <= 1) & (close_pend -> (open & ((st == 0) | (st == 4) | (st == 5) | (st == 6)))))

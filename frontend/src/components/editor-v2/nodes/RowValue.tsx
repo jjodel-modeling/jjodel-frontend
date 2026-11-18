@@ -57,6 +57,8 @@ export const MAX_CHIPS = 4;
 export interface RowValueTarget {
     id: string;
     name: string;
+    /** For a nameless target, `: <Class>`; painted in place of the empty name. */
+    label?: string;
     /** The pointer no longer resolves to an object. */
     broken?: boolean;
 }
@@ -319,7 +321,7 @@ function RowValue(props: RowValueProps) {
                                     key={`${t.id}_${i}`}
                                     parts={{ superclassName: pillTargets.get(t.id) ?? null, instanceName: t.name }}
                                     variant={isNode ? 'node' : 'row'}
-                                    title={`Go to ${t.name}`}
+                                    title={`Go to ${t.label ?? t.name}`}
                                     onClick={(e) => { e.stopPropagation(); onTargetClick?.(t.id); }}
                                 />
                             );
@@ -328,11 +330,11 @@ function RowValue(props: RowValueProps) {
                             <span
                                 key={`${t.id}_${i}`}
                                 className="mm-object__ref-pill"
-                                title={`Go to ${t.name}`}
+                                title={`Go to ${t.label ?? t.name}`}
                                 onClick={(e) => { e.stopPropagation(); onTargetClick?.(t.id); }}
                             >
                                 <i className="bi bi-link-45deg" />
-                                {t.name}
+                                {t.label ?? t.name}
                             </span>
                         );
                     })}

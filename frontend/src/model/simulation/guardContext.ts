@@ -39,7 +39,7 @@
 import { EvaluationContext, isJjelFunction } from '../../jjel/evaluator';
 import type { JjelValue } from '../../jjel/evaluator';
 import { registerBitVectorConstructors } from '../../jjel/evaluator/evaluator';
-import type { JjelStateAccess } from '../../jjel/evaluator/context';
+import type { JjelClassificationAccess, JjelStateAccess } from '../../jjel/evaluator/context';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import type { SimStateAccess } from './netTypes';
 
@@ -74,6 +74,19 @@ export interface SimStateReader {
     readPresentation(attr: string): JjelValue | undefined;
     /** The derived boolean view of the marking (R-SIM-11). */
     isMarked(elementId: string): boolean;
+}
+
+/**
+ * The DCN nucleus's binding over one σ (dcn/dcnHandles.ts `bindDcn`): the
+ * σ-backed handle `self` stands for at a site, the instances by name, and the
+ * classification accessor over the same handles (R-DCN-12, R-DCN-7).
+ */
+export interface SimDcnBinding {
+    /** The handle of the instance a DCN transition stands for, or of the instance with that id; `undefined` when none. */
+    selfOf(site: string): JjelValue | undefined;
+    /** Instance name to its handle: bound below `self`, `event` and `model`. */
+    readonly named: Readonly<Record<string, JjelValue>>;
+    readonly classification: JjelClassificationAccess;
 }
 
 /** The keys of `buildEvalContext` that never enter a guard: the selection, as live L values. */
@@ -158,25 +171,38 @@ export function freezeSnapshot(
  * so the scopes of `forall` and of lambdas inherit it and the base never has
  * it. Without it `.[a]` throws, as it does outside the simulator.
  *
- * `null` when the transition, or the current event, has no handle in the
- * snapshot; the guard evaluator reports it as a defect.
+ * `classification`, when given, is what `x.in(V::D)` asks (R-DCN-7), set the
+ * same way. Without it `.in(V::D)` throws.
+ *
+ * `dcn`, when given, is the DCN nucleus's binding over the current σ: `self` is
+ * its handle for the site, the instances are bound by name below the three
+ * roots, and its accessor answers `.in(V::D)` unless `classification` is given.
+ * An event with no pool handle is then `null`: a DCN event is a press (an
+ * invocation or the tick), not an instance. Without it nothing changes.
+ *
+ * `null` when the transition (the site's instance, with `dcn`), or the current
+ * event without `dcn`, has no handle; the guard evaluator reports it as a defect.
  */
 export function buildGuardContext(
     snapshot: SimSnapshot,
     site: { transitionId: string },
     step: { event: string | null },
     state?: JjelStateAccess,
+    classification?: JjelClassificationAccess,
+    dcn?: SimDcnBinding,
 ): EvaluationContext | null {
-    const self = snapshot.handleById.get(site.transitionId);
+    const self = dcn ? dcn.selfOf(site.transitionId) : snapshot.handleById.get(site.transitionId);
     if (self === undefined) return null;
     let event: JjelValue = null;
     if (step.event !== null) {
         const handle = snapshot.handleById.get(step.event);
-        if (handle === undefined) return null;
-        event = handle;
+        if (handle === undefined && !dcn) return null;
+        event = handle ?? null;
     }
-    const ctx = snapshot.base.child({ self, event, model: snapshot.model });
+    const ctx = snapshot.base.child(dcn ? { ...dcn.named, self, event, model: snapshot.model } : { self, event, model: snapshot.model });
     if (state) ctx.stateAccess = state;
+    const access = classification ?? dcn?.classification;
+    if (access) ctx.classification = access;
     return ctx;
 }
 

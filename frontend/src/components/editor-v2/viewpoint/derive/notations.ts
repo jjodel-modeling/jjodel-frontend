@@ -200,6 +200,8 @@ function storedBinding(lookup: Lookup, metamodelId: string): Readonly<Record<str
 const PROFILE_NOTATION: Readonly<Record<SystemProfileId, DerivedNotationId>> = {
     petri: 'petriClassic', flowchart: 'activityUml', stateMachine: 'statechart', extendedStateMachine: 'stateMachine',
     dfa: 'stateMachine', nfa: 'stateMachine', moore: 'stateMachine', mealy: 'stateMachine',
+    // Dynamic classification has no notation of its own yet (R-DCN-8, P-2026-11-07-0941).
+    dynamicClassification: 'generic',
 };
 
 /** The notation a stored binding matches: its system profile, or the one a user profile is based on; «Custom» by shape and Trigger. */

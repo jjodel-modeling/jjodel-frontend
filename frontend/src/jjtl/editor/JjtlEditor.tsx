@@ -54,7 +54,8 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
         console.log('[JjtlEditor] Full token stream:', lexerResult.tokens.map(
             (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
         ).join(' '));
-        const parserResult = parse(lexerResult.tokens);
+        // Same parse as useJjtlParser: with the source, so the markers match the Problems panel
+        const parserResult = parse(lexerResult.tokens, content);
 
         const allErrors = [
             ...lexerResult.errors.map(e => ({ ...e, message: `Lexer: ${e.message}` })),

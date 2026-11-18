@@ -10,7 +10,8 @@
  * store's lookup with `buildEvalContext`, the call the panel's Reset makes.
  *
  * Cleanup: the model's entries are cleared outright on unmount and on a model switch,
- * as ConformanceProblemSync does on unmount.
+ * as ConformanceProblemSync does on unmount, once the last editor on the model lets go
+ * (`acquireProducerMount`, multi-tab L4b): another tab on the same model keeps its badges.
  */
 
 import { useEffect } from 'react';
@@ -19,6 +20,7 @@ import { DUser, LPointerTargetable, store } from '../../../joiner';
 import type { DState } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
 import { buildVertexResolver } from './vertexResolver';
+import { acquireProducerMount } from './registry';
 import {
     clearSimCheckProblems, reconcileSimCheckProblems, resolveSimCheckProblems, simCheckSignature,
 } from './simCheckToProblems';
@@ -60,11 +62,11 @@ export function SimCheckProblemSync({ modelid, graphId }: Props) {
         return () => clearTimeout(timer);
     }, [modelid, graphId, sig]);
 
-    // Full cleanup when the editor closes or switches model: nothing stale bleeds into the next.
+    // Full cleanup when the last editor on the model closes or switches model: nothing stale
+    // bleeds into the next, and a second tab on the same model keeps what it shows.
     useEffect(() => {
-        return () => {
-            if (modelid) clearSimCheckProblems(modelid);
-        };
+        if (!modelid) return;
+        return acquireProducerMount('simulation', modelid, () => clearSimCheckProblems(modelid));
     }, [modelid]);
 
     return null;

@@ -1,0 +1,38 @@
+[
+ {
+  "objects": 1201,
+  "chars": 66185,
+  "tokens": 8277,
+  "semanticTokens": 6070,
+  "symbols": 1201,
+  "folds": 1003,
+  "refTargets": 200,
+  "parseMs": 7.64,
+  "deriveMs": 1.03,
+  "pathAtOffsetMs": 0.02,
+  "displayMatchValidMs": 15.7,
+  "parseBrokenMs": 6.19,
+  "displayMatchBrokenMs": 14.78,
+  "displayMatchBrokenNoSpansMs": 47,
+  "brokenErrors": 1,
+  "brokenOrphans": 0
+ },
+ {
+  "objects": 6001,
+  "chars": 336401,
+  "tokens": 41345,
+  "semanticTokens": 30338,
+  "symbols": 6001,
+  "folds": 5003,
+  "refTargets": 1000,
+  "parseMs": 28.2,
+  "deriveMs": 4.75,
+  "pathAtOffsetMs": 0.06,
+  "displayMatchValidMs": 444.4,
+  "parseBrokenMs": 27.37,
+  "displayMatchBrokenMs": 455.47,
+  "displayMatchBrokenNoSpansMs": 1804.13,
+  "brokenErrors": 1,
+  "brokenOrphans": 0
+ }
+]

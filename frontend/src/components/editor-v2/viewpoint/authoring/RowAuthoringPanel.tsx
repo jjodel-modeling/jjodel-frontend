@@ -18,7 +18,7 @@ import {
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultRowViewIR } from '../ir/irDefaults';
-import type { RowViewIR, TextSource, TextStyle } from '../ir/irTypes';
+import type { Conditional, RowViewIR, TextSource, TextStyle } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import {
     metaclassChipLabel,
@@ -61,6 +61,15 @@ const FEATURES_HINT = 'set a metaclass in the Applies to tab to enable feature p
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 /** New template entry default: a blank literal (mirrors the label list default). */
 const newTemplateSource = (): TextSource => ({ from: 'literal', text: '' });
+
+/** The row after a new `visible`; `undefined` drops the key (absent = drawn), any other value is written as is. */
+export function withRowVisible(ir: RowViewIR, next: Conditional<boolean> | undefined): RowViewIR {
+    if (next === undefined) {
+        const { visible: _dropped, ...rest } = ir;
+        return rest;
+    }
+    return { ...ir, visible: next };
+}
 
 /**
  * RowAuthoringPanel — authors the IR of a selected row view (kind `row`).
@@ -423,21 +432,28 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 )}
             />
 
-            {/* Visible — only edited when already present (never seeded here → verbatim). */}
-            {draft.visible !== undefined && (
-                <div className="jj-field">
-                    <label className="jj-field-label">Visible</label>
-                    <ConditionalEditor<boolean>
-                        value={draft.visible}
-                        onChange={(next) => patch({ ...draft, visible: next })}
-                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
-                        defaultValue={true}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                    />
-                </div>
-            )}
+            {/* Visible — offered from absent; absent stays absent until a control changes,
+                and Reset drops the key (withRowVisible). */}
+            <div className="jj-field" data-testid="row-visible">
+                <label className="jj-field-label">Visible</label>
+                <ConditionalEditor<boolean>
+                    value={draft.visible}
+                    onChange={(next) => patch(withRowVisible(draft, next))}
+                    renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
+                    defaultValue={true}
+                    features={features}
+                    featuresHint={FEATURES_HINT}
+                    classNames={classNames}
+                    rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'visibility' }}
+                />
+                {draft.visible === undefined ? (
+                    <HelpText icon={false}>Default: drawn.</HelpText>
+                ) : (
+                    <Button variant="ghost" size="sm" onClick={() => patch(withRowVisible(draft, undefined))}>
+                        Reset
+                    </Button>
+                )}
+            </div>
 
             {/* Label of the view (IR label, distinct from the DViewElement name,
                 which the relocated Name field of Applies to writes) */}

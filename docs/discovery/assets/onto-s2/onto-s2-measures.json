@@ -1,0 +1,812 @@
+{
+  "url": "http://localhost:3087",
+  "at": "2026-10-21T10:27:46.464Z",
+  "file": "/Users/alfonso/jjodel-demo-exports/uml/uml-class-object.jjodel",
+  "ids": {
+    "model": "Pointer1792578491780_USER_140",
+    "mm": "Pointer1792578491717_USER_4",
+    "classes": {
+      "String": "Pointer1792578491783_USER_147",
+      "Integer": "Pointer1792578491785_USER_152",
+      "Boolean": "Pointer1792578491786_USER_157",
+      "Genre": "Pointer1792578491788_USER_162",
+      "Publication": "Pointer1792578491796_USER_183",
+      "Book": "Pointer1792578491809_USER_218",
+      "Magazine": "Pointer1792578491819_USER_247",
+      "Library": "Pointer1792578491826_USER_265",
+      "Member": "Pointer1792578491832_USER_283",
+      "Holdings": "Pointer1792578491851_USER_332",
+      "Membership": "Pointer1792578491861_USER_361",
+      "Borrowing": "Pointer1792578491870_USER_390"
+    }
+  },
+  "binding": {
+    "ok": true,
+    "missing": [],
+    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1792578491764_USER_108\",\"slotContainer\":\"Pointer1792578491765_USER_110\",\"definingFeature\":\"Pointer1792578491766_USER_112\",\"valueHolder\":\"Pointer1792578491767_USER_114\",\"featureContainer\":\"Pointer1792578491754_USER_86\",\"generalization\":{\"via\":\"Pointer1792578491751_USER_84\",\"general\":\"Pointer1792578491759_USER_98\"},\"abstractFlag\":\"Pointer1792578491775_USER_129\",\"featureType\":\"Pointer1792578491760_USER_100\",\"defaultValue\":\"Pointer1792578491778_USER_135\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1792578491737_USER_52\",\"field\":\"Pointer1792578491780_USER_139\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1792578491737_USER_50\",\"field\":\"Pointer1792578491779_USER_138\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1792578491736_USER_48\",\"field\":\"Pointer1792578491779_USER_137\"},{\"when\":\"instance\",\"create\":\"Pointer1792578491739_USER_56\",\"field\":\"Pointer1792578491768_USER_116\"}]},{\"name\":\"link\",\"typeReference\":\"Pointer1792578491764_USER_108\",\"slotContainer\":\"Pointer1792578491765_USER_110\",\"definingFeature\":\"Pointer1792578491766_USER_112\",\"valueHolder\":\"Pointer1792578491767_USER_114\",\"featureContainer\":\"Pointer1792578491757_USER_92\"}]}"
+  },
+  "historyAfterBinding": {
+    "flag": true,
+    "user": 2,
+    "all": 2,
+    "senders": [
+      "globalcanundostate",
+      "all",
+      "Pointer_OfflineUser"
+    ],
+    "lastAgeMs": 803
+  },
+  "cascade": {
+    "at": {
+      "x": 300,
+      "y": 789
+    },
+    "panels": 2,
+    "parent": "New instance of",
+    "labels": [
+      "Book",
+      "Library",
+      "Magazine",
+      "Member"
+    ]
+  },
+  "cascadeFit": {
+    "vh": 900,
+    "lastTop": 859,
+    "lastBottom": 887,
+    "panelTop": 768,
+    "unclampedBottom": 916
+  },
+  "book": {
+    "shape": {
+      "id": "Pointer1792578520953_USER_944",
+      "cls": "InstanceSpecification",
+      "name": "book1",
+      "classifier": "Book",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "isbn",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "genre",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "title",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "year",
+          "values": [],
+          "contained": "father=dvalue"
+        }
+      ]
+    },
+    "added": [
+      "InstanceSpecification:book1",
+      "Slot:Slot_0",
+      "Slot:Slot_1",
+      "Slot:Slot_2",
+      "Slot:Slot_3"
+    ],
+    "vertices": [
+      {
+        "id": "Pointer1792578521134_USER_949",
+        "cls": "DVertex",
+        "x": 50,
+        "y": 9350,
+        "father": "Pointer1792578491780_USER_140_graph5"
+      }
+    ],
+    "clickFlow": {
+      "x": 54.28380110894259,
+      "y": 956.2923100792918
+    },
+    "undo": {
+      "before": 2,
+      "after": 3
+    }
+  },
+  "placement": {
+    "placed": {
+      "flow": {
+        "x": 48,
+        "y": 960
+      },
+      "box": {
+        "l": 296.1524658203125,
+        "t": 791.2705078125,
+        "r": 467.5950927734375,
+        "b": 875.7672119140625
+      },
+      "at": {
+        "x": 300,
+        "y": 789
+      }
+    },
+    "flow1": {
+      "x": 54.28380110894259,
+      "y": 956.2923100792918
+    }
+  },
+  "settled": {
+    "pushed": 0,
+    "top": [
+      {
+        "ageMs": 4167,
+        "keys": [
+          "idlookup",
+          "vertexs",
+          "edges",
+          "objects",
+          "values",
+          "ELEMENT_CREATED",
+          "action_title"
+        ],
+        "idl": 51,
+        "cls": [
+          "?",
+          "DClass",
+          "DClass",
+          "DAttribute",
+          "DReference",
+          "DReference",
+          "DReference",
+          "DReference"
+        ],
+        "title": "EditorV2 deselect"
+      }
+    ]
+  },
+  "undoPre": {
+    "entries": [
+      {
+        "ageMs": 6566,
+        "keys": [
+          "idlookup",
+          "action_title"
+        ],
+        "idl": 2,
+        "cls": [
+          "?",
+          "DModel"
+        ],
+        "fields": [
+          "clonedCounter:674",
+          "8491717_USER_4:clonedCounter,_state"
+        ],
+        "title": "EditorV2 deselect"
+      },
+      {
+        "ageMs": 4168,
+        "keys": [
+          "idlookup",
+          "vertexs",
+          "edges",
+          "objects",
+          "values",
+          "ELEMENT_CREATED",
+          "action_title"
+        ],
+        "idl": 51,
+        "cls": [
+          "?",
+          "DClass",
+          "DClass",
+          "DAttribute",
+          "DReference",
+          "DReference",
+          "DReference",
+          "DReference"
+        ],
+        "title": "EditorV2 deselect"
+      }
+    ],
+    "group": {
+      "open": null,
+      "tail": {
+        "ageMs": 4169,
+        "lastAgeMs": null,
+        "onTop": true
+      },
+      "closed": {
+        "group": 1,
+        "by": "end",
+        "ageMs": 1921
+      },
+      "tailCleared": null,
+      "txDepth": 1,
+      "txBegun": true
+    }
+  },
+  "undo": {
+    "entries": 1,
+    "presses": 1,
+    "back": true,
+    "undoBefore": 2,
+    "undoAfterCreate": 3,
+    "undoAfterPresses": 2,
+    "bindingKept": true,
+    "idlBefore": 956,
+    "idlAfterCreate": 986,
+    "idlAfterPresses": 956,
+    "h0": {
+      "flag": true,
+      "user": 2,
+      "all": 2,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 2180
+    },
+    "h1": {
+      "flag": true,
+      "user": 3,
+      "all": 3,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 3241
+    },
+    "steps": [
+      {
+        "undo": 2,
+        "objects": 93,
+        "instance": false,
+        "binding": true
+      }
+    ]
+  },
+  "memberUndo": {
+    "before": 4,
+    "after": 5,
+    "entries": [
+      {
+        "ageMs": 3851,
+        "keys": [
+          "idlookup",
+          "action_title"
+        ],
+        "idl": 1,
+        "cls": [
+          "DEdge"
+        ],
+        "fields": [
+          "9471_USER_1013:pointedBy"
+        ],
+        "title": "Create element"
+      },
+      {
+        "ageMs": 2721,
+        "keys": [
+          "idlookup",
+          "vertexs",
+          "edges",
+          "objects",
+          "values",
+          "action_title"
+        ],
+        "idl": 44,
+        "cls": [
+          "?",
+          "DClass",
+          "DClass",
+          "DClass",
+          "DAttribute",
+          "DReference",
+          "DReference",
+          "DReference"
+        ],
+        "title": "EditorV2 deselect"
+      }
+    ],
+    "group": {
+      "open": null,
+      "tail": {
+        "ageMs": 2721,
+        "lastAgeMs": null,
+        "onTop": true
+      },
+      "closed": {
+        "group": 3,
+        "by": "end",
+        "ageMs": 518
+      },
+      "tailCleared": {
+        "group": null,
+        "by": "push",
+        "ageMs": 3850
+      },
+      "txDepth": 1,
+      "txBegun": true
+    }
+  },
+  "member": {
+    "shape": {
+      "id": "Pointer1792578532047_USER_1014",
+      "cls": "InstanceSpecification",
+      "name": "member1",
+      "classifier": "Member",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "name",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "active",
+          "values": [
+            {
+              "cls": "LiteralBoolean",
+              "value": true
+            }
+          ],
+          "contained": "father=dvalue"
+        }
+      ]
+    }
+  },
+  "framed": {
+    "box": [
+      48,
+      960,
+      1176,
+      1098
+    ],
+    "k": 0.9556737588652482
+  },
+  "objectDiagramNew": [
+    {
+      "name": "book1",
+      "x": 48,
+      "y": 960,
+      "w": 280,
+      "h": 138
+    },
+    {
+      "name": "member1",
+      "x": 896,
+      "y": 960,
+      "w": 280,
+      "h": 102
+    }
+  ],
+  "bookBox": {
+    "name": "book1",
+    "vertex": "Pointer1792578527739_USER_984",
+    "box": {
+      "node": {
+        "w": 280,
+        "h": 138
+      },
+      "labels": [
+        {
+          "text": "book1",
+          "inside": true,
+          "clipped": false,
+          "top": 1.9,
+          "bottom": 25.7
+        },
+        {
+          "text": "Book",
+          "inside": true,
+          "clipped": false,
+          "top": 25.7,
+          "bottom": 49.5
+        }
+      ],
+      "rows": [
+        {
+          "text": "isbn =",
+          "inside": true,
+          "top": 54.3,
+          "bottom": 71.6
+        },
+        {
+          "text": "genre =",
+          "inside": true,
+          "top": 71.6,
+          "bottom": 89
+        },
+        {
+          "text": "title =",
+          "inside": true,
+          "top": 89,
+          "bottom": 106.4
+        },
+        {
+          "text": "year =",
+          "inside": true,
+          "top": 106.4,
+          "bottom": 123.8
+        }
+      ]
+    }
+  },
+  "classNode": {
+    "bookItems": [
+      "New instance",
+      "Add Property (ownedAttributes)",
+      "Add Operation (ownedOperations)",
+      "Add Generalization (generalizations)",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "Up",
+      "Down",
+      "Reset size",
+      "Disable auto-sizing",
+      "Help",
+      "Explain this",
+      "Edit view · View for Class"
+    ],
+    "pubItems": [
+      "Add Property (ownedAttributes)",
+      "Add Operation (ownedOperations)",
+      "Add Generalization (generalizations)",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "Up",
+      "Down",
+      "Reset size",
+      "Disable auto-sizing",
+      "Help",
+      "Explain this",
+      "Edit view · View for Class"
+    ],
+    "shape": {
+      "id": "Pointer1792578546430_USER_1042",
+      "cls": "InstanceSpecification",
+      "name": "book2",
+      "classifier": "Book",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "isbn",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "genre",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "title",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "year",
+          "values": [],
+          "contained": "father=dvalue"
+        }
+      ]
+    },
+    "cascadeShape": {
+      "name": "book1"
+    },
+    "vertices": [
+      {
+        "id": "Pointer1792578546587_USER_1047",
+        "cls": "DVertex",
+        "x": 50,
+        "y": 10250,
+        "father": "Pointer1792578491780_USER_140_graph5"
+      }
+    ],
+    "bookNode": {
+      "id": "Pointer1792578491811_USER_224",
+      "name": "Book",
+      "x": 420,
+      "y": 420,
+      "w": 220,
+      "h": 82,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rect",
+      "band": null,
+      "bandLabel": null
+    }
+  },
+  "rules": {
+    "newNames": [
+      "book1",
+      "member1",
+      "book2"
+    ],
+    "findings": [
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "isbn has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "genre has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "title has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "year has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "member1",
+        "msg": "name has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "isbn has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "genre has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "title has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "year has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "book1",
+        "msg": "0 Holdings links at end holdings, library is 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "book2",
+        "msg": "0 Holdings links at end holdings, library is 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "member1",
+        "msg": "0 Membership links at end members, libraries is 1..-1"
+      }
+    ]
+  },
+  "undoLaterGroup": {
+    "open": null,
+    "tail": {
+      "ageMs": 3894,
+      "lastAgeMs": null,
+      "onTop": true
+    },
+    "closed": {
+      "group": 4,
+      "by": "end",
+      "ageMs": 1636
+    },
+    "tailCleared": {
+      "group": null,
+      "by": "push",
+      "ageMs": 13493
+    },
+    "txDepth": 1,
+    "txBegun": true
+  },
+  "undoLater": {
+    "entriesBefore": 7,
+    "presses": 1,
+    "steps": [
+      {
+        "undo": 6,
+        "objects": 102,
+        "binding": true,
+        "member1": true
+      }
+    ],
+    "removed": 5,
+    "entries": 1,
+    "entryList": [
+      {
+        "ageMs": 13493,
+        "keys": [
+          "idlookup",
+          "viewpoint",
+          "action_title"
+        ],
+        "idl": 3,
+        "cls": [
+          "?",
+          "DViewPoint",
+          "DProject"
+        ],
+        "fields": [
+          "clonedCounter:691",
+          "92047_USER_859:pointedBy",
+          "8491678_USER_2:activeViewpoint,clonedCounter"
+        ],
+        "title": "Instantiate: node layout"
+      },
+      {
+        "ageMs": 3893,
+        "keys": [
+          "idlookup",
+          "vertexs",
+          "edges",
+          "objects",
+          "values",
+          "ELEMENT_CREATED",
+          "action_title"
+        ],
+        "idl": 51,
+        "cls": [
+          "?",
+          "DClass",
+          "DClass",
+          "DAttribute",
+          "DReference",
+          "DReference",
+          "DReference",
+          "DReference"
+        ],
+        "title": ""
+      }
+    ],
+    "idlBefore": 1010,
+    "idlAfterCreate": 1040,
+    "idlAfterPresses": 1010
+  },
+  "undoLaterSync": {
+    "lateSync": 0,
+    "others": 0,
+    "presses": 1
+  },
+  "undoPaths": {
+    "before": {
+      "flag": true,
+      "user": 6,
+      "all": 6,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 15919
+    },
+    "afterCreateInstance": {
+      "flag": true,
+      "user": 8,
+      "all": 8,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 636
+    },
+    "instantiateResult": {
+      "ok": true,
+      "instance": "Pointer1792578554384_USER_1084",
+      "slots": 1,
+      "problems": [],
+      "ms": 1508
+    },
+    "afterInstantiate": {
+      "flag": true,
+      "user": 9,
+      "all": 9,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 2747
+    },
+    "undoNoPlace": [
+      {
+        "undo": 9,
+        "objects": 105,
+        "libInstance": true,
+        "diag1": true
+      },
+      {
+        "undo": 8,
+        "objects": 103,
+        "libInstance": false,
+        "diag1": true
+      }
+    ]
+  },
+  "classNodeBox": {
+    "name": "book2",
+    "vertex": "Pointer1792578559793_USER_1103",
+    "box": {
+      "node": {
+        "w": 280,
+        "h": 138
+      },
+      "labels": [
+        {
+          "text": "book2",
+          "inside": true,
+          "clipped": false,
+          "top": 2,
+          "bottom": 26.9
+        },
+        {
+          "text": "Book",
+          "inside": true,
+          "clipped": false,
+          "top": 26.9,
+          "bottom": 51.8
+        }
+      ],
+      "rows": [
+        {
+          "text": "isbn =",
+          "inside": true,
+          "top": 56.8,
+          "bottom": 75
+        },
+        {
+          "text": "genre =",
+          "inside": true,
+          "top": 75,
+          "bottom": 93.2
+        },
+        {
+          "text": "title =",
+          "inside": true,
+          "top": 93.2,
+          "bottom": 111.3
+        },
+        {
+          "text": "year =",
+          "inside": true,
+          "top": 111.3,
+          "bottom": 129.5
+        }
+      ]
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "checks": {
+    "pass": 21,
+    "fail": 0
+  }
+}

@@ -39,11 +39,12 @@ import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
+import { irViewpointArg } from './viewpoint/ir/irResolve';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
     compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
-    resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
+    resolveDropTarget, slotAccepts, slotRefOf, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
 } from './viewpoint/ir/irMembership';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -55,9 +56,13 @@ import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLay
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 import { clientCentre } from './utils/canvasCentre';
 import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
+import { revealViewport } from './utils/revealNode';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
-import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
+import { openViewportFallback, type NodeRect } from './openViewport';
+import { canRenderOnlyVisible } from './onlyRenderVisible';
+import { allMeasured, decorateUnmeasured, isDecorated, shouldDecorate, undecorate, type DecorationEntry } from './unmeasuredNodes';
+import { getActiveLayoutKey, getLayoutKeyFor } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
@@ -74,11 +79,17 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
+import { clabjectPropertyGroup, classDragPayload, classDropRequest, classElementPlan, classRail, createClassElement, creationOptions, generalizationSlot, instanceObjectRecord, instantiate, instantiateLink, linkOptions, linkRecord, objectRecord, ONTO_DRAG_MIME, ontoDragPayload, ontoDropRequest, ontoLevelOf, ontoRailSections, propertyPlan, selectionTakesProperty, syncSlots, syncSlotsPlan, viewCentre, type ClassElementPlan, type CreationOption, type LinkOption, type PropertyPlan } from './hooks/instantiate';
+import { CLASS_RAIL_HINTS, type ClassRailGroup, type ClassRailKind } from '../../model/ontological/classRail';
+import OntoBindingModal from './onto/OntoBindingModal';
+import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
+import { InstantiationProblemSync } from './problems/InstantiationProblemSync';
 import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
+import { DcnProblemSync } from './problems/DcnProblemSync';
 import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
@@ -101,6 +112,7 @@ import {
     syncCreateObject,
     syncCreateCompositionLink,
     syncCreateReferenceLink,
+    planSlotAppend,
     syncEdgeRefKind,
     syncRemoveAttribute,
     syncRemoveOperation,
@@ -110,14 +122,17 @@ import {
     setModelUri,
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
-import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, labelPathSamples, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
 import { computeContainedAutoLayout } from './utils/elkContainers';
 import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
+import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
+import { paneAcceptsPaletteDrop, paneEventVerdict, paneIsInactive, type PaneActivation } from './utils/canvasSplit';
+import { useCanvasSplit } from './hooks/useCanvasSplit';
 import { PolymetricView } from '../polymetric';
 import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
@@ -131,7 +146,7 @@ import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureOb
 import { PreviewEdge } from './preview/PreviewEdge';
 import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
 import { PreviewBar } from './preview/PreviewBar';
-import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { codegenAvailable, codePillVisible, useCodegenEnabled } from '../../codegen/setting';
 import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
@@ -152,6 +167,8 @@ const nodeTypes: NodeTypes = {
 // De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
 const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
 const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+// The longest the auto-layout waits for React Flow to measure the nodes it had not mounted (unmeasuredNodes.ts).
+const AUTO_LAYOUT_MEASURE_WAIT_MS = 5000;
 
 // ─── Viewport persistence ────────────────────────────────────────────
 // Pan and zoom are pure view state: they live in localStorage, never in the D-layer
@@ -223,12 +240,13 @@ function irVertexIdForObject(graphId: string | null, objectId: string): string |
  * (waypoints AND side pins) session-only. Default true (no IR index / no
  * resolved view / resolution error → persist).
  */
-function isIREdgeLayoutPersistable(objectId: string, state?: DState): boolean {
+function isIREdgeLayoutPersistable(objectId: string, state?: DState, viewpointId?: string): boolean {
     try {
         const s: any = state ?? store.getState();
-        const sig = computeIRSignature(s);
+        // `viewpointId` is the IR core's argument for the tab's viewpoint (L5, irViewpointArg); absent, the root.
+        const sig = computeIRSignature(s, viewpointId);
         if (!sig) return true;
-        const index = getIRIndex(s, sig);
+        const index = getIRIndex(s, sig, viewpointId);
         if (!index) return true;
         const metaclassId = s.idlookup?.[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') return true;
@@ -357,6 +375,10 @@ interface ContextMenuState {
     childKind?: 'attr' | 'op' | 'ref';
     isMultiSelect?: boolean;
     selectedCount?: number;
+    /** Pane menu of the ontological instantiation: the record and its classifiers. */
+    pane?: { record: OntoBinding; options: CreationOption[] };
+    /** Pane menu at the `class` level (R-OI-23): the groups of the rail, and whether the selection takes a property. */
+    classPane?: { groups: ClassRailGroup[]; propertyEnabled: boolean };
 }
 
 // Clipboard state type
@@ -384,6 +406,12 @@ export interface EditorV2Props {
     hasViewpoint?: boolean;
     /** Handler invoked when the user clicks the segmented mode toggle. */
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
+    /** The viewpoint of the tab this canvas belongs to (R-MT-1, R-LAY-19), exposed by
+     *  EditorContext: `null` is abstract syntax, `undefined` means no tab (standalone route), and
+     *  then the readers below fall back to the root as before. */
+    viewpointId?: string | null;
+    /** Sets the tab's viewpoint, for the toolbar picker (through EditorContext). */
+    onViewpointChange?: (viewpointId: string | null) => void;
 }
 
 /**
@@ -482,7 +510,7 @@ function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: b
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
+function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
     // Phase 3: React Flow state — initialised from demo data when standalone,
     // or populated by useJjomSync when modelid is provided.
     const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
@@ -566,17 +594,45 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     // Phase 3: bidirectional incremental sync with JjOM/Redux
+    // This editor's place in a split of canvases (multi-tab L6c, P-2026-11-08-1855): one palette, the active pane's.
+    const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
+    const canvasSplit = useCanvasSplit(paneEl);
+    const inCanvasSplit = paneEl !== null && canvasSplit.panes.includes(paneEl);
+    const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
+    const paneActivationRef = useRef<PaneActivation>('none');
+    const paneAcceptsDropRef = useRef(true);
+    paneAcceptsDropRef.current = paneEl === null || paneAcceptsPaletteDrop(canvasSplit, paneEl);
+    // The rail covers only the last pane of a split (P-2026-11-08-1729): any other canvas reserves nothing for it (D6).
+    const paneUnderRail = !inCanvasSplit || canvasSplit.panes[canvasSplit.panes.length - 1] === paneEl;
+    const paneUnderRailRef = useRef(paneUnderRail);
+    paneUnderRailRef.current = paneUnderRail;
+    const paneRightInset = () => paneUnderRailRef.current ? getCanvasRightInset() : 0;
+    const paneFitPadding = () => paneUnderRailRef.current ? fitPadding() : 0.2;
+
     // fitViewRef / applyDistributionRef bridge hook ordering: useJjomSync's
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
     const fitViewRef = useRef<(() => void) | null>(null);
+    // True when the current viewport frames no node (ticket #419); set beside fitViewRef below.
+    const viewportShowsNoNodeRef = useRef<(() => boolean) | null>(null);
     // Viewport restored from a previous session, read ONCE at mount: it feeds
     // `defaultViewport` (so the canvas opens where it was left, with no flash at the
     // origin) and suppresses the opening fit. Null = first ever opening under this
     // (model, layout key) → the fit is the fallback, unchanged.
+    // The tab's viewpoint, through a ref so that the callbacks reading it keep their deps. The
+    // viewport key is the layout key of THAT viewpoint (R-LAY-19); with no tab, the root's.
+    const viewpointIdRef = useRef(viewpointId);
+    viewpointIdRef.current = viewpointId;
+    const tabLayoutKey = (): string => viewpointIdRef.current === undefined
+        ? getActiveLayoutKey()
+        : getLayoutKeyFor(store.getState(), viewpointIdRef.current);
+    // The IR index of the tab's viewpoint (L5), read through the same ref: a tab on abstract syntax
+    // has none, and with no tab it is the root's, as before.
+    const tabIRViewpoint = (): string | undefined => irViewpointArg(viewpointIdRef.current);
+    const tabIRIndex = (state: any) => getIRIndex(state, computeIRSignature(state, tabIRViewpoint()), tabIRViewpoint());
     const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
     if (restoredViewportRef.current === undefined) {
-        restoredViewportRef.current = readStoredViewport(modelid, getActiveLayoutKey());
+        restoredViewportRef.current = readStoredViewport(modelid, tabLayoutKey());
     }
     const applyDistributionRef = useRef<((eds: Edge[]) => Edge[]) | null>(null);
     const setEdgesRef = useRef(setEdges);
@@ -586,16 +642,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the first (edge-less) layout. Set below; armed only on the justCreated path. See
     // docs/discovery/2026-07-07-s4b-recalc-bypass.md (H2).
     const armReLayoutRef = useRef<(() => void) | null>(null);
+    // The tab's viewpoint (L2) gives the sync its layout key (L3): passed here, because this component
+    // renders the EditorContext.Provider below this call and the hook cannot read it.
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
             // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
             // creating populate run, so the layout runs only on a graph no vertex of which has a layout
             // record yet; otherwise the new vertices keep their default placement and nothing else moves
-            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155). Above a size cap it does not run either
+            // (P-2026-11-04-0926).
             const createdOnOpen = justCreatedGraphRef.current;
             justCreatedGraphRef.current = false;
-            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+            const size = { nodes: getNodes().length, edges: getEdges().length };
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {}, size)) {
                 await autoLayoutRef.current();
                 // The M1 reference edges materialize asynchronously AFTER this first
                 // layout; watch for them and re-run the layout once when they land.
@@ -605,7 +665,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
             // only thing to do is NOT fit over it (R-LAY-18: no new fitView sites).
-            if (!restoredViewportRef.current) fitViewRef.current?.();
+            // Unless it frames no node: then it goes through the open fit and its fallback (ticket #419).
+            if (!restoredViewportRef.current || viewportShowsNoNodeRef.current?.()) fitViewRef.current?.();
             // Apply port distribution to edges loaded from JjOM.
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
@@ -613,7 +674,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 setEdges(eds => applyDistributionRef.current!(eds));
             }
         }, 50);
-    });
+    }, undefined, viewpointId);
     useM1ReferenceEdges(modelid, graphId);
 
     // Debounced autosave of node positions on drag-end (gated by autosaveLayout)
@@ -625,9 +686,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The Simulation pill: Advanced mode and the metamodel's Simulation toggle (P-2026-09-29-1225, R-SIM-99). A boolean
     // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
     const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
-    // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
+    // The Code pill (R-GEN-2): the setting in Advanced mode (3.2, P-2026-11-15-1730, so hidden in Basic whatever the
+    // metamodel holds), then the rule of codegen/setting.ts, a boolean per dispatch.
     const codegenEnabled = useCodegenEnabled();
-    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenAvailable(codegenEnabled, !!state.advanced), !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    // The «Instances of» rail (R-OI-18): a string per dispatch, the groups rebuilt only when it changes; Redux
+    // `advanced` gates the empty state with «Declare binding…», so Basic shows no section without a binding.
+    const ontoRailSig = useSelector((state: any) => isModelMode && !!modelid ? ontoRailSections((id: string) => state.idlookup?.[id], modelid, viewpointId).signature : '');
+    // The level of the tab's viewpoint (R-OI-19): at `class` no instance surface, the empty state included (R-OI-20).
+    const ontoClassLevel = useSelector((state: any) => ontoLevelOf((id: string) => state.idlookup?.[id], viewpointId) === 'class');
+    const ontoSections = useMemo(
+        () => (isModelMode && modelid && !ontoClassLevel ? ontoRailSections((id: string) => (store.getState() as any)?.idlookup?.[id], modelid, viewpointId).sections : []),
+        [ontoRailSig, isModelMode, modelid, ontoClassLevel, viewpointId]
+    );
+    // The «Attributes» group below the top level, for a clabject (R-OI-29): `null` at `class` and on UML.
+    const ontoPropertySig = useSelector((state: any) => isModelMode && !!modelid
+        ? clabjectPropertyGroup(state.idlookup ?? {}, modelid, viewpointId)?.items.map(i => `${i.metaclass}=${i.name}`).join(',') ?? '' : '');
+    const ontoPropertyGroup = useMemo(
+        () => (isModelMode && modelid && ontoPropertySig ? clabjectPropertyGroup((store.getState() as any)?.idlookup ?? {}, modelid, viewpointId) : null),
+        [ontoPropertySig, isModelMode, modelid, viewpointId]
+    );
+    // The groups of the `class` level (R-OI-21), `null` at any other: the same string-per-dispatch shape as «Instances of».
+    const classRailSig = useSelector((state: any) => isModelMode && !!modelid && ontoClassLevel ? classRail(state.idlookup ?? {}, modelid)?.signature ?? '' : '');
+    const classGroups = useMemo(
+        () => (isModelMode && modelid && ontoClassLevel ? classRail((store.getState() as any)?.idlookup ?? {}, modelid)?.groups ?? [] : null),
+        [classRailSig, isModelMode, modelid, ontoClassLevel]
+    );
+    const advancedMode = useSelector((state: any) => !!state.advanced);
+    const [bindingMetamodel, setBindingMetamodel] = useState<string | null>(null);
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -758,13 +844,45 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
     // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
     // canvas without them, so none of them can be laid out, snapshotted or written back.
-    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)), [getFlowNodes]);
+    // Undecorated (unmeasuredNodes.ts): no reader of getNodes() sees the estimated size of a never-measured node.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)).map(undecorate), [getFlowNodes]);
     const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
-    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // Ticket #419: a fit that frames no node (the box centre between the nodes at minZoom) pans, same zoom, onto
+    // the node nearest the box centre (openViewport.ts). R-LAY-18: a setViewport after the existing fits, no new fit.
+    const openFallbackViewport = useCallback(() => {
+        const { nodeLookup, width, height } = storeApi.getState();
+        const rects: NodeRect[] = [];
+        for (const n of nodeLookup.values()) {
+            if (n.hidden || isPreviewId(n.id)) continue;
+            const p = n.internals.positionAbsolute;
+            rects.push({ id: n.id, x: p.x, y: p.y, w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
+        }
+        return openViewportFallback(rects, getViewport(), { width, height, rightInset: paneRightInset() }, paneFitPadding());
+    }, [storeApi, getViewport]);
+    const ensureNodeInView = useCallback((duration?: number) => {
+        const next = openFallbackViewport();
+        if (next) setViewport(next, { duration });
+    }, [openFallbackViewport, setViewport]);
+    viewportShowsNoNodeRef.current = () => openFallbackViewport() !== null;
+    fitViewRef.current = () => fitView({ padding: paneFitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
     // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
-    const fitViewOptions = useFitViewOptions();
+    const railFitViewOptions = useFitViewOptions();
+    const fitViewOptions = useMemo(() => paneUnderRail ? railFitViewOptions : { padding: 0.2, maxZoom: 1 }, [paneUnderRail, railFitViewOptions]);
+    // A pane entering a split refits once, to its own visible area (E2, P-2026-11-08-2025): when it has nodes, two
+    // frames on, so that the dock's layout and React Flow's measure of the new size have landed. Later resizes do not refit.
+    const wasInCanvasSplitRef = useRef(false);
+    const splitFitDueRef = useRef(false);
+    const hasNodes = nodes.length > 0;
+    useEffect(() => {
+        if (inCanvasSplit !== wasInCanvasSplitRef.current) splitFitDueRef.current = inCanvasSplit;
+        wasInCanvasSplitRef.current = inCanvasSplit;
+        if (!splitFitDueRef.current || !hasNodes) return;
+        splitFitDueRef.current = false;
+        let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => fitViewRef.current?.()); });
+        return () => cancelAnimationFrame(frame);
+    }, [inCanvasSplit, hasNodes]);
 
     const {
         activeEditorId,
@@ -1044,7 +1162,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         compatibleRefs: CompatibleReference[];
         /** IR connect rules applicable to this pair (object-as-edge creation entries). */
         objectEdgeMatches?: IRConnectRuleMatch[];
+        /** Associations a link can be made of between the pair (S4, R-OI-24). */
+        linkMatches?: LinkOption[];
     } | null>(null);
+    const runLinkRef = useRef<(option: LinkOption) => void>(() => {});
     const handleM1ReferenceSelectedRef = useRef<(ref: MetaclassReference, conn?: Connection) => void>(() => {});
     const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
@@ -1140,20 +1261,24 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!nodeId || modelId !== modelid) return;
             setNodes(nds => nds.map(n => ({ ...n, selected: n.id === nodeId })));
             setEdges(eds => eds.map(e => ({ ...e, selected: false })));
-            // Center the view on the selected node
+            // Bring the selected node into view on React Flow's own pane (P-2026-10-25-1441):
+            // same zoom, no move when it is already fully inside.
             const targetNode = getNodes().find(n => n.id === nodeId);
             if (targetNode) {
-                const x = (targetNode.position?.x ?? 0) + ((targetNode.measured?.width ?? 150) / 2);
-                const y = (targetNode.position?.y ?? 0) + ((targetNode.measured?.height ?? 50) / 2);
-                const vp = getViewport();
-                // F3: subtract the overlay's right inset so "one third from the left"
-                // is measured against the VISIBLE canvas width, not the full window.
-                setViewport({ x: -x * vp.zoom + (window.innerWidth - getCanvasRightInset()) / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
+                const box = {
+                    x: targetNode.position?.x ?? 0,
+                    y: targetNode.position?.y ?? 0,
+                    width: targetNode.measured?.width ?? 150,
+                    height: targetNode.measured?.height ?? 50,
+                };
+                const { width, height } = storeApi.getState();
+                const next = revealViewport(box, getViewport(), { width, height }, paneRightInset());
+                if (next) setViewport(next, { duration: 300 });
             }
         };
         window.addEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
         return () => window.removeEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
-    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
+    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport, storeApi]);
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
@@ -1247,7 +1372,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             const state: any = store.getState();
             const lookup = state.idlookup;
-            const index = getIRIndex(state, computeIRSignature(state));
+            const index = tabIRIndex(state);
             if (!index || !lookup) return;
             const readCtx = makeReadCtx(lookup);
 
@@ -1612,6 +1737,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const lastSelectedModelElement = useSelector((s: DState) =>
         (s as any)._lastSelected?.modelElement as string | undefined
     );
+    const classPropertyEnabled = useSelector((state: any) =>
+        isModelMode && !!modelid && ontoClassLevel && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
+    const ontoPropertyEnabled = useSelector((state: any) =>
+        !!modelid && !!ontoPropertySig && selectionTakesProperty(state.idlookup ?? {}, modelid, lastSelectedModelElement));
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -1675,11 +1804,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR containment decoration (Fase 2b): hidden subtrees + lifted edges when
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
-    const irContainment = useIRContainment(stableNodes, stableEdges);
+    const irContainment = useIRContainment(stableNodes, stableEdges, viewpointId);
     // The containment model of the last decoration, read by the graphVertex gestures (S3, R-GV-8) in the drag-end,
     // resize, drop and connect paths below.
     const irContainmentRef = useRef(irContainment);
     irContainmentRef.current = irContainment;
+
+    // React Flow renders only the elements in view (P-2026-11-02-0020) unless a view that can draw an object on
+    // canvas needs its node mounted: a graphVertex container, or a box derived from content (onlyRenderVisible.ts).
+    // Keyed on the containment model, which follows the viewpoint and the node set; with no IR viewpoint it is the
+    // same empty model on every render, so this runs once.
+    const onlyRenderVisible = useMemo(() => {
+        const model = irContainment.model;
+        if (model.objByVertex.size === 0) return true;
+        const state: any = store.getState();
+        const index = tabIRIndex(state);
+        return canRenderOnlyVisible(index, state.idlookup ?? {}, model.objByVertex.values(), model.containers.size);
+    }, [irContainment.model]);
 
     /**
      * Membership slot edits of a graphVertex gesture (S3, R-GV-8): an append through the L-proxy `.values` setter, as
@@ -1737,6 +1878,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
     }, [flowElements, scriptPreview, previewLayoutPass]);
 
+    // A large canvas that renders only the visible elements hands React Flow its never-measured nodes with the
+    // handles of the DynamicHandles pool and an estimated size, so React Flow does not mount every one of them to
+    // measure it (P-2026-11-04-0901, LIR docs/discovery/lir_2026-11-04_canvas_mount_unmeasured.md). The canvas state
+    // never holds the estimate. `mountAll` suspends the decoration while the auto-layout waits for real sizes.
+    const [mountAll, setMountAll] = useState(false);
+    const decorationCacheRef = useRef(new Map<string, DecorationEntry>());
+    // Ids React Flow has measured at least once, and ids that went in decorated and are not measured yet.
+    const measuredIdsRef = useRef(new Set<string>());
+    const decoratedIdsRef = useRef(new Set<string>());
+    const rfNodes = useMemo(() => {
+        if (mountAll || !shouldDecorate(onlyRenderVisible, canvasElements.nodes.length)) {
+            decorationCacheRef.current.clear();
+            decoratedIdsRef.current.clear();
+            return canvasElements.nodes;
+        }
+        const out = decorateUnmeasured(canvasElements.nodes, canvasElements.edges, decorationCacheRef.current, measuredIdsRef.current);
+        decoratedIdsRef.current.clear();
+        if (out !== canvasElements.nodes) for (const n of out) if (isDecorated(n)) decoratedIdsRef.current.add(n.id);
+        return out;
+    }, [canvasElements, onlyRenderVisible, mountAll]);
+
+    // The first measurement of a node that went in decorated: one more port distribution, coalesced on two frames,
+    // reads its real size once the canvas state holds it. Distribution never runs on the estimate.
+    const measuredRedistributionRafRef = useRef(0);
+    const noteMeasurements = useCallback((changes: any[]) => {
+        let first = false;
+        for (const c of changes) {
+            if (c?.type !== 'dimensions' || !c.dimensions) continue;
+            measuredIdsRef.current.add(c.id);
+            if (decoratedIdsRef.current.delete(c.id)) first = true;
+        }
+        if (!first || measuredRedistributionRafRef.current) return;
+        measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+            measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+                measuredRedistributionRafRef.current = 0;
+                if (applyDistributionRef.current) setEdges(eds => applyDistributionRef.current!(eds));
+            });
+        });
+    }, [setEdges]);
+    useEffect(() => () => cancelAnimationFrame(measuredRedistributionRafRef.current), []);
+
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
     // 2026-07-19). Skipped when the resolved view opts out via persistWaypoints.
@@ -1744,7 +1926,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const merged = getIREdgeAnchorOverride(objectId);
         if (!merged) return;
         const layout = irEdgeLayoutFromOverride(merged);
-        if (!layout || !isIREdgeLayoutPersistable(objectId)) return;
+        if (!layout || !isIREdgeLayoutPersistable(objectId, undefined, tabIRViewpoint())) return;
         const vertexId = irVertexIdForObject(graphId, objectId);
         if (!vertexId) return;
         syncIREdgeLayoutToJjom(vertexId, layout);
@@ -1759,7 +1941,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     useEffect(() => {
         if (!graphId || irLayoutHydratedGraphs.has(graphId)) return;
         const state: any = store.getState();
-        if (!computeIRSignature(state)) return;
+        if (!computeIRSignature(state, tabIRViewpoint())) return;
         irLayoutHydratedGraphs.add(graphId);
         const lookup = state.idlookup ?? {};
         const subs: string[] = lookup[graphId]?.subElements ?? [];
@@ -1768,7 +1950,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const vid of subs) {
             const v = lookup[vid];
             if (!v || v.className !== 'DVertex' || typeof v.model !== 'string') continue;
-            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state)) {
+            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state, tabIRViewpoint())) {
                 layoutEntries.push([v.model, {
                     sourceSide: v.irEdgeLayout.sourceSide,
                     targetSide: v.irEdgeLayout.targetSide,
@@ -1784,7 +1966,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
-    const irInteractionPlan = useIRInteractionPlan();
+    const irInteractionPlan = useIRInteractionPlan(viewpointId);
     irPlanRef.current = irInteractionPlan;
 
     // Palette intersection with the rootable classes, with normative fallback
@@ -1872,17 +2054,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             mi.allClasses,
                         );
 
+                        // S4 (R-OI-24): at `instance` and `both` a drag between two instances also offers a link
+                        // of every association whose ends accept them. At `class` the drag stays as it was.
+                        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                        const linkMatches = ontoLevelOf(get, viewpointIdRef.current) === 'class'
+                            ? []
+                            : linkOptions(get, get(connection.source)?.model, get(connection.target)?.model);
+
                         if (compatibleRefs.length === 0 && connectMatches.length === 0) {
-                            return; // no compatible refs — ignore
+                            // No match opens nothing; one is auto-selected (Q7); two up go to the popup below.
+                            if (linkMatches.length === 0) return; // no compatible refs — ignore
+                            if (linkMatches.length === 1) {
+                                runLinkRef.current(linkMatches[0]);
+                                return;
+                            }
                         }
 
-                        if (compatibleRefs.length === 1 && connectMatches.length === 0) {
+                        if (compatibleRefs.length === 1 && connectMatches.length === 0 && linkMatches.length === 0) {
                             // Auto-select: skip popup, create edge directly
                             handleM1ReferenceSelectedRef.current(compatibleRefs[0].ref, connection);
                             return;
                         }
 
-                        if (compatibleRefs.length === 0 && connectMatches.length === 1) {
+                        if (compatibleRefs.length === 0 && connectMatches.length === 1 && linkMatches.length === 0) {
                             // Auto-create: single applicable IR rule, no direct reference
                             handleObjectEdgeSelectedRef.current(connectMatches[0], connection);
                             return;
@@ -1894,6 +2088,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
                             objectEdgeMatches: connectMatches,
+                            linkMatches,
                         });
                     }
                     return;
@@ -2187,6 +2382,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             takeSnapshot();
 
+            // At `class` the drag is one undo entry with an exact inverse (R-OI-22): outside a group the reducer's legacy
+            // merge of the deferred writes leaves the new object in the store after the undo (S2-L28).
+            const grouped = !!generalizationSlot((store.getState() as any).idlookup ?? {}, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+            if (grouped) beginUndoGroup();
+            const closeGroup = (landed: () => boolean, attempt = 0) => {
+                if (!grouped) return;
+                if (landed() || attempt >= 80) endUndoGroup();
+                else setTimeout(() => closeGroup(landed, attempt + 1), 100);
+            };
+
             // Hidden vertex position: midpoint between the two endpoint nodes
             const currentNodes = getNodes();
             const sn = currentNodes.find(n => n.id === conn.source);
@@ -2197,6 +2402,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const vertexId = syncCreateObject(graphId, match.edgeClass.id, midX, midY);
             if (!vertexId) {
                 console.warn('[EditorV2] Failed to create object-as-edge instance');
+                closeGroup(() => true);
                 return;
             }
             markDropCreated(vertexId);
@@ -2212,9 +2418,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const writeSlot = (lObject: any, featName: string, objId: string) => {
                 const slot = lObject['$' + featName];
                 if (!slot) return;
-                const meaningful = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
-                slot.values = [...meaningful, objId];
+                slot.values = planSlotAppend(slot, objId);
             };
+            let landed = () => true;
             const writeSlotsAndMount = (attempt: number) => {
                 const lObject = (LPointerTargetable.fromPointer(vertexId) as any)?.model;
                 const ready = lObject
@@ -2230,12 +2436,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // The edge object belongs where its source's container chain says (R-GV-8, spec addendum §6.1;
                     // S3): a SequenceFlow in its Process's flowElements, not at the root. SetField-only, no creator.
                     const idl = (store.getState() as any).idlookup ?? {};
-                    const owner = ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
+                    // At `class` with a declared binding a Generalization is owned by its specific classifier
+                    // (R-OI-22); every other notation and level keeps the container chain.
+                    const classSlot = generalizationSlot(idl, viewpointIdRef.current, match.edgeClass.id, srcObjectId);
+                    const owner = classSlot
+                        ? slotRefOf(idl, classSlot.ownerId, classSlot.feature)
+                        : ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
                     const edgeObjectId: string | undefined = lObject?.id;
                     if (owner && edgeObjectId && slotAccepts(idl, owner, match.edgeClass.id)) {
                         TRANSACTION('graphVertex edge object owner', () => {
                             applyMembershipOps([{ op: 'append', slot: owner, value: edgeObjectId }]);
                         });
+                        // The owner's write is the last one queued: once it is in the store, the slots' are.
+                        if (classSlot) landed = () => !!(LPointerTargetable.fromPointer(classSlot.ownerId) as any)?.['$' + classSlot.feature]?.__raw?.values?.includes(edgeObjectId);
                     }
                 }
                 const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
@@ -2251,6 +2464,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     } as ObjectNodeData,
                 };
                 setNodes(nds => nds.some(n => n.id === vertexId) ? nds : [...nds, newNode]);
+                closeGroup(landed);
             };
             setTimeout(() => writeSlotsAndMount(0), 0);
         },
@@ -2622,13 +2836,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
     );
 
+    const runOntoPayloadRef = useRef<(payload: string, click: { x: number; y: number }) => void>(() => {});
+
     // Handle drop from palette
     const onDrop = useCallback(
         (event: React.DragEvent) => {
             event.preventDefault();
 
+            // A drag from «Instances of» (R-OI-18): its own key, the pane menu's path (runInstantiate, defined below).
+            const ontoPayload = event.dataTransfer.getData(ONTO_DRAG_MIME);
+            if (ontoPayload) {
+                if (paneAcceptsDropRef.current) runOntoPayloadRef.current(ontoPayload, { x: event.clientX, y: event.clientY });
+                return;
+            }
+
             const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
+            if (!rawType || !paneAcceptsDropRef.current) return;
 
             createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
         },
@@ -2641,13 +2864,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         (type: string, metaclassId?: string) => {
             const canvas = editorContainerRef.current;
             if (!canvas) return;
-            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
         },
         [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
     const onDragOver = useCallback((event: React.DragEvent) => {
+        // In a split only the active pane takes a palette drop (L6c): no preventDefault, no drop, no-drop cursor.
+        if (!paneAcceptsDropRef.current && (event.dataTransfer.types.includes('application/reactflow') || event.dataTransfer.types.includes(ONTO_DRAG_MIME))) {
+            event.dataTransfer.dropEffect = 'none';
+            return;
+        }
         event.preventDefault();
 
         // M1: show not-allowed cursor for non-rootable classes (they need context menu)
@@ -2682,7 +2910,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const onClassicDrop = useCallback((event: React.DragEvent) => {
         event.preventDefault();
         const metaclassId = event.dataTransfer.getData('application/jjodel-classic');
-        if (!metaclassId || !modelid) return;
+        if (!metaclassId || !modelid || !paneAcceptsDropRef.current) return;
 
         try {
             const lModel: any = LPointerTargetable.fromPointer(modelid);
@@ -2701,7 +2929,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // dataTransfer.types is readable during dragOver (unlike getData), so we
     // can filter out unrelated drags (e.g. files from the desktop) early.
     const onClassicDragOver = useCallback((event: React.DragEvent) => {
-        if (!event.dataTransfer.types.includes('application/jjodel-classic')) return;
+        if (!event.dataTransfer.types.includes('application/jjodel-classic') || !paneAcceptsDropRef.current) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
@@ -3113,6 +3341,126 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         []
     );
 
+    // Pane menu of the ontological instantiation (R-OI-10, hooks/instantiate.ts). It opens
+    // only when the metamodel's bag declares an `object` record and the tab's viewpoint is not at
+    // `class` (R-OI-20); otherwise the pane right click is left alone, as before.
+    const onPaneContextMenu = useCallback(
+        (event: MouseEvent | React.MouseEvent) => {
+            if (!isModelMode || !modelid) return;
+            const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+            const record = objectRecord(get, modelid);
+            if (!record) return;
+            if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+                const lookup = (store.getState() as any)?.idlookup ?? {};
+                const groups = classRail(lookup, modelid)?.groups ?? [];
+                if (groups.length === 0) return;
+                event.preventDefault();
+                const propertyEnabled = selectionTakesProperty(lookup, modelid, (store.getState() as any)?._lastSelected?.modelElement);
+                setContextMenu({ x: event.clientX, y: event.clientY, classPane: { groups, propertyEnabled } });
+                return;
+            }
+            event.preventDefault();
+            setContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                pane: { record, options: creationOptions(get, record, modelid, viewpointIdRef.current) },
+            });
+        },
+        [isModelMode, modelid]
+    );
+
+    // One instantiation with its slots, one undo entry; its vertex is the one useJjomSync Step 2bis
+    // gives a new root, placed by the layout write of instantiate (hooks/instantiate.ts header):
+    // at the right click under the layout in force, at the centre of the view under any other
+    // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
+    // viewports and the pane are read at the click, not when the write lands. The layout in force is the tab's
+    // (P-2026-11-07-1620): its viewpoint goes to instantiate, its key decides where the click lands.
+    const placementAt = useCallback((click?: { x: number; y: number }) => {
+        const activeKey = tabLayoutKey();
+        const clickAt = click ? screenToFlowPosition(click) : null;
+        const current = getViewport();
+        const el = editorContainerRef.current;
+        const pane = { width: el?.clientWidth ?? 0, height: el?.clientHeight ?? 0 };
+        return (layoutKey: string) => {
+            if (layoutKey === activeKey && clickAt) return clickAt;
+            if (pane.width <= 0 || pane.height <= 0) return null;
+            return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
+        };
+    }, [screenToFlowPosition, getViewport, modelid]);
+
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+        void instantiate(classifierId, record, placementAt(click), viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
+        });
+    }, [placementAt]);
+
+    // A link between two instances (R-OI-24): the record re-read from the store, the queue of instantiate, one undo entry.
+    const runLink = useCallback((option: LinkOption) => {
+        if (!modelid) return;
+        const record = linkRecord((id: string) => (store.getState() as any)?.idlookup?.[id], modelid);
+        if (!record) return;
+        void instantiateLink(option.id, record, option.ends, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] link:', result.problems);
+        });
+    }, [modelid]);
+    runLinkRef.current = runLink;
+
+    // A class-level element (R-OI-21): one undo entry, the queue of instantiate, the plan read at the gesture.
+    const runClassPlan = useCallback((plan: ClassElementPlan | PropertyPlan | { error: string }, click?: { x: number; y: number }) => {
+        if ('error' in plan) { console.warn('[EditorV2] class element:', plan.error); return; }
+        void createClassElement(plan, click ? placementAt(click) : undefined, viewpointIdRef.current).then(result => {
+            if (!result.ok) console.warn('[EditorV2] class element:', result.problems);
+        });
+    }, [placementAt]);
+
+    const runClassifier = useCallback((metaclassId: string, click: { x: number; y: number }) => {
+        if (!modelid) return;
+        runClassPlan(classElementPlan((store.getState() as any)?.idlookup ?? {}, modelid, metaclassId), click);
+    }, [modelid, runClassPlan]);
+
+    // An attribute of the selected class: the row draws inside its node, so no position is written.
+    const runProperty = useCallback((metaclassId: string) => {
+        if (!modelid) return;
+        const state = store.getState() as any;
+        runClassPlan(propertyPlan(state?.idlookup ?? {}, modelid, metaclassId, state?._lastSelected?.modelElement));
+    }, [modelid, runClassPlan]);
+
+    // A drop or a click on «Instances of» (R-OI-18): the record re-read from the store by name, then the pane menu's
+    // path, so the queue, the deadline, the one undo entry and the tab's layout come with it. The click lands where a
+    // linguistic palette click does, the centre of the canvas the overlay leaves visible.
+    const runOntoPayload = useCallback((payload: string, click: { x: number; y: number }) => {
+        if (!isModelMode || !modelid) return;
+        const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+        // The level read at the drop (R-OI-20, R-OI-21): a drag can be held across a tab switch, so a payload of the other
+        // level writes nothing.
+        if (ontoLevelOf(get, viewpointIdRef.current) === 'class') {
+            const metaclass = classDropRequest((store.getState() as any)?.idlookup ?? {}, modelid, payload);
+            if (metaclass) runClassifier(metaclass, click);
+            return;
+        }
+        const request = ontoDropRequest(get, modelid, payload, viewpointIdRef.current);
+        if (request) runInstantiate(request.classifierId, request.record, click);
+    }, [isModelMode, modelid, runInstantiate, runClassifier]);
+    runOntoPayloadRef.current = runOntoPayload;
+
+    const onOntoActivate = useCallback((record: OntoBinding, classifierId: string) => {
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(ontoDragPayload(record, classifierId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
+    }, [runOntoPayload]);
+
+    const onClassActivate = useCallback((kind: ClassRailKind, metaclassId: string) => {
+        if (kind === 'property') { runProperty(metaclassId); return; }
+        const canvas = editorContainerRef.current;
+        if (!canvas) return;
+        runOntoPayload(classDragPayload(metaclassId), clientCentre(canvas.getBoundingClientRect(), paneRightInset()));
+    }, [runProperty, runOntoPayload]);
+
+    const onDeclareBinding = useCallback(() => {
+        const metamodel = modelid ? (store.getState() as any)?.idlookup?.[modelid]?.instanceof : undefined;
+        if (typeof metamodel === 'string' && metamodel !== '') setBindingMetamodel(metamodel);
+    }, [modelid]);
+
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
         clearSyntheticEdgeSelection();     // IR object-as-edge selection lives outside the base state
@@ -3404,6 +3752,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 && (node.type === 'objectNode' || node.type === 'classNode' || node.type === 'enumNode')
                 && ((node as any).width != null || (node as any).height != null);
 
+            // «New instance» on a node whose object is a classifier the metamodel's `object`
+            // record lets be instantiated (R-OI-10), except under a viewpoint at `class` (R-OI-20).
+            if (isModelMode && modelid && node) {
+                const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                const record = objectRecord(get, modelid);
+                const objectId: unknown = get(node.id)?.model;
+                if (record && typeof objectId === 'string' && ontoLevelOf(get, viewpointIdRef.current) !== 'class'
+                    && creationOptions(get, record, modelid, viewpointIdRef.current).some(o => o.id === objectId)) {
+                    items.push(
+                        { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
+                        { divider: true },
+                    );
+                }
+                // «Sync slots» on an instance the `object` record judges (S3a, R-OI-9): only the missing slots;
+                // disabled when none is missing. The same function the missing-slot problem's action runs.
+                const instanceRecord = typeof objectId === 'string' ? instanceObjectRecord(get, modelid, objectId) : null;
+                if (instanceRecord && typeof objectId === 'string') {
+                    const plan = syncSlotsPlan(get, instanceRecord, objectId);
+                    const missing = 'error' in plan ? 0 : plan.slots.length;
+                    items.push(
+                        {
+                            label: 'Sync slots', icon: 'bi-arrow-repeat', disabled: missing === 0,
+                            tooltip: missing === 0 ? 'Every feature of the classifier has a slot' : undefined,
+                            onClick: () => void syncSlots(objectId, instanceRecord).then(result => {
+                                if (!result.ok) console.warn('[EditorV2] syncSlots:', result.problems);
+                            }),
+                        },
+                        { divider: true },
+                    );
+                }
+            }
+
             // M1: composition children for object nodes (uses compositionCompat utility)
             if (isModelMode && node?.type === 'objectNode') {
                 const objData = node.data as ObjectNodeData;
@@ -3649,7 +4029,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (node?.type === 'objectNode') {
                 const st: any = store.getState();
                 const lookup = st?.idlookup;
-                const index = lookup ? getIRIndex(st, computeIRSignature(st)) : null;
+                const index = lookup ? tabIRIndex(st) : null;
                 const objectId = lookup?.[node.id]?.model;
                 const classId = (node.data as any)?.instanceOfClassId;
                 if (index && typeof objectId === 'string' && classId) {
@@ -3771,6 +4151,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 },
             ];
         }
+
+        // Pane menu at the `class` level: «New ▸ <metaclass>», the items of the rail (R-OI-23).
+        if (contextMenu?.classPane) {
+            const { groups, propertyEnabled } = contextMenu.classPane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
+            return [{
+                label: 'New',
+                icon: 'bi-plus-square',
+                children: groups.flatMap(group => group.items.map((item): ContextMenuItem => {
+                    if (group.kind === 'classifier') return { label: item.name, icon: 'bi-box', onClick: () => runClassifier(item.metaclass, click) };
+                    if (group.kind === 'property' && propertyEnabled) return { label: item.name, icon: 'bi-list-ul', onClick: () => runProperty(item.metaclass) };
+                    return { label: item.name, disabled: true, tooltip: CLASS_RAIL_HINTS[group.kind] };
+                })),
+            }];
+        }
+
+        // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
+        if (contextMenu?.pane) {
+            const { record, options } = contextMenu.pane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
+            return [{
+                label: 'New instance of',
+                icon: 'bi-plus-square',
+                disabled: options.length === 0,
+                tooltip: options.length === 0 ? 'No class to instantiate' : undefined,
+                children: options.map(o => ({
+                    label: o.name,
+                    icon: 'bi-box',
+                    onClick: () => runInstantiate(o.id, record, click),
+                })),
+            }];
+        }
         return [];
     };
 
@@ -3789,9 +4201,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setViewport({ ...getViewport(), zoom: next }, { duration: 150 });
     }, [storeApi, setViewport, getViewport]);
     const handleResetZoom = useCallback(() => {
-        fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 });
+        fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 });
     }, [fitView]);
-    const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
+    const handleFitView = useCallback(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
 
     // Persist pan/zoom at the end of every move (React Flow fires onMoveEnd once per
     // gesture, so no debounce is needed) and once more on unmount, which covers a
@@ -3812,13 +4224,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const saveViewport = useCallback(() => {
         const vp = getViewport();
         lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
-        writeStoredViewport(modelid, getActiveLayoutKey(), vp);
+        writeStoredViewport(modelid, tabLayoutKey(), vp);
     }, [modelid, getViewport]);
     const modelidRef = useRef(modelid);
     modelidRef.current = modelid;
     useEffect(() => () => {
         const vp = lastViewportRef.current;
-        if (vp) writeStoredViewport(modelidRef.current, getActiveLayoutKey(), vp);
+        if (vp) writeStoredViewport(modelidRef.current, tabLayoutKey(), vp);
     }, []);
 
     // Register the flow editor as a ZoomController with the active-editor context.
@@ -3935,6 +4347,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // `full` is the toolbar's (P-2026-10-01-2215 Phase 2): real sizes, labels, the viewpoint's profile, the 8 px grid
     // and ELK's routes. Without it (the first open, the late-edge re-layout) the layout is today's, unchanged.
     const handleAutoLayout = useCallback(async (opts?: { full?: boolean }) => {
+        // ELK reads real sizes only: with never-measured nodes decorated, mount them all as before, wait until the
+        // canvas state holds their measurement (capped), then lay out.
+        if (decoratedIdsRef.current.size > 0) {
+            setMountAll(true);
+            const start = performance.now();
+            await new Promise<void>((resolve) => {
+                const tick = () => {
+                    const pending = getNodes().filter((n) => !measuredIdsRef.current.has(n.id));
+                    if (allMeasured(pending) || performance.now() - start > AUTO_LAYOUT_MEASURE_WAIT_MS) resolve();
+                    else requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+            setMountAll(false);
+        }
         const currentNodes = getNodes();
         const currentEdges = getEdges();
         if (currentNodes.length === 0) return;
@@ -3942,7 +4369,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (opts?.full) {
             const state: any = store.getState();
             const lookup = state?.idlookup ?? {};
-            const vpState: Record<string, unknown> = (typeof state?.viewpoint === 'string' && lookup[state.viewpoint]?._state) || {};
+            // The tab's viewpoint (R3 of the multi-tab discovery); the root only with no tab.
+            const vpId: unknown = viewpointIdRef.current === undefined ? state?.viewpoint : viewpointIdRef.current;
+            const vpState: Record<string, unknown> = (typeof vpId === 'string' && lookup[vpId]?._state) || {};
             // The profile the derived viewpoint was derived with; a metamodel without one takes the class view's;
             // any other canvas keeps today's strategy (null).
             let profile: ElkLayoutProfile | null = null;
@@ -3973,7 +4402,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     const p = g.querySelector<SVGPathElement>('path.reference-edge, path.inheritance-edge');
                     if (!id || !p) return;
                     const len = p.getTotalLength();
-                    const n = Math.max(2, Math.ceil(len / 6));
+                    const n = labelPathSamples(len);
                     const m = p.getScreenCTM();
                     if (!m) return;
                     const pts: DOMPoint[] = [];
@@ -4011,13 +4440,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const outsideMap = container ? measureOutsideLabels(container) : new Map();
             // Across graphVertex containers (S6): bottom-up by container, each laid-out container a block one level up;
             // with no container that declares a layout, today's flat run (utils/elkContainers.ts).
-            const layoutKey = getActiveLayoutKey();
+            // The canvas's own key, the one its sync reads (E4, P-2026-11-08-2025): the root's would move the other pane of a split.
+            const layoutKey = tabLayoutKey();
             const result = await computeContainedAutoLayout(currentNodes, currentEdges, {
                 profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id),
                 containment: irContainmentRef.current.model,
                 storedOf: v => { const r = readVertexLayout(lookup[v] ?? {}, layoutKey); return { w: r.w, h: r.h, isResized: !!r.isResized }; },
             });
-            const placed = currentNodes.map(n => {
+            // ELK ran in a worker and the canvas stayed live: what changed meanwhile is kept, only what is still there moves.
+            const placed = getNodes().map(n => {
                 const p = result.positions.get(n.id);
                 return p ? { ...n, position: p } : n;
             });
@@ -4029,14 +4460,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const s = result.sizes.get(n.id);
                 return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
             });
-            if (moved.length > 0) syncPositionBatchToJjom(moved);
+            if (moved.length > 0) syncPositionBatchToJjom(moved, layoutKey);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
                 const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
-                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })), layoutKey);
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
@@ -4083,7 +4514,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     },
                 };
             })));
-            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
+            requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
             return;
         }
 
@@ -4095,7 +4526,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const n of layoutedNodes) {
             updates.push({ id: n.id, x: n.position.x, y: n.position.y });
         }
-        if (updates.length > 0) syncPositionBatchToJjom(updates);
+        if (updates.length > 0) syncPositionBatchToJjom(updates, tabLayoutKey());
 
         // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
         // applyDistribution alone only re-indexes handles and inherits the side that
@@ -4135,11 +4566,28 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
-    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid]);
+        requestAnimationFrame(() => fitView({ padding: paneFitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
-    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);
+    // A layout ELK cannot finish is reported, not thrown into the page (P-2026-11-04-1443): nothing moved.
+    // ELK runs in a worker, so the page can click again meanwhile: the ref drops that click before the toolbar is disabled.
+    const [autoLayoutBusy, setAutoLayoutBusy] = useState(false);
+    const autoLayoutBusyRef = useRef(false);
+    const handleToolbarAutoLayout = useCallback(() => {
+        if (autoLayoutBusyRef.current) return;
+        autoLayoutBusyRef.current = true;
+        setAutoLayoutBusy(true);
+        handleAutoLayout({ full: true }).catch((err: unknown) => {
+            console.warn('[EditorV2] auto layout failed:', err);
+            toast.error(err instanceof RangeError
+                ? 'Auto layout: this diagram is too large for the layout engine. Nothing was moved.'
+                : 'Auto layout failed. Nothing was moved.');
+        }).finally(() => {
+            autoLayoutBusyRef.current = false;
+            setAutoLayoutBusy(false);
+        });
+    }, [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
@@ -4329,7 +4777,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         const state: any = store.getState();
         const idlookup = state.idlookup ?? {};
-        const index = getIRIndex(state, computeIRSignature(state));
+        const index = tabIRIndex(state);
         if (!index) return null;
         const readCtx = makeReadCtx(idlookup);
         const rendered = getNodes();
@@ -4414,6 +4862,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // (e.g. from updateNodeInternals → dimension changes triggered
             // by our own setEdges), just apply the changes without edge recalc.
             if (isProcessingNodesChangeRef.current) {
+                noteMeasurements(changes);
                 onNodesChange(changes);
                 return;
             }
@@ -4709,6 +5158,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return true; // first measurement or actual size change
             });
             if (changesToApply.length > 0) {
+                noteMeasurements(changesToApply);
                 onNodesChange(changesToApply);
             }
 
@@ -4717,7 +5167,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
         },
         [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout,
-            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes]
+            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes, noteMeasurements]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -4787,7 +5237,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelId: modelid }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelid]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelId: modelid, viewpointId, onViewpointChange }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelid, viewpointId, onViewpointChange]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {
@@ -4833,7 +5283,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
     const handleCanvasNodesChange = useCallback((changes: any[]) => {
-        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id));
+        // A `replace` or `add` React Flow builds from a decorated node goes in undecorated: no estimate in the canvas state.
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id))
+            .map((c) => (c?.item && isDecorated(c.item) ? { ...c, item: undecorate(c.item) } : c));
         if (own.length > 0) handleNodesChange(own);
     }, [handleNodesChange]);
     const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
@@ -4873,7 +5325,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={canvasElements.nodes}
+                nodes={rfNodes}
                 edges={canvasElements.edges}
                 onNodesChange={handleCanvasNodesChange}
                 onNodeDrag={handleNodeDragPointer}
@@ -4890,6 +5342,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onDragOver={onDragOver}
                 onNodeContextMenu={handleCanvasNodeContextMenu}
                 onEdgeContextMenu={handleCanvasEdgeContextMenu}
+                onPaneContextMenu={onPaneContextMenu}
                 onNodeClick={handleCanvasNodeClick}
                 onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
@@ -4901,12 +5354,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
                 fitViewOptions={fitViewOptions}
+                // A split's canvas is narrow, so its fit goes below the default floor; 0.5 is that default, spelled out because the store skips an undefined prop (D6).
+                minZoom={inCanvasSplit ? 0.05 : 0.5}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
                 multiSelectionKeyCode="Shift"
                 selectionMode={SelectionMode.Partial}
-                panOnDrag={[0, 1, 2]}
+                panOnDrag={[0, 1]}
                 zoomOnScroll={false}
                 panOnScroll={false}
                 panOnScrollMode={PanOnScrollMode.Free}
@@ -4915,6 +5370,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 zoomOnPinch={true}
                 deleteKeyCode={null}
                 connectionRadius={40}
+                onlyRenderVisibleElements={onlyRenderVisible}
             >
                 <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
                     <defs>
@@ -4979,11 +5435,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     options={pendingM1Connection.compatibleRefs}
                     onSelect={(ref) => handleM1ReferenceSelected(ref)}
                     onCancel={() => setPendingM1Connection(null)}
-                    objectEdgeOptions={(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
-                        key: `${m.edgeClass.id}_${i}`,
-                        label: `New ${m.edgeClass.name}`,
-                    }))}
+                    objectEdgeOptions={[
+                        ...(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
+                            key: `${m.edgeClass.id}_${i}`,
+                            label: `New ${m.edgeClass.name}`,
+                        })),
+                        ...(pendingM1Connection.linkMatches ?? []).map(o => ({ key: `link:${o.id}`, label: `New ${o.name}` })),
+                    ]}
                     onSelectObjectEdge={(key) => {
+                        const link = (pendingM1Connection.linkMatches ?? []).find(o => `link:${o.id}` === key);
+                        if (link) {
+                            setPendingM1Connection(null);
+                            runLink(link);
+                            return;
+                        }
                         const matches = pendingM1Connection.objectEdgeMatches ?? [];
                         const idx = matches.findIndex((m, i) => `${m.edgeClass.id}_${i}` === key);
                         if (idx >= 0) handleObjectEdgeSelected(matches[idx]);
@@ -5008,25 +5473,73 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         </HighlightProvider>
     );
 
+    const palette = (
+        <PalettePanel
+            editorMode={modeInfo.mode}
+            rootableClasses={irPalette.classes}
+            irPaletteFallback={irPalette.fallback}
+            undeclaredClasses={irPalette.undeclared}
+            allClasses={modeInfo.allClasses}
+            selectedDObjectId={lastSelectedModelElement ?? null}
+            onItemActivate={onPaletteActivate}
+            collapsed={!!scriptPreview?.owner}
+            ontoSections={ontoSections}
+            onOntoActivate={onOntoActivate}
+            onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
+            classGroups={classGroups}
+            onClassActivate={onClassActivate}
+            classPropertyEnabled={classPropertyEnabled}
+            ontoPropertyGroup={ontoPropertyGroup}
+            ontoPropertyEnabled={ontoPropertyEnabled}
+            viewpointName={inCanvasSplit ? (viewpointId ? (LPointerTargetable.fromPointer(viewpointId) as any)?.name : 'Abstract syntax') : undefined}
+        />
+    );
+    // In a split the inactive pane runs no command: its first press only activates it (P-2026-11-08-2045). Wheel events are not guarded, so it can still be looked at.
+    const guardPaneEvent = (event: React.SyntheticEvent) => {
+        if (!paneEl) return;
+        const verdict = paneEventVerdict(DockManager.getCanvasSplit(), paneEl, paneActivationRef.current, { type: event.type, detail: (event.nativeEvent as UIEvent).detail });
+        paneActivationRef.current = verdict.activation;
+        if (!verdict.consume) return;
+        event.stopPropagation();
+        // A cancelled pointerdown would suppress the mousedown the verdict counts on; a key keeps its browser default.
+        if (event.type !== 'pointerdown' && event.type !== 'keydown') event.preventDefault();
+        if (verdict.activate) {
+            DockManager.activateCanvasPane(paneEl);
+            paneEl.focus({ preventScroll: true });
+        }
+    };
+    const paneGuardProps = {
+        onPointerDownCapture: (event: React.PointerEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onKeyDownCapture: (event: React.KeyboardEvent) => { markUserInteracted(); guardPaneEvent(event); },
+        onMouseDownCapture: guardPaneEvent,
+        onPointerUpCapture: guardPaneEvent,
+        onMouseUpCapture: guardPaneEvent,
+        onClickCapture: guardPaneEvent,
+        onDoubleClickCapture: guardPaneEvent,
+        onContextMenuCapture: guardPaneEvent,
+        onDragStartCapture: guardPaneEvent,
+    };
+
+    // In a split the active pane shows its palette in the first pane's slot, at the window's left edge; the other pane shows none.
+    const paletteSlot = inCanvasSplit && canvasSplit.active === paneEl
+        ? canvasSplit.panes[0].querySelector<HTMLElement>(':scope > .editor-v2-palette-slot')
+        : null;
+
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div ref={setPaneEl} className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}${inCanvasSplit ? ' editor-v2--split-pane' : ''}${inCanvasSplit && canvasSplit.active === paneEl ? ' editor-v2--active-pane' : ''}`} tabIndex={0} onKeyDown={onKeyDown} {...paneGuardProps}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
+                <InstantiationProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
+                <DcnProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
-                <PalettePanel
-                    editorMode={modeInfo.mode}
-                    rootableClasses={irPalette.classes}
-                    irPaletteFallback={irPalette.fallback}
-                    undeclaredClasses={irPalette.undeclared}
-                    allClasses={modeInfo.allClasses}
-                    selectedDObjectId={lastSelectedModelElement ?? null}
-                    onItemActivate={onPaletteActivate}
-                    collapsed={!!scriptPreview?.owner}
-                />
-                <div className="editor-v2__main">
+                <div className="editor-v2-palette-slot" />
+                {inCanvasSplit ? (paletteSlot && createPortal(palette, paletteSlot)) : palette}
+                {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
+                <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
+                        commandsDisabled={autoLayoutBusy || (paneEl !== null && paneIsInactive(canvasSplit, paneEl))}
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}
@@ -5173,7 +5686,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
+function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
     return (
         <ReactFlowProvider>
             <EditorV2Inner
@@ -5183,6 +5696,8 @@ function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoi
                 editorMode={editorMode}
                 hasViewpoint={hasViewpoint}
                 onEditorModeChange={onEditorModeChange}
+                viewpointId={viewpointId}
+                onViewpointChange={onViewpointChange}
             />
         </ReactFlowProvider>
     );

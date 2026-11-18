@@ -18,9 +18,17 @@ import {
     DATA_MANAGER_OPTION_LABEL,
     DATA_MANAGER_OPTION_VALUE,
     isDataManagerOption,
+    isTextualOption,
+    TEXTUAL_OPTION_ICON,
+    TEXTUAL_OPTION_VALUE,
+    textualLanguageNameOf,
+    textualOptionLabel,
 } from './dataManagerOption';
+import { codegenAvailable, useCodegenEnabled } from '../../codegen/setting';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { saveViewpointPreference } from '../abstract/tabs/EditorSwitch';
+import { useEditorContextSafe } from './contexts/EditorContext';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
@@ -33,6 +41,8 @@ import { useValidationFreshness } from './problems/ValidationFreshnessSync';
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
 
 interface ToolbarProps {
+    /** The inactive pane of a split: every control disabled, tooltips kept (P-2026-11-08-2045). */
+    commandsDisabled?: boolean;
     snapEnabled: boolean;
     onToggleSnap: () => void;
     // TODO: cleanup — `onFitView` has had no call site since the fit button left the
@@ -113,6 +123,19 @@ interface SyntaxEntry {
 
 const ABSTRACT_SYNTAX_ENTRY: SyntaxEntry = { value: '', label: 'Abstract syntax', icon: 'bi-diagram-3' };
 const VIEWPOINT_ENTRY_ICON = 'bi-eye';
+
+// The textual entry (R-TXT-23, P-2026-11-02-0040) opens a tab whose module lives in src/codegen/, reached by dynamic
+// import only (R-GEN-2, scripts/gates/check-codegen-lazy.ts). Under the build flag, as EditorV2's `CODEGEN_BUILD`:
+// without `VITE_CODEGEN=true` Vite turns the literal into `undefined === 'true'` and Rollup drops the import. The bare
+// text `import.meta.env.X` is the form Vite replaces; tsconfig has no vite/client types, hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+
+/** The name of the metamodel `modelId` is an instance of, '' when there is none: the textual entry's default label. */
+function metamodelNameOf(lookup: Readonly<Record<string, any>> | undefined, modelId: string | undefined): string {
+    const mm = modelId ? lookup?.[lookup?.[modelId]?.instanceof] : undefined;
+    return typeof mm?.name === 'string' ? mm.name : '';
+}
 
 /** `aria-controls` / `aria-activedescendant` need ids, and the listbox is portalled onto
  *  `document.body` — outside the toolbar's subtree, where a scoped id would not help. One
@@ -211,6 +234,7 @@ const AlignIcons = {
 };
 
 function Toolbar({
+    commandsDisabled,
     snapEnabled,
     onToggleSnap,
     onFitView,
@@ -275,7 +299,16 @@ function Toolbar({
     // array feeds a rendering selector, not a navigation tree. A `Default` holding
     // authored views is reached through the view tree, not activated as the viewpoint
     // things render through.
-    const rawActiveViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    //
+    // The value shown is the tab's viewpoint (R-MT-1, multi-tab L2), from EditorContext; the root
+    // only when no tab owns this canvas (the standalone route), as before.
+    const editorContext = useEditorContextSafe();
+    const rootViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    const tabViewpointId = editorContext?.viewpointId;
+    const rawActiveViewpointId = (tabViewpointId === undefined ? rootViewpointId : tabViewpointId) as string;
+    // Read through a ref by the picker handler, which keeps its `[modelId]` deps.
+    const onTabViewpointChangeRef = useRef(editorContext?.onViewpointChange);
+    onTabViewpointChangeRef.current = editorContext?.onViewpointChange;
     const viewpointPointers = useSelector((state: any) => state.viewpoints) as string[];
     const viewpoints = (viewpointPointers || [])
         .filter(ptr => !Defaults.isSystemViewpoint(ptr) && !isDataManagerViewpointId(ptr))
@@ -314,6 +347,13 @@ function Toolbar({
     // through, and value={null} would turn the controlled <select> into an uncontrolled one — React
     // warns and the selection stops tracking the store. Coerced here and nowhere upstream.
     const shownViewpointId = isMetamodel ? '' : (activeViewpointId || '');
+    // The textual entry shows only when the setting and the build flag are on (R-GEN-2), in Advanced mode (3.2,
+    // P-2026-11-15-1730): Redux `advanced`, reactive in this tab.
+    const codegenAdvanced = useSelector((state: any) => !!state.advanced) as boolean;
+    const codegenEnabled = codegenAvailable(useCodegenEnabled(), codegenAdvanced) && CODEGEN_BUILD;
+    const metamodelName = useSelector((state: any) => metamodelNameOf(state.idlookup, modelId)) as string;
+    // The language's name, when the metamodel's syntax annotations set one (R-TXT-25 (12)): the entry's label then.
+    const languageName = useSelector((state: any) => textualLanguageNameOf(state.idlookup, modelId)) as string | null;
 
     // ── VIEW group enablement ──
     // Notation and Theme govern the abstract-syntax rendering. As soon as a concrete-syntax
@@ -349,7 +389,23 @@ function Toolbar({
             }
             return;
         }
+        // The textual entry is not a viewpoint either: it opens the read-only Text tab, a sibling of the canvas tab as
+        // the manager is. The label is read from the store here, so the handler keeps its `[modelId]` deps.
+        if (isTextualOption(vpId)) {
+            if (!modelId) return;
+            const lookup = (store.getState() as any).idlookup;
+            const label = textualOptionLabel(metamodelNameOf(lookup, modelId), textualLanguageNameOf(lookup, modelId));
+            if (CODEGEN_BUILD) void import('../../codegen/textual/ui/openTextualTab').then(m => m.openTextualTab(modelId, label));
+            return;
+        }
         activateViewpoint(vpId || null);
+        // Q2: the pick is this tab's viewpoint too; the root and the project follow it because
+        // the tab whose picker is used is the focused one.
+        onTabViewpointChangeRef.current?.(vpId || null);
+        // The pick is this model's preference and no other's: the mounted EditorSwitch of every
+        // open tab sees the root change, so the write lives here, with the picker (R-MT-16).
+        // isMetamodel stays out of the deps: it is fixed for a given modelId.
+        if (modelId && !isMetamodel) saveViewpointPreference(modelId, vpId || null);
     }, [modelId]);
 
     // ── The picker itself: a custom listbox, no longer a <select> (NAV2) ──
@@ -396,11 +452,20 @@ function Toolbar({
         // `DockManager.openManager` refuses anyway, and off without a `modelId`, which is
         // what the entry has to resolve to open the tab.
         if (modelId) {
+            // One hairline above the synthetic entries: the textual one first when codegen is on, then the manager.
+            if (codegenEnabled) {
+                syntaxEntries.push({
+                    value: TEXTUAL_OPTION_VALUE,
+                    label: textualOptionLabel(metamodelName, languageName),
+                    icon: TEXTUAL_OPTION_ICON,
+                    sep: true,
+                });
+            }
             syntaxEntries.push({
                 value: DATA_MANAGER_OPTION_VALUE,
                 label: DATA_MANAGER_OPTION_LABEL,
                 icon: DATA_MANAGER_OPTION_ICON,
-                sep: true,
+                sep: !codegenEnabled,
             });
         }
     }
@@ -423,7 +488,8 @@ function Toolbar({
         setSyntaxOpen(false);
         // Focus goes back to the trigger, as it does when a `<select>` closes — except for
         // the manager entry, which moves to another tab: pulling focus back onto a control
-        // of the tab just left is worse than leaving it where the dock puts it.
+        // of the tab just left is worse than leaving it where the dock puts it. The textual entry opens a tab too.
+        if (isTextualOption(value)) { handleViewpointChange(value); return; }
         if (!isDataManagerOption(value)) syntaxTriggerRef.current?.focus();
         handleViewpointChange(value);
     };
@@ -784,6 +850,8 @@ function Toolbar({
 
     return (
         <div className="editor-v2-toolbar">
+            {/* The inactive pane of a split disables every control at once; display: contents leaves the toolbar's layout as it is. */}
+            <fieldset className="editor-v2-toolbar__commands" disabled={!!commandsDisabled}>
             {/* ── Actions / Alignment group (swaps in-place) ── */}
             {selectedCount >= 2 && onAlignLeft ? (
                 <div className="toolbar-group toolbar-group--align">
@@ -1205,10 +1273,11 @@ function Toolbar({
                     </>
                 )}
                 {/* Fit to view retired from this group on 2026-08-26 (mockup 1c): the
-                    group is zoom and nothing else. Nothing is lost with it — the level
-                    button beside it runs `handleResetZoom`, which is the SAME call as
-                    `handleFitView` (`fitView({padding, maxZoom: 1, duration: 200})`,
-                    EditorV2.tsx:3313-3316), so the affordance survives under the `%`. */}
+                    group is zoom and nothing else. The level button beside it does NOT
+                    fit the view: it runs `handleActiveResetZoom` (EditorV2.tsx), which
+                    calls `activeController.setZoom(1)` — an absolute 100%, no fit, no
+                    recentering. `handleFitView` (`fitView({padding, maxZoom: 1,
+                    duration: 200})`) is a separate handler, not reachable from this group. */}
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
 
@@ -1268,6 +1337,7 @@ function Toolbar({
                     </div>
                 </div>
             )}
+            </fieldset>
         </div>
     );
 }

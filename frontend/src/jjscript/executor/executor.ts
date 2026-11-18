@@ -42,7 +42,7 @@ import { getMetamodelById } from './resolvers';
 import { getProject } from './utils';
 import { checkCommandPermission, containedTypes, instanceType, metaclassesNamed, rememberCreated } from './permissionGuard';
 import type { GuardCommand, GuardType } from './permissionGuard';
-import { resolveTargetModel, resolveInstanceHandle } from './commands/instance';
+import { resolveTargetModel, resolveInstanceHandle, resolveInstanceTarget } from './commands/instance';
 import { activeProfileId } from '../../components/environment/consumerMode';
 import { findProfile } from '../../joiner/environmentConfig';
 import { store } from '../../joiner';
@@ -382,7 +382,7 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext, created: 
     }
     // Same spelling as the handlers (`instance.ts`, executeSet/Rename/DeleteInstance).
     const instanceName = args.target.segments.join('::') || args.target.raw;
-    const resolved = resolveInstanceHandle(model, instanceName);
+    const resolved = resolveInstanceTarget(model, args.target);
     cmd.subject = instanceType(resolved, instanceName, created);
 
     // A `delete` touches what the instance contains too (#157, 2026-10-04): read from the store

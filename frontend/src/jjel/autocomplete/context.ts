@@ -8,6 +8,7 @@
  * States:
  *   - 'after-dot':       cursor right after `.` or `?.`             → method provider
  *   - 'after-forall-in': cursor inside `forall <id> in <prefix>`    → identifier (collection)
+ *                        (also `forall x, y in <prefix>` and `forall x in A, y in <prefix>`)
  *   - 'partial-word':    cursor mid-identifier                       → keyword + identifier (filtered by prefix)
  *   - 'top-level':       anything else                               → keyword + identifier (no prefix filter)
  */
@@ -35,6 +36,9 @@ export interface JjelAutocompleteContext {
 
 const IDENT_CHAR = /[a-zA-Z0-9_$]/;
 const IDENT_START = /[a-zA-Z_$]/;
+const NAME_LIST = '([a-zA-Z_$][a-zA-Z0-9_$]*(?:\\s*,\\s*[a-zA-Z_$][a-zA-Z0-9_$]*)+)';
+const FORALL_NAMES_IN = new RegExp(`\\bforall\\s+${NAME_LIST}\\s+in\\s*$`, 'i');
+const LIST_CONTINUES_IN = /,\s*([a-zA-Z_$][a-zA-Z0-9_$]*(?:\s*,\s*[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s+in\s*$/i;
 
 /** Walk back from position to find the start of the current identifier (if any). */
 function findCurrentWord(text: string, cursorPos: number): { currentWord: string; wordStart: number } {
@@ -122,6 +126,20 @@ export function detectJjelContext(input: string, cursorPosition?: number): JjelA
                     }
                 }
             }
+        }
+        // Several variables (R-FA-1): `forall x, y in |` and `forall x in A, y in |` are the same
+        // state. 'in' is bound only by a forall / exists list, so a `, <names> in` after a forall
+        // continues that list.
+        const multi = FORALL_NAMES_IN.exec(beforeWord) ?? (/\bforall\b/i.test(beforeWord) ? LIST_CONTINUES_IN.exec(beforeWord) : null);
+        if (multi && !multi[1].split(',').some(n => /^(in|forall)$/i.test(n.trim()))) {
+            return {
+                input,
+                cursorPosition: pos,
+                currentWord,
+                wordStart,
+                nullSafeDot: false,
+                parseContext: 'after-forall-in',
+            };
         }
     }
 

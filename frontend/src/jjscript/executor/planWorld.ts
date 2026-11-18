@@ -46,7 +46,12 @@ function readClass(idlookup: Idlookup, classId: string): PlanClass {
         for (const id of ids(k?.attributes)) {
             const f = idlookup[id];
             if (!f?.name || attributes.some((x) => x.name === f.name)) continue;
-            attributes.push({ name: f.name, upper: upperOf(f) });
+            const attribute: PlanAttribute = { name: f.name, upper: upperOf(f) };
+            const t = typeof f.type === 'string' ? idlookup[f.type] : undefined;
+            if (t?.className === 'DEnumerator') {
+                attribute.enumeration = { name: String(t.name), literals: ids(t.literals).map((l) => String(idlookup[l]?.name)) };
+            }
+            attributes.push(attribute);
         }
         for (const id of ids(k?.references)) {
             const f = idlookup[id];
@@ -152,6 +157,7 @@ export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
     world.m2 = readMetamodel(idlookup, metamodelId);
 
     const names = makeDrawReadCtx(idlookup);
+    const listed = new Set(ids(model.objects));
     for (const id in idlookup) {
         const o = idlookup[id];
         if (o?.className === 'DClass') {
@@ -166,6 +172,7 @@ export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
             name: names.getName(id) ?? '',
             className: idlookup[o.instanceof]?.name ?? '',
             root: o.father === modelId,
+            listed: listed.has(id),
         };
         if (father?.className === 'DValue' && typeof father.father === 'string') {
             const feature = idlookup[father.instanceof]?.name;

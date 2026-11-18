@@ -28,11 +28,12 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { useSelector } from 'react-redux';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow, useStoreApi } from '@xyflow/react';
 import { boxFromIntrinsic, getShapeDescriptor, hasSizeSupplement, type IntrinsicMeasure, type Size } from './shapeRegistry';
 import { store } from '../../../../joiner';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
-import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { getLayoutKeyOf, getLayoutKeyFor } from '../layout/vertexLayoutAdapter';
+import { useEditorContextSafe } from '../../contexts/EditorContext';
 import { authoredDefaultSize, defaultBoxFor, sizeSourceOf } from '../../nodes/nodeSizing';
 import type { ShapeForm } from './irTypes';
 import { dropIntrinsic, onIntrinsicEpoch, readIntrinsic } from './intrinsicMeasureCache';
@@ -92,17 +93,21 @@ const MAX_UNACCEPTED_WRITES = 3;
  * updates of a commit in one loop, with no microtask between them), so a cycle that
  * gives the size back to the hook every time (another writer dropping it, the host
  * remounting with fresh refs) refilled the budget above at every turn. Counted per
- * vertex at module level, so a remount does not reset it; cleared by a microtask, the
- * first moment after the cascade. Same three: a settle needs two.
+ * (canvas, vertex) at module level, so a remount does not reset it; cleared by a microtask, the
+ * first moment after the cascade. Same three: a settle needs two. The canvas is the React Flow
+ * store of its provider (`useStoreApi`), one per EditorV2 and stable across a node remount, so two
+ * tabs showing the same vertex do not spend each other's budget (multi-tab L3).
  */
 const MAX_WRITES_PER_CASCADE = 3;
-const cascadeWrites = new Map<string, number>();
+const cascadeWrites = new Map<object, Map<string, number>>();
 let cascadeEndQueued = false;
 
-/** Counts one write of `vertexId` in the running cascade; false when over the cap. */
-function takeCascadeWrite(vertexId: string): boolean {
-    const n = (cascadeWrites.get(vertexId) ?? 0) + 1;
-    cascadeWrites.set(vertexId, n);
+/** Counts one write of `vertexId` on `canvas` in the running cascade; false when over the cap. */
+function takeCascadeWrite(canvas: object, vertexId: string): boolean {
+    let perVertex = cascadeWrites.get(canvas);
+    if (!perVertex) cascadeWrites.set(canvas, perVertex = new Map());
+    const n = (perVertex.get(vertexId) ?? 0) + 1;
+    perVertex.set(vertexId, n);
     if (!cascadeEndQueued) {
         cascadeEndQueued = true;
         queueMicrotask(() => {
@@ -114,6 +119,11 @@ function takeCascadeWrite(vertexId: string): boolean {
         console.warn('[useContentDrivenSize] size written too often in one commit cascade, yielding', { vertexId });
     }
     return n <= MAX_WRITES_PER_CASCADE;
+}
+
+/** The layout key of the tab's viewpoint; `undefined` (no tab owns the canvas) reads the root. */
+function layoutKeyIn(state: any, tabViewpointId: string | null | undefined): string {
+    return tabViewpointId === undefined ? getLayoutKeyOf(state) : getLayoutKeyFor(state, tabViewpointId);
 }
 
 /**
@@ -151,10 +161,15 @@ export function useContentDrivenSize(
     defaultSize?: unknown,
 ): void {
     const { getNode, setNodes } = useReactFlow();
+    const canvas = useStoreApi();
+    // The layout key is the tab's (multi-tab L3); the unmount below reads it through the ref.
+    const tabViewpointId = useEditorContextSafe()?.viewpointId;
+    const tabViewpointRef = useRef(tabViewpointId);
+    tabViewpointRef.current = tabViewpointId;
     // Reading the layout key inside the selector is what makes it re-run at a layout change:
-    // the result is a primitive that depends on `s.viewpoint`, so react-redux sees it move.
+    // the result is a primitive that depends on the viewpoint, so react-redux sees it move.
     const isResized = useSelector((s: any) => !!readVertexLayout(
-        (s?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource, getLayoutKeyOf(s)).isResized);
+        (s?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource, layoutKeyIn(s, tabViewpointId)).isResized);
     const desc = getShapeDescriptor(form);
     const defaults = authoredDefaultSize(defaultSize);
     const source = sizeSourceOf(isResized, hasSizeSupplement(desc), defaults);
@@ -268,7 +283,7 @@ export function useContentDrivenSize(
             }
             return;
         }
-        if (!takeCascadeWrite(vertexId)) {
+        if (!takeCascadeWrite(canvas, vertexId)) {
             // Not a write the store refused: the cascade's cap, which the next cascade lifts.
             unaccepted.current -= 1;
             return;
@@ -303,7 +318,7 @@ export function useContentDrivenSize(
         if (mine === null) return;
         const state = store.getState() as any;
         const src = (state?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource;
-        if (readVertexLayout(src, getLayoutKeyOf(state)).isResized) return;
+        if (readVertexLayout(src, layoutKeyIn(state, tabViewpointRef.current)).isResized) return;
         setNodes(nds => {
             let changed = false;
             const next = nds.map(n => {

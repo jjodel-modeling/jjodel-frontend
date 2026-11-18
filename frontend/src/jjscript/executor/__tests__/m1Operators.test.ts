@@ -49,7 +49,7 @@ vi.mock('../../../model/logicWrapper/nameUniqueness', () => ({
     m2KindOf: () => 'class',
 }));
 
-vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined }));
+vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined, dispatchesInFlight: () => 0 }));
 
 import { parse } from '../../parser/parser';
 import { executeSetInstance, executeRemoveInstance } from '../commands/instance';

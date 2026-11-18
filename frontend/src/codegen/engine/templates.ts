@@ -16,6 +16,14 @@
  * apart). The refusal reuses the walker of the guard subset checker, `checkGuardSubset`, and keeps its `E-WITH`
  * diagnostics only. A template with a problem is not evaluated; a call to it is an error.
  *
+ * Templates may share a name when they type their first parameter, `paramType` (P-2026-10-31-1410, dispatch.ts): the
+ * one builtin of the name calls the typed template whose type is the most specific supertype (or the class itself) of
+ * the first argument's metaclass, else the untyped one, else it throws naming the class; two equally specific matches
+ * throw too, and are a problem before evaluation when the generation knows the class graph (`classes`). A template is
+ * known by its key, `name` or `name:Type` (`templateKey`): duplicates are of keys, positions and origins carry the key,
+ * and a template whose arity differs from the first of its name is a problem and is not registered. A record with no
+ * `paramType` keeps today's path: an untyped name alone calls its one template.
+ *
  * Recursion is bounded: more than `MAX_TEMPLATE_DEPTH` nested calls throw, and the hole that made the call turns
  * the throw into one error fragment (origin.ts) instead of a stack overflow. 64 is far above the containment depth
  * of a model a template walks, and about a tenth of the depth at which the stack runs out: without the bound, a
@@ -29,6 +37,8 @@
 import { JjelTokenType, createFunction, parseTemplate, parseTemplateText, tokenize } from '../../jjel';
 import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelParserResult, JjelValue } from '../../jjel';
 import { checkGuardSubset } from '../../model/simulation/subsetChecker';
+import { arityProblem, dispatchProblems, metaclassOf, mostSpecific, templateKey } from './dispatch';
+import type { ClassGraph } from './dispatch';
 import type { OriginHost, TemplateSources } from './origin';
 import { GenerationBudget } from './text';
 import type { TemplatePosition, Text } from './text';
@@ -40,10 +50,14 @@ import type { TemplatePosition, Text } from './text';
  */
 export type TemplateMode = 'text' | 'expression';
 
-/** A template as stored (templateCodec.ts) and as the panel edits it. `target` names the target language, when set. */
+/**
+ * A template as stored (templateCodec.ts) and as the panel edits it. `target` names the target language, when set;
+ * `paramType` the metaclass its first parameter dispatches on (dispatch.ts), absent for an untyped template.
+ */
 export interface TemplateRecord {
     readonly name: string;
     readonly params: readonly string[];
+    readonly paramType?: string;
     readonly body: string;
     readonly mode?: TemplateMode;
     readonly target?: string;
@@ -75,6 +89,11 @@ export interface TemplateSet {
     call(name: string, args: readonly JjelValue[]): Text;
 }
 
+interface Entry {
+    readonly record: TemplateRecord;
+    readonly expr: JjelExpression | null;
+}
+
 const isIdentifier = (name: string): boolean => {
     const { tokens, errors } = tokenize(name);
     return errors.length === 0 && tokens.length === 2 && tokens[0].type === JjelTokenType.IDENTIFIER && tokens[0].value === name;
@@ -93,7 +112,8 @@ function positionIn(body: string, template: string, line: number, column: number
 /**
  * Registers `records` as builtins of `root`, the context of the generation, evaluated by `evaluator` with `host`
  * as its Text host; their sources go to `sources`, for the positions of holes and literal text. `budget` is the
- * generation's, the one `host` checks.
+ * generation's, the one `host` checks. `classes`, the metamodel's class graph when known, adds the type and ambiguity
+ * problems of dispatched names (dispatch.ts).
  */
 export function registerTemplates(
     records: readonly TemplateRecord[],
@@ -102,16 +122,25 @@ export function registerTemplates(
     host: OriginHost,
     sources: TemplateSources,
     budget: GenerationBudget = new GenerationBudget(),
+    classes: ClassGraph | null = null,
 ): TemplateSet {
     const problems: TemplateProblem[] = [];
-    const compiled = new Map<string, { record: TemplateRecord; expr: JjelExpression | null }>();
+    const compiled = new Map<string, Entry[]>();
     let depth = 0;
 
     for (const record of records) {
         const name = record.name;
-        const start: TemplatePosition = { template: name, offset: 0, line: 1, column: 1 };
-        if (compiled.has(name)) {
-            problems.push({ ...start, message: `Template '${name}' is defined twice: the first definition is used` });
+        const key = templateKey(record);
+        const start: TemplatePosition = { template: key, offset: 0, line: 1, column: 1 };
+        const group = compiled.get(name);
+        if (group?.some(e => templateKey(e.record) === key)) {
+            const which = record.paramType !== undefined ? ` for ${record.paramType}` : '';
+            problems.push({ ...start, message: `Template '${name}' is defined twice${which}: the first definition is used` });
+            continue;
+        }
+        const arity = arityProblem(record, group?.[0].record);
+        if (arity) {
+            problems.push({ ...start, message: arity });
             continue;
         }
         if (!isIdentifier(name)) {
@@ -125,53 +154,80 @@ export function registerTemplates(
         const parsed = parseTemplateBody(record);
         let expr: JjelExpression | null = parsed.expression;
         if (parsed.errors.length > 0 || !expr) {
-            for (const e of parsed.errors) problems.push({ ...positionIn(record.body, name, e.line, e.column), message: e.message });
-            if (parsed.errors.length === 0) problems.push({ ...start, message: `Template '${name}' has no body` });
+            for (const e of parsed.errors) problems.push({ ...positionIn(record.body, key, e.line, e.column), message: e.message });
+            if (parsed.errors.length === 0) problems.push({ ...start, message: `Template '${key}' has no body` });
             expr = null;
         } else {
             const refused = checkGuardSubset(expr).filter(d => d.code === 'E-WITH');
             for (const d of refused) {
                 const at = d.location?.start;
                 problems.push({
-                    template: name, offset: at?.offset ?? 0, line: at?.line ?? 1, column: at?.column ?? 1,
+                    template: key, offset: at?.offset ?? 0, line: at?.line ?? 1, column: at?.column ?? 1,
                     message: '`with … do` is not allowed in a template: it binds the features of its object as bare names, so their reads have no origin; navigate with `x.f`',
                 });
             }
             if (refused.length > 0) expr = null;
-            else sources.register(name, record.body, expr, modeOf(record));
+            else sources.register(key, record.body, expr, modeOf(record));
         }
-        compiled.set(name, { record, expr });
+        if (group) group.push({ record, expr });
+        else compiled.set(name, [{ record, expr }]);
+    }
+    if (classes) {
+        const registered = [...compiled.values()].flat().map(e => e.record);
+        for (const p of dispatchProblems(registered, classes)) {
+            if (p.severity === 'error' && p.kind !== 'arity') problems.push({ template: p.key, offset: 0, line: 1, column: 1, message: p.message });
+        }
     }
 
+    /** The template of `name` a call with first argument `first` runs: the only one of an untyped name, else dispatched. */
+    const choose = (name: string, group: readonly Entry[], first: JjelValue | undefined): Entry => {
+        const typed = group.filter(e => e.record.paramType !== undefined);
+        const untyped = group.find(e => e.record.paramType === undefined);
+        if (typed.length === 0 && untyped) return untyped;
+        const meta = metaclassOf(first);
+        if (!meta) {
+            if (untyped) return untyped;
+            throw new Error(`Template '${name}' dispatches on the class of its first argument, which is not a model object`);
+        }
+        const picks = mostSpecific(meta.graph, meta.name, typed.map(e => e.record.paramType as string));
+        if (picks.length > 1) throw new Error(`Template '${name}' is ambiguous for class ${meta.name}: ${picks.map(t => `'${name}:${t}'`).join(' and ')} match equally`);
+        if (picks.length === 1) return typed.find(e => e.record.paramType === picks[0]) as Entry;
+        if (untyped) return untyped;
+        throw new Error(`No template '${name}' applies to class ${meta.name}`);
+    };
+
     const call = (name: string, args: readonly JjelValue[]): Text => {
-        const entry = compiled.get(name);
-        if (!entry) throw new Error(`No template named '${name}'`);
-        if (!entry.expr) throw new Error(`Template '${name}' has errors and cannot be called`);
-        const at: TemplatePosition = { template: name, offset: 0, line: 1, column: 1 };
+        const group = compiled.get(name);
+        if (!group) throw new Error(`No template named '${name}'`);
+        const entry = choose(name, group, args[0]);
+        const key = templateKey(entry.record);
+        if (!entry.expr) throw new Error(`Template '${key}' has errors and cannot be called`);
+        const at: TemplatePosition = { template: key, offset: 0, line: 1, column: 1 };
         budget.checkpoint(at);
         if (depth >= MAX_TEMPLATE_DEPTH) {
-            throw new Error(`Template '${name}' called more than ${MAX_TEMPLATE_DEPTH} levels deep: the recursion has no end`);
+            throw new Error(`Template '${key}' called more than ${MAX_TEMPLATE_DEPTH} levels deep: the recursion has no end`);
         }
         depth++;
         budget.enter(at);
         try {
             const bindings: Record<string, JjelValue> = {};
             entry.record.params.forEach((p, i) => { bindings[p] = args[i] ?? null; });
-            return budget.measure(host.toText(evaluator.evaluate(entry.expr, root.child(bindings))));
+            const expr = entry.expr;
+            return budget.measure(host.evaluateBody(expr, () => evaluator.evaluate(expr, root.child(bindings))));
         } finally {
             budget.leave();
             depth--;
         }
     };
 
-    for (const [name, { record }] of compiled) {
-        root.registerBuiltin(name, createFunction([...record.params], args => call(name, args) as unknown as JjelValue));
+    for (const [name, group] of compiled) {
+        root.registerBuiltin(name, createFunction([...group[0].record.params], args => call(name, args) as unknown as JjelValue));
     }
 
     return {
         problems,
         has: name => compiled.has(name),
-        usable: name => !!compiled.get(name)?.expr,
+        usable: name => !!compiled.get(name)?.some(e => e.expr),
         call,
     };
 }

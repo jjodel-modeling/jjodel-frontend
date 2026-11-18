@@ -8,11 +8,15 @@
 import { LPointerTargetable } from '../../../../joiner';
 import { IR_READ_BACKEND, makeDrawReadCtx, type ReadCtx } from './irReadCtx';
 import { getSimPresentation, getSimRun, isSimActive } from '../../sim/simRunState';
+import { exprTextOf } from '../../../../model/expression/exprBatch';
 
 type Idlookup = Record<string, any>;
 
 /** Whether a model has a run, Reset to Stop (P-2026-10-19-0930): what `simActive` asks the run-state, by DModel id. */
 const hasSimRun = (modelId: string): boolean => getSimRun(modelId) !== undefined;
+
+/** The printed text of an expression slot (R-EXP-2), read on the lookup of this ReadCtx. */
+const expressionReader = (idlookup: Idlookup) => (elementId: string, slot: string): string => exprTextOf(idlookup, elementId, slot);
 
 /**
  * L-proxy backend ('lproxy'): reads through LObject/LValue proxies.
@@ -21,7 +25,7 @@ const hasSimRun = (modelId: string): boolean => getSimRun(modelId) !== undefined
  * Falls back to the draw backend when the proxy throws on stale data.
  */
 export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
-    const draw = makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun);
+    const draw = makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun, expressionReader(idlookup));
     return {
         getValue(elementId, featureName) {
             try {
@@ -55,6 +59,8 @@ export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
         isMarked: draw.isMarked,
         // Presentation too (R-SIM-108): the run's σ, never a slot.
         getPresentation: draw.getPresentation,
+        // The printed expression is computed on the D records, whichever backend is active (R-EXP-2).
+        getExpressionText: draw.getExpressionText,
         // And whether a run shows the element's model (P-2026-10-19-0930): the walk is structural.
         isRunActive: draw.isRunActive,
     };
@@ -68,5 +74,5 @@ export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
  * dependency is resolved inside, not threaded.
  */
 export function makeReadCtx(idlookup: Idlookup): ReadCtx {
-    return IR_READ_BACKEND === 'lproxy' ? makeLproxyReadCtx(idlookup) : makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun);
+    return IR_READ_BACKEND === 'lproxy' ? makeLproxyReadCtx(idlookup) : makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun, expressionReader(idlookup));
 }

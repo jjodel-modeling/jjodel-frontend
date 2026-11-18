@@ -48,13 +48,16 @@ vi.mock('react', async (importOriginal) => {
             return [runtime.slots[k], () => {}];
         },
         useEffect: () => {},
+        useContext: () => null,
         useLayoutEffect: (fn: Effect['fn'], deps?: unknown[]) => { runtime.pending[runtime.e++] = { fn, deps }; },
     };
 });
 
 type RFNode = { id: string; width?: number; height?: number; measured?: unknown };
 const rf: { nodes: RFNode[]; writes: number } = { nodes: [], writes: 0 };
+const flowStore = {};
 vi.mock('@xyflow/react', () => ({
+    useStoreApi: () => flowStore,
     useReactFlow: () => ({
         getNode: (id: string) => rf.nodes.find(n => n.id === id),
         setNodes: (f: (nds: RFNode[]) => RFNode[]) => {

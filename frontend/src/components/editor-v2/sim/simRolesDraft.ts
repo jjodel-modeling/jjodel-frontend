@@ -85,7 +85,14 @@ export interface RoleSections {
  */
 export function roleSections(profile: SimProfile, bag: Readonly<Record<string, unknown>>): RoleSections {
     const mode = (r: RoleId) => profile.modes[r].mode;
-    const shown = (r: RoleId) => r !== 'stateAttributes';
+    // The dcn group never shows under the two net shapes, and under dcn it is the only group shown
+    // (ticket of P-2026-11-07-0941); the net shapes still list each other's group as off, as before
+    // the dcn shape.
+    const hidden = (r: RoleId) => {
+        const g = roleDescriptor(r).group;
+        return profile.shape === 'dcn' ? g !== 'dcn' : g === 'dcn';
+    };
+    const shown = (r: RoleId) => r !== 'stateAttributes' && !hidden(r);
 
     const placed = new Set<RoleId>();
     const required: RoleId[][] = [];
@@ -340,7 +347,7 @@ const CUSTOM_ID = 'custom';
 /**
  * Whether the dialog offers to turn `role` on (`'on'`) or off (`'off'`), or
  * neither. On: an `off` role of the profile's shape that the engine reads (not
- * the other shape's group, not Initial in Petri, not Event, which is derived).
+ * the other shapes' groups, not Initial in Petri, not Event, which is derived).
  * Off: an `edit` role that is no side of a
  * required item, no parameter, not needed by an active role (`dependencyOff`)
  * and not the source of an active derived role (`derivedFromOff`). The rule is
@@ -350,7 +357,7 @@ export function roleSwitch(profile: SimProfile, role: RoleId): 'on' | 'off' | nu
     const d = roleDescriptor(role);
     const mode = profile.modes[role].mode;
     if (mode === 'off') {
-        if (role === 'event' || d.group === OTHER_SHAPE_GROUP[profile.shape]) return null;
+        if (role === 'event' || OTHER_SHAPE_GROUP[profile.shape].includes(d.group)) return null;
         if (profile.shape === 'petri' && role === 'initial') return null;
         return 'on';
     }

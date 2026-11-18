@@ -57,18 +57,18 @@ describe('§B.3 row 1, identity: a bare feature read', () => {
     it('carries (element id, feature id, identity) (mutant: the feature id not read from idlookup)', () => {
         const f = holeFragment('"${s.title}"');
         expect(f.text).toBe('unlocked State');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
     });
 
     it('the dual form o.p() and a number feature are reads too', () => {
-        expect(holeFragment('"${s.title()}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(holeFragment('"${s.title()}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
         const f = holeFragment('"${s.n}"');
-        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' } }]);
+        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' }, template: 'main' }]);
     });
 
     it('the element id is the owner of the feature read, not the receiver the navigation starts from (mutant: the receiver id)', () => {
         const f = holeFragment('"${t.next.title}"');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
     });
 });
 
@@ -79,7 +79,7 @@ describe('§B.3 row 2, character-aligned builtins: their name', () => {
         ['reverse()', 'etatS dekcolnu', 'reverse'], ['toUpper', 'UNLOCKED STATE', 'toUpper'], ['toUpperCase', 'UNLOCKED STATE', 'toUpper'],
     ])('s.title.%s (mutant: the transformation name dropped)', (call, text, name) => {
         const f = holeFragment('"${s.title.' + call + '}"');
-        expect([f.text, f.origin]).toEqual([text, { kind: 'model', ...TITLE, transformation: { name } }]);
+        expect([f.text, f.origin]).toEqual([text, { kind: 'model', ...TITLE, transformation: { name }, template: 'main' }]);
     });
 });
 
@@ -89,7 +89,7 @@ describe('§B.3 row 3, sub-range builtins: their name and arguments', () => {
         ['substring(0, 8)', 'substring', [0, 8]], ['slice(2)', 'slice', [2]], ['slice(-5)', 'slice', [-5]], ['charAt(0)', 'charAt', [0]],
     ])('s.title.%s (mutant: the arguments dropped)', (call, name, args) => {
         const f = holeFragment('"${s.title.' + call + '}"');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name, args } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name, args }, template: 'main' });
     });
 });
 
@@ -98,17 +98,27 @@ describe('§B.3 row 4, lossy whole-value builtins: their name', () => {
         ['camelCase()', 'camelCase'], ['pascalCase()', 'pascalCase'], ['snakeCase()', 'snakeCase'], ['kebabCase()', 'kebabCase'],
         ['padStart(20, "*")', 'padStart'], ['padEnd(20)', 'padEnd'], ['quote()', 'quote'],
     ])('s.title.%s', (call, name) => {
-        expect(holeFragment('"${s.title.' + call + '}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name } });
+        expect(holeFragment('"${s.title.' + call + '}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name }, template: 'main' });
     });
 });
 
 describe('§B.3 row 5, anything else: opaque, with the reads observed in the hole', () => {
     it.each([
         ['s.title.replace("u", "U")', [TITLE]], ['s.title.replaceAll("e", "E")', [TITLE]], ['s.title.repeat(2)', [TITLE]],
-        ['s.title * 2', [TITLE]], ['s.title + t.label', [TITLE, LABEL]], ['s.title.substring(s.n)', [TITLE, { elementId: 's2', feature: 'A_n', featureName: 'n' }]],
-        ['t.label + t.label', [LABEL]], ['"x"', []],
+        ['s.title * 2', [TITLE]], ['s.title.substring(s.n)', [TITLE, { elementId: 's2', feature: 'A_n', featureName: 'n' }]],
+        ['"x"', []],
     ])('%s (mutant: the reads not recorded)', (expr, reads) => {
-        expect(holeFragment('"${' + expr + '}"').origin).toEqual({ kind: 'opaque', reads });
+        expect(holeFragment('"${' + expr + '}"').origin).toEqual({ kind: 'opaque', reads, template: 'main' });
+    });
+
+    // Amended by P-2026-10-31-1341: rule 1 applies per operand of a plain string `+`, so these two holes, once one
+    // opaque fragment with both reads, are one model fragment per operand (originOperands.test.ts).
+    it.each([
+        ['s.title + t.label', [TITLE, LABEL]], ['t.label + t.label', [LABEL, LABEL]],
+    ])('%s: one model fragment per operand', (expr, owners) => {
+        const out = gen('"${' + expr + '}"');
+        const frags = out.text.fragments.filter(f => f.kind !== 'literal');
+        expect(frags.map(f => f.origin)).toEqual(owners.map(o => ({ kind: 'model', ...o, transformation: { name: 'identity' }, template: 'main' })));
     });
 });
 
@@ -154,5 +164,58 @@ describe('the absent value and the explicit null (U10)', () => {
         const origins: Origin[] = out.text.fragments.filter(f => f.kind === 'model').map(f => f.origin);
         expect(origins.map(o => (o as any).elementId)).toEqual(['s2', 't1', 't1']);
         expect(out.code).toBe('unlocked State, CoinCoin');
+    });
+});
+
+describe('an index read with a string key (R-TXT-6, R-TXT-13)', () => {
+    const IDENTITY_TITLE = { kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' };
+
+    /** `gen` with extra globals: a key `k = "title"` and a handle `f` named `title`. */
+    function genWith(body: string) {
+        const { lookup, globals } = fixture();
+        return generate({ ...globals, k: 'title', f: { id: 'f1', __type: 'Attribute', name: 'title' } }, lookup, 'M', [T(body)], 'main');
+    }
+    const hole = (body: string): TextFragment => {
+        const out = genWith(body);
+        expect(out.errors).toEqual([]);
+        const frags = out.text.fragments.filter(x => x.kind !== 'literal');
+        expect(frags).toHaveLength(1);
+        return frags[0];
+    };
+
+    it.each([['s["title"]'], ['s[k]'], ['s[f.name]'], ['s["ti" + "tle"]']])('%s has the origin of s.title (mutant: an IndexAccess hole not linked)', expr => {
+        const f = hole('"${' + expr + '}"');
+        expect([f.text, f.origin]).toEqual(['unlocked State', IDENTITY_TITLE]);
+    });
+
+    it('a number feature read by index keeps its feature (mutant: the value type not allowed)', () => {
+        const f = hole('"${s["n"]}"');
+        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' }, template: 'main' }]);
+    });
+
+    it.each([['s["title"].repeat(2)'], ['s["title"].replace("u", "U")'], ['s["n"] * 2']])('%s is not an index hole: opaque (mutant: the check on the expression type dropped)', expr => {
+        expect(hole('"${' + expr + '}"').origin.kind).toBe('opaque');
+    });
+
+    it('a plain string + links its index operand, as a member operand (rule 1 per operand)', () => {
+        const out = genWith('"${s["title"] + "x"}"');
+        expect(out.text.fragments.filter(x => x.kind === 'model').map(x => x.origin)).toEqual([IDENTITY_TITLE]);
+    });
+
+    it('an index hole whose last read differs from its value stays opaque, with the reads (mutant: the value check dropped)', () => {
+        const f = hole('"${["z", s.title][s.n - 2]}"');
+        expect([f.text, f.origin.kind]).toEqual(['unlocked State', 'opaque']);
+        const g = hole('"${[s.title, "z"][s.n - 2]}"');
+        expect([g.text, g.origin.kind]).toEqual(['z', 'opaque']);
+    });
+
+    it('a numeric index on an array stays opaque, with the reads of the array (mutant: a numeric key linked)', () => {
+        const f = hole('"${[s.title][0]}"');
+        expect([f.text, f.origin]).toEqual(['unlocked State', { kind: 'opaque', reads: [TITLE], template: 'main' }]);
+    });
+
+    it('a key that names no member is no read and no link (mutant: the membership guard dropped)', () => {
+        const out = genWith('"${s["nope"]}"');
+        expect(out.text.fragments.filter(x => x.kind === 'model')).toEqual([]);
     });
 });

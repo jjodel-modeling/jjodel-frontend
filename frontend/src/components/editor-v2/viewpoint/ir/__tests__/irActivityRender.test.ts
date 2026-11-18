@@ -37,6 +37,7 @@ vi.mock('../../../sim/simRunState', () => ({
     useSimVersion: () => 0,
     useSimChoiceVersion: () => 0,
     getSimRun: () => undefined,
+    getSimDcnNode: () => null,
 }));
 vi.mock('@xyflow/react', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@xyflow/react')>();
