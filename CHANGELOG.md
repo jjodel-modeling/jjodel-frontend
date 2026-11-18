@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (`staging` at `3da1d6348`), which becomes 3.1.0.
+## [3.2.0-beta] - 2026-11-18
+
+Beta of 3.2.0: the trunk `alfonso-frontend-jjtl` on 2026-11-18, handed over for the merge into `staging`. It covers the work after the beta of 2026-10-18 (`staging` at `3da1d6348`), which became 3.1.0.
 
 ### Added
 
