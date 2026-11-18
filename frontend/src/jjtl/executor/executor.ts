@@ -1278,6 +1278,7 @@ export class JjtlExecutor {
                 },
             });
         }
+        if (target !== value) this.defineParentGetter(handle, target);
         this.sourceRefHandles.set(id, handle);
         return handle;
     }
@@ -1334,6 +1335,49 @@ export class JjtlExecutor {
         return typeof id === 'string' && this.sourceIndexById.get(id) === obj;
     }
 
+    /**
+     * The container of a source object, the object `parent` names (SPEC §4.2, §7.3), or
+     * undefined. An element of the serialized source array (a string `id`, and a
+     * `className` or `__type`) is contained through `_containerId` only, so a root has no
+     * container: its own feature `father` (Families) is not read as one. Anything else,
+     * L-layer proxies and test objects without that shape, falls back to `father` /
+     * `eContainer` / `owner`, a `{ __ref: id }` dereferenced. A user feature named
+     * `parent` is checked by the callers, before this.
+     */
+    private sourceContainerOf(obj: any): any {
+        const isElement = this.isSourceElement(obj);
+        const containerId = obj._containerId;
+        if (containerId && typeof containerId === 'string') {
+            // First match, as in derefSourceRef: the index isSourceElement builds.
+            const found = this.sourceIndexById?.get(containerId);
+            if (found !== undefined) return found;
+        }
+        if (isElement && (typeof obj.className === 'string' || typeof obj.__type === 'string')) {
+            return undefined;
+        }
+        const container = obj.father ?? obj.eContainer ?? obj.owner ?? null;
+        return container === null || container === undefined ? undefined : this.derefSourceRef(container);
+    }
+
+    /**
+     * Give a view or a handle of `obj` the property `parent`, its container, when `obj`
+     * has a container and no feature of that name. The getter is non-enumerable, like the
+     * features of a handle, so Object.keys, JSON and fromJjelValue see the same keys as
+     * before; it is lazy, so a cycle (`m.parent.daughters.first().parent`) is followed one
+     * read at a time. Returns whether it was defined.
+     */
+    private defineParentGetter(target: any, obj: any): boolean {
+        if (Object.prototype.hasOwnProperty.call(obj, 'parent')) return false;
+        const container = this.sourceContainerOf(obj);
+        if (container === undefined) return false;
+        Object.defineProperty(target, 'parent', {
+            get: () => this.bindSourceValue(container),
+            enumerable: false,
+            configurable: true,
+        });
+        return true;
+    }
+
     private sourceView(obj: any): any {
         const cached = this.sourceViews.get(obj);
         if (cached) return cached;
@@ -1344,6 +1388,8 @@ export class JjtlExecutor {
             if (lifted !== value) changed = true;
             view[key] = lifted;
         }
+        // A contained element always gets a view: the input object is never mutated.
+        if (this.defineParentGetter(view, obj)) changed = true;
         const result = changed ? view : obj;
         this.sourceViews.set(obj, result);
         return result;
@@ -2978,29 +3024,13 @@ export class JjtlExecutor {
         // Resolution order:
         //   1. User-defined feature named "parent" (already in bindings from proxyEntries)
         //   2. _containerId → look up the containing DObject in the source model
-        //   3. Fallback to .father / .eContainer / .owner (for L-layer proxies or tests)
+        //   3. Fallback to .father / .eContainer / .owner (for L-layer proxies or tests),
+        //      never for an element of the serialized source array (sourceContainerOf)
+        // The same lookup backs `x.parent` on views and handles (defineParentGetter).
         if (sourceInstance && typeof sourceInstance === 'object' && bindings.parent === undefined) {
-            let resolved = false;
-            const containerId = (sourceInstance as any)._containerId;
-            if (containerId && typeof containerId === 'string') {
-                const sourceArr = Array.isArray(this.context.sourceModel) ? this.context.sourceModel : [];
-                const parentObj = sourceArr.find((o: any) => o.id === containerId);
-                if (parentObj) {
-                    bindings.parent = this.bindSourceValue(parentObj);
-                    resolved = true;
-                }
-            }
-            if (!resolved) {
-                const container =
-                    (sourceInstance as any).father ??
-                    (sourceInstance as any).eContainer ??
-                    (sourceInstance as any).owner ??
-                    null;
-                if (container !== null && container !== undefined) {
-                    // Same dereference as inside a forall: a container arriving as
-                    // { __ref: id } is resolved to the source object it names.
-                    bindings.parent = this.bindSourceValue(this.derefSourceRef(container));
-                }
+            const container = this.sourceContainerOf(sourceInstance);
+            if (container !== undefined) {
+                bindings.parent = this.bindSourceValue(container);
             }
         }
 

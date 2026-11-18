@@ -80,7 +80,10 @@ async function run(body: string, withSource: boolean, source: any[] = SOURCE) {
     expect(result.errors).toEqual([]);
     expect(result.success).toBe(true);
     const names = (c: string) => (result.targetModel!.instances.get(c) ?? []).map((o: any) => o.fullName).sort();
-    return { female: names('Female'), male: names('Male'), warnings: result.warnings };
+    // Nested creations are reached through their owner, as in source-collections-in-expressions.
+    const members = (result.targetModel!.instances.get('Household') ?? [])
+        .flatMap((h: any) => (h.members ?? []).map((o: any) => o.fullName)).sort();
+    return { female: names('Female'), male: names('Male'), members, warnings: result.warnings };
 }
 
 const FEMALE = ['Brenda March', 'Cindy March', 'Jackie Sailor', 'Kelly Sailor'];
@@ -134,7 +137,7 @@ Family f -> Household {
         }
     }
 }`, withSource);
-        expect(out.female).toEqual(['Brenda March', 'Kelly Sailor']);
+        expect(out.members).toEqual(['Brenda March', 'Kelly Sailor']);
         expect(out.warnings).toEqual([]);
     });
 
@@ -194,7 +197,7 @@ Family f -> Household {
         }
     }
 }`, withSource);
-        expect(out.female).toEqual(['Brenda:true', 'Kelly:true']);
+        expect(out.members).toEqual(['Brenda:true', 'Kelly:true']);
         expect(out.warnings).toEqual([]);
     });
 });
