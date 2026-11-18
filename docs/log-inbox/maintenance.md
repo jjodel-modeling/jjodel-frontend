@@ -1478,3 +1478,16 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Priority**: low
 **Found in**: P-2026-11-18-1815
 **Detail**: `docs/discovery/discovery_2026-11-18_jjtl_parent_and_helper_scope.md` (§8, §10.4)
+
+## 2026-11-18 — merge: jjtl-parent-scope into alfonso-frontend-jjtl (P-2026-11-18-2211)
+**Prompt**: `claude_2026-11-18_2211_prompt_merge_jjtl-parent-scope.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-parent-scope` at `0220f0628` into `alfonso-frontend-jjtl`, merge base `4bfd26add`, 6 commits on the branch side.
+**Files touched**: merge `a4f62729e`: 8 files from the branch side (`docs/discovery/discovery_2026-11-18_jjtl_parent_and_helper_scope.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-18_1815_prompt_jjtl_parent_helper_scope.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/__tests__/fixtures/class2relational.ts`, `frontend/src/jjtl/executor/__tests__/class2relational.test.ts`, `frontend/src/jjtl/executor/__tests__/parent-and-helper-scope.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a4f62729e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16485 tests in 630 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI in scope; the chat checked the merge commit a4f62729e on the trunk and the lane P-2026-11-18-1815 gates (JjTL and JjEL suites, typecheck, build green)
+**Notes**: Rollback tag `pre-jjtl-parent-scope` on `4bfd26add` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-18-2211/result.json`.
+**Prompt document name**: 2026-11-18 22:11
