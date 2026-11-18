@@ -9,6 +9,25 @@
 This report is a set of hypotheses with evidence, not a definitive reference. Whoever uses it
 downstream re-reads the real files.
 
+## 0. Answer in brief
+
+Added at the close of Phase 2 (GO given in chat with the answers to §10).
+
+- Both readings confirmed by the probe of §4: `m.parent`, `self.parent`, `.parent` on a
+  `{ __ref }` handle and on a `forall` element all read null, and helper bodies saw the
+  caller's instance context.
+- No helper depended on dynamic scope (§5), and the gallery ships none. The one fixture
+  touched, W2 of class2relational, was a workaround for the missing `e.parent` (goal A).
+- A landed in `6730df10b` (`parent` getter on source views and `{ __ref }` handles, one shared
+  container lookup), B in `cbc8f5c86` (helper bodies evaluated in a lexical context), SPEC in
+  `0e59c274c`; red tests in `94c1c4d47`.
+- §10.1: W2 retired from `WORKAROUNDS` (10 to 7: `ownerColumn` needed a new W3 edit).
+- §10.2: the `father` / `eContainer` / `owner` fallback is skipped for elements of the source
+  array (string `id` plus `className` or `__type`, `sourceContainerOf`); a serialized root
+  reads `parent` null.
+- §10.3: free names in a helper read null with no warning; a member read on them warns.
+- §10.4: `data` elements left out, recorded as a ticket.
+
 ## 1. Objective
 
 Confirm why `helper isFemale(m : Member) -> Boolean { m.parent.mother == m }` always answers
