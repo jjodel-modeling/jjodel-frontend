@@ -60,6 +60,7 @@ import {
     forgetPendingChild,
 } from '../handleRegistry';
 import { isManyValued, linkedIds, planLink, planUnlink, planAdd, planRemove } from '../referenceWrite';
+import { resolveInstanceAddress, elsewhereSuggestion } from '../instanceAddress';
 
 // ============================================
 // SHARED HELPERS
@@ -408,6 +409,22 @@ function removeLinked(refProxy: any, ids: readonly string[], containment: boolea
 function isListedAtRoot(model: LModel, id: string): boolean {
     const objects: any[] = (model as any).__raw?.objects ?? [];
     return objects.some((o: any) => (typeof o === 'string' ? o : o?.id) === id);
+}
+
+/**
+ * Record a cross-model link as a model dependency (#213 follow-up): the caller model lists the
+ * target model in its `dependencies` ("Include other models as prerequisite for this model",
+ * `LModelElement.tsx:5155-5159`), so it is set when a link to an instance of another model is
+ * written, if not already. The committed write forms of the field: the Info panel «Depends
+ * from models» (`Info.tsx:533`, whole-list `l.dependencies = [ids]`) and the delete cascade
+ * (`Dummy.ts`, `case 'dependencies'`, `'-='` by id) — a pointer-list field of DModel driven by
+ * `SetFieldAction` ops, the `'+='` the `pointedBy` writes use. Must run inside the caller's
+ * TRANSACTION, so the undo of the link takes the dependency with it.
+ */
+function ensureModelDependency(callerModel: LModel, targetModelId: string): void {
+    const deps: any[] = (callerModel as any).__raw?.dependencies ?? [];
+    if (deps.some((p: any) => (typeof p === 'string' ? p : p?.id) === targetModelId)) return;
+    SetFieldAction.new(callerModel.id, 'dependencies', targetModelId as any, '+=', true);
 }
 
 /**
@@ -1327,29 +1344,108 @@ export async function executeSetInstance(
         targetInstanceName = (args.value as QualifiedName).raw;
     }
 
-    const resolvedTarget = resolveInstanceHandle(targetModel, targetInstanceName);
-    // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
-    // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
-    // nothing downstream would ever report that the target was chosen rather than named.
-    if (!resolvedTarget.ok && resolvedTarget.candidates) {
+    // #213: `<Model>::<instance>` addresses an instance of another M1 model of the project.
+    // The decision is pure (instanceAddress.ts); `consultRegistry` carries the registry-skip
+    // rule as data: a run-local handle is an instance of the ACTIVE model, and `Other::p`
+    // must never silently resolve to the run-local p. A qualifier naming the active model is
+    // not cross-model — the address keeps today's path exactly, the registry included.
+    const m1Models: LModel[] = (((project as any).models ?? []) as LModel[]).filter((m) => !m.isMetamodel);
+    const resolution = resolveInstanceAddress(
+        targetInstanceName,
+        { id: targetModel.id, name: (targetModel as any).name ?? '' },
+        m1Models.map((m) => ({ id: m.id, name: (m as any).name ?? '' })),
+    );
+
+    let targetInstance: any;
+    // #213 follow-up: the model of a cross-model target, so the write below can record it as a
+    // dependency of the caller model. Null for a local target (a model does not depend on itself).
+    let crossModel: LModel | null = null;
+    if (resolution.kind === 'model-absent') {
         return {
             success: false,
             command: 'set',
-            message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
-            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
-        };
-    }
-    const targetInstance = resolvedTarget.value;
-    if (!targetInstance) {
-        return {
-            success: false,
-            command: 'set',
-            message: `Target instance '${targetInstanceName}' not found in active model`,
+            message: `No model named '${resolution.qualifier}' in the project`,
             errors: [{
-                code: 'INSTANCE_NOT_FOUND',
-                message: `No instance named '${targetInstanceName}' to link to`
+                code: 'MODEL_NOT_FOUND',
+                message: `No model named '${resolution.qualifier}' to take the instance from`,
+                suggestion: `Models in the project: ${resolution.models.map((m) => `'${m.name}'`).join(', ')}`
             }]
         };
+    }
+    if (resolution.kind === 'model-ambiguous') {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot link to '${targetInstanceName}': the model name is ambiguous`,
+            errors: [{
+                code: 'AMBIGUOUS_MODEL',
+                message: `Ambiguous model name '${resolution.qualifier}': ${resolution.matches.length} candidates — ${resolution.matches.map((m) => m.id).join(', ')}. Rename one of the models.`
+            }]
+        };
+    }
+
+    if (resolution.kind === 'local') {
+        const resolvedTarget = resolveInstanceHandle(targetModel, resolution.name);
+        // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
+        // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
+        // nothing downstream would ever report that the target was chosen rather than named.
+        if (!resolvedTarget.ok && resolvedTarget.candidates) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
+            };
+        }
+        targetInstance = resolvedTarget.value;
+        if (!targetInstance) {
+            // #213: the name is not in the active model, but one or more other models of the
+            // project hold it. Bare names stay active-model-only (no fallback); the suggestion
+            // points at the qualified spelling.
+            const elsewhere = m1Models
+                .filter((m) => m.id !== targetModel.id && findInstanceByName(m, resolution.name).length > 0)
+                .map((m) => (m as any).name ?? '');
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in active model`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${targetInstanceName}' to link to`,
+                    ...(elsewhere.length > 0 ? { suggestion: elsewhereSuggestion(resolution.name, elsewhere) } : {})
+                }]
+            };
+        }
+    } else {
+        // Cross-model: the instance the model named holds, model-wide (roots and contained),
+        // through the same lookup as the local path. The run's handle registry is deliberately
+        // not consulted (consultRegistry is false above).
+        const otherModel = m1Models.find((m) => m.id === resolution.model.id);
+        const matches = otherModel ? findInstanceByName(otherModel, resolution.instance) : [];
+        if (matches.length > 1) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: describeAmbiguity(targetInstanceName, matches.map(toCandidate)) }]
+            };
+        }
+        targetInstance = matches[0];
+        if (!targetInstance) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in model '${resolution.model.name}'`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${resolution.instance}' in model '${resolution.model.name}'`
+                }]
+            };
+        }
+        // TODO(#213): the slot is written below as the canvas writes it (refProxy.values / the
+        // by-value removal); the composition policy for cross-model containment slots (father,
+        // orphaning on removal) is off-topic until decided.
+        if (otherModel) crossModel = otherModel;
     }
 
     // Read the slot only after the queued writes have landed.
@@ -1362,7 +1458,7 @@ export async function executeSetInstance(
         if (mismatch) return mismatch;
     }
     if (operator !== '=') {
-        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel);
+        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel, crossModel);
     }
 
     return new Promise((resolve) => {
@@ -1383,6 +1479,10 @@ export async function executeSetInstance(
                 const plan = planLink(linkedIds(refProxy.__raw?.values), targetInstance.id, isManyValued(meta?.upperBound));
                 removeLinked(refProxy, plan.remove, !!meta?.containment, targetModel.id);
                 if (plan.write) refProxy.values = plan.write;
+                // #213 follow-up: a link that adds a cross-model target records the target model
+                // as a dependency of the caller model, if not already (same TRANSACTION: the undo
+                // takes it back with the link).
+                if (plan.write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',
@@ -1427,7 +1527,8 @@ function applyCollectionUpdate(
     instanceName: string,
     targetId: string,
     targetName: string,
-    targetModel: LModel
+    targetModel: LModel,
+    crossModel: LModel | null = null
 ): Promise<ExecutionResult> | ExecutionResult {
     const fail = (code: string, message: string, detail: string, suggestion?: string): ExecutionResult => ({
         success: false,
@@ -1488,6 +1589,10 @@ function applyCollectionUpdate(
             TRANSACTION(operator === '+=' ? 'JjScript: Add to reference' : 'JjScript: Remove from reference', () => {
                 removeLinked(refProxy, remove, containment, targetModel.id);
                 if (write) refProxy.values = write;
+                // #213 follow-up: an append that adds a cross-model target records the target
+                // model as a dependency of the caller model, if not already. A removal (`-=`)
+                // adds nothing: taking a link out is not an addition.
+                if (operator === '+=' && write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',
