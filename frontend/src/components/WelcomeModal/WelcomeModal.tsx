@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import './WelcomeModal.scss';
 
-// 3.1.1 screen: a new key, so a user who dismissed the earlier 3.1 screen sees this one.
-// The older keys (jjodel_welcome_3_seen, jjodel_welcome_3_1_seen) are neither read nor deleted.
-const STORAGE_KEY = 'jjodel_welcome_3_1_1_seen';
+// 3.2 screen: a new key, so a user who dismissed the 3.1.1 screen sees this one.
+// The older keys (jjodel_welcome_3_seen, jjodel_welcome_3_1_seen, jjodel_welcome_3_1_1_seen) are neither read nor deleted.
+const STORAGE_KEY = 'jjodel_welcome_3_2_seen';
 
+// The featured block of 3.2: a model as text, in the default style of the textual syntax
+// (src/codegen/textual/printer.ts). Each line is a list of [token class, text]; '' is plain text.
+const TEXT_LINES: [string, string][][] = [
+  [['wm-cls', 'Family'], ['', ' march '], ['wm-op', '{']],
+  [['', '  '], ['wm-kw', 'lastName'], ['', ' '], ['wm-lit', '"March"']],
+  [['', '  '], ['wm-kw', 'father'], ['', ' '], ['wm-op', '{'], ['', ' '], ['wm-cls', 'Member'], ['', ' jim '], ['wm-op', '{'], ['', ' '], ['wm-kw', 'firstName'], ['', ' '], ['wm-lit', '"Jim"'], ['', ' '], ['wm-op', '} }']],
+  [['', '  '], ['wm-kw', 'daughters'], ['', ' '], ['wm-op', '{'], ['', ' '], ['wm-cls', 'Member'], ['', ' brenda '], ['wm-op', '{'], ['', ' '], ['wm-kw', 'firstName'], ['', ' '], ['wm-lit', '"Brenda"'], ['', ' '], ['wm-op', '} }']],
+  [['wm-op', '}']],
+];
+
+// TODO: cleanup. The 3.1 featured illustration, no longer rendered since the 3.2 screen.
 // Static illustration of the featured block: a three-place Petri net at step 2
 // of a run (3 tokens in `ready` at start; one `start` and one `finish` fired).
 const PETRI_NODES: { kind: 'place' | 'trans'; label: string; tokens?: number; enabled?: boolean }[] = [
@@ -50,54 +61,46 @@ const WelcomeModal: React.FC = () => {
           <button className="wm-close-btn" onClick={close} aria-label="Close">✕</button>
           <div className="wm-hero-content">
             <div className="wm-hero-label">What's new</div>
-            <div className="wm-hero-title" id="wm-title">Jjodel 3.1</div>
+            <div className="wm-hero-title" id="wm-title">Jjodel 3.2</div>
             <div className="wm-hero-sub">
-              Simulation, derived viewpoints, containers, validation and a new Jjodie panel.
+              Models as text, code generation, side-by-side panes and transformations over several models.
             </div>
           </div>
         </div>
 
         <div className="wm-body">
-
           <div className="wm-featured wm-featured--static">
             <div className="wm-featured-top">
               <div className="wm-tags">
-                <span className="wm-tag wm-tag--sim">Simulation</span>
-                <span className="wm-tag wm-tag--new">New</span>
+                <span className="wm-tag wm-tag--jjtl">Textual syntax</span>
+                <span className="wm-tag wm-tag--new">Advanced</span>
               </div>
             </div>
-            <div className="wm-featured-title">Run your models</div>
+            <div className="wm-featured-title">Edit a model as text</div>
             <div className="wm-featured-desc">
-              Automata, Petri nets, Moore and Mealy machines and statecharts run step by step, with events, guards and actions. Step back, replay a run as a scenario, see coverage on the canvas, and drive the model from an I/O board with buttons, LEDs and a clock.
+              In Advanced mode a model also opens as text, in a syntax derived from its metamodel. Edit the text and the model follows. Completion, hover and an outline come from the same grammar, and the syntax can take a C-like or a Pascal style, or your own block keywords.
             </div>
             <div className="wm-code-wrap">
+              <div className="wm-code-titlebar">
+                <span className="wm-code-filename">sample-Families · Text</span>
+              </div>
               <div className="wm-code-body">
-                <div
-                  className="wm-petri"
-                  role="img"
-                  aria-label="A Petri net at step 2 of a run: place ready holds two tokens, busy none, done one; transition start is enabled."
-                >
-                  {PETRI_NODES.map((n, i) => (
-                    <React.Fragment key={n.label}>
-                      {i > 0 && <span className="wm-petri-arc" />}
-                      {n.kind === 'place' ? (
-                        <span className="wm-petri-place">
-                          {Array.from({ length: n.tokens ?? 0 }, (_, k) => <span key={k} className="wm-petri-token" />)}
-                          <span className="wm-petri-label">{n.label}</span>
-                        </span>
-                      ) : (
-                        <span className={`wm-petri-trans${n.enabled ? ' wm-petri-trans--enabled' : ''}`}>
-                          <span className="wm-petri-label">{n.label}</span>
-                        </span>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  <span className="wm-petri-state">Running · step 2</span>
+                <div className="wm-line-numbers">
+                  {TEXT_LINES.map((_, i) => <span key={i}>{i + 1}</span>)}
+                </div>
+                <div className="wm-code-scroll">
+                  <div className="wm-code-lines">
+                    {TEXT_LINES.map((line, i) => (
+                      <div key={i}>
+                        {line.map(([cls, text], j) => (cls ? <span key={j} className={cls}>{text}</span> : <React.Fragment key={j}>{text}</React.Fragment>))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
             <div className="wm-pills">
-              {['Step / Play', 'Scenarios', 'Coverage', 'I/O board'].map(p => (
+              {['Edit as text', 'Completion', 'Outline', 'Syntax styles'].map(p => (
                 <span key={p} className="wm-pill">{p}</span>
               ))}
             </div>
@@ -105,77 +108,75 @@ const WelcomeModal: React.FC = () => {
 
           <div className="wm-section-label">Also new</div>
           <div className="wm-grid wm-grid--three">
-
-            <div className="wm-card wm-card--static">
-              <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--sky">Viewpoints</span>
-              </div>
-              <div className="wm-card-title">Derive viewpoint</div>
-              <div className="wm-card-desc">
-                A full viewpoint from a metamodel in one click, in your notation: statechart, Petri net, flowchart, UML activity, ER (Chen) and more.
-              </div>
-            </div>
-
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
                 <span className="wm-card-tag wm-card-tag--rose">Canvas</span>
               </div>
-              <div className="wm-card-title">Containers and Auto layout</div>
+              <div className="wm-card-title">Side by side</div>
               <div className="wm-card-desc">
-                Containers drawn as frames and partitions. Auto layout in the toolbar arranges the whole graph.
+                Open a model beside another from the tree, each pane with its own viewpoint. One palette serves the active pane.
               </div>
             </div>
-
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--amber">Rules</span>
+                <span className="wm-card-tag wm-card-tag--sky">Code</span>
               </div>
-              <div className="wm-card-title">Validation</div>
+              <div className="wm-card-title">Code generation</div>
               <div className="wm-card-desc">
-                Your own rules, the Validate command, and violation dots on the instances.
+                Templates over a metamodel and generators in the left bar. Run the generated JavaScript and check it against the simulator. Advanced mode.
               </div>
             </div>
-
+            <div className="wm-card wm-card--static">
+              <div className="wm-card-top">
+                <span className="wm-card-tag wm-card-tag--amber">JjTL</span>
+              </div>
+              <div className="wm-card-title">Several sources</div>
+              <div className="wm-card-desc">
+                A transformation reads several models of the same metamodel in one run.
+              </div>
+            </div>
           </div>
 
           <div className="wm-grid wm-grid--three">
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--sky">AI</span>
+                <span className="wm-card-tag wm-card-tag--sky">Viewpoints</span>
               </div>
-              <div className="wm-card-title">Jjodie panel</div>
+              <div className="wm-card-title">View panel</div>
               <div className="wm-card-desc">
-                Docked beside the editor. A generated script previews on the canvas, and Apply is one undo step.
+                Vertex, edge and container views: the properties once reachable only from the Source tab now have a control.
               </div>
             </div>
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--rose">Scripts</span>
+                <span className="wm-card-tag wm-card-tag--rose">JjEL</span>
               </div>
-              <div className="wm-card-title">Refactorings</div>
+              <div className="wm-card-title">Expressions</div>
               <div className="wm-card-desc">
-                Save a script in the project and run it on a metamodel or a model from the Tools menu.
+                <code>is</code> follows the class hierarchy, <code>==</code> compares model objects by identity, and <code>forall</code> walks multi-valued features.
               </div>
             </div>
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--amber">Examples</span>
+                <span className="wm-card-tag wm-card-tag--amber">Performance</span>
               </div>
-              <div className="wm-card-title">Templates</div>
+              <div className="wm-card-title">Large models</div>
               <div className="wm-card-desc">
-                Starter projects and worked examples to clone, on the new Templates page.
+                Reference lists are built when opened, and the canvas redraws only the nodes that changed.
               </div>
             </div>
           </div>
 
           <div className="wm-recall">
-            <div className="wm-recall-label">New in 3.0</div>
+            <div className="wm-recall-label">New in 3.1</div>
             <div className="wm-recall-items">
               {[
-                'JjTL model-to-model transformations',
-                'Transformation Editor',
-                'Jj-languages: JjTL, JjEL, JjScript, JjModal',
-                'Documentation generation',
+                'Simulation',
+                'Derive viewpoint',
+                'Containers and Auto layout',
+                'Validation',
+                'Jjodie panel',
+                'Templates',
               ].map(item => (
                 <span key={item} className="wm-recall-item">{item}</span>
               ))}

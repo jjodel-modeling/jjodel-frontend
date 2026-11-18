@@ -247,7 +247,7 @@ async function readLevels(page: Page, modelId: string, ids: Ids) {
 const browser = await chromium.launch();
 try {
     const { page, errors } = await openPage(browser);
-    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); });
+    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); localStorage.setItem('jjodel_welcome_3_2_seen', '1'); });
     const pid = await createProject(page, PROJECT);
     await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await page.waitForTimeout(4000);

@@ -39,6 +39,32 @@ Beta of 3.2.0: the trunk `alfonso-frontend-jjtl` on 2026-11-18, handed over for 
 #### AI
 - Settings rows of the AI providers show the connection state.
 
+#### Textual syntax
+- A model also opens as text: the viewpoint selector offers the model's textual syntax, which opens a Text tab beside the canvas, in a syntax derived from the metamodel and named after the language. Text and code generation are on by default in Advanced mode; Settings → Advanced turns them off.
+- Edit an existing model from its text: the edit is compared with the model and applied, moves and reorders included. When objects are renamed or reordered, a confirm panel lists the planned pairings before anything is written.
+- Language service in the Text tab: completion, a hover card that can be pinned, outline and breadcrumb, rename, Format Document and Format Selection, quick fixes for a misspelled keyword or an unknown reference, and validation and conformance problems as markers.
+- Selection follows between canvas and text, and a click on a generated span reveals where it comes from.
+- Syntax styles: C-like and Pascal/Ada, indentation, keyword overrides per token and per block in a Syntax form or in EBNF mode, head prefixes, and expressions written with operators.
+- JjEL inside the text is highlighted, checked and completed.
+- Export and Import of a model's text file; object ids travel as comments, so an imported text matches the objects it came from.
+
+#### Editor
+- Several tabs on one model: «Open in new tab» and «Open beside», each tab with its own viewpoint and named after it in the app bar. Two panes side by side share one palette, the active pane's; the divider has a grip, and the inactive pane runs no command.
+- View panel: a control for each view property that was reachable only from the Source tab (vertex visibility, entry mark, bar thickness, compartment exclusions, literal and text styles, edge label, placement, curve and waypoints, partition separator, the shape keys, badges and compartments of a graphVertex), and a rules table on every conditional property.
+- Dashboard: drop a `.jjodel` file to import it, with an import dialog and a report of what failed.
+- Tips and announcements: a tips browser in the Help menu, a tips card beside the Jjodie button, an announcement banner, and «Show tips» under Settings → Notifications.
+
+#### JjTL
+- A run reads several source models of one metamodel; the run dialog lists the included models as pills, and the megamodel view draws one input edge per included model.
+- Called, lazy and delegating rules, an environment of bound values, and `let` that keeps its value.
+- Targets are placed inside their container through the trace, and the write-back finds targets by identity.
+- `forall` over several variables, as a cartesian product.
+- Clearer failures: a missing or abstract target class is an error, a failing builtin names the rule and the source element, and the output panel prints the warnings of a run.
+
+#### JjEL and JjScript
+- `forall` and `exists` over several variables, in JjEL and in JjScript's `forall ... do`.
+- JjScript: rename to a JjEL expression, and move an M1 object between containment slots.
+
 ### Changed
 - The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
 - Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
@@ -53,6 +79,13 @@ Beta of 3.2.0: the trunk `alfonso-frontend-jjtl` on 2026-11-18, handed over for 
 - The Templates page keeps Advanced mode when you reach it from inside the app.
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
+- JjEL: `and` and `or` short-circuit, as the SPEC says; `x is T` on a model instance follows the class hierarchy.
+- JjTL: a many-valued source feature is a collection; two creation blocks on one feature accumulate; a repeated parse no longer drops the pending one.
+- Large models: no automatic layout on open above 500 nodes or edges, and no network-simplex placement above 1,000 dummy nodes.
+- A reference to a nameless object is labelled `: <Class>` and no longer shown as broken.
+- Undo: a creation on the canvas opens its own entry (#682); a change to the graph only writes none.
+- XMI import types attribute values by the metamodel (#607).
+- JjScript: creating an instance refuses a name the model already holds.
 
 ## [3.1.2] - 2026-11-07
 
