@@ -2,10 +2,11 @@
 
 Prompt-ID: P-2026-11-18-1815
 Chat: C-2026-11-18-1815
+Front: maintenance
 Status: da eseguire
 Lane: full (language semantics change in the JjTL executor)
 Depends: none
-Request: none (project chat, Alfonso's words kept locally)
+Request: https://claude.ai/code/session_01DQt9R56QsDvvpmBV3SoYap (Alfonso, 2026-11-18 18:03-18:12: a helper reading m.parent.mother == m returns false while the same test works as a guard; «procedi»)
 Branch: `jjtl-parent-scope`, from the tip of `alfonso-frontend-jjtl`, own worktree `~/jjodel-w-jjtl-parent`
 Model: default from `.claude/settings.json`; no subagents, no background tasks; one probe run per tool call
 
