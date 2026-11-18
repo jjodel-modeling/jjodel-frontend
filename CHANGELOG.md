@@ -47,6 +47,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - A graphVertex container hides the edges it encloses (R-GV-18).
 - The simulator compiles triggers by position, and fuses fork and join.
 - A keyword is a valid member name after `.` and `?.` in JjEL.
+- JjEL: two references to the same model object are equal, whatever path produced them (`self.parent.father == self`); `contains`, `indexOf`, `distinct`, `distinctBy` and `groupBy` agree. A JjTL guard comparing source objects now holds (Families2Persons).
 - The Templates page keeps Advanced mode when you reach it from inside the app.
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
