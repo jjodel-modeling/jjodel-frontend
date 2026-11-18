@@ -1532,14 +1532,18 @@ export class JjtlExecutor {
         // (SPEC §3.4); a helper called from here sees its own parameters only
         const shadowed: ReadonlySet<string> = new Set(paramNames);
 
-        return createFunction(paramNames, (args: JjelValue[], ctx: EvaluationContext) => {
+        return createFunction(paramNames, (args: JjelValue[]) => {
             // Create child context with parameter bindings
             const bindings: Record<string, JjelValue> = {};
             paramNames.forEach((name, i) => {
                 bindings[name] = args[i] ?? null;
             });
 
-            const childCtx = ctx.child(bindings);
+            // Lexical scope (SPEC §3.4): a child of the root context, never of the caller's,
+            // so the body sees its parameters, the builtins and helpers, and the root
+            // bindings (`data`, `source` as the whole model), and nothing of the instance,
+            // `let` or `forall` it is called from (P-2026-11-18-1815).
+            const childCtx = this.context.evalContext.child(bindings);
             childCtx.shadowedBuiltins = shadowed;
             return this.evaluateExpression(helper.body, childCtx);
         });
