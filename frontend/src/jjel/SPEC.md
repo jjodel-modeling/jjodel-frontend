@@ -520,7 +520,7 @@ In order of priority:
 - `+`: string concatenation if either operand is string; numeric addition if both numbers; array concatenation if both arrays
 - `*`: string repetition if string × number; numeric multiplication if both numbers
 - `/`, `%`: return `null` on division by zero
-- `==`: deep equality for arrays and objects
+- `==`, `!=`: by value for primitives; element by element for arrays; key by key for records. Two **model objects** are equal when they are the same object of the model, whatever path each reference came from: `self.parent.father == self` is true on the father, and so is `m == self` for the `m` of a `forall` that reaches the selected element. The comparison reads the identifier of the underlying object, never its features: two objects with the same class and the same values are different, and a model object is equal to no record, primitive or `null`. A model object is an element of a model or metamodel (an instance, a class, a JjTL source object or a reference to one); a record written in an expression is not one, even with an `id` key, and an object a JjTL rule is still creating compares key by key
 - `and`, `or`: **short-circuit** evaluation; return boolean
 - `implies`: short-circuit; `P implies Q` ≡ `not P or Q`
 
@@ -570,6 +570,8 @@ With `forall` replacing `filter` and `map`, the remaining collection methods are
 **Slicing:** `take(n)`, `skip(n)`, `takeWhile(fn)`, `skipWhile(fn)`
 **Join:** `join(separator)`
 **Boolean:** `all(fn)`, `any(fn)`, `none(fn)`
+
+`contains`, `indexOf`, `distinct`, `distinctBy` and `groupBy` use the equality of `==` (§6.3): a model object is found, and counted once, by its identity. `members.contains(self)` is true when `self` is one of them; `[self, self.parent.father].distinct()` has one element on the father.
 
 Note: `filter` and `map` are **removed** — replaced by `forall` construct.
 

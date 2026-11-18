@@ -12,6 +12,7 @@ import {
     isBitVector,
     isJjelFunction
 } from '../context';
+import { modelIdentityOf, modelObjectsEqual } from '../identity';
 import { BitVectorDefect, compareBitVectors, noTruthValue, toVerilog } from './bitvectors';
 
 /**
@@ -25,13 +26,19 @@ function holds(v: JjelValue): boolean {
 
 /**
  * Key for `distinct`, `distinctBy`, `groupBy`: `JSON.stringify`, with a
- * bit-vector tagged so it never collides with the string of its Verilog form.
+ * bit-vector tagged so it never collides with the string of its Verilog form
+ * and a model object replaced by its identity (identity.ts).
  * The replacer reads `this[k]`, the value before `toJSON`.
  */
 function keyOf(value: JjelValue): string {
     return JSON.stringify(value, function (this: Record<string, unknown>, k: string, v: unknown) {
         const original = this[k];
         if (isBitVector(original)) return { '\u0000bv': toVerilog(original) };
+        // A model object is keyed by its identity, at any depth, and never walked:
+        // two references to one object share a key, and the cycles of the handles
+        // (`member.parent.father` is the member) are not entered.
+        const id = modelIdentityOf(original);
+        if (id !== null) return { '\u0000id': id };
         return v;
     });
 }
@@ -566,6 +573,10 @@ function compare(a: JjelValue, b: JjelValue): number {
 function deepEqual(a: JjelValue, b: JjelValue): boolean {
     if (a === b) return true;
     if (a === null || b === null) return a === b;
+
+    // Model objects: identity of the underlying object, as `==` (identity.ts).
+    const sameModelObject = modelObjectsEqual(a, b);
+    if (sameModelObject !== undefined) return sameModelObject;
 
     if (typeof a !== typeof b) return false;
 

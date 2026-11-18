@@ -1446,3 +1446,16 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjodel-book author/discovery/discovery_2026-11-15_canvas_subclass_reattachment.md, with the probe source.
 **Priority**: low
 **Found in**: P-2026-11-15-2305
+
+## 2026-11-17 — fix: JjEL equality of model objects decides by identity (P-2026-11-17-2219)
+**Prompt**: `claude_2026-11-17_2219_prompt_jjel_object_identity.md`: two references to the same model object compared as different (`self.parent.father == self` false on the father; a JjTL guard `parent.mother == self` never true, Families2Persons mapped every Member to Male). Confirm the cause in the evaluator, then `==`, `!=` and the operations that rely on equality decide by the id of the underlying object.
+**Files touched**: `e74d77994` `frontend/src/jjel/__tests__/object-identity.test.ts` (new), `frontend/src/jjtl/executor/__tests__/source-object-identity.test.ts` (new); `29aab5059` `frontend/src/jjel/evaluator/identity.ts` (new), `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjel/evaluator/builtins/collections.ts`; `aa39e1c81` `frontend/src/jjel/SPEC.md`; the discovery report, the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, 2026-11-18, on :3002 (branch jjel-object-identity): Families2Persons with guards on objects gives 4 Female and 5 Male; his further checks fine.
+**Notes**: Not a regression: same code at 3.0.0, 3.1.0, 3.1.2; October compared a quantifier variable (pool handle), November `self` (a separate record). Tests first, 12 of 20 red; bench in `29aab5059`, one mutant survives as declared intent. Typecheck 0; vitest 20 red in 6 tooling and Chromium files, red the same way on `e30274962` here, plus the 3 known. Run by the chat in a cloud checkout. Also fixed: `distinct` threw on handles. Details: the report.
+**Prompt document name**: 2026-11-17 22:19

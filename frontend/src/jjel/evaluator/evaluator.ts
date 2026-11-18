@@ -55,6 +55,7 @@ import {
     getDateMethod,
     getDateConstructor
 } from './builtins';
+import { modelObjectsEqual } from './identity';
 import { joinWithTextHost } from './builtins/collections';
 import {
     BITVECTOR_METHOD_NAMES,
@@ -1378,6 +1379,10 @@ export class JjelEvaluator {
         if (isBitVector(a) || isBitVector(b)) {
             return isBitVector(a) && isBitVector(b) && bitVectorsEqual(a, b);
         }
+
+        // Model objects: identity of the underlying object, never a walk of the keys.
+        const sameModelObject = modelObjectsEqual(a, b);
+        if (sameModelObject !== undefined) return sameModelObject;
 
         if (typeof a !== typeof b) return false;
 
