@@ -260,7 +260,7 @@ try {
     const { page, errors } = await openPage(browser);
     const warnings: string[] = [];
     page.on('console', (m) => { if (/\[EditorV2\] instantiate:/.test(m.text())) warnings.push(m.text().slice(0, 300)); });
-    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); });
+    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); localStorage.setItem('jjodel_welcome_3_2_seen', '1'); });
     await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await wait(page, 5000);
     const imported = await ev<{ id: string | null }>(page, `

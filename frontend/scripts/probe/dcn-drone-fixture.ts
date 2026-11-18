@@ -687,7 +687,7 @@ try {
     const { page, errors } = await openPage(browser);
     // smoke/states.ts \`seed\` sets the 3 and 3.1 welcome keys; the modal now reads the 3.1.1 one, and its backdrop
     // swallows the dashboard's clicks (measured on the first run of this probe).
-    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); });
+    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); localStorage.setItem('jjodel_welcome_3_2_seen', '1'); });
     const pid = await createProject(page, PROJECT);
     await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await page.waitForTimeout(4000);

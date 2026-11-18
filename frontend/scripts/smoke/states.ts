@@ -186,6 +186,7 @@ export async function seed(ctx: BrowserContext, advanced: boolean): Promise<void
             localStorage.setItem('jjodel_welcome_3_seen', '1');
             localStorage.setItem('jjodel_welcome_3_1_seen', '1');
             localStorage.setItem('jjodel_welcome_3_1_1_seen', '1');
+            localStorage.setItem('jjodel_welcome_3_2_seen', '1');
             localStorage.setItem('jjodel.interfaceMode', args.advanced ? 'advanced' : 'basic');
         },
         { user: OFFLINE_USER, advanced },

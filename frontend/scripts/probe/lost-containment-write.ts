@@ -298,7 +298,7 @@ try {
         traceRemoved = removed;
     }
     // As the DCN fixture: the 3.1.1 welcome modal's backdrop swallows the dashboard's clicks, and the widgets cover the tabs.
-    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); });
+    await page.context().addInitScript(() => { localStorage.setItem('jjodel_welcome_3_1_1_seen', '1'); localStorage.setItem('jjodel_welcome_3_2_seen', '1'); });
     const pid = await createProject(page, 'lost containment');
     await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await page.waitForTimeout(NAV_MS);
