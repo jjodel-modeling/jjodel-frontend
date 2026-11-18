@@ -112,10 +112,10 @@ from `self` the 75 keys the handle does not have (`features`, `isRoot`, `node`-s
 
 ## 5. Evidence
 
-- Tests first, `0de8bfa89`: `jjel/__tests__/object-identity.test.ts` (14) and
+- Tests first, `e74d77994`: `jjel/__tests__/object-identity.test.ts` (14) and
   `jjtl/executor/__tests__/source-object-identity.test.ts` (6, the guard of the report on the sample model's 2 families
   and 9 members, both parse paths). 12 of 20 red on the unfixed trunk; the JjTL case gives 0 Female and 9 Male.
-- After `eb2dea24b`: 20 of 20. Mutation bench: no check in `isEqual` 8 red; none in `deepEqual` 5; none in `keyOf` 3;
+- After `29aab5059`: 20 of 20. Mutation bench: no check in `isEqual` 8 red; none in `deepEqual` 5; none in `keyOf` 3;
   no `__ref` branch 1; no `__createdBy` exclusion 1; no marker test 3. One mutant survives: letting a model object
   compared with a non-model value fall through to the key walk. On plain records the two rules cannot differ (a record
   with the same keys would carry the marker); the early `false` is there for L proxies and cycles. Declared intent.
