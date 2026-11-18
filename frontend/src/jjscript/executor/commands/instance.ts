@@ -60,6 +60,7 @@ import {
     forgetPendingChild,
 } from '../handleRegistry';
 import { isManyValued, linkedIds, planLink, planUnlink, planAdd, planRemove } from '../referenceWrite';
+import { resolveInstanceAddress, elsewhereSuggestion } from '../instanceAddress';
 
 // ============================================
 // SHARED HELPERS
@@ -311,6 +312,56 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
 }
 
 /**
+ * #211 — write a whole vector into an attribute slot.
+ *
+ * The plain whole-array set the reducer replaces (`reducer.ts deepCopyButOnlyFollowingPath`):
+ * it grows and shrinks, so `= [a, b]`, `= []`, `= null` and a full `+=` all take this one form.
+ * The proxy's `slot.values = [...]` setter is deliberately not used: its shrink path issues the
+ * valueless `'-='` the reducer drops (model/AGENTS.md §9.3), so a shorter write would keep the
+ * excess. Primitives carry no containment and no `pointedBy`, `isPtr` is false.
+ */
+function writeVector(
+    lObject: any,
+    property: string,
+    values: (string | number | boolean | null)[],
+    message: string,
+    data: Record<string, any>
+): Promise<ExecutionResult> {
+    return new Promise((resolve) => {
+        try {
+            TRANSACTION('JjScript: Set instance attribute', () => {
+                const slot = (lObject as any)['$' + property];
+                if (!slot?.id) {
+                    resolve({
+                        success: false,
+                        command: 'set',
+                        message: `Feature proxy for '${property}' is not available on instance`,
+                        errors: [{ code: 'NO_FEATURE_PROXY', message: 'Internal: $-proxy missing' }]
+                    });
+                    return;
+                }
+                SetFieldAction.new(slot.id, 'values', values, '', false);
+                resolve({
+                    success: true,
+                    command: 'set',
+                    message,
+                    data,
+                    affectedElements: [lObject.id],
+                    undoable: true
+                });
+            });
+        } catch (error) {
+            resolve({
+                success: false,
+                command: 'set',
+                message: `Failed to set attribute: ${(error as Error).message}`,
+                errors: [{ code: 'SET_INSTANCE_ATTR_ERROR', message: (error as Error).message }]
+            });
+        }
+    });
+}
+
+/**
  * Let every write already queued reach the store before a reference slot is read.
  *
  * The app keeps a transaction block open and commits it every `U.UpdatingTimer` (300 ms,
@@ -358,6 +409,22 @@ function removeLinked(refProxy: any, ids: readonly string[], containment: boolea
 function isListedAtRoot(model: LModel, id: string): boolean {
     const objects: any[] = (model as any).__raw?.objects ?? [];
     return objects.some((o: any) => (typeof o === 'string' ? o : o?.id) === id);
+}
+
+/**
+ * Record a cross-model link as a model dependency (#213 follow-up): the caller model lists the
+ * target model in its `dependencies` ("Include other models as prerequisite for this model",
+ * `LModelElement.tsx:5155-5159`), so it is set when a link to an instance of another model is
+ * written, if not already. The committed write forms of the field: the Info panel «Depends
+ * from models» (`Info.tsx:533`, whole-list `l.dependencies = [ids]`) and the delete cascade
+ * (`Dummy.ts`, `case 'dependencies'`, `'-='` by id) — a pointer-list field of DModel driven by
+ * `SetFieldAction` ops, the `'+='` the `pointedBy` writes use. Must run inside the caller's
+ * TRANSACTION, so the undo of the link takes the dependency with it.
+ */
+function ensureModelDependency(callerModel: LModel, targetModelId: string): void {
+    const deps: any[] = (callerModel as any).__raw?.dependencies ?? [];
+    if (deps.some((p: any) => (typeof p === 'string' ? p : p?.id) === targetModelId)) return;
+    SetFieldAction.new(callerModel.id, 'dependencies', targetModelId as any, '+=', true);
 }
 
 /**
@@ -971,10 +1038,16 @@ export async function executeSetInstance(
 
     const operator = args.operator ?? '=';
 
-    // Attribute branch — write a primitive
+    // Attribute branch — write a primitive, or, on a vector attribute, act on its elements (#211)
     if (kind === 'attribute') {
-        // #175: the branch writes the value as given, so `+= 1` would store 1. Refused instead.
-        if (operator !== '=') {
+        const metaclassAttrs: any[] = (metaclass as any).allAttributes ?? (metaclass as any).attributes ?? [];
+        const attrMeta = metaclassAttrs.find((a: any) => a?.name === args.property);
+        const many = isManyValued(attrMeta?.upperBound);
+        const label = `${instanceName}.${args.property}`;
+
+        // #175 / R-JS-13, amended by #211: `+=` and `-=` act on a vector; a single-valued
+        // attribute holds none, so the refusal stands there.
+        if (operator !== '=' && !many) {
             return {
                 success: false,
                 command: 'set',
@@ -996,7 +1069,170 @@ export async function executeSetInstance(
                 }]
             };
         }
-        const primitive = literalToPrimitive(args.value as LiteralValue);
+        const lit = args.value as LiteralValue;
+
+        // #211: `= [a, b]` replaces the whole vector, order as written; `= []` clears it.
+        if (lit.kind === 'array') {
+            if (operator !== '=') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${operator}' takes a single element of ${label}, not a list`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: `Write one element: set ${label} ${operator} <value>`
+                    }]
+                };
+            }
+            if (!many) {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${label}' holds at most one value`,
+                    errors: [{
+                        code: 'MULTIPLICITY_EXCEEDED',
+                        message: `${label} is single-valued and the list holds ${lit.values.length} element${lit.values.length === 1 ? '' : 's'}`,
+                        suggestion: `Write one value: set ${label} = <value>`
+                    }]
+                };
+            }
+            // Every refusal is decided before any write. A slot holds primitives: a name names
+            // nothing it can hold, `null` names nothing, and an enum literal is a pointer.
+            for (const v of lit.values) {
+                if (!isLiteralValue(v) || (v as LiteralValue).kind === 'null' || (v as LiteralValue).kind === 'enumLiteral') {
+                    const shown = isLiteralValue(v) ? literalValueToString(v as LiteralValue) : qualifiedNameToString(v as QualifiedName);
+                    return {
+                        success: false,
+                        command: 'set',
+                        message: `'${shown}' is not a value ${label} can hold`,
+                        errors: [{
+                            code: 'TYPE_MISMATCH',
+                            message: `${label} holds primitives; to clear it: set ${label} = null`
+                        }]
+                    };
+                }
+            }
+            const vector = lit.values.map((v) => literalToPrimitive(v as LiteralValue));
+            return writeVector(lObject, args.property, vector,
+                `Set ${label} = ${literalValueToString(lit)}`,
+                { id: lObject.id, instance: instanceName, property: args.property, newValue: vector, kind: 'attribute' });
+        }
+
+        // #211: `= null` on a vector clears it, as on a reference; single-valued keeps the
+        // committed single write below.
+        if (lit.kind === 'null' && many && operator === '=') {
+            return writeVector(lObject, args.property, [],
+                `Cleared ${label}`,
+                { id: lObject.id, instance: instanceName, property: args.property, cleared: true, kind: 'attribute' });
+        }
+
+        // #211: `+=` / `-=` on the vector (a single-valued attribute was refused above).
+        if (operator === '+=' || operator === '-=') {
+            if (lit.kind === 'null') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${operator}' needs a value`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: operator === '+='
+                            ? `Add an element: set ${label} += <value>`
+                            : `Take an element out: set ${label} -= <value>`
+                    }]
+                };
+            }
+            if (lit.kind === 'enumLiteral') {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `'${label}' holds primitives, not enum literals`,
+                    errors: [{
+                        code: 'TYPE_MISMATCH',
+                        message: `${label} holds primitives; '${lit.literal}' is an enum literal`
+                    }]
+                };
+            }
+            const primitive = literalToPrimitive(lit);
+            // Read the slot only after the queued writes have landed, as the reference branch does.
+            await settlePendingWrites();
+            const slot = (lObject as any)['$' + args.property];
+            if (!slot?.id) {
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `Feature proxy for '${args.property}' is not available on instance`,
+                    errors: [{ code: 'NO_FEATURE_PROXY', message: 'Internal: $-proxy missing' }]
+                };
+            }
+            const raw: any[] = slot.__raw?.values ?? [];
+            const current = raw.filter((v: any) => v != null && v !== '');
+            if (operator === '+=') {
+                const bound = attrMeta?.upperBound;
+                const capacity = bound === -1 || bound === '*' ? Infinity : (bound as number);
+                if (current.length >= capacity) {
+                    return {
+                        success: false,
+                        command: 'set',
+                        message: `'${label}' is full (at most ${capacity})`,
+                        errors: [{
+                            code: 'MULTIPLICITY_EXCEEDED',
+                            message: `${label} holds at most ${capacity} elements`
+                        }]
+                    };
+                }
+                // Duplicates are kept, as in the reference vectors (#175): the slot may hold the
+                // element more than once, and `+=` appends rather than checks.
+                const vector = [...current, primitive];
+                return writeVector(lObject, args.property, vector,
+                    `Added ${literalValueToString(lit)} to ${label}`,
+                    { id: lObject.id, instance: instanceName, property: args.property, newValue: vector, kind: 'attribute' });
+            }
+            if (!current.includes(primitive)) {
+                const shown = literalValueToString(lit);
+                return {
+                    success: false,
+                    command: 'set',
+                    message: `${shown} is not in ${label}`,
+                    errors: [{
+                        code: 'NOT_SET',
+                        message: `Nothing to remove: ${label} does not hold ${shown}`
+                    }]
+                };
+            }
+            return new Promise((resolve) => {
+                try {
+                    TRANSACTION('JjScript: Remove from attribute', () => {
+                        // By value, every copy — the reducer's own removal, the one `removeLinked`
+                        // makes (R-DEL-4). A valueless `'-='` would be dropped by the reducer.
+                        SetFieldAction.new(slot.id, 'values', primitive, '-=', false);
+                        resolve({
+                            success: true,
+                            command: 'set',
+                            message: `Removed ${literalValueToString(lit)} from ${label}`,
+                            data: {
+                                id: lObject.id,
+                                instance: instanceName,
+                                property: args.property,
+                                removed: true,
+                                kind: 'attribute'
+                            },
+                            affectedElements: [lObject.id],
+                            undoable: true
+                        });
+                    });
+                } catch (error) {
+                    resolve({
+                        success: false,
+                        command: 'set',
+                        message: `Failed to remove from attribute: ${(error as Error).message}`,
+                        errors: [{ code: 'SET_INSTANCE_ATTR_ERROR', message: (error as Error).message }]
+                    });
+                }
+            });
+        }
+
+        // Single literal: the committed path, single-valued and vector alike.
+        const primitive = literalToPrimitive(lit);
 
         return new Promise((resolve) => {
             try {
@@ -1015,7 +1251,7 @@ export async function executeSetInstance(
                     resolve({
                         success: true,
                         command: 'set',
-                        message: `Set ${instanceName}.${args.property} = ${literalValueToString(args.value as LiteralValue)}`,
+                        message: `Set ${instanceName}.${args.property} = ${literalValueToString(lit)}`,
                         data: {
                             id: lObject.id,
                             instance: instanceName,
@@ -1108,29 +1344,108 @@ export async function executeSetInstance(
         targetInstanceName = (args.value as QualifiedName).raw;
     }
 
-    const resolvedTarget = resolveInstanceHandle(targetModel, targetInstanceName);
-    // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
-    // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
-    // nothing downstream would ever report that the target was chosen rather than named.
-    if (!resolvedTarget.ok && resolvedTarget.candidates) {
+    // #213: `<Model>::<instance>` addresses an instance of another M1 model of the project.
+    // The decision is pure (instanceAddress.ts); `consultRegistry` carries the registry-skip
+    // rule as data: a run-local handle is an instance of the ACTIVE model, and `Other::p`
+    // must never silently resolve to the run-local p. A qualifier naming the active model is
+    // not cross-model — the address keeps today's path exactly, the registry included.
+    const m1Models: LModel[] = (((project as any).models ?? []) as LModel[]).filter((m) => !m.isMetamodel);
+    const resolution = resolveInstanceAddress(
+        targetInstanceName,
+        { id: targetModel.id, name: (targetModel as any).name ?? '' },
+        m1Models.map((m) => ({ id: m.id, name: (m as any).name ?? '' })),
+    );
+
+    let targetInstance: any;
+    // #213 follow-up: the model of a cross-model target, so the write below can record it as a
+    // dependency of the caller model. Null for a local target (a model does not depend on itself).
+    let crossModel: LModel | null = null;
+    if (resolution.kind === 'model-absent') {
         return {
             success: false,
             command: 'set',
-            message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
-            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
-        };
-    }
-    const targetInstance = resolvedTarget.value;
-    if (!targetInstance) {
-        return {
-            success: false,
-            command: 'set',
-            message: `Target instance '${targetInstanceName}' not found in active model`,
+            message: `No model named '${resolution.qualifier}' in the project`,
             errors: [{
-                code: 'INSTANCE_NOT_FOUND',
-                message: `No instance named '${targetInstanceName}' to link to`
+                code: 'MODEL_NOT_FOUND',
+                message: `No model named '${resolution.qualifier}' to take the instance from`,
+                suggestion: `Models in the project: ${resolution.models.map((m) => `'${m.name}'`).join(', ')}`
             }]
         };
+    }
+    if (resolution.kind === 'model-ambiguous') {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot link to '${targetInstanceName}': the model name is ambiguous`,
+            errors: [{
+                code: 'AMBIGUOUS_MODEL',
+                message: `Ambiguous model name '${resolution.qualifier}': ${resolution.matches.length} candidates — ${resolution.matches.map((m) => m.id).join(', ')}. Rename one of the models.`
+            }]
+        };
+    }
+
+    if (resolution.kind === 'local') {
+        const resolvedTarget = resolveInstanceHandle(targetModel, resolution.name);
+        // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
+        // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
+        // nothing downstream would ever report that the target was chosen rather than named.
+        if (!resolvedTarget.ok && resolvedTarget.candidates) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
+            };
+        }
+        targetInstance = resolvedTarget.value;
+        if (!targetInstance) {
+            // #213: the name is not in the active model, but one or more other models of the
+            // project hold it. Bare names stay active-model-only (no fallback); the suggestion
+            // points at the qualified spelling.
+            const elsewhere = m1Models
+                .filter((m) => m.id !== targetModel.id && findInstanceByName(m, resolution.name).length > 0)
+                .map((m) => (m as any).name ?? '');
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in active model`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${targetInstanceName}' to link to`,
+                    ...(elsewhere.length > 0 ? { suggestion: elsewhereSuggestion(resolution.name, elsewhere) } : {})
+                }]
+            };
+        }
+    } else {
+        // Cross-model: the instance the model named holds, model-wide (roots and contained),
+        // through the same lookup as the local path. The run's handle registry is deliberately
+        // not consulted (consultRegistry is false above).
+        const otherModel = m1Models.find((m) => m.id === resolution.model.id);
+        const matches = otherModel ? findInstanceByName(otherModel, resolution.instance) : [];
+        if (matches.length > 1) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+                errors: [{ code: 'AMBIGUOUS_INSTANCE', message: describeAmbiguity(targetInstanceName, matches.map(toCandidate)) }]
+            };
+        }
+        targetInstance = matches[0];
+        if (!targetInstance) {
+            return {
+                success: false,
+                command: 'set',
+                message: `Target instance '${targetInstanceName}' not found in model '${resolution.model.name}'`,
+                errors: [{
+                    code: 'INSTANCE_NOT_FOUND',
+                    message: `No instance named '${resolution.instance}' in model '${resolution.model.name}'`
+                }]
+            };
+        }
+        // TODO(#213): the slot is written below as the canvas writes it (refProxy.values / the
+        // by-value removal); the composition policy for cross-model containment slots (father,
+        // orphaning on removal) is off-topic until decided.
+        if (otherModel) crossModel = otherModel;
     }
 
     // Read the slot only after the queued writes have landed.
@@ -1143,7 +1458,7 @@ export async function executeSetInstance(
         if (mismatch) return mismatch;
     }
     if (operator !== '=') {
-        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel);
+        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel, crossModel);
     }
 
     return new Promise((resolve) => {
@@ -1164,6 +1479,10 @@ export async function executeSetInstance(
                 const plan = planLink(linkedIds(refProxy.__raw?.values), targetInstance.id, isManyValued(meta?.upperBound));
                 removeLinked(refProxy, plan.remove, !!meta?.containment, targetModel.id);
                 if (plan.write) refProxy.values = plan.write;
+                // #213 follow-up: a link that adds a cross-model target records the target model
+                // as a dependency of the caller model, if not already (same TRANSACTION: the undo
+                // takes it back with the link).
+                if (plan.write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',
@@ -1208,7 +1527,8 @@ function applyCollectionUpdate(
     instanceName: string,
     targetId: string,
     targetName: string,
-    targetModel: LModel
+    targetModel: LModel,
+    crossModel: LModel | null = null
 ): Promise<ExecutionResult> | ExecutionResult {
     const fail = (code: string, message: string, detail: string, suggestion?: string): ExecutionResult => ({
         success: false,
@@ -1269,6 +1589,10 @@ function applyCollectionUpdate(
             TRANSACTION(operator === '+=' ? 'JjScript: Add to reference' : 'JjScript: Remove from reference', () => {
                 removeLinked(refProxy, remove, containment, targetModel.id);
                 if (write) refProxy.values = write;
+                // #213 follow-up: an append that adds a cross-model target records the target
+                // model as a dependency of the caller model, if not already. A removal (`-=`)
+                // adds nothing: taking a link out is not an addition.
+                if (operator === '+=' && write && crossModel) ensureModelDependency(targetModel, crossModel.id);
                 resolve({
                     success: true,
                     command: 'set',

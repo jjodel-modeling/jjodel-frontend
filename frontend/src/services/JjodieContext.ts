@@ -9,7 +9,7 @@
  */
 
 import type { LProject, LClass, LAttribute, LReference, LPackage, LEnumerator, LModel } from '../joiner';
-import { DocumentationSection } from '../types/jodie';
+import { DocumentationSection } from '../types/documentation';
 import { JsonModelService } from './export';
 import { validateConformance } from '../model/conformance/ConformanceValidator';
 

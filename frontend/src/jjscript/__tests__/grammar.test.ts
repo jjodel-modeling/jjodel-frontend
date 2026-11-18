@@ -331,7 +331,7 @@ describe('parseLiteralValue', () => {
         expect(a.kind).toBe('array');
         if (a.kind === 'array') {
             expect(a.values.length).toBe(3);
-            expect(a.values[0].kind).toBe('number');
+            expect((a.values[0] as any).kind).toBe('number');
         }
     });
 

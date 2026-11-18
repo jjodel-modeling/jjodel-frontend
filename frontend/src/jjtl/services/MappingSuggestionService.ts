@@ -12,14 +12,15 @@ import {
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
-import {JodieConfig, TAIProvider} from "../../types/jodie";
+import type { ProviderId } from '../../services/ai';
+import { registry } from '../../services/ai';
 
 export interface AnalyzeOptions {
     mode: SuggestionMode;
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
     /** Optional: provider selected by the user in the UI. Falls back to the global active provider if omitted. */
-    aiProvider?: TAIProvider;
+    aiProvider?: ProviderId;
     /** Optional: allows the caller to cancel an in-flight analysis. */
     signal?: AbortSignal;
     /** Optional: progress callback fired at each AI-pipeline phase boundary.
@@ -55,7 +56,7 @@ export class MappingSuggestionService {
                 suggestions = this.simpleMatcher.analyze(sourceElements, targetElements);
             } else {
                 // AI mode
-                if (!JodieConfig.hasEnabledProviders()) {
+                if (registry.enabled().length === 0) {
                     return {
                         mode,
                         suggestions: [],

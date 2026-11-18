@@ -425,6 +425,7 @@ create reference <name> in <class> type <target>
 delete <element>              Delete an element
 rename <element> to <name>    Rename an element
 set <element>.<prop> = <value>  Set property
+set <inst>.<ref> = <Model>::<inst>  Link an instance of another M1 model (names with spaces: quoted)
 list [type]                   List elements
 show <element>                Show details
 help [topic]                  Get help

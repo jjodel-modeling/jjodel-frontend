@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {AI, AIConfig, AIProvider, AIVersion, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from '../../types/jodie';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import './AISettingsContent.scss';
 import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
-import { AIProviderService } from '../../services/AIProviderService';
 import { AIEvents } from '../../events/registry';
-import type { CatalogFailure } from '../../services/aiModelCatalog';
+import { FailureCatalog, FeaturePreferenceStore, PROVIDER_IDS, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
+import type { ConnectionTestResult, ProviderId, StoredProviderConfig } from '../../services/ai';
+import { hasCatalog, refreshLiveCatalog } from '../common/ProviderModelSelector';
+import { PROVIDER_VISUALS } from '../common/providerVisuals';
 
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
@@ -41,8 +42,27 @@ interface ProviderFormState {
     custom: ProviderInfo;
 }
 
+// #196 L6: these two types came from types/jodie.ts and services/aiModelCatalog.ts, deleted; this
+// file is their only reader. Copied verbatim (AIVersion without its constructor).
+/** The kind of a failed connection test, in the words `lastTestFailure` stores. */
+type CatalogFailure = 'auth' | 'rate' | 'network' | 'server' | 'other';
+/** One model entry of the retired `AI[p].versions`. */
+interface AIVersion {
+    label: string;
+    capabilities: {
+        pdf: boolean;
+        vision: boolean;
+    }
+    deprecated: boolean;
+    contextWindow?: number;
+    family?: string;
+    rank?: number;
+    source?: 'live' | 'static';
+    unavailable?: boolean;
+}
+
 // Map settings provider IDs to PROVIDER_MODELS keys
-const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
+const SETTINGS_TO_PROVIDER: Record<string, string> = {
     openai: 'openai',
     anthropic: 'claude',
     mistral: 'mistral',
@@ -62,6 +82,19 @@ const FAILURE_LABELS: Record<CatalogFailure, string> = {
     server: 'Provider error',
     other: 'Test failed',
 };
+// The stored kind of a failed test (lastTestFailure keeps today's words, so a stored one still reads).
+const FAILURE_KINDS: Record<FailureCatalog, CatalogFailure> = {
+    [FailureCatalog.AUTH]: 'auth',
+    [FailureCatalog.RATE]: 'rate',
+    [FailureCatalog.NETWORK]: 'network',
+    [FailureCatalog.SERVER]: 'server',
+};
+// Only a rejected key disables the provider (rate limit, network and outage do not); a failure the
+// test does not classify keeps the old behaviour (disable).
+const failureDisablesProvider = (result: ConnectionTestResult): boolean =>
+    !result.success && (result.failure === undefined || result.failure === FailureCatalog.AUTH);
+// The stored record of a provider, empty when it was never saved.
+const storedConfig = (name: ProviderId): StoredProviderConfig => ProviderConfigStore.load(name) ?? {};
 // Component to show model capability badges
 function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): JSX.Element | null {
     if (!model) return null;
@@ -101,7 +134,7 @@ export function AISettingsContent({
     const [testError, setTestError] = useState<Dictionary<string, string>>({});
     // A passing test can still qualify the result (e.g. the selected model is not offered to the key).
     const [testWarning, setTestWarning] = useState<Dictionary<string, string>>({});
-    const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
+    const [expandedProvider, setExpandedProvider] = useState<ProviderId | null>(null);
     // Section the expanded row belonged to when it was opened. A row is grouped by its
     // configured state, which flips on the first character typed in the API key field: without
     // this freeze the open row would move to the other list, React would unmount its subtree
@@ -115,7 +148,7 @@ export function AISettingsContent({
     // empty field can never coexist with a "Configured" pill. Keyed by provider id (independent).
     const [apiKeyByProvider, setApiKeyByProvider] = useState<Dictionary<string, string>>(() => {
         const init: Dictionary<string, string> = {};
-        for (const p of ALL_AI_PROVIDERS) init[p] = AIConfig.get(p).apiKey || '';
+        for (const p of PROVIDER_IDS) init[p] = ProviderConfigStore.get(p).apiKey || '';
         return init;
     });
     // const [update, setUpdate] = useState(0);
@@ -131,7 +164,7 @@ export function AISettingsContent({
     useEffect(() => {
         const onProviderChanged = () => {
             const next: Dictionary<string, string> = {};
-            for (const p of ALL_AI_PROVIDERS) next[p] = AIConfig.get(p).apiKey || '';
+            for (const p of PROVIDER_IDS) next[p] = ProviderConfigStore.get(p).apiKey || '';
             setApiKeyByProvider(next);
         };
         window.addEventListener(AIEvents.PROVIDER_CHANGED, onProviderChanged);
@@ -143,7 +176,7 @@ export function AISettingsContent({
         Object.values(revertTimers.current).forEach(id => clearTimeout(id));
     }, []);
 
-    const clearRevertTimer = (provider: TAIProvider) => {
+    const clearRevertTimer = (provider: ProviderId) => {
         const id = revertTimers.current[provider];
         if (id) {
             clearTimeout(id);
@@ -152,7 +185,7 @@ export function AISettingsContent({
     };
 
     // Hold the test result (success/error) for REVERT_DELAY_MS, then revert the button to idle.
-    const scheduleRevert = (provider: TAIProvider) => {
+    const scheduleRevert = (provider: ProviderId) => {
         clearRevertTimer(provider);
         revertTimers.current[provider] = setTimeout(() => {
             setTestStatus(prev => ({ ...prev, [provider]: 'idle' }));
@@ -160,47 +193,57 @@ export function AISettingsContent({
         }, REVERT_DELAY_MS);
     };
 
-    // Test provider connection against the real provider endpoint (shared AIProviderService).
+    // The model the chat requests from this provider: its own pick when the chat points here, else
+    // none (the provider's configured model). Test Connection and the row label both use it (#179).
+    const chatRequestedModel = (name: ProviderId): string | undefined => {
+        const pref = FeaturePreferenceStore.get('chat');
+        return pref?.providerId === name ? pref.modelId : undefined;
+    };
+
+    // Test provider connection against the real provider endpoint (provider.test(), src/services/ai).
     // Persist the outcome on config (lastTested + lastTestOk + lastTestFailure, plus enabled) so the
     // row dot and its tooltip survive a reload; on failure keep the error message.
     // The transient button result auto-reverts to idle via scheduleRevert (success and failure alike).
-    const handleTestConnection = async (provider: TAIProvider) => {
+    const handleTestConnection = async (provider: ProviderId) => {
         clearRevertTimer(provider); // cancel a pending revert from a previous test before starting a new one
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
         setTestError(prev => ({ ...prev, [provider]: '' }));
         setTestWarning(prev => ({ ...prev, [provider]: '' }));
 
         try {
-            const result = await AIProviderService.testConnection(provider);
-            const config = AIConfig.get(provider);
+            const result = await registry.get(provider).test(chatRequestedModel(provider));
 
             if (result.success) {
-                config.lastTested = Date.now();
-                config.lastTestOk = true;
-                config.lastTestFailure = undefined;
-                config.enabled = true;
-                // The current model answered: the notice about the retired one has served (#179).
-                config.replacedModel = undefined;
-                config.save();
+                ProviderConfigStore.save(provider, {
+                    lastTested: Date.now(),
+                    lastTestOk: true,
+                    lastTestFailure: undefined,
+                    enabled: true,
+                    // The current model answered: the notice about the retired one has served (#179).
+                    replacedModel: undefined,
+                });
                 setTestWarning(prev => ({ ...prev, [provider]: result.warning || '' }));
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
+                // A key that answers loads the models it can use (the old test listed them itself).
+                if (hasCatalog(provider)) void refreshLiveCatalog(provider, true).catch(() => undefined);
             } else {
-                config.lastTested = Date.now();
-                config.lastTestOk = false;
-                config.lastTestFailure = result.failure ?? 'other';
-                // Only a rejected key disables the provider (rate limit, network and outage do not).
-                if (AIProviderService.failureDisablesProvider(result)) config.enabled = false;
-                config.save();
+                ProviderConfigStore.save(provider, {
+                    lastTested: Date.now(),
+                    lastTestOk: false,
+                    lastTestFailure: result.failure === undefined ? 'other' : FAILURE_KINDS[result.failure],
+                    // Only a rejected key disables the provider (rate limit, network and outage do not).
+                    ...(failureDisablesProvider(result) ? { enabled: false } : {}),
+                });
                 setTestError(prev => ({ ...prev, [provider]: result.error || 'Connection failed' }));
                 setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
             }
         } catch (err) {
-            const config = AIConfig.get(provider);
-            config.lastTested = Date.now();
-            config.lastTestOk = false;
-            config.lastTestFailure = 'network';
-            config.enabled = false;
-            config.save();
+            ProviderConfigStore.save(provider, {
+                lastTested: Date.now(),
+                lastTestOk: false,
+                lastTestFailure: 'network',
+                enabled: false,
+            });
             setTestError(prev => ({ ...prev, [provider]: (err as Error).message || 'Connection failed' }));
             setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
         } finally {
@@ -210,47 +253,47 @@ export function AISettingsContent({
 
     // Derive configured-state from the single source of truth (key map), mirroring isConfigured()
     // semantics: requiresKey providers → non-empty key; Ollama → baseUrl; Custom → key OR baseUrl.
-    const isProviderConfigured = (name: TAIProvider): boolean => {
-        const config = AIConfig.get(name);
-        const llm = AI[name];
+    const isProviderConfigured = (name: ProviderId): boolean => {
+        const config = storedConfig(name);
         const liveKey = (apiKeyByProvider[name] ?? '').trim();
         const baseUrlConfigured = !!(config.baseUrl && String(config.baseUrl).trim());
-        return name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
-            : llm.requiresKey ? liveKey !== ''
+        return name === 'Custom' ? (liveKey !== '' || baseUrlConfigured)
+            : PROVIDER_SPECS[name].requiresKey ? liveKey !== ''
             : baseUrlConfigured;
     };
 
     // Label of the model this provider currently points at, shown only on configured rows: the
     // model the chat calls it with, which is the one Test Connection tests (#179).
     // Falls back to the raw id for models outside the registry (custom / user-pulled tags).
-    const activeModelLabel = (name: TAIProvider): string => {
-        const model = AIProviderService.chatModel(name);
-        return AI[name].versions[model]?.label || model || '';
+    const activeModelLabel = (name: ProviderId): string => {
+        const provider = registry.get(name);
+        const model = provider.resolveModel(chatRequestedModel(name));
+        return provider.model(model)?.displayName || model || '';
     };
 
-    // A retired model this provider was moved off at load (AIConfig.retireModels), named until a
+    // A retired model this provider was moved off at load (FeaturePreferenceStore.retireModels), named until a
     // test passes on the current one (#179). Null when there is nothing to say.
-    const replacedModelNotice = (name: TAIProvider): string | null => {
-        const replaced = AIConfig.get(name).replacedModel;
-        if (!replaced) return null;
-        const label = AI[name].versions[replaced]?.label || replaced;
+    const replacedModelNotice = (name: ProviderId): string | null => {
+        const replaced = storedConfig(name).replacedModel;
+        if (typeof replaced !== 'string' || !replaced) return null;
+        const label = registry.get(name).model(replaced)?.displayName || replaced;
         return `${label} is no longer available, so ${name} now uses ${activeModelLabel(name)}.`;
     };
 
-    const toggleProvider = (name: TAIProvider) => {
+    const toggleProvider = (name: ProviderId) => {
         if (expandedProvider === name) { setExpandedProvider(null); setExpandedGroup(null); }
         else { setExpandedProvider(name); setExpandedGroup(isProviderConfigured(name) ? 'configured' : 'available'); }
     };
 
     // Render provider card
     const renderProviderCard = (
-        name: TAIProvider,
+        name: ProviderId,
         fields: {key: 'apiKey' | 'model' | 'baseUrl' /*| 'name'*/; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[],
         inConfiguredGroup: boolean
     ) => {
         const isExpanded = expandedProvider === name;
-        const config = AIConfig.get(name);
-        let llm = AI[name];
+        const config = storedConfig(name);
+        let llm = PROVIDER_VISUALS[name];
         const isConfigured: boolean = isProviderConfigured(name);
 
         // Row state — the persistent at-a-glance status (the transient test button complements it),
@@ -266,14 +309,10 @@ export function AISettingsContent({
         const keyInvalid = isConfigured && !untested && config.lastTestOk === false;
         const stateClass = untested ? '' : keyInvalid ? 'ai-provider-row__state--error' : 'ai-provider-row__state--active';
         const stateLabel = untested ? 'Not tested'
-            : keyInvalid ? FAILURE_LABELS[config.lastTestFailure ?? 'other']
+            : keyInvalid ? FAILURE_LABELS[(config.lastTestFailure as CatalogFailure | undefined) ?? 'other']
             : 'Connected';
 
         const status = testStatus[name] || 'idle';
-
-        // Get available models for this provider
-        const availableModels: AIVersion[] = Object.values(llm.versions);
-        const selectedModel = llm.versions[config.model];
 
         // Logos are normalized by the 28x28 tile around them (.ai-provider-row__logo): the image
         // fills the tile, the glyph and the letter sit centered on the provider's pastel.
@@ -323,10 +362,10 @@ export function AISettingsContent({
                         tile keep its neutral default instead of painting it white on white. */}
                     <span
                         className="ai-provider-row__logo"
-                        style={name === AIProvider.Custom ? undefined : { background: llm.bgColor, color: llm.color }}
+                        style={name === 'Custom' ? undefined : { background: llm.bgColor, color: llm.color }}
                     >
                         {llm.logo ? AIicon(name) : (
-                            name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial
+                            name === 'Custom' ? <i className="bi bi-puzzle" /> : llm.initial
                         )}
                     </span>
 
@@ -365,12 +404,11 @@ export function AISettingsContent({
                                             let val = e.target.value;
                                             switch (field.key) {
                                                 case "apiKey":
-                                                    config.apiKey = val;
                                                     // mirror to the single source of truth (drives field + pill)
                                                     setApiKeyByProvider(prev => ({ ...prev, [name]: val }));
                                                     break;
-                                                case "model": config.model = val; break;
-                                                case "baseUrl": config.baseUrl = val; break;
+                                                case "model": break;
+                                                case "baseUrl": break;
                                                 /*case "name":
                                                     rename disabled for now: need to modify all collections like those?
                                                     delete JodieConfig.current.providers[oldName];
@@ -382,10 +420,12 @@ export function AISettingsContent({
                                                 break;*/
                                             }
                                             // Any credential edit invalidates a prior test result → untested.
-                                            config.lastTested = undefined;
-                                            config.lastTestOk = undefined;
-                                            config.lastTestFailure = undefined;
-                                            config.save();
+                                            ProviderConfigStore.save(name, {
+                                                [field.key]: val,
+                                                lastTested: undefined,
+                                                lastTestOk: undefined,
+                                                lastTestFailure: undefined,
+                                            });
                                             // Re-render for non-key edits (baseUrl/model); the apiKey
                                             // case already re-renders via setApiKeyByProvider above.
                                             forceRefresh(v => v + 1);
@@ -430,9 +470,9 @@ export function AISettingsContent({
     // Fields of the expanded form, unchanged: credentials only (the model is chosen by the
     // app-level picker), plus endpoint and model name for Custom.
     const fieldsFor = (
-        name: TAIProvider
+        name: ProviderId
     ): {key: 'apiKey' | 'model' | 'baseUrl'; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[] =>
-        name === AIProvider.Custom
+        name === 'Custom'
             ? [
                 // { key: 'name', label: 'Provider Name', type: 'text', placeholder: 'My Custom Provider' },
                 { key: 'baseUrl', label: 'Base URL', type: 'text', placeholder: 'https://api.example.com/v1/chat/completions' },
@@ -440,13 +480,13 @@ export function AISettingsContent({
                 { key: 'model', label: 'Model Name', type: 'text', placeholder: 'model-name' },
             ]
             : [
-                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: AI[name].keyPlaceholder || "Your " + name + " API key" },
+                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: PROVIDER_VISUALS[name].keyPlaceholder || "Your " + name + " API key" },
             ];
 
     // Two sections by state. The open row keeps the section it was opened in (see expandedGroup).
-    const configuredProviders: TAIProvider[] = [];
-    const availableProviders: TAIProvider[] = [];
-    for (const provider of ALL_AI_PROVIDERS) {
+    const configuredProviders: ProviderId[] = [];
+    const availableProviders: ProviderId[] = [];
+    for (const provider of PROVIDER_IDS) {
         const configured = (provider === expandedProvider && expandedGroup)
             ? expandedGroup === 'configured'
             : isProviderConfigured(provider);
@@ -473,7 +513,7 @@ export function AISettingsContent({
                 {availableProviders.length > 0 && (
                     <div className="ai-provider-group">
                         <div className="ai-provider-group__label">Available · {availableProviders.length}</div>
-                        {/* Custom closes the list: it is last in ALL_AI_PROVIDERS and needs no divider
+                        {/* Custom closes the list: it is last in PROVIDER_IDS and needs no divider
                             of its own — the inline subtitle says what it is. */}
                         {availableProviders.map(provider => renderProviderCard(provider, fieldsFor(provider), false))}
                     </div>

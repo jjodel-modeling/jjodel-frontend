@@ -423,7 +423,12 @@ export interface NullLiteral {
 
 export interface ArrayLiteral {
     kind: 'array';
-    values: LiteralValue[];
+    /**
+     * #211: elements are literals or names — a `set` vector may name elements
+     * (`set Person.superTypes = [Animal, Plant]`), and the M2 executor resolves
+     * each one. Deliberate widening of `LiteralValue[]` (rule 11 exception, #211).
+     */
+    values: (LiteralValue | QualifiedName)[];
 }
 
 export interface EnumLiteralRef {

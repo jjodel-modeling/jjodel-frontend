@@ -2,6 +2,58 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-12 — feat(#213): a cross-model link records the target model as a dependency of the caller model
+**Prompt**: user in chat (same lane as #213): «Add a little improvement: when a external reference is added, add the target model (if not already set) as dependency of the caller model»
+**Files touched**: `src/jjscript/executor/commands/instance.ts` (`ensureModelDependency`, the cross branch, both write transactions), `src/jjscript/executor/__tests__/crossModelLink.test.ts` (+7), `src/jjscript/executor/commands/help.ts`, the discovery report addendum (§7), this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — crossModelLink 25/25, m1Operators 25/25, m1AttributeVectors 25/25, m1Containment 28/28, instanceAddress 21/21; full suite 12341 green (12334 + 7), red the nine known monaco-import files; typecheck 0; build 0; check:docs 5/5
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; D-layer `DModel.dependencies` `'+='` append only, inside the link's own TRANSACTION; no critical-zone file)
+**Smoke visivo**: non applicabile — the user did the manual smoke (JjScript console + right-sidebar References); the recorded dependency is what the slot's select reads (report §7)
+**Notes**: the write is the same committed form as the Info panel («Depends from models», Info.tsx:533) and the delete cascade (Dummy.ts `case 'dependencies'`); effect: the target model's instances become visible through the caller's `cross*` getters (LModelElement.tsx:5155-5236) — the field's committed semantics; the sidebar select reads `allCrossSubObjects`, which merges `allDependencies` (LModelElement.tsx:8175). Detail: the report addendum.
+**Prompt document name**: — (user in chat, no prompt file)
+
+## 2026-11-12 — feat(#213): M1 cross-model reference links in JjScript (Model::instance)
+**Prompt**: issue #213 — at M1 there was no way to link a type-compatible instance from another model to a reference field via `set <instance>.<reference-name>` (it works graphically); the fix plan ratified in the issue comment (2026-11-12 11:29), full lane
+**Files touched**: new `src/jjscript/executor/instanceAddress.ts` (pure decision core), `src/jjscript/executor/commands/instance.ts` (link branch), `src/jjscript/executor/elementWaiter.ts` (M1 branch), `src/jjscript/executor/commands/help.ts`, `src/jjscript/services/JjScriptService.ts`, new `src/jjscript/executor/__tests__/crossModelLink.test.ts` (18) and `instanceAddress.test.ts` (21), the discovery report, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — m1Operators 25/25 and m1AttributeVectors 25/25 unchanged; full suite 12334 green, red the nine known monaco-import files; typecheck exit 0 (zero baseline); build exit 0, pre-existing chunk-size warning only
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat before the diff; JjOM pointer-id writes only through the canvas-verified `refProxy.values`/`SetFieldAction` forms; no critical-zone file)
+**Smoke visivo**: non applicabile — needs a manual browser session (two-model project, console); the bench covers parser + executor
+**Notes**: mutation bench (a)–(d) all killed (registry leak, last-:: split, first case-insensitive match, bare-name fallback) — recorded in the commit message. Sharp edges carried (report §6): profile guard still active-model only (executor.ts:407), SPEC.md §5.2 not updated (not in the plan's file list), quoted `remove "…"` unparseable (pre-existing). Detail: `docs/discovery/discovery_2026-11-12_213_m1_cross_model_links.md`
+**Prompt document name**: 2026-11-12 11:29 (#213: set external references from jjscript)
+
+## 2026-11-11 — fix(#214): multiplicity clause written on create attribute and create parameter
+**Prompt**: issue #214 — `create attribute <name> in <Class> type <type> <multiplicity>` ignored the multiplicity, always [0..1]; user extended in chat: «fix also for createParameter»
+**Files touched**: `executor/commands/create.ts` (createAttribute, createParameter), new bench `executor/__tests__/createAttributeMultiplicity.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — jjscript suite 876 green, the one red file is the known monaco-import `context-binding`; typecheck 0 (the zero baseline); build 0, only the pre-existing chunk-size warning
+**Out-of-scope changes**: no — createParameter was explicitly named in chat
+**Layer Impact Report**: produced (D-layer bound writes on the freshly created element only; no L-layer writer, sync, canvas or persistence change)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers parser + executor
+**Notes**: root: both creators dropped the parsed `options.multiplicity`; the DStructuralFeature seeds [0..1] were all that got written. Mirrored createReference's block (create.ts:872-880), same '*' → -1. Bench 8 red → green, 3 controls (seeds, the reference source). Tickets: createAttribute still drops `default <value>` (create.ts has no defaultValue handling); eval.ts:502 multiValued still misses numeric upperBound > 1 (from #211).
+**Prompt document name**: 2026-11-11 10:05 (#214: multiplicity in create attribute / parameter)
+
+## 2026-11-10 — feat(#211): multiple assignment in set on multi-valued attributes
+**Prompt**: issue #211 — the vector forms of `set` on an attribute with multiplicity (`= [a, b]`, `+= c`, `-= a`); plan with four ratified decisions, lane executed
+**Files touched**: `parser.ts` (`parseSetValue`), `types.ts` (`ArrayLiteral` widened), `parser/grammar.ts` (`literalValueToString`), `consumerProposalModel.ts` + `grammar.test.ts` (mandatory compile ripples), `executor/commands/instance.ts` (M1 attribute branch, `writeVector`), `executor/effectsPlanner.ts` (planner alignment), `SPEC.md` (was untracked, committed for the first time), `help.ts`, `__tests__/parser.test.ts`, new `executor/__tests__/m1AttributeVectors.test.ts`, the discovery report, this entry, the R-JS-13 amendment in `decisions.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `m1Operators` 25/25 unchanged (reference semantics and the single-valued attribute refusal stand), full suite 12276 green; the 11 red files are the nine known monaco-import ones plus two Playwright-environmental (`irCollapsedRender`, `irSelectionRing`: Chromium binary missing)
+**Out-of-scope changes**: yes — `consumerProposalModel.ts` and `grammar.test.ts`: mandatory compile ripples of the `ArrayLiteral` widening (the plan's rule-11 exception); `SPEC.md` committed for the first time (untracked, no history)
+**Layer Impact Report**: produced (in chat before the diff: D-layer `values` writes + L-layer reads only, canvas/sync untouched)
+**Smoke visivo**: non applicabile — needs a manual browser session; the bench covers the parser + executor paths
+**Notes**: R-JS-13 amended (multi-valued carve-out, single-valued refusal retained), the four ratified decisions in the discovery §4; the `[1]`-as-MULTIPLICITY sharp edge documented in SPEC; candidate ticket: `eval.ts:502` `multiValued` misses numeric `upperBound > 1`. Detail: `docs/discovery/discovery_2026-11-10_211_set_attribute_vectors.md`
+**Prompt document name**: 2026-11-10 16:00 (#211: set vector forms on multi-valued attributes)
+
 **Incidenti — sanatoria batch L1–L4 (2026-09-02).** Tre commit del batch portano un
 contenuto che il loro messaggio non descrive. Nessun rewrite di history: e' stato un
 rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> contenuto reale».
@@ -27,6 +79,19 @@ scritte nello stesso file prima di committare.
 the Create View gate fix»: contenuto reale **due** entry, la sua e quella della discovery
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
+
+## 2026-11-12 — fix: attribute-row context menu — single owner, closes after selection (issue #216)
+**Prompt**: Juri in chat, no prompt file: «fetch issue #216 (right-click menu on a class attribute doesn't disappear after action selection; 5 canvas clicks needed to dismiss), checkout staging, plan first, then implement on fix/216-context-menu, commit, PR to staging».
+**Files touched**: commit `1a58397fc`: `frontend/src/components/editor-v2/EditorV2.tsx` (ownership guard on the CHILD_CONTEXT_MENU window listener: only the editor whose canvas owns the nodeId opens the row menu), `frontend/src/components/editor-v2/ContextMenu.tsx` (item close in a finally, so a throwing action cannot leave the menu open). This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — the guard narrows the row-menu openers to the owning editor only (each EditorV2 has its own ReactFlowProvider/node list); node/edge menus, sync and D/L layers unchanged; typecheck exit 0, build exit 0, vitest 12262 green + the 9 known red files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 sync file touched; canvas v2-flow menu wiring only)
+**Smoke visivo**: passato — user confirmation on a multi-tab project: right-click on an attribute row → one menu + one backdrop; item click closes the menu and runs the action once; one canvas click closes the menu.
+**Notes**: Root cause: ClassNode dispatches CHILD_CONTEXT_MENU on window (ClassNode.tsx:697/:759/:837); every mounted EditorV2 listened without an ownership check (EditorV2.tsx:3176); hidden dock tabs stay mounted (DockManager.tsx:123-125) → N open tabs = N stacked menus/backdrops: item click closed only the top copy, canvas click consumed one backdrop — the 5 clicks = 5 open tabs. Out-of-scope finding: U.tsx:260-263 always-truthy filter suppresses the classic-menu outside-click close within 300 ms.
+**Prompt document name**: — (Juri in chat, no prompt file)
 
 ## 2026-10-12 — merge: Alfonso's trunk into staging, his branch aligned by fast-forward (C-2026-10-12-1927)
 **Prompt**: Juri in chat, no prompt file: «Fai pull di tutti i branch e: 1) mergia alfonso-frontend-jjtl su staging e 2) staging su alfonso-frontend-jjtl». Run in the main tree on `staging`. No hard stop between the report and the merge: the request was the merge itself (P4 derogated, flagged here).
@@ -404,73 +469,4 @@ Detail: `docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.
 **Smoke visivo**: non applicabile
 **Notes**: Hard stop of Phase 1. 20 probe sessions and 3 scripted guard sessions on 2.1.296 with the flags lane-run uses. A loaded mod overrides the deny list at tool.check (git stash list ran), skips both PreToolUse hooks by answering a call, and runs host commands via $.process.run; sec-default is not seated here, so its arm was not run. A mod fails open by default, closed with .catch. 20 files in the report commit, above five: DOVE names them (rule 19).
 **Prompt document name**: 2026-10-11 17:45
-
-## 2026-10-11 — docs(goals): goal tree, new softgoals, correlations and hurts (P-2026-10-11-1650)
-**Prompt**: `claude_2026-10-11_1650_prompt_goal_tree_hurts.md`, lane full (data and docs only), unattended: SG-8..SG-12 under five macro goals in `goal-tree.json`, contributions for the new softgoals, the cost pass for hurts over every positive row, `correlations.json`, RC-27 on every added entry and on a 40-entry sample of the first draft, README, report, board on 4702.
-**Files touched**: `041cd2d47`: `docs/goals/softgoals.json`, `docs/goals/contributions.json`, `docs/goals/conflicts.json`, `docs/goals/goal-tree.json` (new), `docs/goals/correlations.json` (new), `docs/goals/README.md`, `docs/discovery/discovery_2026-10-11_goal_tree_hurts.md` (new); this entry, uncommitted (RC-17).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Step 9 gate exit 0 (negative control exit 1, 5 of 5 faults caught); `req-trace --no-cache` exit 0; reqTrace and laneBoardRequirements 41/41; check:docs 5/5.
-**Out-of-scope changes**: no: seven files in one commit, above five (RC-11), each named in the prompt; step 10 says four JSON files, they are five because `conflicts.json` (step 4) changed too.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile in this lane (data and docs); the chat's RC-23 check of the Requirements tab on 4702 passed on 2026-10-11 (12 softgoals in the filter, 13 conflicts, no em dash, render about 130 ms; 2.6 MB of pair tables, addressed by P-2026-10-11-1735).
-**Notes**: SG-8..SG-12 all kept (35 to 183 rows). Negative share 8% to 19%, first 12 hurt. RC-27, 677 items: contributions 515/35/21, correlations 25/28/11, conflicts 2/0/0, sample 32/5/3 (80% as written; the 3 rejected are SG-3 «scenes unchanged»). 27 negatives not recordable, one entry per pair (report §4). req-trace opposing pairs 612 to 6569 (Q1). Cache /tmp/lane-board-4702-timeline-cache.json; scratch /tmp/gt1650/.
-**Prompt document name**: 2026-10-11 16:50
-
-**Ticket** (P-2026-10-11-1650): `parseRegister` in `req-trace.mjs` does not parse R-D, R-2/3.6 and R-B12, which the goal-model parser and the contract check accept, so 7 entries of `contributions.json` never reach the Requirements tab (998 in the file, 991 on rows).
-
-## 2026-10-11 — merge: goal-tree into alfonso-frontend-jjtl (P-2026-10-11-1808)
-**Prompt**: `claude_2026-10-11_1808_prompt_merge_goal-tree.md`, a direct merge by `lane-run merge --direct`, no session: `goal-tree` at `041cd2d47` into `alfonso-frontend-jjtl`, merge base `f6e14efad`, 1 commit on the branch side.
-**Files touched**: merge `30e8e2b5e`: 7 files from the branch side (`docs/discovery/discovery_2026-10-11_goal_tree_hurts.md`, `docs/goals/README.md`, `docs/goals/conflicts.json`, `docs/goals/contributions.json`, `docs/goals/correlations.json`, `docs/goals/goal-tree.json`, `docs/goals/softgoals.json`); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `30e8e2b5e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8692 tests in 359 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: data-only merge of docs/goals; Requirements tab checked on 4702 (12 softgoals, 13 conflicts, no em dash)
-**Notes**: Rollback tag `pre-goal-tree` on `58a407501` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1808/result.json`.
-**Prompt document name**: 2026-10-11 18:08
-
-## 2026-10-11 — docs(research): governance drift dataset for CAIN 2027 (P-2026-10-11-1630)
-**Prompt**: `claude_2026-10-11_1630_prompt_cain_governance_dataset_discovery.md`: read-only discovery, the governance-drift dataset for a CAIN 2027 short paper (register history, RC-26 crossings, grammar conformance, RC-18, autonomy, rule timeline, the enforced vs text-only comparison, anonymization, threats).
-**Files touched**: `docs/research/cain-2027/discovery_2026-10-11_governance_dataset.md`, `docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/scripts/governance-dataset.ts`, `docs/research/cain-2027/scripts/rules-enforcement.csv`, `docs/research/cain-2027/scripts/rc26-hand-check.json`, eight CSVs in `docs/research/cain-2027/data/` (report commit); this entry, uncommitted (RC-17).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
-**Prompt document name**: 2026-10-11 16:30
-
-## 2026-10-11 — merge: cain-data into alfonso-frontend-jjtl (P-2026-10-11-1719)
-**Prompt**: `claude_2026-10-11_1719_prompt_merge_cain-data.md`, a direct merge by `lane-run merge --direct`, no session: `cain-data` at `e34fccc1f` into `alfonso-frontend-jjtl`, merge base `154311f55`, 1 commit on the branch side.
-**Files touched**: merge `2dc0982bc`: 13 files from the branch side (`docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/data/autonomy_weekly.csv`, `docs/research/cain-2027/data/comparison.csv`, `docs/research/cain-2027/data/conformance_daily.csv`, `docs/research/cain-2027/data/conformance_failures.csv`, `docs/research/cain-2027/data/decisions.csv`, `docs/research/cain-2027/data/rc18_daily.csv`, `docs/research/cain-2027/data/rules.csv`, and 5 more); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `2dc0982bc` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8636 tests in 357 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: docs-only merge (research dataset), no visual change
-**Notes**: Rollback tag `pre-cain-data` on `dfea753d4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1719/result.json`.
-**Prompt document name**: 2026-10-11 17:19
-
-## 2026-10-11 — docs(decisions): ratify the provisional rows of the digest, amend R-SIM-120 and R-VP-29, fix headers (P-2026-10-11-1540)
-**Prompt**: `claude_2026-10-11_1540_prompt_ratify_provisional_rows.md`, lane fast, unattended: apply Alfonso's «ok alle raccomandazioni» to the digest of P-2026-10-11-1430, RC-38 excepted: ratify 74 rows, amend R-SIM-120 and R-VP-29 then ratify them, apply the §7 header rewrites, regenerate `docs/digest/`, write the digest's §10 Outcome.
-**Files touched**: `d7a251297`: `docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`; this entry, uncommitted (RC-17).
-**Outcome**: ⚠️ partial
-**Corregge**: —
-**Causa**: (a)
-**Regressions**: no. `docs:digest --all` parses 401 of 402 rows, RC-38's header the only failure, as before; check:docs 5/5.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Partial: `--write` exits 2 on RC-38 and writes nothing, so the 34-date backfill of `docs/digest/` waits for RC-38 (adopted unattended, RC-21: the gate is not bypassed). 1 header says provisional (RC-38), 76 say `ratified by Alfonso 2026-10-11`; 39 cited commits on HEAD. Subject shortened to 72 (bash-guard). 1b clauses dropped: the section intros name the chat. Not applied: the R-SIM-70 paragraph (§6), the R-JS intros' «Marker: provisional». Detail: digest §10.
-**Prompt document name**: 2026-10-11 15:40
-
-**Ticket** (P-2026-10-11-1540): `docs:digest --write` writes nothing when any header fails to parse, so one row waiting for Alfonso (RC-38) blocks the digest of every date. Writing every date but the failing row's would unblock the backfill; a script change, Alfonso's call.
 

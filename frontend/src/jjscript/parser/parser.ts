@@ -42,6 +42,7 @@ import {
     BlockArgs,
     CreateOptions,
     QualifiedName,
+    LiteralValue,
     COMMANDS,
     ELEMENT_TYPES,
     KEYWORDS
@@ -629,8 +630,8 @@ export class Parser {
             operator = '=';
         }
 
-        // Value
-        const value = this.parseValueOrQualified();
+        // Value — an array literal `[a, b]` (#211) or the usual value-or-qualified-name
+        const value = this.parseSetValue();
 
         return { command: 'set', target, property, value, operator };
     }
@@ -1295,6 +1296,33 @@ export class Parser {
         }
 
         throw new Error(`Expected literal value, found '${token.value}'`);
+    }
+
+    /**
+     * The value of a `set` (#211): an array literal `[v1, v2, ...]` over the vector the
+     * attribute holds, or the usual value-or-qualified-name. Elements are literals or names,
+     * comma-separated; `= []` is the empty vector. A single-element `[1]` never reaches here:
+     * the lexer reads it as MULTIPLICITY (`lexer.ts readMultiplicityOrPunctuation`), and so do
+     * `[*]`, `[+]`, `[?]` — a documented sharp edge, not a parse of this method.
+     */
+    private parseSetValue(): LiteralValue | QualifiedName {
+        const token = this.peek();
+        if (token.type === 'PUNCTUATION' && token.value === '[') {
+            this.advance(); // consume '['
+            const values: (LiteralValue | QualifiedName)[] = [];
+            while (!(this.peek().type === 'PUNCTUATION' && this.peek().value === ']')) {
+                values.push(this.parseValueOrQualified());
+                if (!(this.peek().type === 'PUNCTUATION' && this.peek().value === ',')) break;
+                this.advance(); // consume ','
+            }
+            const close = this.peek();
+            if (!close || close.type !== 'PUNCTUATION' || close.value !== ']') {
+                throw new Error(`Expected ']' to close the array value`);
+            }
+            this.advance(); // consume ']'
+            return { kind: 'array', values };
+        }
+        return this.parseValueOrQualified();
     }
 
     private parseValueOrQualified() {

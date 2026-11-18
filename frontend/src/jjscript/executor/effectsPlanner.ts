@@ -179,8 +179,10 @@ export interface PlannedFeature {
     ownerId: string;
     feature: string;
     value: string | number | boolean | null;
-    /** A multi-valued attribute: `=` replaces its first value. */
+    /** A multi-valued attribute: `=` on a vector replaces the whole vector (#211). */
     many: boolean;
+    /** #211: the vector a `set` writes, when it is a list (`value` is then null). */
+    values?: (string | number | boolean | null)[];
     /** `M2`: a `set` (or `abstract`) on an element of the metamodel. */
     level?: 'M2';
 }
@@ -413,11 +415,39 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     const operator = args.operator ?? '=';
 
     if (attribute) {
-        if (operator !== '=') return fail('OPERATOR_NOT_SUPPORTED', `'${operator}' is not available on the attribute '${args.property}'`); // :977-987
+        // #211: a vector attribute (upper > 1) takes `= [...]`, `+= <v>`, `-= <v>`. The
+        // simulation does not track attribute slots, so it cannot check capacity or absence,
+        // the way it can for reference slots; the executor does.
+        const many = isManyValued(attribute.upper);
+        if (operator !== '=' && !many) return fail('OPERATOR_NOT_SUPPORTED', `'${operator}' is not available on the attribute '${args.property}'`); // :977-987
         if (!isLiteral(args.value)) return fail('TYPE_MISMATCH', `Attribute '${args.property}' expects a literal value`); // :988-998
+        const lit = args.value as LiteralValue;
+        if (lit.kind === 'array') {
+            if (operator !== '=') return fail('TYPE_MISMATCH', `'${operator}' takes a single element, not a list`);
+            if (!many) return fail('MULTIPLICITY_EXCEEDED', `'${ownerName}.${args.property}' is single-valued`);
+            for (const v of lit.values) {
+                if (!isLiteral(v) || (v as LiteralValue).kind === 'null' || (v as LiteralValue).kind === 'enumLiteral') {
+                    return fail('TYPE_MISMATCH', `An element of '${ownerName}.${args.property}' must be a primitive literal`);
+                }
+            }
+            const vector = lit.values.map((v) => literalToPrimitive(v as LiteralValue));
+            return ok({ kind: 'feature', value: {
+                line, owner: ownerName, ownerId: source.id, feature: args.property,
+                value: null, many: true, values: vector,
+            } });
+        }
+        if (lit.kind === 'null' && many && operator === '=') {
+            return ok({ kind: 'feature', value: {
+                line, owner: ownerName, ownerId: source.id, feature: args.property,
+                value: null, many: true, values: [],
+            } });
+        }
+        if ((operator === '+=' || operator === '-=') && (lit.kind === 'null' || lit.kind === 'enumLiteral')) {
+            return fail('TYPE_MISMATCH', `'${ownerName}.${args.property}' holds primitives, not ${lit.kind === 'null' ? 'null' : 'enum literals'}`);
+        }
         return ok({ kind: 'feature', value: {
             line, owner: ownerName, ownerId: source.id, feature: args.property,
-            value: literalToPrimitive(args.value), many: isManyValued(attribute.upper),
+            value: literalToPrimitive(lit), many,
         } });
     }
 

@@ -327,16 +327,19 @@ export class JsonModelService {
      * Build a reference to a classifier (class / enum / datatype). When the
      * classifier lives in a metamodel other than `currentModelId`, the origin
      * metamodel is recorded on the ref AND queued for full embedding.
+     * `qualifyAlways` records the origin metamodel even when it is the current
+     * one (an object's class: the same object must serialize identically in
+     * its owner's `objects` and in another document's `externalObjects`, #207).
      */
-    private static buildClassifierRef(classifier: any, currentModelId: string, ctx: BuildContext): JsonClassifierRef {
+    private static buildClassifierRef(classifier: any, currentModelId: string, ctx: BuildContext, qualifyAlways: boolean = false): JsonClassifierRef {
         const out: JsonClassifierRef = { name: classifier?.name || '' };
         try {
             const pkg = classifier?.package;
             if (pkg?.name) out.package = pkg.name;
 
             const ownerModel: LModel | undefined = classifier?.model;
-            if (ownerModel && ownerModel.id && ownerModel.id !== currentModelId) {
-                this.registerExternal(ownerModel, ctx);
+            if (ownerModel && ownerModel.id && (qualifyAlways || ownerModel.id !== currentModelId)) {
+                if (ownerModel.id !== currentModelId) this.registerExternal(ownerModel, ctx);
                 out.metamodel = {
                     id: ownerModel.id,
                     name: ownerModel.name || '',
@@ -400,7 +403,7 @@ export class JsonModelService {
         const metaclass: any = obj.instanceof;
         const out: any = {
             id: obj.id,
-            class: metaclass ? this.buildClassifierRef(metaclass, currentModelId, ctx) : { name: 'Object' },
+            class: metaclass ? this.buildClassifierRef(metaclass, currentModelId, ctx, true) : { name: 'Object' },
         };
         if (obj.name) out.name = obj.name;
 

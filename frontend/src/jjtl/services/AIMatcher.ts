@@ -1,14 +1,15 @@
 /**
  * AIMatcher - AI-powered mapping suggestions using configured LLM providers
  * Uses JodieConfigService to check provider availability
- * Uses AIProviderService to call the LLM
+ * Uses the provider registry (src/services/ai) to call the LLM
  */
 
 import { MetamodelElement } from '../views/MetamodelTreeView';
 import { MappingSuggestion, SuggestionConfidence, AnalysisProgressCallback } from '../types/suggestions';
-import { AIProviderService } from '../../services/AIProviderService';
 import { PromptService } from '../../services/PromptService';
-import {AIConfig, JodieConfig, TAIProvider} from "../../types/jodie";
+import type { ProviderId } from '../../services/ai';
+import { registry } from '../../services/ai';
+import { isProviderId, preferredModelId, preferredProviderId } from '../../components/common/ProviderModelSelector';
 
 export class AIMatcher {
     // Store elements for ID lookup after AI response
@@ -23,11 +24,11 @@ export class AIMatcher {
         targetElements: MetamodelElement[],
         sourceMetamodelName: string = 'Source',
         targetMetamodelName: string = 'Target',
-        aiProvider?: TAIProvider,
+        aiProvider?: ProviderId,
         signal?: AbortSignal,
         onProgress?: AnalysisProgressCallback
     ): Promise<MappingSuggestion[]> {
-        if (JodieConfig.getEnabledProviders().length == 0) {
+        if (registry.enabled().length == 0) {
             throw new Error('AI provider not configured. Please configure an AI provider in Settings.');
         }
 
@@ -49,17 +50,21 @@ export class AIMatcher {
         const targetClassCount = this.countClasses(targetElements);
 
         try {
-            const provider = aiProvider ?? AIConfig.getPreferred('mappings');
-            const model = AIConfig.getPreferredModel('mappings');
-            // TODO: AIProviderService.chat does not yet accept AbortSignal.
-            // To enable real cancellation, add `signal?: AbortSignal` to its signature
-            // and forward it to the underlying fetch() calls in each provider adapter.
-            //
+            const provider = aiProvider ?? preferredProviderId('mappings');
+            const model = preferredModelId('mappings');
+            if (!isProviderId(provider)) throw new Error(`Unsupported provider: ${provider}`);
             // Phase 2 — calling AI. Fire progress with the detail from phase 1 attached
             // to that (now completing) phase. Contract: onProgress(step) means "step is
             // starting; previous one is complete; detail below belongs to the previous one".
             onProgress?.('calling-ai', `${sourceClassCount} source classes, ${targetClassCount} target classes`);
-            const response = await AIProviderService.chat(prompt, provider, [], undefined, undefined, undefined, model);
+            // The signal aborts the request (R-AI-15); the abort surfaces below as the AbortError
+            // the panel already handles, whatever error the SDK threw.
+            const response = await registry.get(provider).chat({
+                system: PromptService.getRendered('chat'),
+                history: [{ role: 'user', content: prompt }],
+                model,
+                signal,
+            }).catch(e => { if (signal?.aborted) return ''; throw e; });
             if (signal?.aborted) {
                 const abortErr = new Error('Analysis was cancelled');
                 abortErr.name = 'AbortError';

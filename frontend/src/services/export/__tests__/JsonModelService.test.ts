@@ -162,6 +162,27 @@ describe('JsonModelService M1 reference closure (#128)', () => {
         expectResolvedOnce(doc, ['book', 'author']);
     });
 
+    it('serializes a snapshot in externalObjects identically to the object in its owner (#207)', () => {
+        const scenario = metamodel('Scenario');
+        const sustainability = metamodel('Sustainability');
+        const owner = model('elena_usecase_scenario', scenario.mm);
+        const referencing = model('sustainability', sustainability.mm);
+        const root = object('ElenaScenario', owner, scenario.cls);
+        const pathway = object('OnboardingPhase', owner, scenario.cls, false);
+        const goal = object('goal', owner, scenario.cls, false);
+        reference(root, 'pathway', [pathway.id], true);
+        reference(pathway, 'goal', [goal.id], true);
+        reference(object('assessment', referencing, sustainability.cls), 'scenario', [root.id]);
+
+        const ownerDoc = exported(owner);
+        const referencingDoc = exported(referencing);
+        expect(referencingDoc.externalObjects).toEqual(ownerDoc.objects);
+        expect(ownerDoc.objects[0].children.pathway[0].children.goal[0].class.metamodel)
+            .toEqual({ id: 'Scenario', name: 'Scenario', nsURI: 'urn:Scenario' });
+        expect(ownerDoc).not.toHaveProperty('externalMetamodels');
+        expect(referencingDoc.externalMetamodels.map((mm: any) => mm.id)).toEqual(['Scenario']);
+    });
+
     it('preserves local-only exports, containment, primitive attributes and enum literals', () => {
         const { cls, local, book } = setup();
         const chapter = object('chapter', local, cls);

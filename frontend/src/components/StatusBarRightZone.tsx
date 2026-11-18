@@ -13,7 +13,7 @@ import type { DState } from '../joiner';
 import { useSettingsModalSafe } from '../contexts/SettingsModalContext';
 import NotificationCenter, { useToastHistorySnapshot } from './NotificationCenter';
 import './StatusBarRightZone.scss';
-import { AIConfig, JodieConfig } from "../types/jodie";
+import { registry } from '../services/ai';
 import { AIEvents } from '../events/registry';
 import { VERSION_LABEL, VERSION_FULL_BASE } from '../version';
 
@@ -25,13 +25,13 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
     const settingsModal = useSettingsModalSafe();
     const { unreadCount } = useToastHistorySnapshot();
     const [showNotifications, setShowNotifications] = useState(false);
-    const [aiConnected, setAiConnected] = useState(() => JodieConfig.hasEnabledProviders());
+    const [aiConnected, setAiConnected] = useState(() => registry.enabled().length > 0);
     const bellRef = useRef<HTMLButtonElement>(null);
 
     const schemaVersion = useSelector((state: DState) => (state as any).version?.n);
 
     useEffect(() => {
-        const handler = () => setAiConnected(JodieConfig.hasEnabledProviders());
+        const handler = () => setAiConnected(registry.enabled().length > 0);
         window.addEventListener(AIEvents.PROVIDER_CHANGED, handler);
         window.addEventListener('storage', handler);
         return () => {

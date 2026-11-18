@@ -135,7 +135,9 @@ function literalText(value: LiteralValue): string {
         case 'number': return String(value.value);
         case 'boolean': return value.value ? 'yes' : 'no';
         case 'null': return 'nothing';
-        case 'array': return value.values.map(literalText).join(', ');
+        case 'array':
+            // #211: an element may be a name, not a literal.
+            return value.values.map((v: any) => isLiteral(v) ? literalText(v) : (v as QualifiedName).raw).join(', ');
         case 'enumLiteral': return value.literal;
         default: return '';
     }

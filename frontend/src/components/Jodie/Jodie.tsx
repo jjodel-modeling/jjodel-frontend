@@ -8,16 +8,16 @@ import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
 import {
-    AIProvider,
     ChatMessage,
     ChatImage,
     ChatDocument,
     ChatState,
-    TAIProvider, AIConfig, AI, JodieConfig,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
     CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope, ConsoleEntry
-} from '../../types/jodie';
+} from './types';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
+import { ECapabilities, FeaturePreferenceStore, registry, type ProviderId } from '../../services/ai';
+import { isProviderId, preferredModelId, preferredProviderId } from '../common/ProviderModelSelector';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
 import { getActiveModel, getActiveMetamodel, getActiveLevel, setActiveArtifactCache } from '../../jjscript/executor/utils';
@@ -40,6 +40,11 @@ import type { ConsoleContext } from './console/types';
 import { consumerHelpText } from './consumerVoice';
 import { gateReply } from './reservedIdentifierGate';
 import './JodieWindow.css';
+
+// The load-time migrations of the stored AI preferences (global default, legacy ids, foreign and
+// retired models). They ran as `JodieConfig.load` when types/jodie.ts was evaluated through this
+// module's imports; #196 L6 deleted that file, so they run here, once, at the same point of startup.
+registry.load();
 
 // Generate unique message ID
 function generateMessageId(): string {
@@ -152,7 +157,7 @@ export function Jodie(): JSX.Element {
     });
 
     // Active provider (per-feature: 'chat')
-    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() => AIConfig.getPreferred('chat'));
+    const [activeProvider, setActiveProvider] = useState<ProviderId>(() => preferredProviderId('chat'));
 
     // RAG state
     const lastIndexedProjectRef = useRef<string | null>(null);
@@ -195,7 +200,13 @@ export function Jodie(): JSX.Element {
         window.addEventListener(AIEvents.MODELS_UPDATED, onModels);
         return () => window.removeEventListener(AIEvents.MODELS_UPDATED, onModels);
     }, []);
-    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider, modelsTick]);
+    // The model the chat calls the active provider with: its capabilities gate the attachments.
+    const activeModel = useMemo(() => {
+        if (!isProviderId(activeProvider)) return undefined;
+        const provider = registry.get(activeProvider);
+        const requested = preferredProviderId('chat') === activeProvider ? preferredModelId('chat') : undefined;
+        return provider.model(provider.resolveModel(requested));
+    }, [activeProvider, modelsTick]);
     const state = store.getState();
 
     // Counter bumped on EDITOR_TYPE_CHANGE — drives projectContext re-evaluation
@@ -409,7 +420,7 @@ export function Jodie(): JSX.Element {
     useEffect(() => {
         const handleSettingsChanged = () => {
             // Refresh active provider when settings change
-            setActiveProvider(AIConfig.getPreferred('chat'));
+            setActiveProvider(preferredProviderId('chat'));
         };
 
         window.addEventListener(AIEvents.SETTINGS_CHANGED, handleSettingsChanged);
@@ -581,9 +592,9 @@ export function Jodie(): JSX.Element {
     }, []);
 
     // Change provider
-    const handleProviderChange = useCallback((provider: TAIProvider) => {
+    const handleProviderChange = useCallback((provider: ProviderId) => {
         setActiveProvider(provider);
-        AIConfig.setPreferred('chat', provider);
+        FeaturePreferenceStore.set('chat', provider);
     }, []);
 
     // Send message
@@ -664,8 +675,8 @@ export function Jodie(): JSX.Element {
         let providerToUse = activeProvider;
 
         // Validate that current provider is configured
-        if (!AIConfig.get(activeProvider)?.isConfigured()) {
-            const enabledProviders = JodieConfig.getEnabledProviders();
+        if (!(isProviderId(activeProvider) && registry.get(activeProvider).enabled())) {
+            const enabledProviders = registry.enabled().map(p => p.name);
 
             if (enabledProviders.length === 0) {
                 // No providers configured at all
@@ -687,14 +698,14 @@ export function Jodie(): JSX.Element {
             const firstEnabled = enabledProviders[0];
             providerToUse = firstEnabled;
             setActiveProvider(firstEnabled);
-            AIConfig.setPreferred('chat', firstEnabled);
+            FeaturePreferenceStore.set('chat', firstEnabled);
 
             // Add info message about switching
             const switchMessage: ChatMessage = {
                 id: generateMessageId(),
                 kind: 'chat',
                 role: 'assistant',
-                content: `Switched to ${AI[firstEnabled].name} (your configured provider).`,
+                content: `Switched to ${firstEnabled} (your configured provider).`,
                 timestamp: Date.now(),
             };
             setChatState(prev => ({
@@ -944,8 +955,8 @@ export function Jodie(): JSX.Element {
                     onOpenSettings={handleOpenSettings}
                     onOpenDocumentation={handleOpenDocumentation}
                     onJjScriptExecuted={handleJjScriptExecuted}
-                    supportsVision={activeVersion?.capabilities.vision || false}
-                    supportsPDF={activeVersion?.capabilities.pdf || false}
+                    supportsVision={activeModel?.has(ECapabilities.IMAGES) || false}
+                    supportsPDF={activeModel?.has(ECapabilities.DOCUMENTS) || false}
                     prefilledMessage={pendingPrefill}
                     onStop={handleStop}
                     isVisible={windowVisible}

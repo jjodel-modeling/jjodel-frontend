@@ -19,7 +19,7 @@
  * "JjScript Error" message the handler builds, so the earlier results stay.
  */
 import type { LanguageProvider, ConsoleContext, ConsoleResult } from '../types';
-import type { ChatMessage } from '../../../../types/jodie';
+import type { ChatMessage } from '../../types';
 import { JjScriptService, parse } from '../../../../jjscript';
 import { groupBlockCommands } from '../../../../jjscript/executor/executor';
 

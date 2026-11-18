@@ -19,13 +19,13 @@ import type { FakeStateProps } from '../../../joiner';
 import { DState, LProject, LUser, DUser, LModel, U } from '../../../joiner';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
-import {AI, AIConfig, AIProvider, JodieConfig, TAIProvider} from '../../../types/jodie';
+import { registry } from '../../../services/ai';
 import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
-import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
+import type { DocumentationStatus } from '../../../types/documentation';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import { AIDisclaimer } from '../../common/AIDisclaimer';
 import { Badge } from '../../common/Badge';
-import { ProviderModelSelector } from '../../common/ProviderModelSelector';
+import { ProviderModelSelector, preferredProviderId } from '../../common/ProviderModelSelector';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -580,7 +580,7 @@ function DocumentationTabComponent(props: AllProps) {
     const [editorCopyStatus, setEditorCopyStatus] = useState<'idle' | 'copied'>('idle');
 
     // AI Provider selector (with persistence)
-    const selectedProvider = AIConfig.getPreferred('documentation'); // useAIProviderPreference('documentation');
+    const selectedProvider = preferredProviderId('documentation'); // useAIProviderPreference('documentation');
     const settingsModal = useSettingsModalSafe();
 
     // Progress modal for regeneration
@@ -643,7 +643,7 @@ function DocumentationTabComponent(props: AllProps) {
         setIsGenerating(true);
         try {
             // Use AI if available, otherwise local
-            const useJjodie = JodieConfig.hasEnabledProviders();
+            const useJjodie = registry.enabled().length > 0;
             const result = await DocumentationService.generate(project, useJjodie);
 
             // Content already includes @protected section from DocumentationService
@@ -687,7 +687,7 @@ function DocumentationTabComponent(props: AllProps) {
         setShowRegenerateModal(false);
 
         // Determine if using AI or Local
-        const useAI = JodieConfig.hasEnabledProviders();
+        const useAI = registry.enabled().length > 0;
 
         // Initialize steps based on generation mode
         const initialSteps: GenerationStep[] = useAI ? [

@@ -326,6 +326,57 @@ describe('Parser: set', () => {
         const a = args<SetArgs>('set Person.superTypes += Animal');
         expect(a.operator).toBe('+=');
     });
+
+    it('should parse a string list "[a, b]" (#211)', () => {
+        const a = args<SetArgs>('set s.tags = ["a", "b"]');
+        expect(a.operator).toBe('=');
+        const value = a.value as any;
+        expect(value.kind).toBe('array');
+        expect(value.values.map((v: any) => v.kind)).toEqual(['string', 'string']);
+        expect(value.values.map((v: any) => v.value)).toEqual(['a', 'b']);
+    });
+
+    it('should parse a number list (#211)', () => {
+        const a = args<SetArgs>('set s.bounds = [1, 2, 3]');
+        const value = a.value as any;
+        expect(value.kind).toBe('array');
+        expect(value.values.map((v: any) => v.value)).toEqual([1, 2, 3]);
+    });
+
+    it('should parse name elements of a list (#211)', () => {
+        const a = args<SetArgs>('set Person.superTypes = [Animal, Plant]');
+        const value = a.value as any;
+        expect(value.kind).toBe('array');
+        // Name elements are QualifiedNames, not literals: no `kind` field.
+        expect(value.values.every((v: any) => v && !('kind' in v))).toBe(true);
+        expect(value.values.map((v: any) => v.raw)).toEqual(['Animal', 'Plant']);
+    });
+
+    it('should parse the empty list (#211)', () => {
+        const a = args<SetArgs>('set s.tags = []');
+        const value = a.value as any;
+        expect(value.kind).toBe('array');
+        expect(value.values).toEqual([]);
+    });
+
+    it('parses a list after += (the executor refuses it) (#211)', () => {
+        const a = args<SetArgs>('set s.tags += ["a"]');
+        expect(a.operator).toBe('+=');
+        expect((a.value as any).kind).toBe('array');
+    });
+
+    it('refuses an unterminated list (#211)', () => {
+        const r = parse('set s.tags = [1, 2');
+        expect(r.success).toBe(false);
+        expect(r.errors?.[0]?.message).toBe("Expected ']' to close the array value");
+    });
+
+    it('does not read a multiplicity as a list (#211)', () => {
+        // `[0..3]` is the lexer's MULTIPLICITY token, not an array literal.
+        const r = parse('set s.tags = [0..3]');
+        expect(r.success).toBe(false);
+        expect(r.errors?.[0]?.message).toMatch(/qualified name or identifier/);
+    });
 });
 
 // ─── ADD ─────────────────────────────────────────────────────
