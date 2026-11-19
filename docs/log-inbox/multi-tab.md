@@ -393,3 +393,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no visual change; app probe S1-S6 on 3074, chat check 2026-11-19 16:46)
 **Notes**: Probe S1-S5 pass as in L4c (MM 8/5 at r0..r3, Families 8, drag kept, drop +1, save/reload identical). S6: edge kept (B 44 to 45, rendered, 0 dup), mark check fails: both callers reach the writer with childVertexId null (store one macrotask behind), ticket filed. Typecheck 0, vitest 628 / 3 known, build ok. Second cause (c): the prompt assumed the writer marks. Unknown: the A-to-no-model switch then unmount, not measured (§11.5).
 **Prompt document name**: 2026-11-19 16:25
+
+## 2026-11-19 — merge: multi-tab-l4c into alfonso-frontend-jjtl (P-2026-11-19-1705)
+**Prompt**: `claude_2026-11-19_1705_prompt_merge_multi-tab-l4c.md`, lane full (merge; zero conflicts measured): bring `multi-tab-l4c` at 8b5ff3c6b into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 2f9277a66; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: 3ca35aebc (merge), 17 files — `frontend/src/components/editor-v2/sync/syncState.ts`, `sync/canvasToJjom.ts`, `sync/__tests__/syncStateByModel.test.ts`, `hooks/useJjomSync.ts`, `hooks/useM1ReferenceEdges.ts`, `hooks/useJjomSelection.ts`, `hooks/createAdapter.ts`, `hooks/__tests__/createAdapterFlow.test.ts`, `utils/jjomTransformers.ts`, `EditorV2.tsx`, `contextMenu/ContextMenu.tsx`, the editor groups discovery, three prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry and the Status of the prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 628 passed files, 16495 passed, 0 failed and 3 skipped (16498, expected 16482 + 13): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: no (above five files: the merge brings the branch's 17, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 17:24, unattended, on the gates and the branch probes S1-S6; Alfonso in the morning digest)
+**Notes**: No conflict, no union; merge tree 1e294ae8a equal to the committed tree; probes as expected (R-MT-29 once, R-MT-30 none, three headings once). Step 1 not met to the letter: the 1610 prompt reads superseded, not eseguito; accepted as terminal, named in the prompt's findings, declared in the merge body. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 17:05
