@@ -380,3 +380,16 @@ active log is not touched by this lane.
 **Priority**: low
 **Found in**: P-2026-11-19-1625
 **Detail**: docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md
+
+## 2026-11-19 — fix: no clear from a model-less editor, composition edges by model (multi-tab L4d)
+**Prompt**: `claude_2026-11-19_1625_prompt_multi-tab-l4d-relaunch.md`, lane full, critical zone (R-MT-26 item 4, go-ahead flag): relaunch of the blocked P-2026-11-19-1610 for the two residues of L4c: a model-less editor's unmount clears nothing, `createCompositionEdgeForObjects` files under the model its callers pass
+**Files touched**: d0c786696 (code): `editor-v2/sync/syncState.ts`, `hooks/useJjomSync.ts`, `sync/canvasToJjom.ts`, `contextMenu/ContextMenu.tsx`, `hooks/createAdapter.ts`, `sync/__tests__/syncStateByModel.test.ts`, `hooks/__tests__/createAdapterFlow.test.ts` (:98); 9f73ac082 (docs): discovery §11.5, `docs/decisions.md` R-MT-29 (one sentence); eaad9e54d: ticket in this inbox; ea99c4c40: Status of 1625 and 1610; this commit: this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-19 15:30 `claude_2026-11-19_1530_prompt_multi-tab-l4c-registries-by-model.md`
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (the ticket entry eaad9e54d in this inbox, outside the approved list; above five files: the seven code files above, all approved)
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (no visual change; app probe S1-S6 on 3074, chat check 2026-11-19 16:46)
+**Notes**: Probe S1-S5 pass as in L4c (MM 8/5 at r0..r3, Families 8, drag kept, drop +1, save/reload identical). S6: edge kept (B 44 to 45, rendered, 0 dup), mark check fails: both callers reach the writer with childVertexId null (store one macrotask behind), ticket filed. Typecheck 0, vitest 628 / 3 known, build ok. Second cause (c): the prompt assumed the writer marks. Unknown: the A-to-no-model switch then unmount, not measured (§11.5).
+**Prompt document name**: 2026-11-19 16:25
