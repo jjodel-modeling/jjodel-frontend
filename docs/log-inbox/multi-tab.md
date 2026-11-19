@@ -502,3 +502,18 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-19 23:15 on 3095; mouse probe 9/9 at 1600 and 1280, 0 console errors)
 **Notes**: Root cause: the app bar project label and the dashboard press noted the summary tab, so group 1 went active before open. Filter in noteActiveTab via DockManager's DModel test. Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. Probe without the filter fails the 3 reported steps. Known residue, not this lane: left bar and status bar follow the last artifact tab while the dashboard shows. Crops in ~/.jjodel-lanes/P-2026-11-19-2236/.
 **Prompt document name**: 2026-11-19 22:36
+
+## 2026-11-20 — fix: the last children[0] readers go through the active group (multi-tab lane 6)
+**Prompt**: `claude_2026-11-19_2336_prompt_multi-tab-readers.md`, lane full: Console, navigationUtils, JjScript utils, openTemplateEditor and canvasSelection read the active tab of the dock's first panel; route them through `dockGroups.ts`, one-group behaviour unchanged, outside hits reported only
+**Files touched**: 8f6d70f46 (`Console.tsx`, `navigationUtils.ts`, `jjscript/executor/utils.ts`, `openTemplateEditor.ts`, `canvasSelection.ts`, `openTemplateEditor.test.ts`, new `utils/__tests__/navigationUtils.test.ts`); this commit: this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 files, above five, all on the prompt's approved list: the five and their tests)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (mouse probe 11/11 at 1600, 0 console errors, dev server 3072; Alfonso's look pending at the hard stop)
+**Notes**: activeTabId + modelOfTabId (Console, JjScript), modelGroups (navigationUtils counts every group), activeGroup (codegen). Gates: typecheck 0, vitest 3 known import failures only, build ok. Bench: 4 two-group tests die on HEAD. Probe control on HEAD: 9/11, S3 and S4 fail. Crops, probe and control in ~/.jjodel-lanes/P-2026-11-19-2336/.
+**Prompt document name**: 2026-11-19 23:36
+
+**Ticket** (lane 6 findings, not fixed): (1) the JjScript probe step does not discriminate: the EDITOR_TYPE_CHANGE cache names Office on HEAD too, so the dock reader of `jjscript/executor/utils.ts` is a fallback the UI rarely reaches. (2) `children[0]` hits left outside the five: `Dock.tsx` 197, 217 (known, R-MT-30), `MyRcDock.tsx` 276, `Navbar.tsx` 736, 1938, 1941. (3) A template tab in group 2 squeezes group 1 to about 135 px (crop s4); lane 5 width rule. (4) The generator pane says «No model conforms to SmartBuilding» with Apartment and Office open, on HEAD too.
