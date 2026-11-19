@@ -10,6 +10,7 @@
 
 import { buildEvalContext } from '../../jjscript';
 import type { ExecutionContext } from '../../jjscript/types';
+import { getActiveLevel, getActiveModel, getActiveMetamodel } from '../../jjscript/executor/utils';
 import { EvaluationContext, JjelEvaluator, JjelTimeoutError } from '../../jjel';
 import { parseExpression } from '../../jjel/parser';
 import type { JjelValue, JjelWarning } from '../../jjel';
@@ -26,9 +27,29 @@ function getCurrentProjectId(): string | null {
     }
 }
 
+/**
+ * Metamodel the evaluation reads, resolved from the UI as JjScriptService does: with a
+ * model tab active, that model's own metamodel; otherwise the active metamodel. Without
+ * it, getTargetMetamodel falls back to the project's first metamodel whenever a model
+ * tab is active, and `instances` lists another metamodel's objects (#192, as #220).
+ */
+function activeTargetMetamodelId(): string | undefined {
+    try {
+        if (getActiveLevel() === 'M1') {
+            const inst = (getActiveModel() as any)?.instanceof;
+            const id = typeof inst === 'string' ? inst : inst?.id;
+            if (id) return id;
+        }
+        return getActiveMetamodel()?.id ?? undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 function makeMinimalContext(): ExecutionContext {
     return {
         projectId: getCurrentProjectId() ?? '',
+        targetMetamodelId: activeTargetMetamodelId(),
         history: [],
         variables: new Map(),
     };

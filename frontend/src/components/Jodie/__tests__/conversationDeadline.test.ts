@@ -15,6 +15,11 @@ vi.mock('../../../joiner', () => ({
 vi.mock('../../../jjscript', () => ({
     buildEvalContext: () => ({ ...bindings.current }),
 }));
+vi.mock('../../../jjscript/executor/utils', () => ({
+    getActiveLevel: () => 'M2',
+    getActiveModel: () => null,
+    getActiveMetamodel: () => null,
+}));
 
 import {
     evaluateJjelInJodie,
