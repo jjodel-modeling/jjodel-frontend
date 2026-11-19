@@ -450,3 +450,16 @@ active log is not touched by this lane.
 **Ticket**: Reported by Alfonso at the lane 2b visual check: a metamodel opens in the left group (group 1) whatever the active group, not in the active group as G3 says for every artifact. Next lane.
 **Priority**: medium
 **Found in**: P-2026-11-19-1915
+
+## 2026-11-19 — merge: multi-tab-groups-2b into alfonso-frontend-jjtl (P-2026-11-19-2124)
+**Prompt**: `claude_2026-11-19_2124_prompt_merge_multi-tab-groups-2b.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-groups-2b` at b18a0b03d into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 9ada8807b; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: f84c48f21 (merge), 11 files — `Navbar.tsx`, `navbar.scss`, `TabsOverflowMenu.tsx`, `BottomToolbar.tsx`, `Dashboard.tsx`, `DockManagerStyles.scss`, `abstract/style.scss`, two prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2124
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16522 passed, 0 failed and 3 skipped (16525, expected 16522 + 0, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 11, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 21:37, unattended, on the gates and Alfonso's visual GO on 2b at 21:18; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union (trunk's 2a merge entry first, then the branch's 2b entry and its ticket; a pure addition, 18 lines over the trunk, 13 over the branch). Probes as expected (three headings once). Trunk side 4 files, not 3: c1f08b3c5 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 21:24
