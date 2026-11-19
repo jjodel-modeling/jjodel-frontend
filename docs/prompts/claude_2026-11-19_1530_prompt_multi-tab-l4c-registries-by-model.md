@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1530
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · 2837e117d, dfef10a39 · verifica visiva non applicabile (no visual change; chat check 2026-11-19 15:57 on the probe numbers: S1 5 registered edges kept, S2 Families 8 edges stable, S3 drag kept, S4 drop one node no duplicate edge, S5 save/reload identical; gates green)
 Lane: full (implementation, critical zone, standing go-ahead R-MT-26 (4); Alfonso's GO 2026-11-19 15:28 «via fino alla fine con /lane auto» on the recommendations of the editor groups discovery)
 Depends: P-2026-11-19-1330 and P-2026-11-19-1350 (editor groups discovery, Q7: L4c first; Layer Impact Report in §4.4)
 Worktree: ~/jjodel-w-mtl4c, branch multi-tab-l4c, created from the trunk `alfonso-frontend-jjtl` at 2f9277a66, at this prompt's commit

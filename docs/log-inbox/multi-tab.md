@@ -361,3 +361,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat smoke 23:02: 3001 serves the trunk, index, EditorV2.tsx and DockManager.tsx transform with 200; Alfonso's visual GO on the same code on 3061 at 21:55)
 **Notes**: No conflict, no union; all probes as expected. Trunk tip full vitest: 2 load reds under concurrent runs (laneRun timeout, outline 10 ms), both green alone; none on the merge. The first trunk hook run went to the background on timeout: stopped, re-run in the foreground. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change). Rule 16: active log read only at closure. Tip moved after the merge by docs-only 6fea9e8e2 (P-2026-11-08-2230), another chat.
 **Prompt document name**: 2026-11-08 22:23
+
+## 2026-11-19 — fix: sync registries keyed by model (multi-tab L4c)
+**Prompt**: `claude_2026-11-19_1530_prompt_multi-tab-l4c-registries-by-model.md`, lane full, critical zone (R-MT-26 item 4, GO 15:28): key the `syncState.ts` registries by model so the last tab of model A no longer clears model B's entries; design §4.4 of the editor groups discovery
+**Files touched**: 2837e117d (code): `editor-v2/sync/syncState.ts`, `sync/__tests__/syncStateByModel.test.ts` (new), `hooks/useJjomSync.ts`, `sync/canvasToJjom.ts`, `hooks/useM1ReferenceEdges.ts`, `utils/jjomTransformers.ts`, `hooks/useJjomSelection.ts`, `EditorV2.tsx`; dfef10a39 (docs): `docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md` §11, `docs/decisions.md` R-MT-29; this commit: the prompt's Status, this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (above five files: the ten above, all in the prompt's approved list of §4.4; `m1EdgeSweep.ts` needed no change)
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (no visual change; app probe 6/6 on 3074, chat check 2026-11-19 15:57)
+**Notes**: Probe: SmartBuilding registered edges 5/5/5/5 at r0..r3 (5/5/0/0 before, §4.2); Families 8 edges stable; drag kept; drop +1 node, no duplicate edge; save/reload identical. Typecheck 0, vitest 628 passed / 3 known import failures, build ok. S3 rewritten twice (criterion, then a close that never fired), told in §11.4. Shared bucket left for `createCompositionEdgeForObjects` and `transformJjomGraph`.
+**Prompt document name**: 2026-11-19 15:30
