@@ -1,7 +1,7 @@
 /**
  * The editor groups of the dock (multi-tab lane 2a, R-MT-30): every rc-dock panel of the `models`
  * group is a group, as in VS Code. The active group is the group of the last focused or activated
- * tab; the dock's other readers go through `activeGroup` instead of reading `dockbox.children[0]`.
+ * artifact tab; the dock's other readers go through `activeGroup` instead of reading `dockbox.children[0]`.
  * Split Right is the only move that makes a group (`dockMoveAllowed`).
  *
  * No imports: the bench executes it. The layout is read structurally, so a saved layout (the one
@@ -44,10 +44,22 @@ export function groupOfTab(layout: any, tabId: string | null | undefined): Group
 const RECENT_CAP = 32;
 let recent: string[] = [];
 
-/** Records that the tab `tabId` was focused or activated. */
-export function noteActiveTab(tabId: string | null | undefined): void {
-    if (!tabId || recent[0] === tabId) return;
+// Only artifact tabs, a model's or a metamodel's (further tabs `<id>~tab<N>` included), count for the active
+// group (P-2026-11-19-2236): the project summary, from which artifacts are opened, is no editor, as VS Code's
+// Explorer is not. The test lives with the store (`DockManager`, which sets it); unset, only the summary is excluded.
+const notSummary = (tabId: string) => tabId !== SUMMARY_TAB_ID;
+let isArtifactTab: (tabId: string) => boolean = notSummary;
+
+/** Sets the test of an artifact tab; `undefined` restores the default (every tab but the project summary). */
+export function setArtifactTabPredicate(predicate: ((tabId: string) => boolean) | undefined): void {
+    isArtifactTab = predicate ?? notSummary;
+}
+
+/** Records that the tab `tabId` was focused or activated; a non-artifact tab is not recorded. True when recorded. */
+export function noteActiveTab(tabId: string | null | undefined): boolean {
+    if (!tabId || recent[0] === tabId || !isArtifactTab(tabId)) return false;
     recent = [tabId, ...recent.filter(id => id !== tabId)].slice(0, RECENT_CAP);
+    return true;
 }
 
 export function recentTabIds(): readonly string[] { return recent; }

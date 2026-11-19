@@ -5,7 +5,7 @@ import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from 
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
-import { activeGroup, groupOfTab, noteActiveTab, withSplitRight } from "./tabs/dockGroups";
+import { activeGroup, groupOfTab, noteActiveTab, setArtifactTabPredicate, withSplitRight } from "./tabs/dockGroups";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
@@ -689,5 +689,8 @@ class DockManager {
     }
 
 }
+
+// Only a model's or a metamodel's tab makes its group the active one (P-2026-11-19-2236): the test `open` uses, on the model of the tab id.
+setArtifactTabPredicate(tabId => (store.getState() as any).idlookup?.[modelOfTabId(tabId)]?.className === 'DModel');
 
 export default DockManager;
