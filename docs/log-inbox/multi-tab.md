@@ -489,3 +489,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 22:30, unattended, on the gates and Alfonso's visual GO on the branch at 22:06 on 3087; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, resolved by union (trunk's 2b merge entry first, then the branch's lane mm entry; a pure addition, 13 lines over either side). Probes as expected (R-MT-31 once, R-MT-32 none, two headings once). Trunk side 4 files, not 3: 7f4222a73 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 22:14
+
+## 2026-11-19 — fix: the project tab does not make its group active (multi-tab lane active-group)
+**Prompt**: `claude_2026-11-19_2236_prompt_multi-tab-active-group.md`, lane full: a model or metamodel opened from the project dashboard landed in group 1, not the active group; only artifact tabs now count for the active group, R-MT-32
+**Files touched**: 52cdcda06 (`dockGroups.ts`, `Dock.tsx`, `DockManager.tsx`, `dockGroups.test.ts`, `dockManagerSecondTab.test.ts`); f83fc698b (`docs/decisions.md` R-MT-32); this commit: this inbox, Status of 2236
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 16:00
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (6 files, above five, all on the prompt's approved list: the five above and `docs/decisions.md`; `MyRcDock.tsx` untouched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 23:15 on 3095; mouse probe 9/9 at 1600 and 1280, 0 console errors)
+**Notes**: Root cause: the app bar project label and the dashboard press noted the summary tab, so group 1 went active before open. Filter in noteActiveTab via DockManager's DModel test. Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. Probe without the filter fails the 3 reported steps. Known residue, not this lane: left bar and status bar follow the last artifact tab while the dashboard shows. Crops in ~/.jjodel-lanes/P-2026-11-19-2236/.
+**Prompt document name**: 2026-11-19 22:36

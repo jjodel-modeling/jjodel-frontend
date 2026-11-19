@@ -51,7 +51,7 @@ describe('DockManager, several tabs on one model', () => {
     beforeEach(() => {
         resetDockGroups();
         h.consumer = false;
-        h.state = { idlookup: { M: { id: M, className: 'DModel', isMetamodel: false }, MM: { id: 'MM', className: 'DModel', isMetamodel: true } } };
+        h.state = { idlookup: { M: { id: M, className: 'DModel', isMetamodel: false }, MM: { id: 'MM', className: 'DModel', isMetamodel: true }, N: { id: 'N', className: 'DModel', isMetamodel: false } } };
     });
 
     describe('closeTabsForEntity', () => {

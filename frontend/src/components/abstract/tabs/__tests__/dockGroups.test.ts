@@ -1,10 +1,10 @@
 /**
  * Multi-tab lane 2a (P-2026-11-19-1600, R-MT-30): the editor groups of the dock, executed on plain layouts.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     activeGroup, activeTabId, dockMoveAllowed, groupOfTab, modelGroups, noteActiveTab, recentTabIds,
-    resetDockGroups, splitRightInProgress, withSplitRight, SUMMARY_TAB_ID,
+    resetDockGroups, setArtifactTabPredicate, splitRightInProgress, withSplitRight, SUMMARY_TAB_ID,
 } from '../dockGroups';
 
 const tab = (id: string) => ({ id, group: 'models' });
@@ -84,6 +84,57 @@ describe('dockGroups', () => {
             for (let i = 0; i < 50; i++) noteActiveTab(`t${i}`);
             expect(recentTabIds()).toHaveLength(32);
             expect(recentTabIds()[0]).toBe('t49');
+        });
+    });
+
+    describe('only artifact tabs count for the active group (P-2026-11-19-2236)', () => {
+        const artifacts = new Set(['A', 'A~tab2', 'MM']);
+        beforeEach(() => setArtifactTabPredicate(id => artifacts.has(id.split('~tab')[0])));
+        afterEach(() => setArtifactTabPredicate(undefined));
+
+        it('the project tab noted after an artifact tab does not move the active group', () => {
+            const l = layout(panel('g1', [SUMMARY_TAB_ID, 'A'], SUMMARY_TAB_ID), panel('g2', ['A~tab2']));
+            noteActiveTab('A~tab2');
+            noteActiveTab(SUMMARY_TAB_ID);
+            expect(activeGroup(l)?.id).toBe('g2');
+            expect(activeTabId(l)).toBe('A~tab2');
+        });
+
+        it('any other non-artifact tab noted after an artifact tab does not move it either', () => {
+            const l = layout(panel('g1', [SUMMARY_TAB_ID, 'doc_x'], 'doc_x'), panel('g2', ['MM']));
+            noteActiveTab('MM');
+            noteActiveTab('doc_x');
+            expect(activeGroup(l)?.id).toBe('g2');
+        });
+
+        it('an artifact tab still moves it, a further tab included', () => {
+            const l = layout(panel('g1', [SUMMARY_TAB_ID, 'A']), panel('g2', ['A~tab2']));
+            noteActiveTab('A~tab2');
+            noteActiveTab('A');
+            expect(activeGroup(l)?.id).toBe('g1');
+            noteActiveTab(SUMMARY_TAB_ID);
+            noteActiveTab('A~tab2');
+            expect(activeGroup(l)?.id).toBe('g2');
+        });
+
+        it('only non-artifact tabs noted: the first group', () => {
+            const l = layout(panel('g1', [SUMMARY_TAB_ID]), panel('g2', ['doc_x']));
+            noteActiveTab('doc_x');
+            noteActiveTab(SUMMARY_TAB_ID);
+            expect(activeGroup(l)?.id).toBe('g1');
+            expect(recentTabIds()).toEqual([]);
+        });
+
+        it('noteActiveTab says whether it recorded the tab', () => {
+            expect(noteActiveTab(SUMMARY_TAB_ID)).toBe(false);
+            expect(noteActiveTab('A')).toBe(true);
+            expect(noteActiveTab('A')).toBe(false);
+        });
+
+        it('with no predicate set, the project tab alone is not an artifact', () => {
+            setArtifactTabPredicate(undefined);
+            expect(noteActiveTab(SUMMARY_TAB_ID)).toBe(false);
+            expect(noteActiveTab('X')).toBe(true);
         });
     });
 

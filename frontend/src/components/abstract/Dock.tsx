@@ -289,7 +289,8 @@ function DockComponent(props: AllProps) {
             const layout = dock.getLayout();
             const group = modelGroups(layout).find(p => p.id === row.dataset.dockid);
             if (!group?.activeId || activeTabId(layout) === group.activeId) return;
-            noteActiveTab(group.activeId);
+            // Only an artifact tab moves the active group (P-2026-11-19-2236): a press on the project summary leaves it as it is.
+            if (!noteActiveTab(group.activeId)) return;
             announceActiveTab(layout);
             PinnableDock.instance?.forceEditorTypeBroadcast?.();
             DockManager.refreshCanvasSplit();
