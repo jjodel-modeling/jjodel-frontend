@@ -1154,7 +1154,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 >
                     {splitPanel}
                 </div>,
-                document.body
+                // Portaled into #root, not <body>: #root is position: fixed, so it is a
+                // stacking context, and a sibling of it at z-index 900 covered every layer
+                // inside it (navbar menus at 950, the Jjodie window at 3000+).
+                document.getElementById('root') ?? document.body
               ))
             : splitPanel}
         {/* No reopen pill (2026-08-26). A floating cluster of two buttons used to
