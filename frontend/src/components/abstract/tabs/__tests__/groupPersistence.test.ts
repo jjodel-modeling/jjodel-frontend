@@ -62,6 +62,7 @@ describe('groupPersistence', () => {
         expect([g1.size, g2.size]).toEqual([700, 300]);
         expect(plan.activeGroup).toBe(1);
         expect(plan.activeTab).toBe('B');
+        expect(plan.tabs.map(t => [t.id, t.viewpointId])).toEqual([['A', null], ['M', null], ['A~tab2', 'vpX'], ['B', 'vpY']]);
     });
 
     it('non-artifact tabs are not saved, and a group left without tabs is not saved', () => {

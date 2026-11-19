@@ -6,6 +6,7 @@ import { store } from '../../../joiner';
 import { activateViewpoint } from '../../../utils/lastViewpoint';
 import DockManager from '../DockManager';
 import { activeTabId } from './dockGroups';
+import { noteTabViewpoint } from './groupPersistence';
 import { JjodelEvents } from '../../../events/registry';
 import './EditorSwitch.scss';
 
@@ -161,6 +162,9 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
     const hasViewpoint = !!shownViewpointId && !isMetamodel;
     const tabViewpointRef = useRef(tabViewpointId);
     tabViewpointRef.current = tabViewpointId;
+    // The viewpoint this tab shows, for the editor groups record (G7): written at mount and on every change, null for
+    // abstract syntax. A metamodel tab writes its own, null until G10.
+    useEffect(() => { noteTabViewpoint(ownTabId, tabViewpointId); }, [ownTabId, tabViewpointId]);
     const rootViewpointRef = useRef(viewpointId);
     rootViewpointRef.current = viewpointId;
     // Whether this tab is the dock's active one, kept by the ACTIVE_TAB listener below.

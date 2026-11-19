@@ -294,12 +294,34 @@ function DockComponent(props: AllProps) {
             announceActiveTab(layout);
             PinnableDock.instance?.forceEditorTypeBroadcast?.();
             DockManager.refreshCanvasSplit();
+            DockManager.noteGroupsChanged?.();
         };
         document.addEventListener('pointerdown', onPress, true);
         document.addEventListener('focusin', onPress, true);
         return () => {
             document.removeEventListener('pointerdown', onPress, true);
             document.removeEventListener('focusin', onPress, true);
+        };
+    }, []);
+
+    // Editor groups persistence (G7, P-2026-11-19-2328): once, at project open, the groups the user left on this project
+    // come back (`DockManager.restoreGroups`); every later change is saved, and the pending write goes out at page unload
+    // and at project close (the dock unmounts).
+    useEffect(() => {
+        if (DockManager.restoreGroups?.(DUser.current, DProject.getProject()?.id)) {
+            setTimeout(() => {
+                const dock = DockManager.dock;
+                if (!dock) return;
+                announceActiveTab(dock.getLayout());
+                PinnableDock.instance?.forceEditorTypeBroadcast?.();
+                DockManager.refreshCanvasSplit();
+            }, 0);
+        }
+        const onUnload = () => DockManager.flushGroups?.();
+        window.addEventListener('beforeunload', onUnload);
+        return () => {
+            window.removeEventListener('beforeunload', onUnload);
+            DockManager.flushGroups?.(true);
         };
     }, []);
 
@@ -391,6 +413,7 @@ function DockComponent(props: AllProps) {
         if (direction !== 'remove' && currentTabId && groupOfTab(newLayout, currentTabId)) noteActiveTab(currentTabId);
         setTimeout(() => DockManager.refreshCanvasSplit?.(), 0);
         announceActiveTab(newLayout);
+        DockManager.noteGroupsChanged?.(newLayout);
     };
 
     const announceActiveTab = (newLayout: any) => {
@@ -456,7 +479,9 @@ function DockComponent(props: AllProps) {
 
     return (
         <>
-            <PinnableDock ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />
+            {/* loadTab (G7): the restored groups' tabs are rebuilt from their saved ids, the summary is this one. */}
+            <PinnableDock ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange}
+                loadTab={(saved: any) => saved?.id === ModelsSummary.id ? ModelsSummary : DockManager.loadTab(saved) as any} />
             <TabsOverflowMenu />
         </>
     );

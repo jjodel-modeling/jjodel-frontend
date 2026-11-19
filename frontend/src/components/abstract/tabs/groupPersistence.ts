@@ -171,6 +171,8 @@ export interface RestorePlan {
     activeGroup: number;
     /** The tab to note as the most recent (`noteActiveTab`): an artifact tab of the active group, null when it has none. */
     activeTab: string | null;
+    /** The artifact tabs restored, in layout order, with the viewpoint each shows until it mounts. */
+    tabs: SavedGroupTab[];
 }
 
 /**
@@ -181,6 +183,7 @@ export interface RestorePlan {
 export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext): RestorePlan {
     const originalActive = groupsOf(record.layout.dockbox)[record.activeGroup] ?? null;
     let hasSummary = false;
+    const restored: SavedGroupTab[] = [];
     const pruned = new Map<any, SavedGroupPanel>();
     const prunePanel = (panel: SavedGroupPanel): SavedGroupPanel | null => {
         const tabs: SavedGroupTab[] = [];
@@ -189,6 +192,7 @@ export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext)
             if (!t.modelId || !ctx.canOpenModel(t.modelId)) continue;
             const vp = typeof t.viewpointId === 'string' && t.viewpointId && ctx.viewpointKnown(t.viewpointId) ? t.viewpointId : null;
             tabs.push({ id: t.id, modelId: t.modelId, viewpointId: vp });
+            restored.push({ id: t.id, modelId: t.modelId, viewpointId: vp });
         }
         if (!tabs.length) return null;
         const activeId = tabs.some(t => t.id === panel.activeId) ? panel.activeId : tabs[0].id;
@@ -217,7 +221,7 @@ export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext)
     const group = groups[activeGroup];
     const artifact = (id: string | undefined) => !!id && id !== SUMMARY_TAB_ID;
     const activeTab = artifact(group.activeId) ? group.activeId as string : (group.tabs.find(t => artifact(t.id))?.id ?? null);
-    return { layout: { dockbox }, activeGroup, activeTab };
+    return { layout: { dockbox }, activeGroup, activeTab, tabs: restored };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
