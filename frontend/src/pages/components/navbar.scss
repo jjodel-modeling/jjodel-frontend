@@ -2115,16 +2115,17 @@ html[data-mode="advanced"] body > .dropdown.dropdown--portal > div.item {
 }
 
 // ============================================
-// HIDE RC-DOCK LEFT PANEL TAB BAR
-// Tabs are now rendered in the app bar
+// RC-DOCK TAB BAR OF THE EDITOR GROUPS
+// Hidden until the app shows the group strips (Navbar.tsx sets `data-group-strips`, multi-tab lane 2b, R-MT-30):
+// each group then shows rc-dock's own strip, styled as the app bar tabs were (DockManagerStyles.scss).
 // ============================================
 
-.not-strip .dock-panel.dock-style-models .dock-bar {
+html:not([data-group-strips="on"]) .not-strip .dock-panel.dock-style-models .dock-bar {
   display: none !important;
 }
 
 // Ensure content fills the full height when models tab bar is hidden
-.not-strip .dock-panel.dock-style-models > .dock-content-holder {
+html:not([data-group-strips="on"]) .not-strip .dock-panel.dock-style-models > .dock-content-holder {
   height: 100% !important;
 }
 

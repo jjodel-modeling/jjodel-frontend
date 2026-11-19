@@ -38,6 +38,7 @@ import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
 import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
+import { modelGroups, SUMMARY_TAB_ID } from '../../components/abstract/tabs/dockGroups';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -133,6 +134,39 @@ interface NewDocumentButtonProps {
     project: LProject;
     metamodels: LModel[];
 }
+// The glyphs of the badge icons, as bootstrap-icons draws them (`bi-table`, `bi-file-earmark-text`):
+// the badge is a pseudo-element of rc-dock's tab, so it takes the character, not the class.
+const BADGE_GLYPHS: Record<string, string> = { 'bi-table': '\uF5AA', 'bi-file-earmark-text': '\uF38B' };
+
+const setOrDrop = (el: Element, name: string, value: string | null | undefined): void => {
+    if (value === null || value === undefined || value === '') { if (el.hasAttribute(name)) el.removeAttribute(name); }
+    else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+};
+
+/**
+ * Writes on rc-dock's tab of a group strip (multi-tab lane 2b, R-MT-30) what the app bar tab showed: the kind and
+ * the id (`data-jj-kind`, `data-jj-tab-id`, read by the strip CSS and the right-click menu), the tooltip, and on the
+ * title the badge where it draws none (`data-jj-badge`, a letter or an icon glyph) and the viewpoint of a model shown
+ * in more than one tab (`data-jj-viewpoint`, drawn after the name: `<model> · <viewpoint>`, G5). Attributes only: rc-dock
+ * owns the element and redraws a moved tab, and the next sync writes them again.
+ */
+function decorateGroupTab(panelId: string, t: { id: string; title: string; type: string; viewpoint?: string },
+                          badge: { letter: string; icon?: string }, typeLabel: string): void {
+    const btn = document.querySelector(`.dock-panel[data-dockid="${CSS.escape(panelId)}"] [role="tab"][id$="-tab-${CSS.escape(t.id)}"]`);
+    if (!btn) return;
+    setOrDrop(btn, 'data-jj-tab-id', t.id);
+    setOrDrop(btn, 'data-jj-kind', t.type);
+    // The badge only where the title draws none (tab-title.scss draws M, m, D, V and the transformation's icon; a
+    // generator's title its own icon): the instance manager and the text tab.
+    const glyph = t.type === 'manager' || t.type === 'textual' ? (badge.icon ? BADGE_GLYPHS[badge.icon] : badge.letter) : '';
+    setOrDrop(btn, 'title', typeLabel ? `${t.title} — ${typeLabel}` : t.title);
+    const title = btn.querySelector('.tab-title');
+    if (!title) return;
+    setOrDrop(title, 'data-jj-badge', glyph);
+    setOrDrop(title, 'data-jj-badge-icon', glyph && badge.icon ? 'on' : null);
+    setOrDrop(title, 'data-jj-viewpoint', t.viewpoint ? ` · ${t.viewpoint}` : null);
+}
+
 function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
     const [open, setOpen] = useState(false);
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -1726,23 +1760,34 @@ function NavbarComponent(props: AllProps) {
     const userEmail = user?.email || '';
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
 
-    // ─── Custom Tab Strip synced with DockManager ───
-    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean}>>([]);
+    // ─── Group strips (multi-tab lane 2b, R-MT-30) ───
+    // Each editor group shows rc-dock's own tab bar; the app bar no longer lists tabs. This loop reads the tabs of
+    // every group and writes on rc-dock's tab element what the app bar tab showed: the badge, the
+    // `<model> · <viewpoint>` title and the tooltip (`decorateGroupTab`). Attributes only: the element is rc-dock's.
+    // `html[data-group-strips]` shows the strips: a project open, and not in consumer, where there are no tabs (R5).
+    useEffect(() => {
+        const root = document.documentElement;
+        if (project && !consumer) root.setAttribute('data-group-strips', 'on');
+        else root.removeAttribute('data-group-strips');
+        return () => root.removeAttribute('data-group-strips');
+    }, [project, consumer]);
 
-    // Sync tabs from DockManager on layout changes
+    // Sync the strip decorations from DockManager on layout changes
     useEffect(() => {
         const syncTabs = () => {
             if (!DockManager.dock) return;
             try {
                 const layout = DockManager.dock.getLayout();
-                const modelsPanel = layout?.dockbox?.children?.[0];
-                if (!modelsPanel || !('tabs' in modelsPanel)) return;
+                const groups = modelGroups(layout);
+                if (!groups.length) return;
 
-                const tabs = (modelsPanel as any).tabs || [];
-                const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
+                const tabs: any[] = groups.flatMap(g => g.tabs);
+                const shownIds = new Set(groups.map(g => g.activeId || g.tabs[0]?.id));
+                const panelOf = new Map<string, string>();
+                groups.forEach(g => g.tabs.forEach(t => { if (t.id && g.id) panelOf.set(t.id, g.id); }));
                 const state = store.getState();
 
-                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean };
+                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean; viewpoint?: string };
                 const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {
                     const id = tab.id || '';
                     let title = '';
@@ -1838,34 +1883,11 @@ function NavbarComponent(props: AllProps) {
                         }
                     }
 
-                    return { id, title, type, active: id === activeId, closable };
+                    return { id, title, type, active: shownIds.has(id), closable };
                 }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
-                // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
-                // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
-                // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
-                // A model tab opened beside another (R-MT-24, P-2026-11-08-1608) the same way; the target of a Refactoring
-                // tab (`jjs_`, P-2026-10-25-0040) and a metamodel are not: that split has no entry of its own in the strip.
-                const besideModels = !String(activeId || '').startsWith('jjs_');
-                const walkBeside = (node: any): void => {
-                    if (!node || node === modelsPanel) return;
-                    if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
-                    const shown = node.activeId || node.tabs[0]?.id;
-                    node.tabs.forEach((tab: any) => {
-                        const id = tab.id || '';
-                        if (!id.startsWith('codegen_tpl_')) {
-                            const raw = besideModels ? ((state as any).idlookup?.[modelOfTabId(id)]) : null;
-                            if (raw?.className === 'DModel' && !raw.isMetamodel) {
-                                tabList.push({ id, title: raw.name || 'Unnamed', type: 'model', active: id === shown, closable: tab.closable !== false, beside: true });
-                            }
-                            return;
-                        }
-                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
-                        if (typeof named !== 'string' || !named) return;
-                        tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
-                    });
-                };
-                walkBeside(layout?.dockbox);
+                // A generator tab beside the canvas (codegen) is in a panel of its own rc-dock group, which shows its own
+                // strip (DockManagerStyles.scss); a model tab beside another is in a group of its own, read above.
 
                 // Two tabs on one model read `<model> · <viewpoint>` (multi-tab L6c, P-2026-11-08-1855). A tab's viewpoint is its
                 // editor's state, and this strip reads it where the editor shows it; a tab with no editor mounted keeps the plain name.
@@ -1875,24 +1897,17 @@ function NavbarComponent(props: AllProps) {
                     if (t.type !== 'model' || (tabsPerModel.get(modelOfTabId(t.id)) || 0) < 2) return;
                     const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(t.id)}"]`);
                     const viewpoint = pane?.querySelector('.toolbar-viewpoint-trigger__label')?.textContent?.trim();
-                    if (viewpoint) t.title = `${t.title} · ${viewpoint}`;
+                    if (viewpoint) { t.title = `${t.title} · ${viewpoint}`; t.viewpoint = viewpoint; }
                 });
 
-                setOpenTabs(prev => {
-                    if (prev.length === tabList.length && prev.every((t, i) =>
-                        t.id === tabList[i].id &&
-                        t.title === tabList[i].title &&
-                        t.active === tabList[i].active &&
-                        t.type === tabList[i].type &&
-                        t.closable === tabList[i].closable &&
-                        t.beside === tabList[i].beside
-                    )) {
-                        // Same content, same length: keep previous reference to skip Navbar re-render.
-                        // syncTabs runs every 1s via setInterval; during pan or any idle period
-                        // tabs don't change, and the Navbar re-render was the dominant JS cost (~85ms each).
-                        return prev;
-                    }
-                    return tabList;
+                tabList.forEach(t => {
+                    const panelId = panelOf.get(t.id);
+                    if (panelId) decorateGroupTab(panelId, t, getTabBadge(t.type), getTabTypeLabel(t.type));
+                });
+                // A group whose only tab is the project summary (not on the strip, Q4) shows no empty strip.
+                groups.forEach(g => {
+                    const el = g.id ? document.querySelector(`.dock-panel[data-dockid="${CSS.escape(g.id)}"]`) : null;
+                    if (el) setOrDrop(el, 'data-jj-strip-empty', g.tabs.every(t => t.id === SUMMARY_TAB_ID) ? 'on' : null);
                 });
             } catch (e) {
                 // Ignore errors during sync
@@ -1930,24 +1945,21 @@ function NavbarComponent(props: AllProps) {
         }
     }, []);
 
-    const handleTabClick = useCallback((tabId: string, beside?: boolean) => {
-        if (!DockManager.dock) return;
-        DockManager.dock.updateTab(tabId, null, true);
-        // Beside the canvas the layout stays and focus goes to the tab's content (its first
-        // [tabindex] element), so its keyboard shortcuts apply (P-2026-10-25-1510).
-        if (beside) {
-            const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(tabId)}"]`);
-            (pane?.querySelector('[tabindex]') as HTMLElement | null)?.focus({ preventScroll: true });
-        }
-    }, []);
-
-    const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        // A tab that asks before closing (a generator tab, P-2026-10-25-1200) closes through itself.
-        const docked: any = DockManager.dock?.find(tabId);
-        if (typeof docked?.requestClose === 'function') docked.requestClose();
-        else DockManager.closeTab(tabId);
-    }, []);
+    // The right-click menu of a metamodel or model tab (R-JJD-14), now on the group strips: rc-dock's tab carries
+    // the kind and the id `decorateGroupTab` wrote on it.
+    useEffect(() => {
+        if (!project || consumer) return;
+        const onContextMenu = (e: MouseEvent) => {
+            const btn = (e.target as Element | null)?.closest?.('.dock-panel.dock-style-models [role="tab"][data-jj-tab-id]');
+            const kind = btn?.getAttribute('data-jj-kind');
+            const tabId = btn?.getAttribute('data-jj-tab-id');
+            if (!tabId || (kind !== 'metamodel' && kind !== 'model')) return;
+            e.preventDefault();
+            setArtifactMenu({ modelId: modelOfTabId(tabId), x: e.clientX, y: e.clientY });
+        };
+        document.addEventListener('contextmenu', onContextMenu);
+        return () => document.removeEventListener('contextmenu', onContextMenu);
+    }, [project, consumer]);
 
     // Tab type badge letter or icon
     const getTabBadge = (type: string): { letter: string; icon?: string; className: string } => {
@@ -1983,33 +1995,6 @@ function NavbarComponent(props: AllProps) {
         }
     };
 
-    // Overflow logic
-    const MAX_VISIBLE_TABS = 6;
-    // #157 Fase 3b: in consumer mode hide developer-artifact tabs (metamodel, viewpoint,
-    // transformation) from the strip — defense-in-depth behind the DockManager open guards (F3).
-    const developerTabTypes = new Set(['metamodel', 'viewpoint', 'transformation']);
-    const visibleTabs = openTabs.filter(t => t.type !== 'project' // Don't show project summary in navbar
-        && !(consumer && developerTabTypes.has(t.type)));
-    const tabsToShow = visibleTabs.length > MAX_VISIBLE_TABS
-        ? [...visibleTabs.slice(0, MAX_VISIBLE_TABS)]
-        : visibleTabs;
-    const overflowTabs = visibleTabs.length > MAX_VISIBLE_TABS
-        ? visibleTabs.slice(MAX_VISIBLE_TABS)
-        : [];
-    // Ensure active tab is always visible
-    const activeTab = visibleTabs.find(t => t.active);
-    if (activeTab && !tabsToShow.find(t => t.id === activeTab.id)) {
-        tabsToShow.pop();
-        tabsToShow.push(activeTab);
-    }
-    // And a generator tab on screen beside the canvas, in place of the last tab not on screen.
-    visibleTabs.filter(t => t.beside && t.active && !tabsToShow.includes(t)).forEach(t => {
-        const off = tabsToShow.map(s => s.active).lastIndexOf(false);
-        if (off >= 0) tabsToShow.splice(off, 1);
-        tabsToShow.push(t);
-    });
-
-    const [showOverflow, setShowOverflow] = useState(false);
     /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
     const [artifactMenu, setArtifactMenu] = useState<{ modelId: string; x: number; y: number } | null>(null);
     const closeArtifactMenu = useCallback(() => setArtifactMenu(null), []);
@@ -2024,23 +2009,6 @@ function NavbarComponent(props: AllProps) {
             setSavingProject(false);
         }
     };
-    const overflowBtnRef = useRef<HTMLButtonElement>(null);
-    const overflowDropdownRef = useRef<HTMLDivElement>(null);
-    const [overflowMenuPos, setOverflowMenuPos] = useState({ top: 0, left: 0 });
-
-    useEffect(() => {
-        if (!showOverflow) return;
-        const handleMouseDown = (e: MouseEvent) => {
-            if (
-                overflowBtnRef.current && !overflowBtnRef.current.contains(e.target as Node) &&
-                overflowDropdownRef.current && !overflowDropdownRef.current.contains(e.target as Node)
-            ) {
-                setShowOverflow(false);
-            }
-        };
-        document.addEventListener('mousedown', handleMouseDown);
-        return () => document.removeEventListener('mousedown', handleMouseDown);
-    }, [showOverflow]);
 
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'}>
@@ -2070,12 +2038,9 @@ function NavbarComponent(props: AllProps) {
                     onClick={() => {
                         const dock = DockManager.dock;
                         if (dock) {
-                            const layout = dock.getLayout();
-                            const modelsPanel = layout?.dockbox?.children?.[0];
-                            if (modelsPanel && 'tabs' in modelsPanel && (modelsPanel as any).tabs?.length > 0) {
-                                const firstTabId = (modelsPanel as any).tabs[0].id;
-                                dock.updateTab(firstTabId, null, true);
-                            }
+                            // The summary stays in group 1, first (Q4).
+                            const firstTabId = modelGroups(dock.getLayout())[0]?.tabs[0]?.id;
+                            if (firstTabId) dock.updateTab(firstTabId, null, true);
                         }
                     }}
                     title="Project overview"
@@ -2087,89 +2052,14 @@ function NavbarComponent(props: AllProps) {
                 </div>
             )}
 
-            {/* Custom Tab Strip — not in consumer (R5), and with it the «+» new-document button. */}
+            {/* The tabs are on the group strips (lane 2b, R-MT-30); this box keeps the «+» new-document button and the
+                tab right-click menu. Not in consumer (R5). */}
             {project && !consumer && (
                 <div className="appbar-tabs">
-                    {tabsToShow.map(tab => {
-                        const badge = getTabBadge(tab.type);
-                        return (
-                            <button
-                                key={tab.id}
-                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}${tab.beside ? ' appbar-tab--beside' : ''}`}
-                                onClick={() => handleTabClick(tab.id, tab.beside)}
-                                onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
-                                    e.preventDefault();
-                                    setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
-                                } : undefined}
-                                data-tab-id={tab.id}
-                                title={(() => {
-                                    const typeLabel = getTabTypeLabel(tab.type);
-                                    return typeLabel ? `${tab.title} — ${typeLabel}` : tab.title;
-                                })()}
-                            >
-                                {(badge.letter || badge.icon) && (
-                                    <span className={`appbar-tab__badge ${badge.className}`}>
-                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
-                                    </span>
-                                )}
-                                <span className="appbar-tab__name">{tab.title}</span>
-                                {tab.closable && (
-                                    <span
-                                        className="appbar-tab__close"
-                                        onClick={(e) => handleTabClose(tab.id, e)}
-                                        title="Close"
-                                    >
-                                        &times;
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
                     {artifactMenu && (
                         <RunRefactoringMenu key={artifactMenu.modelId + artifactMenu.x + artifactMenu.y}
                                             modelId={artifactMenu.modelId} x={artifactMenu.x} y={artifactMenu.y}
                                             onClose={closeArtifactMenu} />
-                    )}
-                    {overflowTabs.length > 0 && (
-                        <div className="appbar-tabs__overflow">
-                            <button
-                                ref={overflowBtnRef}
-                                className="appbar-tabs__overflow-btn"
-                                onClick={() => {
-                                    if (!showOverflow && overflowBtnRef.current) {
-                                        const rect = overflowBtnRef.current.getBoundingClientRect();
-                                        setOverflowMenuPos({ top: rect.bottom + 4, left: rect.right - 180 });
-                                    }
-                                    setShowOverflow(!showOverflow);
-                                }}
-                            >
-                                +{overflowTabs.length} &#x25BE;
-                            </button>
-                            {showOverflow && ReactDOM.createPortal(
-                                <div ref={overflowDropdownRef}
-                                    className="appbar-tabs__overflow-dropdown"
-                                    style={{ top: overflowMenuPos.top, left: overflowMenuPos.left }}>
-                                    {overflowTabs.map(tab => {
-                                        const badge = getTabBadge(tab.type);
-                                        return (
-                                            <button
-                                                key={tab.id}
-                                                className="appbar-tabs__overflow-item"
-                                                onClick={() => { handleTabClick(tab.id, tab.beside); setShowOverflow(false); }}
-                                            >
-                                                {(badge.letter || badge.icon) && (
-                                                    <span className={`appbar-tab__badge ${badge.className}`}>
-                                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
-                                                    </span>
-                                                )}
-                                                <span>{tab.title}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>,
-                                document.body
-                            )}
-                        </div>
                     )}
                     {/* New document dropdown — trigger lives inside .appbar-tabs after the last tab.
                         The menu uses position:fixed (top/left computed from the trigger's

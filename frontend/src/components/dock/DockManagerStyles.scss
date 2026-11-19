@@ -609,3 +609,161 @@ div.dock-drop-layer{
 .not-strip .dock-tab {
     margin-top: 4px;
 }
+
+// ============================================
+// GROUP STRIPS (multi-tab lane 2b, R-MT-30)
+// Each editor group (a `models` panel) shows rc-dock's own tab bar, styled as the app bar tabs were (navbar.scss
+// `.appbar-tab`: height, font, close cross, active mark, badge), with the tokens the app bar's `--shell-*` resolve to. Navbar.tsx `decorateGroupTab` writes the kind, the
+// badge and the viewpoint suffix on rc-dock's tab as attributes. A generator panel beside the canvas (`codegen`) shows
+// its strip too: the app bar no longer lists its tabs. Tabs never shrink: a strip too narrow for its tabs moves the
+// rest into its own «more» menu (TabsOverflowMenu.tsx), so a close box never sits over a name.
+// ============================================
+
+html[data-group-strips="on"] .not-strip .dock-panel:is(.dock-style-models, .dock-style-codegen) {
+    > .dock > .dock-bar {
+        display: flex !important;
+        align-items: center;
+        height: 34px;
+        min-height: 34px;
+        padding: 0 6px !important;
+        background: var(--color-panel-bg) !important;
+        border-bottom: 1px solid var(--color-panel-border) !important;
+
+        .dock-nav { height: 100%; flex: 1; min-width: 0; }
+        .dock-nav-wrap {
+            height: 100%;
+            align-items: center;
+            padding: 0;
+            gap: 0;
+            background: transparent !important;
+            border-radius: 0;
+        }
+        .dock-nav-list { align-items: center; gap: 2px; height: 100%; }
+        .dock-ink-bar { display: none !important; }
+        .dock-extra-content { display: none; }
+    }
+    &[data-jj-strip-empty] > .dock > .dock-bar { display: none !important; }
+
+    .dock-tab {
+        flex: 0 0 auto;
+        margin: 0 !important;
+        height: 28px;
+        border-radius: var(--radius-sm);
+
+        > .dock-tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 100% !important;
+            max-width: 260px;
+            padding: 0 !important;
+            border-radius: var(--radius-sm);
+            background: transparent !important;
+            box-shadow: none !important;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--color-text-tertiary) !important;
+            overflow: hidden;
+
+            // The badge, as `.appbar-tab__badge`: the title's own (tab-title.scss), resized; the kinds whose title
+            // has none (instance manager, text) get one from `data-jj-badge` on the title.
+            .tab-title::before {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 16px;
+                width: 16px;
+                height: 16px;
+                border-radius: var(--radius-sm);
+                font-size: var(--text-xs);
+                font-weight: 500;
+                line-height: 1;
+            }
+            .tab-title:not([data-jj-badge]):not([data-type="metamodel"]):not([data-type="model"]):not([data-type="documentation"]):not([data-type="viewpoint"])::before { display: none; }
+            .tab-title[data-jj-badge]::before { content: attr(data-jj-badge); background-color: #FEF3C7; color: #D97706; text-transform: none; }
+            .tab-title[data-jj-badge-icon]::before { font-family: 'bootstrap-icons'; font-size: 9px; }
+            .tab-title[data-type="metamodel"]::before { flex-basis: 14px; width: 14px; height: 14px; opacity: 0.55; }
+            .tab-title[data-type="transformation"] .bi { width: 16px; height: 16px; min-width: 16px; }
+
+            // rc-dock's drag wrapper and the title: one row, the name truncated, the viewpoint after it (G5). The
+            // wrapper takes the tab's padding, so a drop anywhere on the tab lands on rc-dock's drop handler.
+            > div {
+                display: flex !important;
+                align-items: center;
+                gap: 4px;
+                min-width: 0;
+                width: 100%;
+                height: 100%;
+                padding: 0 8px 0 10px !important;
+                background: transparent !important;
+            }
+            .tab-title {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                min-width: 0;
+                padding: 0;
+                height: auto;
+                width: auto;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                &[data-jj-viewpoint]::after { content: attr(data-jj-viewpoint); order: 1; white-space: pre; }
+                > * { order: 2; }
+            }
+
+            // The close cross, as `.appbar-tab__close`: a 14px glyph in an 18px box, inside the tab, after the name.
+            .dock-tab-close-btn {
+                position: static;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 18px;
+                width: 18px;
+                height: 18px;
+                margin-left: 0 !important;
+                border-radius: var(--radius-sm);
+                color: var(--color-text-placeholder);
+                font-size: 14px;
+                opacity: 0 !important;
+                transition: opacity 150ms ease, color 150ms ease;
+
+                &::before { position: static; content: '\00d7'; font-size: 14px; line-height: 1; }
+                &:hover { color: #ef4444 !important; background: rgba(239, 68, 68, 0.08) !important; }
+            }
+        }
+
+        &:hover > .dock-tab-btn {
+            background: var(--color-bg-secondary, #f1f5f9) !important;
+            .dock-tab-close-btn { opacity: 1 !important; }
+        }
+
+        // The active tab of a group, as `.appbar-tab--active`.
+        &.dock-tab-active > .dock-tab-btn {
+            background: rgba(14, 165, 233, 0.08) !important;
+            color: #0ea5e9 !important;
+            font-weight: 500;
+            .tab-title[data-type="metamodel"]::before { flex-basis: 16px; width: 16px; height: 16px; opacity: 1; }
+            .dock-tab-close-btn { opacity: 0.7 !important; }
+            &[data-jj-kind="metamodel"] { background: #ede9fe !important; color: #6d28d9 !important; }
+            &[data-jj-kind="viewpoint"] { background: rgba(13, 148, 136, 0.08) !important; color: #0D9488 !important; }
+        }
+
+        // The project summary is in group 1 and not on its strip: the app bar's project label opens it (Q4).
+        &:has(> [role="tab"][id$="-tab-project_summary"]) { display: none; }
+    }
+}
+
+// A group left with only the project summary (group 1 with no model tab) takes no width while another group exists: the
+// other groups share the row (P-2026-11-19-1915). Group 1 cannot close, the summary never moves (Q4); alone, it fills the row.
+.not-strip > .dock-layout > .dock-hbox:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models) {
+    > .dock-panel.dock-style-models[data-dockid]:has(> .dock > .dock-bar [role="tab"][id$="-tab-project_summary"]):not(:has(> .dock > .dock-bar .dock-tab ~ .dock-tab)) {
+        flex: 0 0 0px !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+
+        + .dock-divider { display: none !important; }
+    }
+}

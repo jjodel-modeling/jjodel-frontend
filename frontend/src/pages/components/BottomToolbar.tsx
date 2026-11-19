@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './bottomToolbar.scss';
 import { PinnableDock } from '../../components/dock/MyRcDock';
+import { modelGroups } from '../../components/abstract/tabs/dockGroups';
 
 /**
  * Bottom Toolbar Component
@@ -23,15 +24,10 @@ const hasEditorTabsOpen = (): boolean => {
     try {
         if (!PinnableDock.instance) return false;
         const layout = PinnableDock.instance.getLayout();
-        if (!layout?.dockbox?.children?.[0]) return false;
 
-        // Get the models panel (first child)
-        const modelsPanel = layout.dockbox.children[0] as any;
-        if (!modelsPanel?.tabs) return false;
-
-        // Check if there are any closable tabs (editor tabs)
+        // Check if any editor group (multi-tab lane 2b, R-MT-30) has a closable tab (editor tabs)
         // ModelsSummaryTab has closable: false, editor tabs have closable: true
-        return modelsPanel.tabs.some((tab: any) => tab.closable === true);
+        return modelGroups(layout).some(group => group.tabs.some((tab: any) => tab.closable === true));
     } catch {
         return false;
     }
