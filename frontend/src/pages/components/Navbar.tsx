@@ -1889,12 +1889,13 @@ function NavbarComponent(props: AllProps) {
                 // A generator tab beside the canvas (codegen) is in a panel of its own rc-dock group, which shows its own
                 // strip (DockManagerStyles.scss); a model tab beside another is in a group of its own, read above.
 
-                // Two tabs on one model read `<model> · <viewpoint>` (multi-tab L6c, P-2026-11-08-1855). A tab's viewpoint is its
+                // Two tabs on one model or metamodel (R-MT-31) read `<model> · <viewpoint>` (multi-tab L6c, P-2026-11-08-1855). A tab's viewpoint is its
                 // editor's state, and this strip reads it where the editor shows it; a tab with no editor mounted keeps the plain name.
                 const tabsPerModel = new Map<string, number>();
-                tabList.forEach(t => { if (t.type === 'model') tabsPerModel.set(modelOfTabId(t.id), (tabsPerModel.get(modelOfTabId(t.id)) || 0) + 1); });
+                const isCanvasTab = (t: TabListItem) => t.type === 'model' || t.type === 'metamodel';
+                tabList.forEach(t => { if (isCanvasTab(t)) tabsPerModel.set(modelOfTabId(t.id), (tabsPerModel.get(modelOfTabId(t.id)) || 0) + 1); });
                 tabList.forEach(t => {
-                    if (t.type !== 'model' || (tabsPerModel.get(modelOfTabId(t.id)) || 0) < 2) return;
+                    if (!isCanvasTab(t) || (tabsPerModel.get(modelOfTabId(t.id)) || 0) < 2) return;
                     const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(t.id)}"]`);
                     const viewpoint = pane?.querySelector('.toolbar-viewpoint-trigger__label')?.textContent?.trim();
                     if (viewpoint) { t.title = `${t.title} · ${viewpoint}`; t.viewpoint = viewpoint; }

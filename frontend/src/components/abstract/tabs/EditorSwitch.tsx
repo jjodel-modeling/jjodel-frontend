@@ -116,6 +116,15 @@ export function adoptsRootViewpoint(focused: boolean | null, tabId: string): boo
     return !!focused && isActiveDockTab(tabId);
 }
 
+/**
+ * What a metamodel tab's canvas reads as its viewpoint (R-MT-31). The tab owns its viewpoint as a model tab does; while
+ * the picker offers abstract syntax only (until G10) it holds none, and the root passes through exactly as it did before
+ * the metamodel had a tab viewpoint, so the layout key and every reader stay as they were. Its own wins once it has one.
+ */
+export function metamodelTabViewpoint(tabVpId: string | null, rootVpId: string | null | undefined): string | null {
+    return tabVpId || rootVpId || null;
+}
+
 interface EditorSwitchProps {
     /** Model ID passed to the editor. */
     modelid: string;
@@ -142,12 +151,13 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
     // The tab's own viewpoint (R-MT-1, multi-tab L2), what this tab's EditorV2 and toolbar picker
     // read through EditorContext. It starts from the root, or from the preference the mount
     // restores, and stays in step with the root while the tab is focused (the effects below).
-    // A metamodel owns none: no picker, no focus write, the root passes through as before.
+    // A metamodel tab owns one too (R-MT-31), null until G10 gives its picker an entry: no restore, no focus write, and
+    // while it holds none the root passes through as before (metamodelTabViewpoint).
     const [restoreAtMount] = useState<string | null>(() =>
         isMetamodel || initialViewpointId !== undefined ? null : savedViewpointToRestore(modelid, viewpointId, ownTabId));
     const [tabViewpointId, setTabViewpointId] = useState<string | null>(() =>
-        initialTabViewpoint(viewpointId, restoreAtMount, initialViewpointId));
-    const shownViewpointId: string | null = isMetamodel ? (viewpointId || null) : tabViewpointId;
+        isMetamodel ? (initialViewpointId || null) : initialTabViewpoint(viewpointId, restoreAtMount, initialViewpointId));
+    const shownViewpointId: string | null = isMetamodel ? metamodelTabViewpoint(tabViewpointId, viewpointId) : tabViewpointId;
     const hasViewpoint = !!shownViewpointId && !isMetamodel;
     const tabViewpointRef = useRef(tabViewpointId);
     tabViewpointRef.current = tabViewpointId;
@@ -240,8 +250,8 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
         setEditorMode('flow');
     }, [viewpointId]);
 
-    // Split Right (R-MT-30): a copy of this tab, on its viewpoint, in a new group to the right. No second tab on a metamodel.
-    const splitRight = isMetamodel ? undefined : () => { DockManager.splitRight(ownTabId, tabViewpointRef.current); };
+    // Split Right (R-MT-30): a copy of this tab, on its viewpoint, in a new group to the right; on a metamodel too (R-MT-31).
+    const splitRight = () => { DockManager.splitRight(ownTabId, tabViewpointRef.current); };
 
     if (!hasViewpoint) {
         return (
@@ -252,7 +262,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                             modelid={modelid}
                             hasViewpoint={false}
                             viewpointId={shownViewpointId}
-                            onViewpointChange={isMetamodel ? undefined : setTabViewpointId}
+                            onViewpointChange={setTabViewpointId}
                         onSplitRight={splitRight}
                         />
                     </div>
@@ -276,7 +286,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                         modelid={modelid}
                         hasViewpoint
                         viewpointId={shownViewpointId}
-                        onViewpointChange={isMetamodel ? undefined : setTabViewpointId}
+                        onViewpointChange={setTabViewpointId}
                         onSplitRight={splitRight}
                     />
                 </div>

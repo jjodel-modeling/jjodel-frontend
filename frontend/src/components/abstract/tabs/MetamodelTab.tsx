@@ -175,13 +175,17 @@ function MetamodelTabComponent(props: AllProps) {
         {/* Classic shutdown (Fase 5a): the M2 classicSlot was already dead
             (hasViewpoint is always false for metamodels — children were
             discarded); the dead subtree is now removed explicitly. */}
-        <EditorSwitch modelid={model.id} isMetamodel />
+        <EditorSwitch modelid={model.id} tabId={props.tabId} initialViewpointId={props.initialViewpointId} isMetamodel />
     </div>);
 
 }
 
 interface OwnProps {
-    modelid: Pointer<DModel, 1, 1, LModel>
+    modelid: Pointer<DModel, 1, 1, LModel>,
+    /** The dock id of this tab when it is not the metamodel's first (R-MT-31, `modelTabId.ts`). Omitted: the metamodel id. */
+    tabId?: string,
+    /** The viewpoint this tab starts on, null for abstract syntax (R-MT-31). Omitted: abstract syntax. */
+    initialViewpointId?: string | null,
 }
 
 interface StateProps {
