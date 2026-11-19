@@ -121,11 +121,11 @@ describe('E9 (R-TXT-54): the Text tab opens beside its model\'s canvas', () => {
         expect(textualPlacement(fakeDock([{ tabs: ['project_summary', 'm', TXT], active: TXT }]), 'm')).toBe('activate');
     });
 
-    it('openTextualTab docks the new tab right of the canvas\'s panel, not through DockManager.open (mutant: the placement not applied)', () => {
+    it('openTextualTab docks the new tab in the active editor group, not through DockManager.open (R-MT-30 Q12; mutant: the placement not applied)', () => {
         const dock = fakeDock([{ tabs: ['project_summary', 'm'], active: 'm' }]);
         fake.dock = dock;
         expect(openTextualTab('m', 'Library')).toBe(true);
-        expect(dock.moves.map((m: any) => [m.tab.id, m.target.tabs.map((t: any) => t.id), m.direction])).toEqual([[TXT, ['project_summary', 'm'], 'right']]);
+        expect(dock.moves.map((m: any) => [m.tab.id, m.target.tabs.map((t: any) => t.id), m.direction])).toEqual([[TXT, ['project_summary', 'm'], 'middle']]);
         expect(fake.open).not.toHaveBeenCalled();
     });
 

@@ -406,3 +406,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 17:24, unattended, on the gates and the branch probes S1-S6; Alfonso in the morning digest)
 **Notes**: No conflict, no union; merge tree 1e294ae8a equal to the committed tree; probes as expected (R-MT-29 once, R-MT-30 none, three headings once). Step 1 not met to the letter: the 1610 prompt reads superseded, not eseguito; accepted as terminal, named in the prompt's findings, declared in the merge body. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 17:05
+
+## 2026-11-19 — feat: editor groups core, Split Right only (multi-tab lane 2a)
+**Prompt**: `claude_2026-11-19_1745_prompt_multi-tab-groups-2a-finish.md`, lane full, finish of P-2026-11-19-1600 (stopped at the context ceiling, RC-51): openBeside without its split (Q12), R-MT-30, full gates, probe at 1600 and 1280, visual stop
+**Files touched**: P-2026-11-19-1600: 1c248d9e0 (`tabs/dockGroups.ts` + test), b1c458f83 (`DockManager.tsx`, `Dock.tsx`, `MyRcDock.tsx`, `EditorSwitch.tsx`, `EditorV2.tsx`, `Toolbar.tsx`, `codegen/ui/canvasSelection.ts`, 6 test files); this lane: f0af162bf (`DockManager.tsx`, `__tests__/dockManagerSecondTab.test.ts`), 5a8189689 (`docs/decisions.md` R-MT-30); this commit: this inbox, R-MT-30 GO, Status of 1745 and 1600
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (above five files in the parent: 14 code files; test files outside the listed scope: `myRcDockSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`, `openTextualTab.test.ts`, `dockManagerSecondTab.test.ts`, `dockSecondTabEvents.test.ts`)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 18:15 on 3075; probe P1-P7 7/7 at 1600 and 1280, 0 console errors)
+**Notes**: Typecheck 0, vitest 629 files / 3 known import failures, build ok, check:docs 5/5. P4 (tab moved group 2 to 1) and P6 (tab activated in group 2) driven through the dock API: per-group strips are hidden until lane 2b. Edge refusals via dockMove, no mouse edge drop. At 1280 group 1's canvas is ~257 px (lane 5, Q14). Probe and crops in ~/.jjodel-lanes/P-2026-11-19-1745/.
+**Prompt document name**: 2026-11-19 17:45

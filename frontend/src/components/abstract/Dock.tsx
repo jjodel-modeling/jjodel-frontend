@@ -14,6 +14,7 @@ import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
 import { modelOfTabId } from "./tabs/modelTabId";
+import { activeGroup, activeTabId, groupOfTab, modelGroups, noteActiveTab } from "./tabs/dockGroups";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
@@ -277,13 +278,38 @@ function DockComponent(props: AllProps) {
         return () => window.removeEventListener('hashchange', onHash);
     }, []);
 
+    // Editor groups (R-MT-30): a press or a focus inside a group makes it the active group, as the click on a tab does;
+    // a change of the active tab is announced as a layout change would. Capture phase: a pane's first-click guard
+    // stops the event further down (L6c/L6d), and the group must still become active.
+    useEffect(() => {
+        const onPress = (event: Event) => {
+            const dock = DockManager.dock;
+            const row = (event.target as Element | null)?.closest?.('.dock-panel[data-dockid]') as HTMLElement | null;
+            if (!dock || !row) return;
+            const layout = dock.getLayout();
+            const group = modelGroups(layout).find(p => p.id === row.dataset.dockid);
+            if (!group?.activeId || activeTabId(layout) === group.activeId) return;
+            noteActiveTab(group.activeId);
+            announceActiveTab(layout);
+            PinnableDock.instance?.forceEditorTypeBroadcast?.();
+            DockManager.refreshCanvasSplit();
+        };
+        document.addEventListener('pointerdown', onPress, true);
+        document.addEventListener('focusin', onPress, true);
+        return () => {
+            document.removeEventListener('pointerdown', onPress, true);
+            document.removeEventListener('focusin', onPress, true);
+        };
+    }, []);
+
     // PropertiesWithTreeView width-lock: RETIRED (F5 2026-07-29). Properties + Tree
     // float now (Dashboard mount, portal to <body>); there is no dock tab to width-lock,
     // so nothing is written to document.body here and no listener is needed. (Earlier
     // still, the rail-only listener PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT was removed.)
 
+    // Editor groups (R-MT-30, G4): tabs move between groups by their strips only; the dockMove veto (MyRcDock) does the rest.
     const groups = {
-        'models': {floatable: true, maximizable: false},
+        'models': {floatable: false, maximizable: false, tabLocked: true},
         // editors group: tabLocked=true disables drag-and-drop reordering
         // Tabs remain in fixed order: Properties, Tree View, Viewpoints, Node, Console
         'editors': {floatable: true, maximizable: false, tabLocked: true}
@@ -357,13 +383,22 @@ function DockComponent(props: AllProps) {
     // Emit custom event when the active tab in the left panel changes
     // so that StatusBar can switch between project stats and editor breadcrumb,
     // and Dashboard can hide project sidebar when metamodel editor is active.
-    const handleLayoutChange = (newLayout: any) => {
-        const panel = newLayout?.dockbox?.children?.[0];
+    // Editor groups (R-MT-30): the tab a layout change is about becomes the focus, so a tab activated in any group fires
+    // ACTIVE_TAB; the event names the active group's active tab. A closed tab is not noted (the veto's dockMove notes the
+    // tab its group shows next). The split of canvases is re-read after rc-dock has rendered the change.
+    const handleLayoutChange = (newLayout: any, currentTabId?: string, direction?: string) => {
+        if (direction !== 'remove' && currentTabId && groupOfTab(newLayout, currentTabId)) noteActiveTab(currentTabId);
+        setTimeout(() => DockManager.refreshCanvasSplit?.(), 0);
+        announceActiveTab(newLayout);
+    };
+
+    const announceActiveTab = (newLayout: any) => {
+        const panel = activeGroup(newLayout);
         const activeId = panel?.activeId;
         if (!activeId) return;
 
         // Extract tab type from the title element's data-type attribute
-        const tabs = panel?.tabs || [];
+        const tabs: any[] = panel?.tabs || [];
         const activeTab = tabs.find((t: any) => t.id === activeId);
         const tabType: string | null = (activeTab?.title as any)?.props?.['data-type'] ?? null;
 

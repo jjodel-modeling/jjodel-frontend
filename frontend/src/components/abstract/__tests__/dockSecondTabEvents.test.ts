@@ -77,4 +77,13 @@ describe('Dock.handleLayoutChange with a second tab', () => {
         h.onLayoutChange(layoutOn('project_summary'));
         expect(events).toEqual([]);
     });
+
+    it('a tab activated in a second group fires for that tab (R-MT-30; mutant: the first panel read)', () => {
+        const two = { dockbox: { children: [
+            { id: 'g1', activeId: 'project_summary', tabs: [{ id: 'project_summary' }] },
+            { id: 'g2', activeId: 'M~tab2', tabs: [{ id: 'M~tab2' }] },
+        ] } };
+        h.onLayoutChange(two, 'M~tab2', 'update');
+        expect(events).toEqual([{ editorType: 'model', modelId: 'M' }]);
+    });
 });

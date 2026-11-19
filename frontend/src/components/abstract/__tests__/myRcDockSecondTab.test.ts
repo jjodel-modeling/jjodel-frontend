@@ -20,7 +20,7 @@ function run(activeId: string) {
     const target = new EventTarget();
     target.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, (e) => events.push((e as CustomEvent).detail));
     vi.stubGlobal('window', target);
-    const self = { getLayout: () => ({ dockbox: { children: [{ activeId }] } }), _lastActiveId: undefined };
+    const self = { getLayout: () => ({ dockbox: { children: [{ activeId, tabs: [{ id: activeId }] }] } }), _lastActiveId: undefined };
     (PinnableDock.prototype as any)._detectActiveTabChange.call(self);
     return events;
 }
