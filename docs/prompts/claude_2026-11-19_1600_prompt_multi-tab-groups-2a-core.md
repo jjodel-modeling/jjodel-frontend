@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1600
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · 1c248d9e0, b1c458f83 · verifica visiva passata 2026-11-19 (closed by P-2026-11-19-1745, stopped at the context ceiling)
 Lane: full (implementation, no critical-zone file)
 Depends: P-2026-11-19-1330/1350 (editor groups discovery, `docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md`, Q1..Q14 as recommended, GO of Alfonso 2026-11-19 15:28); P-2026-11-19-1530 (L4c, merged into the trunk)
 Worktree: ~/jjodel-w-mtg2a, branch multi-tab-groups-2a, created from the trunk `alfonso-frontend-jjtl` after the L4c merge, at this prompt's commit
