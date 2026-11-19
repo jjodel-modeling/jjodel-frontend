@@ -374,3 +374,9 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile (no visual change; app probe 6/6 on 3074, chat check 2026-11-19 15:57)
 **Notes**: Probe: SmartBuilding registered edges 5/5/5/5 at r0..r3 (5/5/0/0 before, §4.2); Families 8 edges stable; drag kept; drop +1 node, no duplicate edge; save/reload identical. Typecheck 0, vitest 628 passed / 3 known import failures, build ok. S3 rewritten twice (criterion, then a close that never fired), told in §11.4. Shared bucket left for `createCompositionEdgeForObjects` and `transformJjomGraph`.
 **Prompt document name**: 2026-11-19 15:30
+
+## 2026-11-19 — ticket: createCompositionEdgeForObjects never finds the child vertex
+**Ticket**: Both callers (`ContextMenu.tsx:372`, the classic menu's "Add <Class>"; `createAdapter.ts:468`, `createInstance` with an owner) call `createVertexForObject` and then `createCompositionEdgeForObjects` in the same task. The writer's `findVertexIdForObject` reads `store.getState()`, which does not yet hold the child's vertex (actions reach the store one macrotask later, `action.ts:352`), so it warns `vertex(es) not found` with `childVertexId: null` and returns `null` before `DVoidEdge.new2` and `markCanvasUpdated`. The composition edge appears anyway, drawn later by another writer. The model-keyed mark of L4d is therefore never written at runtime; only the unit test exercises it.
+**Priority**: low
+**Found in**: P-2026-11-19-1625
+**Detail**: docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md
