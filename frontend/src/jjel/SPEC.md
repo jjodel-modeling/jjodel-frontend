@@ -16,7 +16,7 @@ JjEL is a declarative expression language designed for navigating, querying, and
 
 | JjEL is not... | Because... |
 |-----------------|------------|
-| A constraint language (like OCL) | It does not assert what must be true — it computes values and selects sets |
+| A constraint language (like OCL) | It does not assert what must be true — it computes values and selects sets. A validation rule (§8.4) is what asserts: it requires a JjEL boolean to hold on each instance |
 | A programming language (like JS) | No variables, no loops, no side-effects, no I/O |
 | A transformation language (like JjTL) | It does not define rules — it provides expressions *inside* rules |
 | A query language (like SQL) | It does not query a database — it navigates a model graph in memory |
@@ -306,7 +306,6 @@ forall p in (forall x, y in S such that x.p < y.p) : p.x.name + p.y.name
 
 **Syntax:**
 ```
-exists <var> in <collection> : <condition>
 exists <var> in <collection> such that <condition>
 exists <var> in <collection> | <condition>
 ```
@@ -342,8 +341,8 @@ exists c in classes, a in c.attributes | a.name == "id"
 
 **Examples:**
 ```
-isAbstract implies subClasses.isNotEmpty
-a.isPublic implies a.type != null
+c.isAbstract implies c.subclasses.isNotEmpty
+self.right != null implies self.left != self.right
 ```
 
 ### 5.4 `with...do` — Context Binding
@@ -359,13 +358,13 @@ with <expression> do <body>
 
 **Examples:**
 ```
--- Console: explicit context
-with selectedNode do name.pascalCase()
+-- Console: explicit context (data is the selected element)
+with data do name.pascalCase()
 
-with selectedNode do forall a in attributes such that a.isPublic: a.name
+with data do forall a in attributes: a.name
 
 -- Nested
-with selectedNode do
+with data do
   with attributes.first do name + ": " + type
 ```
 
@@ -536,6 +535,25 @@ In order of priority:
 | Division by zero | `null` (silent) |
 | Type mismatch in arithmetic | `null` (silent) |
 
+### 6.5 Model Elements in the Evaluation Context
+
+What an expression sees of a model is built by `buildEvalContext` (`jjscript/executor/commands/eval.ts`), the one builder behind the Console, the JjScript `eval` command, Jodie and validation. Its shape, as of #221 (2026-11-19):
+
+**Globals.** `classes`, `attributes`, `references`, `packages`, `enumerations` (of the target metamodel), `instances` (every object of its models, or of the one model under validation), `metamodel`, `project`, `data` and `node` (the selected element and its graph vertex, when there is a selection). Each class is also bound by its name (`Entity`), and an instance by its name when that name is unique in the pool. A name bound twice is left unbound and the evaluator suggests the qualified form.
+
+**A class** (`Entity`) has `name`, `className` (`"DClass"`), `isAbstract`, `isInterface`, `attributes`, `references`, `operations`, `superTypes`, `subTypes` and their counts. The evaluator adds `superclass`, `superclasses`, `extends`, `allSuperclasses`, `subclass`, `subclasses`, `allSubclasses` (§9.3), all lowercase after `super`/`sub`: `subClasses` is a missing property and reads `null`. These seven exist only after a `.` (`Entity.subclasses`): read as bare names inside `with Entity do`, they are undefined identifiers. It also has:
+- `instances`: the **direct** instances of the class only, never those of its subclasses. On an abstract class it is always empty.
+- `allInstances`: the instances of the class and of all its subclasses.
+- `Entity.Person`: the direct instance named `Person`, when that name is unique among the direct instances and does not collide with a structural key.
+
+**An instance** has `id`, `name`, `instanceOf` (the shared class object, so `x.instanceOf == Entity` compares by identity; `instanceof` is a deprecated alias), one key per feature of its class, and `parent`:
+- An attribute holds its value; an enumeration literal reads as its name (a string). An empty single-valued attribute reads as its declared default, else as the type default when the lower bound is at least 1 (`false`, `0`, `""`, the first literal), else `null`. A multi-valued attribute is always an array.
+- A single-valued reference holds the target instance or `null`; a multi-valued one is always an array (`[]` when empty), never `null`. A target is the same object as in the pool, so `==` between them is identity (§6.3).
+- `parent` is the containing object (the eContainer), or `null` at the root. A user feature named `parent` (or `name`) shadows the built-in.
+- `className` on an instance is an error that points to `x.instanceOf.name`.
+
+A feature the instance's class does not declare is a missing property: it reads `null` and emits the property-not-found warning (§6.4). A declared feature that is empty is **not** missing: it reads `null` or `[]` with no warning. The difference matters in validation, where the warning makes the evaluation not evaluable (§8.4).
+
 ---
 
 ## 7. Built-in Methods
@@ -551,6 +569,8 @@ In order of priority:
 **Conversion:** `toNumber()`, `toInt()`
 **Format:** `quote()`, `format(pattern)`
 
+Parentheses: on a string, only `length`, `size`, `isEmpty`, `isNotEmpty`, `toUpper`, `toLower`, `trim`, `trimStart` and `trimEnd` also read as properties (the evaluator's string switch). Every other method needs `()`: `name.isNotBlank` and `name.capitalize` read as a missing property and give `null`, while `name.isNotBlank()` gives the boolean. Measured 2026-11-19 (#221); the general rule is still open (§9.2).
+
 ### 7.2 Number Methods (30)
 
 **Math:** `abs()`, `round()`, `floor()`, `ceil()`, `trunc()`, `sign()`, `sqrt()`, `pow(exp)`, `exp()`, `log()`, `log10()`, `log2()`
@@ -561,19 +581,20 @@ In order of priority:
 
 ### 7.3 Collection Methods (28)
 
-With `forall` replacing `filter` and `map`, the remaining collection methods are:
+`forall` is the preferred form for filtering and mapping; the methods remain for chaining:
 
-**Aggregation:** `sum()`, `avg()`, `min()`, `max()`, `count()`
+**Aggregation:** `sum()`, `avg()`, `min()`, `max()`, `count()`, `count(fn)` (the elements for which `fn` holds)
 **Access:** `first`, `last`, `at(index)`, `indexOf(item)`
 **Info:** `size`, `length`, `isEmpty`, `isNotEmpty`, `contains(item)`
 **Structure:** `distinct()`, `distinctBy(fn)`, `sortBy(fn)`, `sortByDescending(fn)`, `reverse()`, `flatten()`, `flatMap(fn)`, `groupBy(fn)`
 **Slicing:** `take(n)`, `skip(n)`, `takeWhile(fn)`, `skipWhile(fn)`
 **Join:** `join(separator)`
 **Boolean:** `all(fn)`, `any(fn)`, `none(fn)`
+**Filter and map:** `filter(fn)`, `map(fn)`
 
 `contains`, `indexOf`, `distinct`, `distinctBy` and `groupBy` use the equality of `==` (§6.3): a model object is found, and counted once, by its identity. `members.contains(self)` is true when `self` is one of them; `[self, self.parent.father].distinct()` has one element on the father.
 
-Note: `filter` and `map` are **removed** — replaced by `forall` construct.
+Note: `filter` and `map` were planned for removal in favour of `forall` (§10), but they are still registered (`getCollectionMethod`, `evaluator/builtins/collections.ts`) and the code generator templates use `map(...).join(...)` (§9.4). They stay available; `forall` remains the idiomatic form.
 
 **Global function:** `range(n)` is the list `[0, 1, ..., n-1]` and `range(a, b)` is `[a, ..., b-1]`; both are empty when the end is not above the start (`range(0)`, `range(-2)`, `range(5, 2)`, `range(2, 2)`). It iterates numbers where `forall` iterates model elements: `forall i in range(nregs) -> Register { name := "x" + i }`. Integers only: a fraction, a string, `null`, a boolean, a list or a bit-vector is an error naming `range()`, as is a wrong number of arguments or a result above 1,000,000 elements; nothing is truncated or converted. Being a builtin, `range` shadows a context variable of the same bare name, like `bits`: read a model feature called `range` as `self.range`. Available wherever `JjelEvaluator` registers its globals (expressions, code generator templates) and in JjTL; not in the simulator's guard context, which takes the bit-vector constructors only (R-BV-8).
 
@@ -647,34 +668,65 @@ Mapping expressions compute values for target model properties.
 rule ClassToTable {
   from: DClass
   mapping:
-    tableName = name.snakeCase()
-    columns = forall a in attributes: a.name + " " + a.type.toUpper()
-    foreignKeys = forall r in references such that r.upperBound == 1: r.name.snakeCase() + "_id"
+    tableName := name.snakeCase()
+    columns := forall a in attributes: a.name + " " + a.type.toUpper()
+    foreignKeys := forall r in references such that r.upperBound == 1: r.name.snakeCase() + "_id"
 }
 ```
 
 ### 8.3 Console REPL
 
-Interactive exploration and debugging. No implicit source — context must be explicit via `with...do` or qualified access.
+Interactive exploration and debugging. No implicit source — context must be explicit via `with...do` or qualified access. `data` is the selected element (§6.5).
 
 ```
-> with selectedNode do name
+> with data do name
 "CustomerOrder"
 
-> with selectedNode do forall a in attributes such that a.isPublic: a.name
+> forall a in Customer.attributes such that not a.isDerived: a.name
 ["id", "name", "email"]
 
-> with selectedNode do isAbstract implies subClasses.isNotEmpty
+> NamedElement.isAbstract implies NamedElement.subclasses.isNotEmpty
 true
 ```
 
 ### 8.4 Validation / Invariants
 
+A validation rule (R-VAL) is a JjEL body attached to a context class, evaluated once per instance of that class and of its subclasses in the model under validation (`model/validation/`). The evaluator binds `self` to the instance, its features under their bare names (`self` wins on a clash), and the globals of §6.5 with the extent restricted to that model (R-VAL-16): `Entity.instances` ranges over the validated model, not the project.
+
+The body must return a boolean; nothing is converted (`model/jjelTriState.ts`). Each evaluation ends in one of:
+
+| Outcome | When |
+|---------|------|
+| satisfied | the body returned `true` |
+| violation | the body returned `false` |
+| not evaluable, `exception` | the evaluation threw, e.g. `.name` on a `null` reference |
+| not evaluable, `absent-identifier` | a missing identifier or property was read (§6.4 warning), even if the result is a boolean |
+| not evaluable, `non-boolean` | any other value: a collection from `forall`, `null` from a missing method's parentheses (§7.1), a number |
+| rule defect | the body does not parse; the rule runs on no instance |
+
+So the quantifiers of a rule are the boolean collection methods, not `forall`, and a nullable reference is guarded with `implies` or `?.`:
+
 ```
-forall c in classes: c.attributes.isNotEmpty
-forall c in classes: c.isAbstract implies c.subClasses.isNotEmpty
+-- on Relationship: guard the optional end, then compare by identity
+self.right != null implies self.left != self.right
+
+-- on Entity: at least one key attribute
+self.ownedAttributes.any(a => a.isKey)
+
+-- on NamedElement (abstract): applies to every subclass instance
+self.name.isNotBlank()
+
+-- on Entity: names unique among the entities of the model
+Entity.allInstances.all(e => e == self or e.name != self.name)
+
+-- on Attribute: contained by an entity
+self.parent is Entity
+
+-- metamodel-level checks are Console queries, not rules
 (forall c in classes: c.name).distinct().size == classes.size
 ```
+
+`forall x in S : P` returns a collection and is never a verdict (§5.1); `exists` does return a boolean.
 
 ### 8.5 Derived Attributes
 
@@ -711,8 +763,8 @@ visible = attributes.isNotEmpty or references.isNotEmpty
 
 ```
 -- anti-pattern detection
-forall c in allClasses such that c.isAbstract and c.subClasses.isEmpty
-forall c in allClasses such that c.attributes.size > 10
+forall c in classes such that c.isAbstract and c.subclasses.isEmpty
+forall c in classes such that c.attributes.size > 10
 
 -- metrics
 (forall c in classes: c.attributes.size).avg()
@@ -738,7 +790,7 @@ Some string methods work as properties (no parentheses): `name.toUpper`, `name.t
 
 **Proposal:** Methods with zero arguments may be invoked without parentheses. Methods with arguments require parentheses. This is a simple, memorable rule.
 
-**Status:** To be decided.
+**Status:** To be decided. Today the property forms are the fixed list in §7.1 (strings) plus the zero-argument methods of a bit-vector (§7.5). Elsewhere a missing `()` is silent: `name.isNotBlank` is `null`, which in a validation rule is a non-boolean, not a violation (§8.4).
 
 ### 9.3 DClass-Specific Properties in the Evaluator
 
@@ -786,7 +838,7 @@ forall a in (forall p in packages: p.attributes) such that a.isPublic: a.name
 | Context binding | — | `with obj do expr` |
 | Index access | `.at(index)` only | `collection[index]` (+ `.at()`) |
 | `and`/`or` | Not short-circuit | **Short-circuit** |
-| `filter()` / `map()` | Collection methods | **Replaced by `forall`** |
+| `filter()` / `map()` | Collection methods | `forall` preferred; the methods remain (§7.3) |
 | `:` role | Lambda parameter separator | Projection in `forall`, predicate in `exists` |
 | `such that` | — | Filter condition in `forall` |
 | `do` | — | Body in `with`; the `forall ... do` command is JjScript's |
