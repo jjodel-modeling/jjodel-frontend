@@ -502,3 +502,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-19 23:15 on 3095; mouse probe 9/9 at 1600 and 1280, 0 console errors)
 **Notes**: Root cause: the app bar project label and the dashboard press noted the summary tab, so group 1 went active before open. Filter in noteActiveTab via DockManager's DModel test. Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. Probe without the filter fails the 3 reported steps. Known residue, not this lane: left bar and status bar follow the last artifact tab while the dashboard shows. Crops in ~/.jjodel-lanes/P-2026-11-19-2236/.
 **Prompt document name**: 2026-11-19 22:36
+
+## 2026-11-19 — merge: multi-tab-active-group into alfonso-frontend-jjtl (P-2026-11-19-2320)
+**Prompt**: `claude_2026-11-19_2320_prompt_merge_multi-tab-active-group.md`, lane full (merge; zero conflicts measured): bring `multi-tab-active-group` at fe8ba6e90 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 804ddd61d; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: d29dcd79c (merge), 8 files — `dockGroups.ts`, `Dock.tsx`, `DockManager.tsx`, `dockGroups.test.ts`, `dockManagerSecondTab.test.ts`, the 2236 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2320
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16537 passed, 0 failed and 3 skipped (16540, expected 16531 + 6, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 8, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 23:34, unattended, on the gates and Alfonso's visual GO on the branch at 23:15 on 3095; Alfonso in the morning digest)
+**Notes**: Zero conflicts, no union; merge tree 57629800d equals the commit's tree. Probes as expected (R-MT-32 once, R-MT-33 none, the lane heading once). Trunk side 1 file: 80d501973 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 23:20
