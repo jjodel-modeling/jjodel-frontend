@@ -33,7 +33,8 @@ function buildStyles<
         control: (base, state) => ({
             ...base,
             minHeight: 36,
-            height: 36,
+            // Multi: chips wrap onto further rows, so the control grows with them (#222).
+            height: state.isMulti ? 'auto' : 36,
             backgroundColor: 'var(--form-input-bg)',
             borderColor: state.isFocused
                 ? 'var(--form-input-border-color-focus)'
@@ -44,7 +45,10 @@ function buildStyles<
             transition: 'border-color 150ms ease, box-shadow 150ms ease',
             '&:hover': { borderColor: 'var(--form-input-border-color-hover)' },
         }),
-        valueContainer: (base) => ({ ...base, padding: '0 10px' }),
+        valueContainer: (base, state) => ({
+            ...base,
+            padding: state.isMulti && state.hasValue ? '2px 6px' : '0 10px',
+        }),
         placeholder: (base) => ({ ...base, color: '#94a3b8' }),
         singleValue: (base) => ({ ...base, color: '#1e293b' }),
         input: (base) => ({ ...base, margin: 0, padding: 0, color: '#1e293b' }),

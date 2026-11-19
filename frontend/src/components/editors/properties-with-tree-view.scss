@@ -1781,6 +1781,13 @@ body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models 
         height: 30px !important;
     }
 
+    // A multi select (Extends, Dependencies) wraps its chips onto further rows: the fixed
+    // 30px above let them spill out of the box and over the rows below (#222). The
+    // react-select modifier class on the value container is the hook.
+    .jj-field .jj-select > div:first-of-type:has(.jj-select__value-container--is-multi) {
+        height: auto !important;
+    }
+
     // `_form-system.scss:1166-1169` mette 20px di `padding-bottom` su `.jj-select`, senza
     // commento e senza consumatore dichiarato. Nello stack a tre righe faceva da spaziatore;
     // nella griglia lo spazio lo dà `gap`, e quei 20px alzavano la riga Type a 56px contro i

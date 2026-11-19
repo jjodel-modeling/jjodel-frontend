@@ -101,7 +101,9 @@ function InheritanceSection(props: {
     extendValue: {value: string; label: string}[];
     extendOptions: any;
 }) {
-    const { lclass, advanced, hasDependencies, extendValue, extendOptions } = props;
+    // TODO: cleanup — hasDependencies no longer gates the Extends field (#222): the options
+    // already list this metamodel's own packages, dependent ones only with cross-extend.
+    const { lclass, advanced, extendValue, extendOptions } = props;
     const { isAdvanced: globalAdvanced } = useInterfaceMode();
 
     return (
@@ -111,7 +113,7 @@ function InheritanceSection(props: {
             <div className="jj-divider" />
             <PropertiesToggle data={lclass} field={'interface'} label="Interface"
                 tooltip="Defines a contract without implementation" />
-            {advanced && hasDependencies && <>
+            {advanced && <>
                 <div className="jj-divider" />
                 <div className="jj-field" style={{marginTop: 4}}>
                     <div className="jj-field-label">Extends</div>
@@ -120,7 +122,7 @@ function InheritanceSection(props: {
                         onChange={(v: any) => {
                             lclass.extends = v.map((e: any) => e.value) as Any<string[]>;
                         }} />
-                    <div className="jj-field-hint">Inherit from classes in dependent metamodels</div>
+                    <div className="jj-field-hint">Inherit from classes of this metamodel, or of dependent metamodels with cross-extend</div>
                 </div>
             </>}
             <div className={`jj-toggle-row-animated ${globalAdvanced ? 'jj-toggle-row-animated--visible' : ''}`}>
