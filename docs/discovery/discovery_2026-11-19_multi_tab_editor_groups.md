@@ -582,3 +582,75 @@ data move and is out of what Alfonso asked (13:49). Q13.
     per metamodel would move data (a list of records), which Alfonso excluded at 13:49. It can be a later decision.
 14. **Q14. Minimum group width.** **Recommended: 400 px with the narrow-toolbar rule** (§6), not 480 px, which forbids
     Split Right at 1280.
+
+## 11. L4c as implemented
+
+Added by P-2026-11-19-1530 (branch `multi-tab-l4c`, code commit `2837e117d`), decision R-MT-29. The design of §4.4 is
+followed as written; this section records the writers re-read before editing and the numbers of the probe.
+
+### 11.1 Shape
+
+**[read]** Each registry of `syncState.ts` stores, per key, the bucket of the model that wrote it (`syncModes`,
+`edgeRefIds`, `canvasUpdatedIds` as `{ value, bucket }`; `dropCreatedIds`, `canvasEdgePairs` as `Map<key, bucket>`). A
+writer called without a `modelId` files under a shared bucket (a module-private symbol). `clear<X>(modelId)` deletes the
+entries of `modelId` and of the shared bucket; `clear<X>()` clears everything, as before. Readers and single-key clears
+(`clearCanvasEdgePair`, `clearCanvasUpdated`, `consumeDropCreated`) do not look at buckets. A key written by two models
+belongs to the last writer. `suppressedSingletonIds` and the populate owner are untouched (neither was cleared on unmount).
+
+The unmount clear in `useJjomSync.ts` passes `heldModel`. When `heldModel` is `undefined` (an instance that never held a
+model) the call is `clear<X>(undefined)`, which clears every model, exactly as before L4c. Not changed here: that path
+holds no keyed entry of its own, and narrowing it is a behaviour change outside the design.
+
+### 11.2 Writer call sites, re-read
+
+**[read]** `command grep -rnE` over `src` for every writer, tests and `syncState.ts` excluded, at `c4c17628e`:
+
+| Writer | Site | Model id passed |
+|---|---|---|
+| `markCanvasUpdated` | `canvasToJjom.ts` `syncPositionToJjom`, `syncSizeToJjom`, `syncSizeResetToJjom`, `syncInheritanceEdge`, `syncReferenceEdge`, `syncCreateCompositionLink`, `syncCreateReferenceLink` (8 lines) | new trailing `modelId` of the function |
+| `markCanvasUpdated` | `canvasToJjom.ts` `createCompositionEdgeForObjects` (1 line) | none: its callers are `ContextMenu.tsx` and `createAdapter.ts`, outside the file list; shared bucket |
+| `markCanvasUpdatedBatch` | `canvasToJjom.ts` `syncPositionBatchToJjom`, `syncSizeBatchToJjom` (2) | new trailing `modelId` |
+| `markCanvasUpdatedBatch` | `useJjomSelection.ts` `selectElement`, `deselectAll` (2; the third line hit of §4.4 is the header comment, :12) | their `modelid` parameter |
+| `markCanvasEdgePair` | `useJjomSync.ts` Step 4 (3), `useM1ReferenceEdges.ts` (1) | `modelid` (in the deps of both effects) |
+| `markCanvasEdgePair` | `canvasToJjom.ts` `syncInheritanceEdge`, `syncReferenceEdge` (2) | new trailing `modelId` |
+| `clearCanvasEdgePair` | `useJjomSync.ts` (1), `useM1ReferenceEdges.ts` (1), `m1EdgeSweep.ts` (1), `canvasToJjom.ts` (3) | none needed: a single-key clear removes the pair whatever model wrote it; `m1EdgeSweep.ts` unchanged |
+| `markDropCreated` | `EditorV2.tsx` (8) | `modelidRef.current` |
+| `setEdgeRefId` | `jjomTransformers.ts:684`, inside `jjomEdgeToRFEdge` | new trailing `modelId` of `jjomEdgeToRFEdge`, given by `useJjomSync.ts` (3 calls) as `heldModelRef.current`; `transformJjomGraph` (only caller `useJjomData-toDelete.ts`) left on the shared bucket |
+| `setSyncMode` | none outside tests (§4.3) | the parameter exists, no caller |
+
+`EditorV2.tsx` passes `modelidRef.current` (the ref of :4229, read at call time) to its 16 calls of the `canvasToJjom.ts`
+writers, so no callback deps changed; the calls that relied on a default `layoutKey` pass `undefined` for it. Callers
+outside the file list (`ContextMenu.tsx`, `createAdapter.ts`) are unchanged and still legal.
+
+### 11.3 Gates
+
+Typecheck 0 errors. Vitest: 628 files passed, 3 failed at import (the known `window is not defined` three, §17); the new
+`sync/__tests__/syncStateByModel.test.ts` has 8 cases. Build ok (the chunk-size and dynamic-import warnings only).
+`npm run check:docs` ok.
+
+### 11.4 Probe
+
+**[measured]** `~/.jjodel-lanes/P-2026-11-19-1530/probe-l4c.mjs` (base: the probe of §4.2, original untouched), dev
+server `http://localhost:3074` on `2837e117d`'s tree, throwaway Chromium profile, output `probe-l4c.json` beside it.
+Fixture: the multi-tab demo of §4.2, plus `frontend/scripts/library/gallery/families-persons/Families.ecore` imported by
+`EcoreService.importFromXML` into the same project. Two groups are made as the parent discovery did, with
+`DockManager.openBeside`, the trunk's dock-level split (L6c/L6d): returned `true` both times, 2 model panels in the row.
+Page errors: 0.
+
+| Scenario | Reading | Result |
+|---|---|---|
+| S1, the inverted measurement (MM edges / registered) | r0 before 8/5; r1 after A's second tab closes 8/5; r2 400 ms after A's last tab closes 8/**5**; r3 +6 s 8/**5** | pass (§4.2 on `ec4ea037e`: 8/5, 8/5, 8/0, 8/0) |
+| S2, Families Family↔Member D-edges, with an M1 tab (A) opened beside it and closed | 8, 8, 8, 8 (rendered 8, duplicate keys 0, at each reading) | pass |
+| S3, drag a Families node, A's last tab closes right after the drag end | before (50, 290); at pointer-up (128, 352); +0.4 s (128, 352); +3.4 s (128, 352); A closed | pass |
+| S4, drop a class on Families while A's last tab closes | classes 2→3, nodes 2→3, D-edges 8→8, duplicate keys 0, Family↔Member 8 | pass |
+| S5, save, reload | MM 7 classes / 8 vertices / 8 edges, Families 3 / 3 / 8, A 19 vertices / 29 edges: identical fingerprints (class names, vertex ids with their `x`/`y` fields, edge keys) | pass |
+
+S3 was run three times. The first run asserted a displacement of exactly 90/60 px, but the node settled at +78/+62 and
+stayed there (snap, drag threshold), so the check was rewritten to compare against the position at pointer-up. The
+second run used a bubble `mouseup` listener to close A, but that listener never fired, so A was not closed. The third
+run closes A from a capture-phase `pointerup` listener through `setTimeout(0)`, which is queued before the drag-end
+handler queues the store dispatch (action.ts), so the release of A runs between the canvas mark and the delivery of the
+position write. That ordering comes from reading the code. The probe did not instrument it.
+
+Not measured: a trunk control run of S2 to S5 (only S1 has a before figure, §4.2), and S4 for an object dropped on an
+M1 canvas.
