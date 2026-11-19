@@ -22,7 +22,7 @@ vi.mock('../EditorSwitch.scss', () => ({}));
 
 import { adoptsRootViewpoint, initialTabViewpoint, savedViewpointToRestore } from '../EditorSwitch';
 
-const activeTab = (activeId: string) => ({ dockbox: { children: [{ activeId }] } });
+const activeTab = (activeId: string) => ({ dockbox: { children: [{ activeId, tabs: [{ id: activeId }] }] } });
 const store = new Map<string, string>();
 
 describe('EditorSwitch on a second tab', () => {

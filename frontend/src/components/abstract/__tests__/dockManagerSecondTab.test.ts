@@ -25,6 +25,7 @@ vi.mock('../../environment/consumerMode', () => ({ isConsumerMode: () => h.consu
 
 import DockManager from '../DockManager';
 import { managerTabId } from '../tabs/instanceManagerModel';
+import { noteActiveTab, resetDockGroups, splitRightInProgress } from '../tabs/dockGroups';
 
 const M = 'M';
 const panel = (id: string, tabIds: string[], activeId = tabIds[0]) => ({ id, activeId, tabs: tabIds.map(t => ({ id: t, content: {} })) });
@@ -48,6 +49,7 @@ const removedIds = (dock: any) => dock.dockMove.mock.calls.filter((c: any[]) => 
 
 describe('DockManager, several tabs on one model', () => {
     beforeEach(() => {
+        resetDockGroups();
         h.consumer = false;
         h.state = { idlookup: { M: { id: M, className: 'DModel', isMetamodel: false }, MM: { id: 'MM', className: 'DModel', isMetamodel: true } } };
     });
@@ -150,6 +152,62 @@ describe('DockManager, several tabs on one model', () => {
             expect(tab).toMatchObject({ id: `${M}~tab2`, viewpointId: 'V' });
             expect(target.id).toBe('p1');
             expect(where).toBe('middle');
+        });
+    });
+
+    describe('editor groups (R-MT-30)', () => {
+        it('splitRight: a copy of the tab on its viewpoint, right of the tab\'s group, inside the veto\'s permission', () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', M], M), panel('p2', ['N'])));
+            let allowed = false;
+            dock.dockMove.mockImplementation(() => { allowed = splitRightInProgress(); });
+            DockManager.splitRight(M, 'V');
+            const [tab, target, where] = dock.dockMove.mock.calls[0];
+            expect(tab).toMatchObject({ id: `${M}~tab2`, viewpointId: 'V', kind: 'model' });
+            expect(target.id).toBe('p1');
+            expect(where).toBe('right');
+            expect(allowed).toBe(true);
+            expect(splitRightInProgress()).toBe(false);
+        });
+
+        it('splitRight on a metamodel, or with something maximized: nothing moves', () => {
+            const dock = install(horizontal(panel('p1', ['MM'])));
+            expect(DockManager.splitRight('MM', null)).toBe(false);
+            install({ ...horizontal(panel('p1', [M])), maxbox: { children: [panel('m', ['x'])] } });
+            expect(DockManager.splitRight(M, null)).toBe(false);
+            expect(dock.dockMove).not.toHaveBeenCalled();
+        });
+
+        it('open: a new tab lands in the active group, not the first', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary']), panel('p2', ['N'])));
+            noteActiveTab('N');
+            await DockManager.open('models', { id: M } as any);
+            expect(dock.dockMove.mock.calls[0][1].id).toBe('p2');
+            expect(dock.dockMove.mock.calls[0][2]).toBe('middle');
+        });
+
+        it('open: a model open only in another group gets a copy in the active group', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', M]), panel('p2', ['N'])));
+            noteActiveTab('N');
+            await DockManager.open('models', { id: M } as any);
+            const [tab, target, where] = dock.dockMove.mock.calls[0];
+            expect(tab.id).toBe(`${M}~tab2`);
+            expect([target.id, where]).toEqual(['p2', 'middle']);
+        });
+
+        it('open: the active group already has a tab of the model, it is focused', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', M]), panel('p2', [`${M}~tab2`])));
+            noteActiveTab(`${M}~tab2`);
+            await DockManager.open('models', { id: M } as any);
+            expect(dock.updateTab).toHaveBeenCalledWith(`${M}~tab2`, null, true);
+            expect(dock.dockMove).not.toHaveBeenCalled();
+        });
+
+        it('open: a tab that is no model\'s is focused where it is open (Q3)', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', 'doc_x']), panel('p2', ['N'])));
+            noteActiveTab('N');
+            await DockManager.open('models', { id: 'doc_x' } as any);
+            expect(dock.updateTab).toHaveBeenCalledWith('doc_x', null, true);
+            expect(dock.dockMove).not.toHaveBeenCalled();
         });
     });
 });

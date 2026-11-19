@@ -14,10 +14,11 @@ export const SUMMARY_TAB_ID = 'project_summary';
 export interface GroupTab { id?: string; group?: string; parent?: any }
 export interface GroupPanel { id?: string; group?: string; activeId?: string; size?: number; tabs: GroupTab[]; parent?: any }
 
-/** Whether a panel of the layout is an editor group. */
+/** Whether a panel of the layout is an editor group: of the `models` group, or of none recorded yet (the summary's panel before rc-dock fixes it). */
 export function isModelGroup(panel: any): panel is GroupPanel {
     if (!panel || !Array.isArray(panel.tabs)) return false;
-    return panel.group === MODELS_GROUP || panel.tabs.some((t: GroupTab) => t?.group === MODELS_GROUP || t?.id === SUMMARY_TAB_ID);
+    if (panel.group !== undefined) return panel.group === MODELS_GROUP;
+    return panel.tabs.every((t: GroupTab) => t?.group === undefined || t.group === MODELS_GROUP);
 }
 
 /** The groups of the dock box, left to right. Floating, windowed and maximized panels are not groups. */

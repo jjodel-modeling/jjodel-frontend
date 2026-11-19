@@ -5,6 +5,7 @@ import { ActiveEditorProvider } from '../../editor-v2/ActiveEditorContext';
 import { store } from '../../../joiner';
 import { activateViewpoint } from '../../../utils/lastViewpoint';
 import DockManager from '../DockManager';
+import { activeTabId } from './dockGroups';
 import { JjodelEvents } from '../../../events/registry';
 import './EditorSwitch.scss';
 
@@ -39,15 +40,15 @@ function writeEditorPrefs(modelid: string, partial: EditorPrefs): void {
 }
 
 /**
- * Whether `tabId` is the dock's active tab: `dockbox.children[0].activeId`, the definition
- * Dock.tsx, MyRcDock.tsx and Navbar.tsx already use. rc-dock keeps inactive tabs mounted
+ * Whether `tabId` is the dock's active tab: the active tab of the active editor group (R-MT-30,
+ * `dockGroups.activeTabId`), the definition Dock.tsx and MyRcDock.tsx use. rc-dock keeps inactive tabs mounted
  * (off-screen), so "mounted" does not mean "the tab the user is looking at". The model tab id
  * is the model id (TabDataMaker.model). False when the dock is not available.
  */
 export function isActiveDockTab(tabId: string): boolean {
     try {
-        const panel = DockManager.dock?.getLayout()?.dockbox?.children?.[0] as any;
-        return !!tabId && panel?.activeId === tabId;
+        const layout = DockManager.dock?.getLayout();
+        return !!tabId && !!layout && activeTabId(layout) === tabId;
     } catch { return false; }
 }
 
@@ -239,6 +240,9 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
         setEditorMode('flow');
     }, [viewpointId]);
 
+    // Split Right (R-MT-30): a copy of this tab, on its viewpoint, in a new group to the right. No second tab on a metamodel.
+    const splitRight = isMetamodel ? undefined : () => { DockManager.splitRight(ownTabId, tabViewpointRef.current); };
+
     if (!hasViewpoint) {
         return (
             <ActiveEditorProvider>
@@ -249,6 +253,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                             hasViewpoint={false}
                             viewpointId={shownViewpointId}
                             onViewpointChange={isMetamodel ? undefined : setTabViewpointId}
+                        onSplitRight={splitRight}
                         />
                     </div>
                 </div>
@@ -272,6 +277,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                         hasViewpoint
                         viewpointId={shownViewpointId}
                         onViewpointChange={isMetamodel ? undefined : setTabViewpointId}
+                        onSplitRight={splitRight}
                     />
                 </div>
             </div>

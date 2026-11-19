@@ -5,6 +5,7 @@ import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from 
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
+import { activeGroup, groupOfTab, noteActiveTab, withSplitRight } from "./tabs/dockGroups";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, splitSizes, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
@@ -32,20 +33,35 @@ class DockManager {
 
     static getCanvasSplit = (): CanvasSplit => DockManager.canvasSplit;
 
-    private static setCanvasSplit(next: CanvasSplit): void {
-        if (next === DockManager.canvasSplit) return;
+    // R-MT-30 (Q6): the active group shows no canvas while another group does; the palette shows collapsed.
+    static paletteCollapsed = false;
+    static getPaletteCollapsed = (): boolean => DockManager.paletteCollapsed;
+
+    private static setCanvasSplit(next: CanvasSplit, paletteCollapsed: boolean = DockManager.paletteCollapsed): void {
+        if (next === DockManager.canvasSplit && paletteCollapsed === DockManager.paletteCollapsed) return;
         DockManager.canvasSplit = next;
+        DockManager.paletteCollapsed = paletteCollapsed;
         DockManager.canvasSplitListeners.forEach(listener => listener());
     }
 
-    /** Re-reads the split from the dock: the same rows the split's SCSS matches, and the editor each panel shows. A Refactoring split is none. */
+    /**
+     * Re-reads the split from the dock: the same rows the split's SCSS matches, and the editor each panel shows. A Refactoring split is none.
+     * Editor groups (R-MT-30): a group whose active tab is no canvas is a group without canvas, not the end of the split (Q6); the canvas of
+     * the active group is the active pane, and with no canvas there the last active one stays, its palette collapsed.
+     */
     static refreshCanvasSplit = (): void => {
         const box = document.querySelector('.not-strip > .dock-layout > .dock-hbox');
         const beside = !box || !!box.querySelector(':scope > .dock-panel .script-tab--beside');
-        const shown = beside ? [] : [...box.querySelectorAll(':scope > .dock-panel.dock-style-models')]
-            .map(panel => panel.querySelector<HTMLElement>('.dock-tabpane-active .editor-v2'));
-        const panes = shown.every((pane): pane is HTMLElement => pane !== null) ? shown as HTMLElement[] : [];
-        DockManager.setCanvasSplit(reconcileCanvasSplit(DockManager.canvasSplit, panes));
+        const rows = beside ? [] : [...box.querySelectorAll<HTMLElement>(':scope > .dock-panel.dock-style-models')];
+        const canvasOf = (row: Element | undefined) => row?.querySelector<HTMLElement>('.dock-tabpane-active .editor-v2') ?? null;
+        const panes = rows.map(canvasOf).filter((pane): pane is HTMLElement => pane !== null);
+        let split = reconcileCanvasSplit(DockManager.canvasSplit, panes);
+        const layout = DockManager.dock?.getLayout();
+        const groupId = layout ? activeGroup(layout)?.id : undefined;
+        const activeRow = rows.find(row => row.dataset.dockid === groupId);
+        const activeCanvas = canvasOf(activeRow);
+        if (activeCanvas) split = activateCanvasPane(split, activeCanvas);
+        DockManager.setCanvasSplit(split, !!activeRow && !activeCanvas && panes.length > 0);
     };
 
     static activateCanvasPane(pane: HTMLElement): void {
@@ -133,13 +149,33 @@ class DockManager {
 
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
-        // Guard: if a tab with this ID already exists, just activate it
+        const target = DockManager.activeGroupPanel();
+        // G3 (R-MT-30): a model opens as a tab in the active group, or is focused there when the group has one of its
+        // tabs; open only in another group, a copy opens in the active group. Any other tab is focused where it is (Q3).
         if (tab.id) {
-            const existing = DockManager.dock.find(tab.id);
-            if (existing && 'content' in existing) {
-                DockManager.dock.updateTab(tab.id, null as any, true);
+            const modelId = modelOfTabId(tab.id);
+            const model = (store.getState() as any).idlookup?.[modelId];
+            const isModelTab = model?.className === 'DModel' && !model.isMetamodel && tab.id === modelId;
+            const here = isModelTab && target ? target.tabs.find(t => modelOfTabId(t.id as string) === modelId) : undefined;
+            if (here) {
+                DockManager.dock.updateTab(here.id as string, null as any, true);
                 return;
             }
+            const existing = DockManager.dock.find(tab.id);
+            if (existing && 'content' in existing) {
+                const elsewhere = isModelTab && target && groupOfTab(DockManager.dock.getLayout(), tab.id) !== target;
+                if (!elsewhere) {
+                    DockManager.dock.updateTab(tab.id, null as any, true);
+                    return;
+                }
+                const copy = DockManager.makeModelTab(modelId, undefined);
+                if (copy && target) DockManager.dock.dockMove(copy, target, 'middle');
+                return;
+            }
+        }
+        if (target) {
+            DockManager.dock.dockMove(tab, target, 'middle');
+            return;
         }
         // F1 (2026-07-29 floating panels): both groups resolve to the canvas child
         // children[0]. The 'editors' group (Documentation opened via Jodie) is
@@ -263,8 +299,9 @@ class DockManager {
                 case 'activate': dock.updateTab(tabId, null as any, true); return true;
                 case 'move-into': dock.dockMove(open() as TabData, target, 'middle'); return true;
                 case 'open-into': dock.dockMove(fresh(), target, 'middle'); return true;
-                case 'split-move': dock.dockMove(open() as TabData, target, 'right'); break;
-                case 'split-open': dock.dockMove(fresh(), target, 'right'); break;
+                // The Refactoring tab beside its target keeps its own split (R-MT-30 lets it through the veto).
+                case 'split-move': withSplitRight(() => dock.dockMove(open() as TabData, target, 'right')); break;
+                case 'split-open': withSplitRight(() => dock.dockMove(fresh(), target, 'right')); break;
             }
             // rc-dock splits in two equal halves: share them by `ratio`, as its divider does (sizes in place, a new box).
             const after = dock.getLayout();
@@ -295,19 +332,57 @@ class DockManager {
     }
 
     /**
-     * The same tab in a panel right of the editor panel's active tab (R-MT-24). When the dock cannot
-     * place it there (`openBeside` false) it opens as a new tab, on the same viewpoint.
+     * «Open beside ▸ <viewpoint>» of the Tree View (R-MT-24), now Split Right with that viewpoint (R-MT-30, Q8): a new
+     * group right of the active one, holding a further tab on the model. When the dock cannot split it opens as a new
+     * tab in the active group, on the same viewpoint.
      */
     static openModelTabBeside(modelId: string, viewpointId: string | null): void {
+        if (DockManager.splitRightModel(modelId, viewpointId)) return;
         const tab = DockManager.makeModelTab(modelId, viewpointId);
-        if (!tab) return;
-        const editorPanel = DockManager.dock?.getLayout()?.dockbox?.children?.[0] as PanelData | undefined;
-        const besideId = editorPanel?.activeId;
-        if (besideId && DockManager.openBeside(besideId, tab.id as string, 0.5, viewpointId)) return;
-        void DockManager.open('models', tab);
+        if (tab) void DockManager.open('models', tab);
     }
 
-    private static makeModelTab(modelId: string, viewpointId: string | null): TabData | null {
+    /** The active editor group (R-MT-30): the group of the last focused or activated tab, else the first. */
+    static activeGroupPanel(): PanelData | null {
+        const layout = DockManager.dock?.getLayout();
+        return layout ? (activeGroup(layout) as PanelData | null) : null;
+    }
+
+    /**
+     * Split Right (R-MT-30, G2): a new group immediately right of the group of the tab `tabId`, holding a copy of it on
+     * `viewpointId` (same model, so the layout is shared, R-MT-4); rc-dock halves the group's width (Q2). The new tab is
+     * active. False when the tab is no M1 model's (a metamodel has no second tab), not in a group, or something is maximized.
+     */
+    static splitRight(tabId: string, viewpointId: string | null): boolean {
+        const layout = DockManager.dock?.getLayout();
+        const group = layout ? groupOfTab(layout, tabId) : null;
+        return !!group && DockManager.splitRightOf(group as PanelData, modelOfTabId(tabId), viewpointId);
+    }
+
+    /** Split Right of the active group with a further tab on the M1 model `modelId`, on `viewpointId` (Q8). */
+    static splitRightModel(modelId: string, viewpointId: string | null): boolean {
+        const group = DockManager.activeGroupPanel();
+        return !!group && DockManager.splitRightOf(group, modelId, viewpointId);
+    }
+
+    private static splitRightOf(group: PanelData, modelId: string, viewpointId: string | null): boolean {
+        const dock = DockManager.dock;
+        if (!dock || dock.getLayout()?.maxbox?.children?.length) return false;
+        const tab = DockManager.makeModelTab(modelId, viewpointId);
+        if (!tab) return false;
+        try {
+            withSplitRight(() => dock.dockMove(tab, group, 'right'));
+        } catch (error) {
+            console.error('[DockManager] splitRight:', error);
+            return false;
+        }
+        const placed = groupOfTab(dock.getLayout(), tab.id as string);
+        if (!placed || placed === group) return false;
+        noteActiveTab(tab.id as string);
+        return true;
+    }
+
+    private static makeModelTab(modelId: string, viewpointId: string | null | undefined): TabData | null {
         const dock = DockManager.dock;
         const model = (store.getState() as any).idlookup?.[modelId];
         if (!dock || model?.className !== 'DModel' || model.isMetamodel) return null;
@@ -378,10 +453,10 @@ class DockManager {
                 content: React.createElement(DocumentationTab, { modelid: project.id })
             };
 
-            const layout = DockManager.dock.getLayout();
-            if (layout?.dockbox?.children?.[0]) {
+            const target = DockManager.activeGroupPanel();
+            if (target) {
                 // console.log('[DockManager] Creating new documentation tab');
-                DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                DockManager.dock.dockMove(tab, target, 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary', modelId: project.id }
                 }));
@@ -605,10 +680,10 @@ class DockManager {
                 content: tabContent
             };
 
-            const layout = DockManager.dock.getLayout();
-            if (layout?.dockbox?.children?.[0]) {
+            const target = DockManager.activeGroupPanel();
+            if (target) {
                 // console.log('[DockManager] Creating new transformation tab');
-                DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                DockManager.dock.dockMove(tab, target, 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation', modelId: transformation.id }
                 }));

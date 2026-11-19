@@ -70,6 +70,8 @@ interface ToolbarProps {
     onZoomIn?: () => void;
     onZoomOut?: () => void;
     onResetZoom?: () => void;
+    /** Split Right (R-MT-30): a new editor group right of this one, holding a copy of the tab. Omitted: no icon. */
+    onSplitRight?: () => void;
     // Alignment (inline — replaces undo/redo group when 2+ selected)
     selectedCount?: number;
     onAlignLeft?: () => void;
@@ -257,6 +259,7 @@ function Toolbar({
     onZoomIn,
     onZoomOut,
     onResetZoom,
+    onSplitRight,
     selectedCount = 0,
     onAlignLeft,
     onAlignCenterV,
@@ -1280,6 +1283,18 @@ function Toolbar({
                     duration: 200})`) is a separate handler, not reachable from this group. */}
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
+
+                {/* Split Right (R-MT-30): the only way to make an editor group, as in VS Code. */}
+                {onSplitRight && (
+                    <button
+                        className="toolbar-commands__btn"
+                        onClick={onSplitRight}
+                        aria-label="Split editor right"
+                        title="Split Right"
+                    >
+                        <i className="bi bi-layout-split" />
+                    </button>
+                )}
 
                 {/* Rail collapse — the WHOLE column, both zones, not the inspector
                     alone. This is where it differs from the rail header's own button,

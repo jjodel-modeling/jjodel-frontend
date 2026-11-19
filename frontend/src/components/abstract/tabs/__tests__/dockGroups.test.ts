@@ -27,9 +27,9 @@ describe('dockGroups', () => {
             expect(modelGroups(l).map(p => p.id)).toEqual(['g1']);
         });
 
-        it('the summary panel before rc-dock fixed its group is a group', () => {
-            const l = { dockbox: { children: [{ tabs: [{ id: SUMMARY_TAB_ID }] }] } };
-            expect(modelGroups(l)).toHaveLength(1);
+        it('a panel with no group recorded is a group, unless one of its tabs is of another group', () => {
+            const l = { dockbox: { children: [{ tabs: [{ id: SUMMARY_TAB_ID }] }, { tabs: [{ id: 'A', group: 'models' }] }, { tabs: [{ id: 'x', group: 'editors' }] }] } };
+            expect(modelGroups(l)).toHaveLength(2);
         });
     });
 

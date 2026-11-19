@@ -20,6 +20,7 @@ import $ from "jquery";
 import {BoxData, LayoutData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
 import { modelOfTabId } from "../abstract/tabs/modelTabId";
+import { activeGroup, activeTabId, dockMoveAllowed, groupOfTab, noteActiveTab, splitRightInProgress } from "../abstract/tabs/dockGroups";
 import "./DockManagerStyles.scss";
 
 // needs to be class component because needs setState() to be called externally
@@ -574,8 +575,8 @@ export class PinnableDock extends DockLayout{
      */
     private _detectActiveTabChange(): void {
     const layout = this.getLayout();
-    const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
-    const activeId = (firstPanel as any)?.activeId as string | undefined;
+    // The active tab of the active editor group (R-MT-30), no longer the first panel's.
+    const activeId = activeTabId(layout) ?? undefined;
 
     // Ignore missing or transient rightbar IDs — do NOT update _lastActiveId
     // so the real editor tab is still detected on the next call
@@ -645,6 +646,33 @@ export class PinnableDock extends DockLayout{
     // dockMove(source: TabData | PanelData, target: string | TabData | PanelData | BoxData | null, direction: DropDirection) {
     //     super.dockMove(source, target, direction);
     // }
+
+    /**
+     * The veto of the editor groups (R-MT-30, `dockGroups.dockMoveAllowed`): a models tab moves only into an existing
+     * group, `right` only for Split Right, never to another edge, a float, a window or a maximize; a whole panel never
+     * moves; the project summary tab never moves. A refused move leaves the layout as it was. Closing the active tab of a
+     * group that stays keeps that group active (the tab it shows next is noted).
+     */
+    dockMove(source: TabData | PanelData, target: string | TabData | PanelData | BoxData | null, direction: Parameters<DockLayout['dockMove']>[2], floatPosition?: Parameters<DockLayout['dockMove']>[3]): void {
+        const isPanel = !!source && 'tabs' in source;
+        const id = (isPanel ? (source as PanelData).activeId : source?.id) as string | undefined;
+        const group = isPanel ? ((source as PanelData).group ?? (source as PanelData).tabs?.[0]?.group) : (source as TabData)?.group;
+        const resolved: any = typeof target === 'string' ? this.find(target) : target;
+        const targetPanel: any = resolved && ('tabs' in resolved || 'children' in resolved) ? resolved : resolved?.parent;
+        const targetGroup = targetPanel?.group ?? targetPanel?.tabs?.[0]?.group ?? null;
+        if (!dockMoveAllowed({ kind: isPanel ? 'panel' : 'tab', id, group, direction, targetGroup, splitting: splitRightInProgress() })) {
+            this.onDragStateChange(false);
+            return;
+        }
+        const before = this.getLayout();
+        const closing = direction === 'remove' && !isPanel && id ? groupOfTab(before, id) : null;
+        const closingIn = closing && closing === activeGroup(before) ? closing.id : undefined;
+        super.dockMove(source, target, direction, floatPosition);
+        if (closingIn) {
+            const stays = this.find(closingIn) as PanelData | undefined;
+            if (stays && 'tabs' in stays && stays.activeId) noteActiveTab(stays.activeId);
+        }
+    }
     //
     // setDropRect(element: HTMLElement, direction?: DropDirection, source?: any, event?: { clientX: number; clientY: number }, panelSize?: [number, number]) {
     //     super.setDropRect(element, direction, source, event, panelSize);

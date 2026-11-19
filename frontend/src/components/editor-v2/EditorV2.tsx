@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo, useEffect, useLayoutEffect } from 'react';
+import React, { useCallback, useRef, useState, useMemo, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
@@ -412,6 +412,8 @@ export interface EditorV2Props {
     viewpointId?: string | null;
     /** Sets the tab's viewpoint, for the toolbar picker (through EditorContext). */
     onViewpointChange?: (viewpointId: string | null) => void;
+    /** Split Right of this canvas's tab (R-MT-30): a new group right of it, a copy on the same viewpoint. Omitted: no split icon. */
+    onSplitRight?: () => void;
 }
 
 /**
@@ -510,7 +512,7 @@ function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: b
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
+function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight }: EditorV2Props) {
     // Phase 3: React Flow state — initialised from demo data when standalone,
     // or populated by useJjomSync when modelid is provided.
     const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
@@ -597,6 +599,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // This editor's place in a split of canvases (multi-tab L6c, P-2026-11-08-1855): one palette, the active pane's.
     const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
     const canvasSplit = useCanvasSplit(paneEl);
+    // R-MT-30 (Q6): while a group without a canvas is active, the palette of the last active canvas shows collapsed.
+    const paletteCollapsedBySplit = useSyncExternalStore(DockManager.subscribeCanvasSplit, DockManager.getPaletteCollapsed);
     const inCanvasSplit = paneEl !== null && canvasSplit.panes.includes(paneEl);
     const activatePane = useCallback(() => { if (paneEl) DockManager.activateCanvasPane(paneEl); }, [paneEl]);
     const paneActivationRef = useRef<PaneActivation>('none');
@@ -5482,7 +5486,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             allClasses={modeInfo.allClasses}
             selectedDObjectId={lastSelectedModelElement ?? null}
             onItemActivate={onPaletteActivate}
-            collapsed={!!scriptPreview?.owner}
+            collapsed={!!scriptPreview?.owner || paletteCollapsedBySplit}
             ontoSections={ontoSections}
             onOntoActivate={onOntoActivate}
             onDeclareBinding={advancedMode ? onDeclareBinding : undefined}
@@ -5561,6 +5565,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         zoomLevel={activeController ? activeZoomLevel : undefined}
                         onZoomIn={activeController ? handleActiveZoomIn : undefined}
                         onZoomOut={activeController ? handleActiveZoomOut : undefined}
+                        onSplitRight={onSplitRight}
                         onResetZoom={activeController ? handleActiveResetZoom : undefined}
                         selectedCount={selectedNodes.length}
                         onAlignLeft={() => withSnapshot(alignLeft)}
@@ -5686,7 +5691,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange }: EditorV2Props) {
+function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight }: EditorV2Props) {
     return (
         <ReactFlowProvider>
             <EditorV2Inner
@@ -5698,6 +5703,7 @@ function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoi
                 onEditorModeChange={onEditorModeChange}
                 viewpointId={viewpointId}
                 onViewpointChange={onViewpointChange}
+                onSplitRight={onSplitRight}
             />
         </ReactFlowProvider>
     );

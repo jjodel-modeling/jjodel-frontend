@@ -23,6 +23,7 @@
 import type { BoxData, DockLayout, LayoutData, PanelData, TabData } from 'rc-dock';
 import { LPointerTargetable } from '../../joiner';
 import DockManager from '../../components/abstract/DockManager';
+import { activeGroup, MODELS_GROUP } from '../../components/abstract/tabs/dockGroups';
 import { JjodelEvents } from '../../events/registry';
 import { pickOnCanvas } from './codeOrigins';
 import { generatorTabId } from './generatorTabs';
@@ -74,6 +75,15 @@ export function findPanel(dock: DockLayout, test: (tabId: string) => boolean): P
  * before React renders it. False when `besideId` is not docked.
  */
 export function dockBeside(dock: DockLayout, tab: TabData, besideId: string): boolean {
+    // Editor groups (R-MT-30, Q12): a tab of the editor groups (the Text tab) opens in the active group, since Split
+    // Right is the only way to make one. A generator tab has a dock group of its own and keeps its split.
+    if (tab.group === MODELS_GROUP && tab.id !== undefined) {
+        const group = activeGroup(dock.getLayout()) as PanelData | null;
+        if (!group) return false;
+        if (panelOf(dock, tab.id) === group) dock.updateTab(tab.id, null as any, true);
+        else dock.dockMove(tab, group, 'middle');
+        return true;
+    }
     const target = panelOf(dock, besideId);
     if (!target || tab.id === undefined) return false;
     dock.dockMove(tab, target, 'right');
