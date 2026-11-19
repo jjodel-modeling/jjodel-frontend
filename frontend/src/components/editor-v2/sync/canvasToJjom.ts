@@ -88,8 +88,8 @@ function writeLayoutDictionary(vertexId: string, write: VertexLayoutWrite): void
  * Write a vertex's new position to JjOM.
  * Called on drag end (lazy mode) or during drag (faithful mode).
  */
-export function syncPositionToJjom(vertexId: string, x: number, y: number, layoutKey?: string): void {
-    markCanvasUpdated(vertexId);
+export function syncPositionToJjom(vertexId: string, x: number, y: number, layoutKey?: string, modelId?: string): void {
+    markCanvasUpdated(vertexId, modelId);
     const write = resolveLayoutWriteFor(vertexId, { x, y }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 drag', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
@@ -103,9 +103,9 @@ export function syncPositionToJjom(vertexId: string, x: number, y: number, layou
  * vertex's box as sized by hand (`isResized`), in the same record: two writes of one vertex in one batch would each
  * read the record as the store holds it and the later would take back the earlier's half (P-2026-10-11-1156).
  */
-export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number; w?: number; h?: number }>, tabLayoutKey?: string): void {
+export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number; w?: number; h?: number }>, tabLayoutKey?: string, modelId?: string): void {
     if (updates.length === 0) return;
-    markCanvasUpdatedBatch(updates.map(u => u.id));
+    markCanvasUpdatedBatch(updates.map(u => u.id), modelId);
     const layoutKey = tabLayoutKey ?? getActiveLayoutKey();
     TRANSACTION('EditorV2 drag batch', () => {
         for (const { id, x, y, w, h } of updates) {
@@ -133,8 +133,8 @@ export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; 
  * width/height on reload (w/h alone can't be the gate: every DVertex gets
  * default w/h at creation, so unresized nodes must keep auto-sizing).
  */
-export function syncSizeToJjom(vertexId: string, w: number, h: number, layoutKey?: string): void {
-    markCanvasUpdated(vertexId);
+export function syncSizeToJjom(vertexId: string, w: number, h: number, layoutKey?: string, modelId?: string): void {
+    markCanvasUpdated(vertexId, modelId);
     const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 resize', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
@@ -149,8 +149,8 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number, layoutKey
  * content-driven again on the next load (w/h keep their last values but the
  * transformers ignore them while `isResized` is false).
  */
-export function syncSizeResetToJjom(vertexId: string, layoutKey?: string): void {
-    markCanvasUpdated(vertexId);
+export function syncSizeResetToJjom(vertexId: string, layoutKey?: string, modelId?: string): void {
+    markCanvasUpdated(vertexId, modelId);
     const write = resolveLayoutWriteFor(vertexId, { isResized: false }, layoutKey ?? getActiveLayoutKey());
     TRANSACTION('EditorV2 reset size', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
@@ -162,9 +162,9 @@ export function syncSizeResetToJjom(vertexId: string, layoutKey?: string): void 
  * Write the same or per-vertex size to multiple vertices at once
  * (e.g. propagate one instance's dimensions to all instances of a view).
  */
-export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>, tabLayoutKey?: string): void {
+export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>, tabLayoutKey?: string, modelId?: string): void {
     if (sizes.length === 0) return;
-    markCanvasUpdatedBatch(sizes.map(s => s.vertexId));
+    markCanvasUpdatedBatch(sizes.map(s => s.vertexId), modelId);
     const layoutKey = tabLayoutKey ?? getActiveLayoutKey();
     TRANSACTION('EditorV2 propagate size', () => {
         for (const { vertexId, w, h } of sizes) {
@@ -221,6 +221,7 @@ export function syncIRCollapsedToJjom(vertexId: string, collapsed: boolean): voi
 export function syncInheritanceEdge(
     sourceVertexId: string,
     targetVertexId: string,
+    modelId?: string,
 ): string | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
@@ -268,7 +269,7 @@ export function syncInheritanceEdge(
         // Register the edge pair BEFORE creating the DVoidEdge so the
         // auto-populate won't create a duplicate even if it runs before
         // the DVoidEdge appears in the graph's subElements.
-        markCanvasEdgePair(sourceVertexId, targetVertexId);
+        markCanvasEdgePair(sourceVertexId, targetVertexId, modelId);
 
         const dEdge = DVoidEdge.new2(
             undefined,
@@ -281,7 +282,7 @@ export function syncInheritanceEdge(
         );
         edgeId = dEdge.id;
 
-        if (edgeId) markCanvasUpdated(edgeId);
+        if (edgeId) markCanvasUpdated(edgeId, modelId);
 
         return edgeId;
     } catch (err) {
@@ -303,6 +304,7 @@ export function syncReferenceEdge(
     targetVertexId: string,
     name: string = 'newRef',
     kind?: 'association' | 'composition' | 'aggregation',
+    modelId?: string,
 ): { edgeId: string; refName: string } | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
@@ -377,7 +379,7 @@ export function syncReferenceEdge(
 
         // Register the edge pair BEFORE creating the DVoidEdge so the
         // auto-populate won't create a duplicate.
-        markCanvasEdgePair(sourceVertexId, targetVertexId);
+        markCanvasEdgePair(sourceVertexId, targetVertexId, modelId);
 
         const dEdge = DVoidEdge.new2(
             refId,
@@ -391,7 +393,7 @@ export function syncReferenceEdge(
         const edgeId = dEdge.id;
 
         if (!edgeId) return null;
-        markCanvasUpdated(edgeId);
+        markCanvasUpdated(edgeId, modelId);
         return { edgeId, refName: uniqueName };
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create reference edge:', err);
@@ -1722,6 +1724,7 @@ export function syncCreateCompositionLink(
     parentVertexId: string,
     childVertexId: string,
     referenceName: string,
+    modelId?: string,
 ): string | null {
     try {
         const parentProxy: any = LPointerTargetable.fromPointer(parentVertexId);
@@ -1776,7 +1779,7 @@ export function syncCreateCompositionLink(
             edgeId = dEdge?.id ?? null;
         });
 
-        if (edgeId) markCanvasUpdated(edgeId);
+        if (edgeId) markCanvasUpdated(edgeId, modelId);
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create composition link:', err);
@@ -1791,6 +1794,7 @@ export function syncCreateReferenceLink(
     sourceVertexId: string,
     targetVertexId: string,
     referenceName: string,
+    modelId?: string,
 ): string | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
@@ -1840,7 +1844,7 @@ export function syncCreateReferenceLink(
             edgeId = dEdge?.id ?? null;
         });
 
-        if (edgeId) markCanvasUpdated(edgeId);
+        if (edgeId) markCanvasUpdated(edgeId, modelId);
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create reference link:', err);

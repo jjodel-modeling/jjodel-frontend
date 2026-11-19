@@ -1050,7 +1050,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // the node label (see discovery §11/§12).
                     const vertexId = syncCreateObject(graphId, metaclassId, nextX, startY);
                     if (vertexId) {
-                        markDropCreated(vertexId);
+                        markDropCreated(vertexId, modelidRef.current);
                         const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? className;
                         const newNode: Node = {
                             id: vertexId,
@@ -1411,7 +1411,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 targetIds.has(n.id) ? { ...n, width: w, height: h, measured: undefined } : n
             ));
             // D-layer persistence (single TRANSACTION).
-            syncSizeBatchToJjom([...targetIds].map(id => ({ vertexId: id, w, h })));
+            syncSizeBatchToJjom([...targetIds].map(id => ({ vertexId: id, w, h })), undefined, modelidRef.current);
             scheduleLayoutSave();
         };
         window.addEventListener(JjodelEvents.PROPAGATE_VIEW_SIZE, handlePropagateSize);
@@ -2176,7 +2176,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             if (isJjomMode) {
                 if (isInheritance) {
-                    const dEdgeId = syncInheritanceEdge(edgeSource, edgeTarget);
+                    const dEdgeId = syncInheritanceEdge(edgeSource, edgeTarget, modelidRef.current);
                     if (!dEdgeId) {
                         console.warn('[EditorV2] Failed to create JjOM edge');
                         setPendingConnection(null);
@@ -2184,7 +2184,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     }
                     edgeId = dEdgeId;
                 } else {
-                    const result = syncReferenceEdge(edgeSource, edgeTarget, refLabel, choice as any);
+                    const result = syncReferenceEdge(edgeSource, edgeTarget, refLabel, choice as any, modelidRef.current);
                     if (!result) {
                         console.warn('[EditorV2] Failed to create JjOM edge');
                         setPendingConnection(null);
@@ -2197,7 +2197,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 // adds the DVoidEdge to its cache without creating a duplicate
                 // RF edge. Without this, the sync detects the new DVoidEdge in
                 // subElementIds and appends a second RF edge to the canvas.
-                markDropCreated(edgeId);
+                markDropCreated(edgeId, modelidRef.current);
             } else {
                 edgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
             }
@@ -2309,8 +2309,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             // Create in JjOM
             const edgeId = metaRef.containment
-                ? syncCreateCompositionLink(edgeSource, edgeTarget, metaRef.name)
-                : syncCreateReferenceLink(edgeSource, edgeTarget, metaRef.name);
+                ? syncCreateCompositionLink(edgeSource, edgeTarget, metaRef.name, modelidRef.current)
+                : syncCreateReferenceLink(edgeSource, edgeTarget, metaRef.name, modelidRef.current);
 
             if (!edgeId) {
                 console.warn('[EditorV2] Failed to create M1 reference edge');
@@ -2318,7 +2318,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return;
             }
 
-            markDropCreated(edgeId);
+            markDropCreated(edgeId, modelidRef.current);
 
             const newEdge: Edge = {
                 id: edgeId,
@@ -2405,7 +2405,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 closeGroup(() => true);
                 return;
             }
-            markDropCreated(vertexId);
+            markDropCreated(vertexId, modelidRef.current);
 
             // The creation TRANSACTION commits in a microtask (CLAUDE.md §9.2):
             // the endpoint slot proxies are not writable synchronously here
@@ -2653,7 +2653,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                 takeSnapshot();
                                 const created = syncCreateObject(graphId, metaclassId, position.x, position.y);
                                 if (!created) return;
-                                markDropCreated(created);
+                                markDropCreated(created, modelidRef.current);
                                 const name = (LPointerTargetable.fromPointer(created as any) as any)?.model?.name ?? className;
                                 setNodes((nds) => [...nds, {
                                     id: created, type: 'objectNode', position,
@@ -2754,7 +2754,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
                 // Create RF node instantly at drop position
                 if (vertexId) {
-                    markDropCreated(vertexId);
+                    markDropCreated(vertexId, modelidRef.current);
                     const newNode: Node = {
                         id: vertexId,
                         type: nodeType,
@@ -3082,7 +3082,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Clear the persisted manual-resize flag and save, so the reset
             // survives a reload (the transformers gate width/height on it).
             if (isJjomMode) {
-                syncSizeResetToJjom(nodeId);
+                syncSizeResetToJjom(nodeId, undefined, modelidRef.current);
                 scheduleLayoutSave();
             }
             requestAnimationFrame(() => requestAnimationFrame(() => updateNodeInternals(nodeId)));
@@ -3574,7 +3574,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         // Read it back for the node label (see discovery §11/§12).
         const vertexId = syncCreateObject(graphId, childClass.id, childX, childY);
         if (vertexId) {
-            markDropCreated(vertexId);
+            markDropCreated(vertexId, modelidRef.current);
             const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? childClass.name;
             const childNode: Node = {
                 id: vertexId,
@@ -3589,10 +3589,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 } as ObjectNodeData,
             };
             setNodes(nds => [...nds, childNode]);
-            const edgeId = syncCreateCompositionLink(parentNode.id, vertexId, refName);
+            const edgeId = syncCreateCompositionLink(parentNode.id, vertexId, refName, modelidRef.current);
             // Immediately create RF edge with proper anchoring (closest sides)
             if (edgeId) {
-                markDropCreated(edgeId);
+                markDropCreated(edgeId, modelidRef.current);
                 // Child is to the right → parent-right, child-left
                 const srcSide = 'right';
                 const tgtSide = 'left';
@@ -4460,14 +4460,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const s = result.sizes.get(n.id);
                 return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
             });
-            if (moved.length > 0) syncPositionBatchToJjom(moved, layoutKey);
+            if (moved.length > 0) syncPositionBatchToJjom(moved, layoutKey, modelidRef.current);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
                 const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
-                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })), layoutKey);
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })), layoutKey, modelidRef.current);
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
@@ -4526,7 +4526,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         for (const n of layoutedNodes) {
             updates.push({ id: n.id, x: n.position.x, y: n.position.y });
         }
-        if (updates.length > 0) syncPositionBatchToJjom(updates, tabLayoutKey());
+        if (updates.length > 0) syncPositionBatchToJjom(updates, tabLayoutKey(), modelidRef.current);
 
         // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
         // applyDistribution alone only re-indexes handles and inherits the side that
@@ -5051,17 +5051,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         // The position and the membership in ONE composite action: one undo restores both (LIR §1).
                         const ops = gvDrop.ops;
                         TRANSACTION('graphVertex membership', () => {
-                            if (positionWrites.length > 0) syncPositionBatchToJjom(positionWrites);
+                            if (positionWrites.length > 0) syncPositionBatchToJjom(positionWrites, undefined, modelidRef.current);
                             applyMembershipOps(ops);
                         });
                     } else if (positionWrites.length > 0) {
-                        syncPositionBatchToJjom(positionWrites);
+                        syncPositionBatchToJjom(positionWrites, undefined, modelidRef.current);
                     }
                     // Faithful mode: flush any pending RAF-throttled writes
                     for (const c of dragEndChanges) {
                         if (getSyncMode(c.id) === 'faithful') {
                             cancelThrottle(`jjom_drag_${c.id}`);
-                            syncPositionToJjom(c.id, c.position.x, c.position.y);
+                            syncPositionToJjom(c.id, c.position.x, c.position.y, undefined, modelidRef.current);
                         }
                     }
                     // Positions are now committed to the D-layer — debounce a
@@ -5078,7 +5078,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     rafThrottle(
                         `jjom_drag_${c.id}`,
                         (pos: { x: number; y: number }) => {
-                            syncPositionToJjom(c.id, pos.x, pos.y);
+                            syncPositionToJjom(c.id, pos.x, pos.y, undefined, modelidRef.current);
                         },
                         32, // ~30fps matching classic editor
                     )({ x: c.position.x, y: c.position.y });
@@ -5095,14 +5095,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
                         if (w !== undefined && h !== undefined) {
-                            syncSizeToJjom(c.id, w, h);
+                            syncSizeToJjom(c.id, w, h, undefined, modelidRef.current);
                             sizeSynced = true;
                         }
                     }
                     for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing === false)) {
                         const pair = pairedPartitionSizes(c.id);
                         if (pair.length > 0) {
-                            syncSizeBatchToJjom(pair);
+                            syncSizeBatchToJjom(pair, undefined, modelidRef.current);
                             sizeSynced = true;
                         }
                     }

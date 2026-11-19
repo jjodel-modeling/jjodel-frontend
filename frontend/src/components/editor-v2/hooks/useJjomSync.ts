@@ -959,7 +959,7 @@ export function useJjomSync(
                             // Register pair so subsequent auto-populate runs
                             // won't recreate this edge even if DVoidEdge.new2
                             // didn't add it to the graph's subElements yet.
-                            markCanvasEdgePair(srcVertex, tgtVertex);
+                            markCanvasEdgePair(srcVertex, tgtVertex, modelid);
                         }
                     }
                 }
@@ -1046,7 +1046,7 @@ export function useJjomSync(
                                 (d: DEdge) => { d.isReference = true; }
                             )?.id);
                             existingEdgeKeys.add(ek);
-                            markCanvasEdgePair(srcVertex, tgtVertex);
+                            markCanvasEdgePair(srcVertex, tgtVertex, modelid);
                         }
                     } else if (decision.action === 'reconcile') {
                         // Branch 1 / ≥2 — atomic retarget + duplicate cleanup.
@@ -1154,7 +1154,7 @@ export function useJjomSync(
                                     (d: DEdge) => { d.isReference = true; }
                                 )?.id);
                                 existingEdgeKeys.add(ek);
-                                markCanvasEdgePair(srcVertex, tgtVertex);
+                                markCanvasEdgePair(srcVertex, tgtVertex, modelid);
                             }
                         }
                     }
@@ -1280,7 +1280,7 @@ export function useJjomSync(
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
             for (const e of edges) {
-                const rfEdge = jjomEdgeToRFEdge(e, layoutKey);
+                const rfEdge = jjomEdgeToRFEdge(e, layoutKey, heldModelRef.current);
                 // Skip orphan edges (source/target vertex not in graph)
                 if (rfEdge && nodeCache.has(rfEdge.source) && nodeCache.has(rfEdge.target)) {
                     edgeCache.set(rfEdge.id, rfEdge);
@@ -1376,7 +1376,7 @@ export function useJjomSync(
                             continue;
                         }
 
-                        const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
+                        const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey, heldModelRef.current);
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
@@ -1492,7 +1492,7 @@ export function useJjomSync(
                         }
                     }
                 } else if (isEdgeClassName(className)) {
-                    const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
+                    const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey, heldModelRef.current);
                     if (rfEdge) {
                         // Preserve handles from applyDistribution
                         const existing = rfEdgeCache.current.get(id);
@@ -1649,15 +1649,17 @@ export function useJjomSync(
             openGateRef.current.timer = undefined;
             openGateRef.current.active = false;
             // The registries are module-level and shared by every instance: they clear
-            // only when the last instance of the held model unmounts (L4, R-MT-17).
+            // only when the last instance of the held model unmounts (L4, R-MT-17), and
+            // then only the entries of that model and of the shared bucket (L4c, R-MT-29).
+            // An instance that never held a model clears every model, as before L4c.
             const heldModel = heldModelRef.current;
             heldModelRef.current = undefined;
             if (heldModel === undefined || releasePopulateOwner(heldModel, populateTokenRef.current)) {
-                clearAllCanvasUpdated();
-                clearSyncModes();
-                clearDropCreated();
-                clearEdgeRefIds();
-                clearCanvasEdgePairs();
+                clearAllCanvasUpdated(heldModel);
+                clearSyncModes(heldModel);
+                clearDropCreated(heldModel);
+                clearEdgeRefIds(heldModel);
+                clearCanvasEdgePairs(heldModel);
             }
             rfNodeCache.current.clear();
             rfEdgeCache.current.clear();

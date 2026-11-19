@@ -582,7 +582,7 @@ function computeOptimalHandles(
  * Transform a JjOM edge (LEdge) into a React Flow Edge.
  * Returns null if the edge cannot be mapped.
  */
-export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
+export function jjomEdgeToRFEdge(edge: any, layoutKey?: string, modelId?: string): Edge | null {
     if (!edge) {
         return null;
     }
@@ -681,7 +681,7 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
         // Register in the stable module-level registry so commitLabel can
         // always find the DReference ID regardless of React state merges.
         if (refModel?.id) {
-            setEdgeRefId(edge.id, refModel.id);
+            setEdgeRefId(edge.id, refModel.id, modelId);
         }
 
         return {
