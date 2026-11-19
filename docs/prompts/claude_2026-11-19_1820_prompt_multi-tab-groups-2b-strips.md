@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1820
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · 021642d48 · verifica visiva passata 2026-11-19 (closed by P-2026-11-19-1915, stopped at the context ceiling)
 Lane: full (implementation, no critical-zone file)
 Depends: P-2026-11-19-1600/1745 (lane 2a, groups core, merged into the trunk after Alfonso's visual GO 2026-11-19 18:15); discovery `docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md` (Q1: per-group strips, rc-dock's own tab bar)
 Worktree: ~/jjodel-w-mtg2b, branch multi-tab-groups-2b, created from the trunk after the 2a merge, at this prompt's commit

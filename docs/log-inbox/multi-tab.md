@@ -419,3 +419,21 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-19 18:15 on 3075; probe P1-P7 7/7 at 1600 and 1280, 0 console errors)
 **Notes**: Typecheck 0, vitest 629 files / 3 known import failures, build ok, check:docs 5/5. P4 (tab moved group 2 to 1) and P6 (tab activated in group 2) driven through the dock API: per-group strips are hidden until lane 2b. Edge refusals via dockMove, no mouse edge drop. At 1280 group 1's canvas is ~257 px (lane 5, Q14). Probe and crops in ~/.jjodel-lanes/P-2026-11-19-1745/.
 **Prompt document name**: 2026-11-19 17:45
+
+## 2026-11-19 — feat: one tab strip per editor group, groups keep their width (multi-tab lane 2b)
+**Prompt**: `claude_2026-11-19_1915_prompt_multi-tab-groups-2b-finish.md`, lane full, finish of P-2026-11-19-1820 (stopped at the context ceiling, RC-51): group 1 widening, 1280 squeezed tabs, probe at 1600 and 1280, gates, commits, R-MT-30 sentence, visual stop
+**Files touched**: 021642d48 (`Navbar.tsx`, `navbar.scss`, `TabsOverflowMenu.tsx`, `BottomToolbar.tsx`, `Dashboard.tsx`, `DockManagerStyles.scss`, `abstract/style.scss`); b25a2b494 (`docs/decisions.md` R-MT-30); this commit: this inbox, Status of 1915 and 1820
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 code files, above five; `style.scss` outside the listed scope, approved in chat: the `.dock-hbox` exclusion on the five legacy blocks, 20 selectors, not the 10 first stated)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 21:18 «ok molto meglio» on 3082; probe S0-S7 10/10 at 1600 and 1280, 0 console errors)
+**Notes**: Widening predates the strips: closing group 1's active tab activates the hidden summary, body summary rule of style.scss collapsed the last group (trunk 9ada8807b identical, 1034/0 px). S6 at 1280 was the same collapse. Gates: typecheck 0, build ok, check:docs 0; vitest 3 known import failures, contextCeiling.test.ts green only with JJODEL_LANE_LOG(_FROM) unset. Probe, crops in ~/.jjodel-lanes/P-2026-11-19-1915/.
+**Prompt document name**: 2026-11-19 19:15
+
+## 2026-11-19 — ticket: metamodels always open in the left group
+**Ticket**: Reported by Alfonso at the lane 2b visual check: a metamodel opens in the left group (group 1) whatever the active group, not in the active group as G3 says for every artifact. Next lane.
+**Priority**: medium
+**Found in**: P-2026-11-19-1915

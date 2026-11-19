@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1915
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · 021642d48, b25a2b494 · verifica visiva passata 2026-11-19
 Lane: full (finish of P-2026-11-19-1820, stopped at the context ceiling, RC-51)
 Depends: P-2026-11-19-1820 (uncommitted work in the tree, six files; handoff in `~/.jjodel-lanes/P-2026-11-19-1820/handoff.md`, full diff in `handoff.diff`, base and HEAD 850775e3b)
 Worktree: ~/jjodel-w-mtg2b, branch multi-tab-groups-2b, at this prompt's commit, with the uncommitted work of P-2026-11-19-1820 in the tree
