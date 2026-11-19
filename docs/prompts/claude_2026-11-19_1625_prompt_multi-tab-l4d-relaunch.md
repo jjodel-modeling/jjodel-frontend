@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1625
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · d0c786696, 9f73ac082, eaad9e54d · verifica visiva non applicabile (no visual change; chat check 2026-11-19 16:46 on the probe numbers: S1-S5 pass as in L4c, S6 edge kept, mark check fails for a pre-existing reason, the composition writer never finds the child vertex, ticket filed, low priority; gates green)
 Lane: full (small, critical zone, standing go-ahead R-MT-26 (4))
 Depends: P-2026-11-19-1610 (blocked: the critical-zone hook refused its edits because it was launched without the go-ahead flag; its five tests are in `~/.jjodel-lanes/P-2026-11-19-1610/syncStateByModel.test.l4d.ts`, its plan and Layer Impact Report in its log); P-2026-11-19-1530 (L4c, registries keyed by model, commits 2837e117d, dfef10a39, fc5a1f552 on this branch, not yet merged)
 Worktree: ~/jjodel-w-mtl4c, branch multi-tab-l4c, at this prompt's commit

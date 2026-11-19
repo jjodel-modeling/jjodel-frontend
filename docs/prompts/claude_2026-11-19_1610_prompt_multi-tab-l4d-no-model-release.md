@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-1610
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: superseded by P-2026-11-19-1625 (blocked: the critical-zone hook refused its edits without the go-ahead flag; its tests and plan were carried by the relaunch)
 Lane: full (small, critical zone, standing go-ahead R-MT-26 (4))
 Depends: P-2026-11-19-1530 (L4c, registries keyed by model, commits 2837e117d, dfef10a39, fc5a1f552 on this branch, not yet merged)
 Worktree: ~/jjodel-w-mtl4c, branch multi-tab-l4c, at this prompt's commit
