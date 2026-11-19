@@ -654,3 +654,54 @@ position write. That ordering comes from reading the code. The probe did not ins
 
 Not measured: a trunk control run of S2 to S5 (only S1 has a before figure, §4.2), and S4 for an object dropped on an
 M1 canvas.
+
+### 11.5 L4d: the two residues
+
+Added by P-2026-11-19-1625 (branch `multi-tab-l4c`, code commit `d0c786696`), on the plan and tests of the blocked
+P-2026-11-19-1610. R-MT-29 gains one sentence; nothing else in it changes.
+
+**[read]** *Model-less release.* `syncState.ts` gains `releaseModelRegistries(modelId, token)`: with no model it returns
+`false` and clears nothing, not even the shared bucket; otherwise it calls `releasePopulateOwner` and, when that was the
+last instance of the model, runs the five clears with that model id. The unmount of `useJjomSync.ts` calls it in place
+of the branch of §11.1 that cleared every model. The five clears have one caller, that unmount (`command grep -rnE` over
+`src`, tests excluded, exit 0; positive control `releasePopulateOwner`, 3 hits in `useJjomSync.ts`). The model-less
+instances are the `/editor-v2` PoC route (`App.tsx:152`, `<EditorV2/>` with no `modelid`) and an editor whose `modelid`
+became `undefined`; `EditorSwitch` always passes one (`ModelTab` returns early without a model). The one thing the
+global clear did for the others: after a switch from model A to no model (`useJjomSync.ts:532` releases A without
+clearing), it wiped A's leftovers on unmount. They now stay until A's next last release; the anti-bounce marks expire on
+their own (300 ms), edge pairs and edge ref ids do not.
+
+**[read]** *Composition edges.* `createCompositionEdgeForObjects` takes an optional trailing `modelId` for its
+`markCanvasUpdated`; `ContextMenu.tsx:372` passes `model.id`, `createAdapter.ts:468` passes `modelId`, and
+`createAdapterFlow.test.ts:98` asserts the fifth argument. `transformJjomGraph` is unchanged.
+
+**[measured]** Gates: typecheck exit 0; `syncStateByModel.test.ts` 5 failed / 8 passed before the code, 13 passed
+after; vitest 628 files passed, 3 failed at import (the known three); build ok.
+
+**[measured]** Probe `~/.jjodel-lanes/P-2026-11-19-1625/probe-l4d.mjs`: the probe of §11.4 copied unchanged for S1 to
+S5 (original untouched) plus S6, dev server `http://localhost:3074` on the tree of `d0c786696`, output `probe-l4d.json`
+beside it, page errors 0.
+
+| Scenario | Reading | Result |
+|---|---|---|
+| S1, MM edges / registered | 8/5, 8/5, 8/**5**, 8/**5** | pass |
+| S2, Families Family↔Member D-edges | 8, 8, 8, 8 (rendered 8, duplicate keys 0) | pass |
+| S3, drag a Families node while A's last tab closes | (50, 290) → pointer-up (128, 352); +0.4 s and +3.4 s (128, 352) | pass |
+| S4, drop a class on Families while A's last tab closes | classes 2→3, nodes 2→3, D-edges 8→8, duplicates 0, Family↔Member 8 | pass |
+| S5, save, reload | MM 7/8/8, Families 3/3/8, A 19 vertices / 29 edges, identical fingerprints | pass |
+| S6, "Add Floor" from the classic context menu on OfficeHQ (model B, Office) while A's last tab (one, in the other group) closes | sentinels: A's pair gone at +63 ms, the shared pair and a shared `canvasUpdated` mark gone with it; the new edge reached the store at +420 ms, mark `false`; at +6 s B has 45 edges (44 before), the new one OfficeHQ→Floor_0 rendered, duplicates 0, ref id none | edge kept; the mark check **fails**, see below |
+
+S6 opens the classic menu through `windoww.contextMenuMap` with the v2-flow vertex of OfficeHQ (the menu `ModelTab`
+mounts for the model's classic graph; the v2-flow node menu goes through `syncCreateCompositionLink`, already keyed by
+L4c) and clicks its one entry; a capture-phase click listener marks the sentinels and queues `closeTab(A)` through
+`setTimeout(0)`. The writer never reaches its mark: the page logged `createCompositionEdgeForObjects: vertex(es) not
+found` with `childVertexId: null`. The child's vertex is created one line earlier by `createVertexForObject`, but
+`findVertexIdForObject` reads `store.getState()` and actions reach the store one macrotask later (`action.ts:352`), so the
+writer returns `null` before `markCanvasUpdated`. A second run called `createAdapter.createInstance(Office, 'Floor',
+OfficeHQ, 'floors')` directly: same warning, `childVertexId: null`, no new edge 30 ms later. The edge that appears is
+drawn later by another writer. On both callers the keyed mark is therefore never written at runtime today, and only the
+unit test (fake store, both vertices present) exercises it. This predates L4d (it is the same with or without the model
+id) and is filed as a ticket in `docs/log-inbox/multi-tab.md`.
+
+Not measured: a trunk control run of S6 (the shared-bucket sentinels stand in for it), and the A-to-no-model switch
+followed by an unmount.
