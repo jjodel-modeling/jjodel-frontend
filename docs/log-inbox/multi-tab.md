@@ -419,3 +419,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-19 18:15 on 3075; probe P1-P7 7/7 at 1600 and 1280, 0 console errors)
 **Notes**: Typecheck 0, vitest 629 files / 3 known import failures, build ok, check:docs 5/5. P4 (tab moved group 2 to 1) and P6 (tab activated in group 2) driven through the dock API: per-group strips are hidden until lane 2b. Edge refusals via dockMove, no mouse edge drop. At 1280 group 1's canvas is ~257 px (lane 5, Q14). Probe and crops in ~/.jjodel-lanes/P-2026-11-19-1745/.
 **Prompt document name**: 2026-11-19 17:45
+
+## 2026-11-19 — merge: multi-tab-groups-2a into alfonso-frontend-jjtl (P-2026-11-19-1830)
+**Prompt**: `claude_2026-11-19_1830_prompt_merge_multi-tab-groups-2a.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-groups-2a` at f0c35e0fc into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 3ca35aebc; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 9ada8807b (merge), 18 files — `tabs/dockGroups.ts` + test, `DockManager.tsx`, `Dock.tsx`, `MyRcDock.tsx`, `EditorSwitch.tsx`, `EditorV2.tsx`, `Toolbar.tsx`, `codegen/ui/canvasSelection.ts`, 6 other test files, two prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 1830 and of 1821
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16522 passed, 0 failed and 3 skipped (16525, expected 16495 + 27): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (the Status of P-2026-11-19-1821, flipped to superseded on the chat's GO instruction; above five files: the merge brings the branch's 18, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 18:46, unattended, on the gates and Alfonso's visual GO on 2a at 18:15; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union (trunk's l4c merge entry first, then the branch's 2a entry; a pure 13-line addition over each side). Probes as expected (R-MT-30 once, R-MT-31 none, two headings once). Trunk had 3 commits since the base, not 2: adcf9c6ee adds this prompt on top of 1821, an earlier rendering never run. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 18:30
