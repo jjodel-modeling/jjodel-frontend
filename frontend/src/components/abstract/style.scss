@@ -1145,8 +1145,9 @@ body[data-layout-mode="sidebar"] {
 /* Documentation Tab - hide properties panel (not needed for docs view) */
 body[data-active-tab="documentation"] {
   // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
-  .dock-hbox > .dock-panel:not(:first-child):last-child,
-  .dock-hbox > .dock-box:not(:first-child):last-child {
+  // P-2026-11-19-1915: nor on editor groups side by side (R-MT-30), as R-MT-24 above.
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1159,8 +1160,8 @@ body[data-active-tab="documentation"] {
     transition: width 200ms ease, opacity 200ms ease;
   }
 
-  .dock-hbox > .dock-panel:first-child,
-  .dock-hbox > .dock-box:first-child {
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:first-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:first-child {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -1172,8 +1173,9 @@ body[data-editor-type="summary"] {
   // F2-fix (2026-07-29): :not(:first-child) — this was hiding the full-width canvas
   // (sole dockbox child) on the project summary/dashboard → white screen.
   // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-11-19-1915: nor on editor groups side by side (R-MT-30), as R-MT-24 above.
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1186,8 +1188,8 @@ body[data-editor-type="summary"] {
     transition: width 200ms ease, opacity 200ms ease;
   }
 
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:first-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:first-child {
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:first-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:first-child {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -1198,8 +1200,9 @@ body[data-editor-type="summary"] {
 body[data-editor-type="transformation"] {
   // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
   // P-2026-10-25-0040: not on the hbox holding a Refactoring tab beside its target (the split is wanted there).
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:not(:first-child):last-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:not(:first-child):last-child {
+  // P-2026-11-19-1915: nor on editor groups side by side (R-MT-30), as R-MT-24 above.
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1212,8 +1215,8 @@ body[data-editor-type="transformation"] {
     transition: width 200ms ease, opacity 200ms ease;
   }
 
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-panel:first-child,
-  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)) > .dock-box:first-child {
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:first-child,
+  .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:first-child {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -1223,8 +1226,9 @@ body[data-editor-type="transformation"] {
 /* Viewpoint Mode - hide properties panel (ViewpointWorkbench has its own) */
 body[data-editor-type="viewpoint"] {
   // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
-  .dock-hbox > .dock-panel:not(:first-child):last-child,
-  .dock-hbox > .dock-box:not(:first-child):last-child {
+  // P-2026-11-19-1915: nor on editor groups side by side (R-MT-30), as R-MT-24 above.
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1237,8 +1241,8 @@ body[data-editor-type="viewpoint"] {
     transition: width 200ms ease, opacity 200ms ease;
   }
 
-  .dock-hbox > .dock-panel:first-child,
-  .dock-hbox > .dock-box:first-child {
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:first-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:first-child {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -1248,8 +1252,9 @@ body[data-editor-type="viewpoint"] {
 /* Canvas-Only Mode - hide properties panel completely */
 body[data-layout-mode="canvas-only"] {
   // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
-  .dock-hbox > .dock-panel:not(:first-child):last-child,
-  .dock-hbox > .dock-box:not(:first-child):last-child {
+  // P-2026-11-19-1915: nor on editor groups side by side (R-MT-30), as R-MT-24 above.
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:not(:first-child):last-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1262,8 +1267,8 @@ body[data-layout-mode="canvas-only"] {
     transition: width 200ms ease, opacity 200ms ease;
   }
 
-  .dock-hbox > .dock-panel:first-child,
-  .dock-hbox > .dock-box:first-child {
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-panel:first-child,
+  .dock-hbox:not(:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models)) > .dock-box:first-child {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { PinnableDock } from './MyRcDock';
+import { modelGroups } from '../abstract/tabs/dockGroups';
 import './tabs-overflow-menu.scss';
 
 interface TabEntry {
@@ -61,16 +62,20 @@ const TYPE_ICON: Record<TabEntry['type'], string> = {
     other:      'bi-file',
 };
 
-function getAllModelsTabs(): TabEntry[] {
+/**
+ * The tabs of one strip (multi-tab lane 2b, R-MT-30): the panel whose «more» button was clicked, an editor group or
+ * a generator panel beside it. Each strip has its own button, so the menu lists that strip's tabs, not the dock's.
+ */
+function getStripTabs(panelId: string | null): TabEntry[] {
     const dock = PinnableDock.instance;
-    if (!dock) return [];
+    if (!dock || !panelId) return [];
 
     const layout = dock.getLayout();
-    const modelsPanel = layout?.dockbox?.children?.[0] as any;
-    if (!modelsPanel?.tabs) return [];
+    const panel = (modelGroups(layout).find(g => g.id === panelId) ?? dock.find(panelId)) as any;
+    if (!panel?.tabs) return [];
 
-    const activeId: string = modelsPanel.activeId || '';
-    return (modelsPanel.tabs as any[]).map(t => ({
+    const activeId: string = panel.activeId || '';
+    return (panel.tabs as any[]).map(t => ({
         id: t.id,
         ...getTabInfo(t),
         isActive: t.id === activeId,
@@ -86,55 +91,27 @@ export const TabsOverflowMenu: React.FC = () => {
 
     const openDropdown = useCallback((btn: Element) => {
         const rect = btn.getBoundingClientRect();
-        setTabs(getAllModelsTabs());
+        setTabs(getStripTabs(btn.closest('.dock-panel')?.getAttribute('data-dockid') ?? null));
         setPos({
             top: rect.bottom + 6,
             left: Math.max(4, rect.right - 220), // right-align to button, min 4px from edge
         });
+        moreBtnRef.current = btn;
         setIsOpen(true);
     }, []);
 
-    // Intercept click on .dock-nav-more using capture phase so we fire
-    // before rc-dock's synthetic event handler and can suppress it.
+    // Intercept a click on any strip's .dock-nav-more in the capture phase, so we fire before rc-dock's synthetic
+    // handler and can suppress it. One delegated listener: every group has its own strip and its own button.
     useEffect(() => {
-        const attach = () => {
-            const btn = document.querySelector('.dock-nav-more');
-            if (btn === moreBtnRef.current) return;
-
-            if (moreBtnRef.current) {
-                (moreBtnRef.current as any).__jjOverflowHandler &&
-                    moreBtnRef.current.removeEventListener(
-                        'click',
-                        (moreBtnRef.current as any).__jjOverflowHandler,
-                        true
-                    );
-            }
-
-            if (!btn) { moreBtnRef.current = null; return; }
-
-            const handler = (e: Event) => {
-                e.stopImmediatePropagation();
-                e.preventDefault();
-                openDropdown(btn);
-            };
-            (btn as any).__jjOverflowHandler = handler;
-            btn.addEventListener('click', handler, true);
-            moreBtnRef.current = btn;
+        const handler = (e: Event) => {
+            const btn = (e.target as Element | null)?.closest?.('.dock-nav-more');
+            if (!btn) return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            openDropdown(btn);
         };
-
-        attach();
-        const observer = new MutationObserver(attach);
-        observer.observe(document.body, { childList: true, subtree: true });
-        return () => {
-            observer.disconnect();
-            if (moreBtnRef.current && (moreBtnRef.current as any).__jjOverflowHandler) {
-                moreBtnRef.current.removeEventListener(
-                    'click',
-                    (moreBtnRef.current as any).__jjOverflowHandler,
-                    true
-                );
-            }
-        };
+        document.addEventListener('click', handler, true);
+        return () => document.removeEventListener('click', handler, true);
     }, [openDropdown]);
 
     // Close on outside click / Escape

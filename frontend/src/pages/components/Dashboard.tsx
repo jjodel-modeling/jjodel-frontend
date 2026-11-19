@@ -50,6 +50,7 @@ import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
 import { JjodelEvents } from '../../events/registry';
+import { activeTabId } from '../../components/abstract/tabs/dockGroups';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { isConsumerMode } from '../../components/environment/consumerMode';
 import { JodieDockSlot } from '../../components/Jodie/JodieWindow';
@@ -595,7 +596,8 @@ function ProjectDashboard(props: DashProps): any {
             const { editorType } = (e as CustomEvent).detail;
             try {
                 const layout = DockManager.dock?.getLayout();
-                const activeId = (layout?.dockbox?.children?.[0] as { activeId?: string } | undefined)?.activeId;
+                // The active tab of the active group (multi-tab lane 2b, R-MT-30), where the new tab opened.
+                const activeId = layout ? activeTabId(layout) : null;
                 if (activeId) tabTypeMapRef.current.set(activeId, editorType);
             } catch { /* dock not ready */ }
             setHideLeftBar(isEditorTab(editorType));
