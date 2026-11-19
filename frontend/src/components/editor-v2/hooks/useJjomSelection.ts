@@ -90,7 +90,7 @@ function selectElement(elementId: string, modelid: string, modelElementId?: stri
         // new references in state.idlookup. Without this, useJjomSync
         // would detect those changes and re-transform everything.
         const allIds = getGraphSubElementIds(modelid);
-        if (allIds.length > 0) markCanvasUpdatedBatch(allIds);
+        if (allIds.length > 0) markCanvasUpdatedBatch(allIds, modelid);
 
         TRANSACTION('EditorV2 select', () => {
             const state: DState = store.getState();
@@ -139,7 +139,7 @@ function selectEdgeTarget(edgeId: string, modelid: string): void {
 function deselectAll(modelid: string): void {
     try {
         const allIds = getGraphSubElementIds(modelid);
-        if (allIds.length > 0) markCanvasUpdatedBatch(allIds);
+        if (allIds.length > 0) markCanvasUpdatedBatch(allIds, modelid);
 
         TRANSACTION('EditorV2 deselect', () => {
             const state: DState = store.getState();

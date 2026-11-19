@@ -174,7 +174,7 @@ export function useM1ReferenceEdges(
                 tgtV,
                 (d: DEdge) => { d.isReference = true; },
             );
-            markCanvasEdgePair(srcV, tgtV);
+            markCanvasEdgePair(srcV, tgtV, modelid);
         }
 
         if (toDelete.length > 0) {

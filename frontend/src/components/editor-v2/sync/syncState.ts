@@ -6,23 +6,54 @@
  */
 
 // ---------------------------------------------------------------------------
+// Registries keyed by model (multi-tab L4c, P-2026-11-19-1530, R-MT-29).
+//
+// Every entry of the registries below records the model that wrote it, so the
+// release of model A (the unmount of its last instance, R-MT-17) clears A's
+// entries only and leaves those of a model B still on screen. A writer called
+// without a model id files under the shared bucket, which every release clears,
+// as all entries were before L4c. Readers keep their signatures and look across
+// models. A clear called without a model id clears every model, as before. A key
+// written by two models belongs to the last writer.
+// See docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md §4.4 and §11.
+// ---------------------------------------------------------------------------
+
+const SHARED_BUCKET = Symbol('shared');
+type Bucket = string | typeof SHARED_BUCKET;
+
+function bucketOf(modelId?: string): Bucket {
+    return modelId ?? SHARED_BUCKET;
+}
+
+/** Clears every entry when modelId is undefined, else the entries of modelId and of the shared bucket. */
+function clearBuckets<V>(map: Map<string, V>, bucketOfEntry: (v: V) => Bucket, modelId?: string): void {
+    if (modelId === undefined) { map.clear(); return; }
+    for (const [key, v] of map) {
+        const b = bucketOfEntry(v);
+        if (b === modelId || b === SHARED_BUCKET) map.delete(key);
+    }
+}
+
+const ownBucket = (b: Bucket): Bucket => b;
+
+// ---------------------------------------------------------------------------
 // SyncMode — per-node drag sync strategy
 // ---------------------------------------------------------------------------
 
 export type SyncMode = 'lazy' | 'faithful';
 
-const syncModes = new Map<string, SyncMode>();
+const syncModes = new Map<string, { mode: SyncMode; bucket: Bucket }>();
 
-export function setSyncMode(nodeId: string, mode: SyncMode): void {
-    syncModes.set(nodeId, mode);
+export function setSyncMode(nodeId: string, mode: SyncMode, modelId?: string): void {
+    syncModes.set(nodeId, { mode, bucket: bucketOf(modelId) });
 }
 
 export function getSyncMode(nodeId: string): SyncMode {
-    return syncModes.get(nodeId) ?? 'lazy';
+    return syncModes.get(nodeId)?.mode ?? 'lazy';
 }
 
-export function clearSyncModes(): void {
-    syncModes.clear();
+export function clearSyncModes(modelId?: string): void {
+    clearBuckets(syncModes, e => e.bucket, modelId);
 }
 
 // ---------------------------------------------------------------------------
@@ -34,18 +65,19 @@ export function clearSyncModes(): void {
 // populates its cache without triggering a re-render.
 // ---------------------------------------------------------------------------
 
-const dropCreatedIds = new Set<string>();
+/** id → bucket of the model that marked it */
+const dropCreatedIds = new Map<string, Bucket>();
 
-export function markDropCreated(id: string): void {
-    dropCreatedIds.add(id);
+export function markDropCreated(id: string, modelId?: string): void {
+    dropCreatedIds.set(id, bucketOf(modelId));
 }
 
 export function consumeDropCreated(id: string): boolean {
     return dropCreatedIds.delete(id);
 }
 
-export function clearDropCreated(): void {
-    dropCreatedIds.clear();
+export function clearDropCreated(modelId?: string): void {
+    clearBuckets(dropCreatedIds, ownBucket, modelId);
 }
 
 // ---------------------------------------------------------------------------
@@ -56,18 +88,18 @@ export function clearDropCreated(): void {
 // DEdge.model field. Set during edge creation and loaded from JjOM on init.
 // ---------------------------------------------------------------------------
 
-const edgeRefIds = new Map<string, string>();
+const edgeRefIds = new Map<string, { refId: string; bucket: Bucket }>();
 
-export function setEdgeRefId(edgeId: string, refId: string): void {
-    edgeRefIds.set(edgeId, refId);
+export function setEdgeRefId(edgeId: string, refId: string, modelId?: string): void {
+    edgeRefIds.set(edgeId, { refId, bucket: bucketOf(modelId) });
 }
 
 export function getEdgeRefId(edgeId: string): string | undefined {
-    return edgeRefIds.get(edgeId);
+    return edgeRefIds.get(edgeId)?.refId;
 }
 
-export function clearEdgeRefIds(): void {
-    edgeRefIds.clear();
+export function clearEdgeRefIds(modelId?: string): void {
+    clearBuckets(edgeRefIds, e => e.bucket, modelId);
 }
 //
 // When the Redux change comes back, the JjOM→RF sync path checks this set
@@ -77,20 +109,21 @@ export function clearEdgeRefIds(): void {
 
 const BOUNCE_WINDOW_MS = 300;
 
-/** id → timestamp of last canvas-originated write */
-const canvasUpdatedIds = new Map<string, number>();
+/** id → timestamp of last canvas-originated write, and the bucket of the model that wrote it */
+const canvasUpdatedIds = new Map<string, { ts: number; bucket: Bucket }>();
 
-export function markCanvasUpdated(id: string): void {
-    canvasUpdatedIds.set(id, Date.now());
+export function markCanvasUpdated(id: string, modelId?: string): void {
+    canvasUpdatedIds.set(id, { ts: Date.now(), bucket: bucketOf(modelId) });
 }
 
-export function markCanvasUpdatedBatch(ids: string[]): void {
+export function markCanvasUpdatedBatch(ids: string[], modelId?: string): void {
     const now = Date.now();
-    for (const id of ids) canvasUpdatedIds.set(id, now);
+    const bucket = bucketOf(modelId);
+    for (const id of ids) canvasUpdatedIds.set(id, { ts: now, bucket });
 }
 
 export function isCanvasUpdated(id: string): boolean {
-    const ts = canvasUpdatedIds.get(id);
+    const ts = canvasUpdatedIds.get(id)?.ts;
     if (!ts) return false;
     if (Date.now() - ts > BOUNCE_WINDOW_MS) {
         canvasUpdatedIds.delete(id);
@@ -103,14 +136,14 @@ export function clearCanvasUpdated(id: string): void {
     canvasUpdatedIds.delete(id);
 }
 
-export function clearAllCanvasUpdated(): void {
-    canvasUpdatedIds.clear();
+export function clearAllCanvasUpdated(modelId?: string): void {
+    clearBuckets(canvasUpdatedIds, e => e.bucket, modelId);
 }
 
 /** Remove entries older than BOUNCE_WINDOW_MS. Call on each sync cycle. */
 export function purgeExpired(): void {
     const now = Date.now();
-    for (const [id, ts] of canvasUpdatedIds) {
+    for (const [id, { ts }] of canvasUpdatedIds) {
         if (now - ts > BOUNCE_WINDOW_MS) canvasUpdatedIds.delete(id);
     }
 }
@@ -126,18 +159,19 @@ export function purgeExpired(): void {
 // to see it.
 // ---------------------------------------------------------------------------
 
-const canvasEdgePairs = new Set<string>();
+/** pair key → bucket of the model that marked it */
+const canvasEdgePairs = new Map<string, Bucket>();
 
-export function markCanvasEdgePair(src: string, tgt: string): void {
-    canvasEdgePairs.add(`${src}→${tgt}`);
+export function markCanvasEdgePair(src: string, tgt: string, modelId?: string): void {
+    canvasEdgePairs.set(`${src}→${tgt}`, bucketOf(modelId));
 }
 
 export function hasCanvasEdgePair(key: string): boolean {
     return canvasEdgePairs.has(key);
 }
 
-export function clearCanvasEdgePairs(): void {
-    canvasEdgePairs.clear();
+export function clearCanvasEdgePairs(modelId?: string): void {
+    clearBuckets(canvasEdgePairs, ownBucket, modelId);
 }
 
 // Clear a single (src→tgt) mark — symmetric to markCanvasEdgePair, same pair-key
@@ -207,6 +241,23 @@ export function releasePopulateOwner(modelId: string, token: object): boolean {
     list.splice(at, 1);
     if (list.length > 0) return false;
     populateInstances.delete(modelId);
+    return true;
+}
+
+/**
+ * The unmount of an editor (multi-tab L4d, P-2026-11-19-1625). An editor that holds
+ * no model releases nothing and clears nothing. Otherwise it releases its hold, and
+ * when that was the last instance of the model it clears that model's entries and the
+ * shared bucket, never another model's. True when it cleared.
+ */
+export function releaseModelRegistries(modelId: string | undefined, token: object): boolean {
+    if (modelId === undefined) return false;
+    if (!releasePopulateOwner(modelId, token)) return false;
+    clearAllCanvasUpdated(modelId);
+    clearSyncModes(modelId);
+    clearDropCreated(modelId);
+    clearEdgeRefIds(modelId);
+    clearCanvasEdgePairs(modelId);
     return true;
 }
 

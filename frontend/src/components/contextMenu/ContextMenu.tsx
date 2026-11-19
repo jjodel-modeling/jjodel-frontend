@@ -369,7 +369,7 @@ function ContextMenuComponentInner(props: AllProps) {
                 }
             }
             createVertexForObject(graphId, child.id, x, y);
-            createCompositionEdgeForObjects(graphId, parent.id, child.id, lref.name);
+            createCompositionEdgeForObjects(graphId, parent.id, child.id, lref.name, model.id);
         };
 
         let jsxret: ReactNode;

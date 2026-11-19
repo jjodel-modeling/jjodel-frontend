@@ -361,3 +361,35 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat smoke 23:02: 3001 serves the trunk, index, EditorV2.tsx and DockManager.tsx transform with 200; Alfonso's visual GO on the same code on 3061 at 21:55)
 **Notes**: No conflict, no union; all probes as expected. Trunk tip full vitest: 2 load reds under concurrent runs (laneRun timeout, outline 10 ms), both green alone; none on the merge. The first trunk hook run went to the background on timeout: stopped, re-run in the foreground. check:docs 5/5, not the prompt's 4/4. Lane board not restarted (no change). Rule 16: active log read only at closure. Tip moved after the merge by docs-only 6fea9e8e2 (P-2026-11-08-2230), another chat.
 **Prompt document name**: 2026-11-08 22:23
+
+## 2026-11-19 — fix: sync registries keyed by model (multi-tab L4c)
+**Prompt**: `claude_2026-11-19_1530_prompt_multi-tab-l4c-registries-by-model.md`, lane full, critical zone (R-MT-26 item 4, GO 15:28): key the `syncState.ts` registries by model so the last tab of model A no longer clears model B's entries; design §4.4 of the editor groups discovery
+**Files touched**: 2837e117d (code): `editor-v2/sync/syncState.ts`, `sync/__tests__/syncStateByModel.test.ts` (new), `hooks/useJjomSync.ts`, `sync/canvasToJjom.ts`, `hooks/useM1ReferenceEdges.ts`, `utils/jjomTransformers.ts`, `hooks/useJjomSelection.ts`, `EditorV2.tsx`; dfef10a39 (docs): `docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md` §11, `docs/decisions.md` R-MT-29; this commit: the prompt's Status, this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (above five files: the ten above, all in the prompt's approved list of §4.4; `m1EdgeSweep.ts` needed no change)
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (no visual change; app probe 6/6 on 3074, chat check 2026-11-19 15:57)
+**Notes**: Probe: SmartBuilding registered edges 5/5/5/5 at r0..r3 (5/5/0/0 before, §4.2); Families 8 edges stable; drag kept; drop +1 node, no duplicate edge; save/reload identical. Typecheck 0, vitest 628 passed / 3 known import failures, build ok. S3 rewritten twice (criterion, then a close that never fired), told in §11.4. Shared bucket left for `createCompositionEdgeForObjects` and `transformJjomGraph`.
+**Prompt document name**: 2026-11-19 15:30
+
+## 2026-11-19 — ticket: createCompositionEdgeForObjects never finds the child vertex
+**Ticket**: Both callers (`ContextMenu.tsx:372`, the classic menu's "Add <Class>"; `createAdapter.ts:468`, `createInstance` with an owner) call `createVertexForObject` and then `createCompositionEdgeForObjects` in the same task. The writer's `findVertexIdForObject` reads `store.getState()`, which does not yet hold the child's vertex (actions reach the store one macrotask later, `action.ts:352`), so it warns `vertex(es) not found` with `childVertexId: null` and returns `null` before `DVoidEdge.new2` and `markCanvasUpdated`. The composition edge appears anyway, drawn later by another writer. The model-keyed mark of L4d is therefore never written at runtime; only the unit test exercises it.
+**Priority**: low
+**Found in**: P-2026-11-19-1625
+**Detail**: docs/discovery/discovery_2026-11-19_multi_tab_editor_groups.md
+
+## 2026-11-19 — fix: no clear from a model-less editor, composition edges by model (multi-tab L4d)
+**Prompt**: `claude_2026-11-19_1625_prompt_multi-tab-l4d-relaunch.md`, lane full, critical zone (R-MT-26 item 4, go-ahead flag): relaunch of the blocked P-2026-11-19-1610 for the two residues of L4c: a model-less editor's unmount clears nothing, `createCompositionEdgeForObjects` files under the model its callers pass
+**Files touched**: d0c786696 (code): `editor-v2/sync/syncState.ts`, `hooks/useJjomSync.ts`, `sync/canvasToJjom.ts`, `contextMenu/ContextMenu.tsx`, `hooks/createAdapter.ts`, `sync/__tests__/syncStateByModel.test.ts`, `hooks/__tests__/createAdapterFlow.test.ts` (:98); 9f73ac082 (docs): discovery §11.5, `docs/decisions.md` R-MT-29 (one sentence); eaad9e54d: ticket in this inbox; ea99c4c40: Status of 1625 and 1610; this commit: this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-19 15:30 `claude_2026-11-19_1530_prompt_multi-tab-l4c-registries-by-model.md`
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (the ticket entry eaad9e54d in this inbox, outside the approved list; above five files: the seven code files above, all approved)
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (no visual change; app probe S1-S6 on 3074, chat check 2026-11-19 16:46)
+**Notes**: Probe S1-S5 pass as in L4c (MM 8/5 at r0..r3, Families 8, drag kept, drop +1, save/reload identical). S6: edge kept (B 44 to 45, rendered, 0 dup), mark check fails: both callers reach the writer with childVertexId null (store one macrotask behind), ticket filed. Typecheck 0, vitest 628 / 3 known, build ok. Second cause (c): the prompt assumed the writer marks. Unknown: the A-to-no-model switch then unmount, not measured (§11.5).
+**Prompt document name**: 2026-11-19 16:25

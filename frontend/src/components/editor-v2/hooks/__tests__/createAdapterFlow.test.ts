@@ -95,7 +95,7 @@ describe('VIEW1 — createInstance gives a contained child its canvas artifacts'
         expect(H.createVertex.mock.calls[0].slice(0, 2)).toEqual([GRAPH, CHILD]);
         // The edge names the parent, the child and the slot it was created under.
         expect(H.createEdge).toHaveBeenCalledTimes(1);
-        expect(H.createEdge.mock.calls[0]).toEqual([GRAPH, PARENT, CHILD, 'editions']);
+        expect(H.createEdge.mock.calls[0]).toEqual([GRAPH, PARENT, CHILD, 'editions', MODEL]);
     });
 
     it('cascades to the right of the parent vertex, one row per sibling already drawn', () => {
