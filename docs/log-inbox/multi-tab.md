@@ -463,3 +463,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 21:37, unattended, on the gates and Alfonso's visual GO on 2b at 21:18; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, resolved by union (trunk's 2a merge entry first, then the branch's 2b entry and its ticket; a pure addition, 18 lines over the trunk, 13 over the branch). Probes as expected (three headings once). Trunk side 4 files, not 3: c1f08b3c5 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 21:24
+
+## 2026-11-19 — feat: metamodels in editor groups, second tab and Split Right (multi-tab lane mm)
+**Prompt**: `claude_2026-11-19_2125_prompt_multi-tab-metamodel-groups.md`, lane full: metamodels open in the active group (G3), second tab `<id>~tab<N>`, Split Right on metamodel tabs, tab viewpoint per metamodel tab, R-MT-31
+**Files touched**: c7e6d5661 (`DockManager.tsx`, `EditorSwitch.tsx`, `TabDataMaker.tsx`, `MetamodelTab.tsx`, `Navbar.tsx`, `dockManagerSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`); eed0b25e2 (`docs/decisions.md` R-MT-31); this commit: this inbox, Status of 2125
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 code files, above five; `TabDataMaker.tsx` and `MetamodelTab.tsx` outside the listed six, approved in chat 21:41)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 22:06 on 3087; probe T1-T7 9/9 at 1600 and 1280, 0 console errors)
+**Notes**: Gates: typecheck 0, build ok, check:docs 5/5, vitest 3 known import failures. Metamodel picker stays Abstract syntax until G10; the viewpoint-change probe step is not applicable. Tree View metamodel row does not open a tab: T2/T3 opened through open2 (rail's door). Cut-off active tab in a 396 px group (2b strips) goes to the width lane. Probe, crops in ~/.jjodel-lanes/P-2026-11-19-2125/.
+**Prompt document name**: 2026-11-19 21:25

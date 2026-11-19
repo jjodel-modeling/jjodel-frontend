@@ -16,13 +16,15 @@ import './tab-title.scss';
 // CSS-only approach: uses data attribute and ::before pseudo-element
 // This avoids React re-rendering issues with rc-dock
 class TabDataMaker {
-    static metamodel (model: DModel|LModel): TabData {
+    /** @param options A tab beyond the metamodel's first (R-MT-31), as for `model()`. Omitted, the tab is its only one. */
+    static metamodel (model: DModel|LModel, options?: { tabId?: string; viewpointId?: string | null }): TabData {
+        const id = options?.tabId ?? model.id;
         return {
-            id: model.id,
+            id,
             title: <div className="tab-title active-on-mouseenter" data-type="metamodel">{model.name}</div>,
             group: 'models',
             closable: true,
-            content: <MetamodelTab modelid={model.id} key={model.id} />
+            content: <MetamodelTab modelid={model.id} key={id} tabId={options?.tabId} initialViewpointId={options?.viewpointId} />
         };
     }
 

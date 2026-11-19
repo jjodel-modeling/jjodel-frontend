@@ -20,7 +20,7 @@ vi.mock('../../DockManager', () => ({
 }));
 vi.mock('../EditorSwitch.scss', () => ({}));
 
-import { adoptsRootViewpoint, initialTabViewpoint, savedViewpointToRestore } from '../EditorSwitch';
+import { adoptsRootViewpoint, initialTabViewpoint, metamodelTabViewpoint, savedViewpointToRestore } from '../EditorSwitch';
 
 const activeTab = (activeId: string) => ({ dockbox: { children: [{ activeId, tabs: [{ id: activeId }] }] } });
 const store = new Map<string, string>();
@@ -67,6 +67,19 @@ describe('EditorSwitch on a second tab', () => {
             expect(initialTabViewpoint('root', 'restored')).toBe('restored');
             expect(initialTabViewpoint('root', null)).toBe('root');
             expect(initialTabViewpoint('root', null, undefined)).toBe('root');
+        });
+    });
+
+    describe('metamodelTabViewpoint (R-MT-31)', () => {
+        it('a metamodel tab with no viewpoint of its own lets the root through, as before', () => {
+            expect(metamodelTabViewpoint(null, 'vp1')).toBe('vp1');
+            expect(metamodelTabViewpoint(null, null)).toBeNull();
+            expect(metamodelTabViewpoint(null, '')).toBeNull();
+        });
+
+        it('a metamodel tab\'s own viewpoint wins over the root, so two tabs can differ', () => {
+            expect(metamodelTabViewpoint('syn', 'vp1')).toBe('syn');
+            expect(metamodelTabViewpoint('syn', null)).toBe('syn');
         });
     });
 
