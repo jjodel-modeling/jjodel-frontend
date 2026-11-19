@@ -476,3 +476,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-19 22:06 on 3087; probe T1-T7 9/9 at 1600 and 1280, 0 console errors)
 **Notes**: Gates: typecheck 0, build ok, check:docs 5/5, vitest 3 known import failures. Metamodel picker stays Abstract syntax until G10; the viewpoint-change probe step is not applicable. Tree View metamodel row does not open a tab: T2/T3 opened through open2 (rail's door). Cut-off active tab in a 396 px group (2b strips) goes to the width lane. Probe, crops in ~/.jjodel-lanes/P-2026-11-19-2125/.
 **Prompt document name**: 2026-11-19 21:25
+
+## 2026-11-19 — merge: multi-tab-groups-mm into alfonso-frontend-jjtl (P-2026-11-19-2214)
+**Prompt**: `claude_2026-11-19_2214_prompt_merge_multi-tab-groups-mm.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-groups-mm` at f9fe85e46 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base f84c48f21; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 83a45cf2e (merge), 11 files — `DockManager.tsx`, `EditorSwitch.tsx`, `MetamodelTab.tsx`, `TabDataMaker.tsx`, `Navbar.tsx`, `dockManagerSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`, two prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2214
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16531 passed, 0 failed and 3 skipped (16534, expected 16522 + 9, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 11, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 22:30, unattended, on the gates and Alfonso's visual GO on the branch at 22:06 on 3087; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union (trunk's 2b merge entry first, then the branch's lane mm entry; a pure addition, 13 lines over either side). Probes as expected (R-MT-31 once, R-MT-32 none, two headings once). Trunk side 4 files, not 3: 7f4222a73 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 22:14
