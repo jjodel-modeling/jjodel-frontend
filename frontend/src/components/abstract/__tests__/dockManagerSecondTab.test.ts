@@ -78,13 +78,21 @@ describe('DockManager, several tabs on one model', () => {
     });
 
     describe('openBeside', () => {
-        it('a second tab\'s id: opens that tab, on that viewpoint, split to the right', () => {
+        it('no group to the right: false, and it never splits (R-MT-30, Q12: Split Right only)', () => {
             const dock = install(horizontal(panel('p1', [M])));
+            expect(DockManager.openBeside(M, `${M}~tab2`, 0.5, 'V')).toBe(false);
+            expect(DockManager.openBeside(M, 'MM', 0.5)).toBe(false);
+            expect(dock.dockMove).not.toHaveBeenCalled();
+            expect(dock.changeLayout).not.toHaveBeenCalled();
+        });
+
+        it('a second tab\'s id with a group to the right: opens that tab there, on that viewpoint', () => {
+            const dock = install(horizontal(panel('p1', [M]), panel('p2', ['N'])));
             expect(DockManager.openBeside(M, `${M}~tab2`, 0.5, 'V')).toBe(true);
             const [tab, target, where] = dock.dockMove.mock.calls[0];
             expect(tab).toMatchObject({ id: `${M}~tab2`, viewpointId: 'V', kind: 'model' });
-            expect(target.id).toBe('p1');
-            expect(where).toBe('right');
+            expect(target.id).toBe('p2');
+            expect(where).toBe('middle');
         });
 
         it('a second tab already on the right is raised by its own id', () => {
@@ -94,15 +102,15 @@ describe('DockManager, several tabs on one model', () => {
             expect(dock.dockMove).not.toHaveBeenCalled();
         });
 
-        it('a bare model id, as ScriptTab passes it: as today', () => {
-            const dock = install(horizontal(panel('p1', ['jjs_s'])));
+        it('a bare model id, as ScriptTab passes it, into the group to the right', () => {
+            const dock = install(horizontal(panel('p1', ['jjs_s']), panel('p2', ['N'])));
             expect(DockManager.openBeside('jjs_s', M, 0.4)).toBe(true);
             expect(dock.dockMove.mock.calls[0][0]).toMatchObject({ id: M, kind: 'model' });
             expect(dock.dockMove.mock.calls[0][0].viewpointId).toBeUndefined();
         });
 
         it('a bare metamodel id still opens the metamodel tab', () => {
-            const dock = install(horizontal(panel('p1', ['jjs_s'])));
+            const dock = install(horizontal(panel('p1', ['jjs_s']), panel('p2', ['N'])));
             expect(DockManager.openBeside('jjs_s', 'MM', 0.4)).toBe(true);
             expect(dock.dockMove.mock.calls[0][0]).toMatchObject({ id: 'MM', kind: 'metamodel' });
         });

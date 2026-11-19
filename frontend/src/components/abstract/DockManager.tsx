@@ -7,7 +7,7 @@ import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
 import { activeGroup, groupOfTab, noteActiveTab, withSplitRight } from "./tabs/dockGroups";
 import { isConsumerMode } from '../environment/consumerMode';
-import { besideAction, splitSizes, type BesidePanel } from '../scripts/refactoringBeside';
+import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
@@ -268,10 +268,11 @@ class DockManager {
     /**
      * Show the canvas tab `tabId` (a model id, or the id of a further tab on a model, R-MT-24) in the dock panel right of the tab `besideTabId`
      * (P-2026-10-25-0020, the Refactoring tab beside its target): raise it there when it already is,
-     * move it there when it is open elsewhere, open it there otherwise, and split `besideTabId`'s
-     * panel to the right, the editor taking `ratio` of the width, when there is no panel to its right.
-     * Never a second instance of the tab. Returns false when the dock cannot place it (the tab is
-     * floating, maximized or nested, no such model, consumer mode for a metamodel).
+     * move it there when it is open elsewhere, open it there otherwise. It never splits: Split Right is
+     * the only way to make a group (R-MT-30, Q12), so with no group right of `besideTabId`'s it returns
+     * false and the Refactoring tab keeps its own class-box pane. `ratio` is no longer read (it sized the split).
+     * Never a second instance of the tab. Returns false when the dock cannot place it (no group to the
+     * right, the tab is floating, maximized or nested, no such model, consumer mode for a metamodel).
      */
     static openBeside(besideTabId: string, tabId: string, ratio: number, viewpointId?: string | null): boolean {
         const dock = DockManager.dock;
@@ -299,21 +300,8 @@ class DockManager {
                 case 'activate': dock.updateTab(tabId, null as any, true); return true;
                 case 'move-into': dock.dockMove(open() as TabData, target, 'middle'); return true;
                 case 'open-into': dock.dockMove(fresh(), target, 'middle'); return true;
-                // The Refactoring tab beside its target keeps its own split (R-MT-30 lets it through the veto).
-                case 'split-move': withSplitRight(() => dock.dockMove(open() as TabData, target, 'right')); break;
-                case 'split-open': withSplitRight(() => dock.dockMove(fresh(), target, 'right')); break;
-            }
-            // rc-dock splits in two equal halves: share them by `ratio`, as its divider does (sizes in place, a new box).
-            const after = dock.getLayout();
-            const kids = [...after.dockbox.children];
-            const at = kids.findIndex(c => 'tabs' in c && c.tabs.some(t => t.id === besideTabId));
-            const left = kids[at];
-            const right = kids[at + 1];
-            if (at >= 0 && right) {
-                [left.size, right.size] = splitSizes(left.size ?? 0, right.size ?? 0, ratio);
-                const dockbox: BoxData = { ...after.dockbox, children: kids };
-                for (const c of kids) c.parent = dockbox;
-                dock.changeLayout({ ...after, dockbox }, besideTabId, 'update');
+                // No split here (R-MT-30, Q12): Split Right is the only way to make a group.
+                case 'split-move': case 'split-open': return false;
             }
             return true;
         } catch (error) {
