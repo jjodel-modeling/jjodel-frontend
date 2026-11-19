@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-11-19-2200
 Chat: C-2026-11-19-2200
-Front: shell-ui
+Front: maintenance (the shell-ui front closed on 2026-10-23; later shell work goes to maintenance)
 Status: da eseguire
 Lane: full (visual change on more than three files, shared component restyle)
 Depends: none
@@ -112,4 +112,4 @@ Hard stop after the report is written and committed (docs only).
 - `frontend/src/components/abstract/tabs/instanceManagerTab.scss` ~145-170 (#158 P2 resizers)
 - `frontend/src/codegen/ui/splitter.tsx` and its test (P-2026-10-24-1515)
 - `frontend/scripts/probe/jjodie-dock.ts` (pattern for a probe in a fresh context with a fixture)
-- shell-ui front: Linear-style consolidation of the shell chrome (2026-10-19)
+- shell-ui front (closed 2026-10-23): `docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md`, R-SHELL-1..5 (shell token layer, `--shell-*` tokens); prefer a `--shell-*` token where one names the role
