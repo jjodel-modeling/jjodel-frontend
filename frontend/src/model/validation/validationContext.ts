@@ -105,13 +105,34 @@ export function collectValidationRules(state?: any): ValidationRuleInput[] {
 // LE ISTANZE
 // ============================================
 
-function minimalExecutionContext(): ExecutionContext {
+/**
+ * Il contesto minimo, con il metamodello NOMINATO (issue #220).
+ *
+ * Senza `targetMetamodelId`, `getTargetMetamodel` interroga la UI: con una tab M1 attiva
+ * la cache dell'artefatto attivo decide `null` per il metamodello, e il ripiego e'
+ * `metamodels[0]`. Il pool delle istanze veniva allora costruito dal PRIMO metamodello
+ * del progetto, e quando il modello validato era istanza di un altro nessuno dei suoi
+ * oggetti aveva un handle: «1 rule over 0 instances», «No violations». Il metamodello
+ * giusto e' quello di cui il modello validato e' istanza, e lo si dice esplicitamente,
+ * come fa `JjScriptService` per una tab M1.
+ */
+function minimalExecutionContext(targetMetamodelId?: string): ExecutionContext {
     let projectId = '';
     try {
         const user: LUser = L.fromPointer(DUser.current);
         projectId = (user?.project as LProject | undefined)?.id ?? '';
     } catch { /* nessun progetto: il contesto esce vuoto e non si valida niente */ }
-    return { projectId, history: [], variables: new Map() };
+    return { projectId, targetMetamodelId, history: [], variables: new Map() };
+}
+
+/** L'id del metamodello di cui `lmodel` e' istanza, o `undefined`. Stessa lettura di
+ *  `JjScriptService` (stringa o proxy). */
+function metamodelIdOf(lmodel: LModel): string | undefined {
+    try {
+        const inst = (lmodel as any).instanceof;
+        const id = typeof inst === 'string' ? inst : inst?.id;
+        return typeof id === 'string' && id ? id : undefined;
+    } catch { return undefined; }
 }
 
 /**
@@ -143,6 +164,12 @@ function classChainOf(obj: LObject): string[] {
  * bene» sono due cose diverse, e la superficie deve poterle distinguere.
  */
 export function buildValidationInput(modelid: string): ValidationInput | null {
+    return buildValidationInputCounted(modelid)?.input ?? null;
+}
+
+/** Come `buildValidationInput`, con il conto delle istanze saltate per mancanza di
+ *  handle: il comando lo porta alla superficie (issue #220, difetto secondario). */
+function buildValidationInputCounted(modelid: string): { input: ValidationInput; skipped: number } | null {
     if (!modelid) return null;
     const rules = collectValidationRules();
 
@@ -156,7 +183,7 @@ export function buildValidationInput(modelid: string): ValidationInput | null {
     // quantificazione attraversa. Senza il parametro, misurato il 2026-09-09, una regola
     // di cardinalita' contava le istanze di TUTTI i modelli del progetto e dichiarava
     // violate due macchine a stati sane.
-    const globals = buildEvalContext(minimalExecutionContext(), { extentModelId: modelid });
+    const globals = buildEvalContext(minimalExecutionContext(metamodelIdOf(lmodel)), { extentModelId: modelid });
 
     // Gli handle sono indicizzati per id: il pool e' di progetto, le istanze da validare
     // sono quelle del modello aperto (R-VAL-14).
@@ -173,16 +200,17 @@ export function buildValidationInput(modelid: string): ValidationInput | null {
     try { objects = (lmodel.allSubObjects ?? lmodel.objects ?? []) as LObject[]; } catch { objects = []; }
 
     const instances: ValidationInstanceInput[] = [];
+    let skipped = 0;
     for (const obj of objects) {
         let id = '';
         try { id = obj?.id ?? ''; } catch { continue; }
         if (!id) continue;
         const handle = handleById.get(id);
         // Un'istanza senza handle non si valuta a occhio: si salta. Succede se il pool
-        // e' costruito da un metamodello diverso da quello del modello aperto, ed e' un
-        // caso che si vede nel conto — le istanze saltate non compaiono in nessuno dei
-        // tre numeri, e non devono comparire come «soddisfatte».
-        if (!handle || typeof handle !== 'object') continue;
+        // e' costruito da un metamodello diverso da quello del modello aperto. Le
+        // istanze saltate non compaiono in nessuno dei tre numeri e non devono comparire
+        // come «soddisfatte»: si contano, e il conto va alla superficie (issue #220).
+        if (!handle || typeof handle !== 'object') { skipped++; continue; }
         instances.push({
             id,
             classChain: classChainOf(obj),
@@ -194,15 +222,17 @@ export function buildValidationInput(modelid: string): ValidationInput | null {
         });
     }
 
-    return { rules, instances, globals };
+    return { input: { rules, instances, globals }, skipped };
 }
 
-/** Il conto delle istanze del modello aperto che non hanno un handle nel pool, cioe'
- *  quelle che il comando non ha potuto guardare. Serve alla superficie per non
- *  spacciare un silenzio per un modello valido. */
 export interface ValidationRunResult extends ValidationReport {
     instanceCount: number;
     ruleCount: number;
+    /** Il conto delle istanze del modello aperto che non hanno un handle nel pool, cioe'
+     *  quelle che il comando non ha potuto guardare. Serve alla superficie per non
+     *  spacciare un silenzio per un modello valido (issue #220). Facoltativo per la
+     *  regola 11; il comando lo valorizza sempre. */
+    skippedInstanceCount?: number;
     /** ms impiegati, comprensivi della costruzione del contesto. Misura, non decorazione:
      *  la spec §9 chiede il numero prima di rendere la rivalutazione automatica. */
     elapsedMs: number;
@@ -211,13 +241,15 @@ export interface ValidationRunResult extends ValidationReport {
 /** Il comando: costruisce l'ingresso e valuta. Non scrive niente da nessuna parte. */
 export function runValidationOnModel(modelid: string): ValidationRunResult | null {
     const t0 = Date.now();
-    const input = buildValidationInput(modelid);
-    if (!input) return null;
+    const built = buildValidationInputCounted(modelid);
+    if (!built) return null;
+    const { input, skipped } = built;
     const report = evaluateValidation(input);
     return {
         ...report,
         instanceCount: input.instances.length,
         ruleCount: input.rules.length,
+        skippedInstanceCount: skipped,
         elapsedMs: Date.now() - t0,
     };
 }

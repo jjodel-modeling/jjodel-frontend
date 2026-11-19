@@ -141,15 +141,21 @@ export function ValidationResultsModal(): React.ReactElement | null {
 
     const violations = result.violations ?? [];
     const clean = violations.length === 0;
+    // Istanze del modello che il comando non ha potuto guardare (issue #220). Con zero
+    // violazioni non e' «validato e pulito» (R-VAL-14): niente verde, esito neutro.
+    const skipped = result.skippedInstanceCount ?? 0;
+    const incomplete = clean && skipped > 0;
+    const variant = !clean ? 'violated' : incomplete ? 'incomplete' : 'clean';
+    const headerIcon = !clean ? 'bi-exclamation-circle-fill' : incomplete ? 'bi-question-circle' : 'bi-check-circle-fill';
 
     return (
         <div className="validation-results-backdrop" onClick={close} role="presentation">
-            <div className={`validation-results validation-results--${clean ? 'clean' : 'violated'}`}
+            <div className={`validation-results validation-results--${variant}`}
                  onClick={e => e.stopPropagation()}
                  role="dialog" aria-modal="true" aria-labelledby="validation-results-title">
 
                 <div className="validation-results__header">
-                    <i className={`bi ${clean ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'} validation-results__header-icon`}
+                    <i className={`bi ${headerIcon} validation-results__header-icon`}
                        aria-hidden="true" />
                     <h2 id="validation-results-title" className="validation-results__title">
                         Validation — {result.modelName}
@@ -186,7 +192,11 @@ export function ValidationResultsModal(): React.ReactElement | null {
                 </div>
 
                 <div className="validation-results__body">
-                    {clean ? (
+                    {incomplete ? (
+                        <p className="validation-results__empty">
+                            No violations among the instances evaluated, but not every instance was evaluated.
+                        </p>
+                    ) : clean ? (
                         <p className="validation-results__empty">
                             <i className="bi bi-check2" aria-hidden="true" /> No violations.
                         </p>
@@ -210,6 +220,15 @@ export function ValidationResultsModal(): React.ReactElement | null {
                         </ul>
                     )}
                 </div>
+
+                {skipped > 0 && (
+                    <div className="validation-results__note validation-results__note--defect">
+                        <i className="bi bi-exclamation-triangle" aria-hidden="true" />{' '}
+                        {skipped} {skipped === 1 ? 'instance' : 'instances'} of this model could not be
+                        {' '}evaluated: {skipped === 1 ? 'its class was' : 'their classes were'} not found
+                        {' '}in the evaluation context. The run says nothing about {skipped === 1 ? 'it' : 'them'}.
+                    </div>
+                )}
 
                 {result.notEvaluable.length > 0 && (
                     <div className="validation-results__note">
