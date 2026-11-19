@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-11-19-2200
 Chat: C-2026-11-19-2200
-Front: maintenance (the shell-ui front closed on 2026-10-23; later shell work goes to maintenance)
+Front: maintenance
 Status: da eseguire
 Lane: full (visual change on more than three files, shared component restyle)
 Depends: none
