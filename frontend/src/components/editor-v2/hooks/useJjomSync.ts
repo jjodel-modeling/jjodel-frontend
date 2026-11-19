@@ -34,18 +34,14 @@ import { jjomVertexToRFNode, jjomEdgeToRFEdge } from '../utils/jjomTransformers'
 import {
     isCanvasUpdated,
     purgeExpired,
-    clearAllCanvasUpdated,
-    clearSyncModes,
     consumeDropCreated,
-    clearDropCreated,
-    clearEdgeRefIds,
     hasCanvasEdgePair,
     markCanvasEdgePair,
     clearCanvasEdgePair,
-    clearCanvasEdgePairs,
     isSingletonSuppressed,
     acquirePopulateOwner,
     releasePopulateOwner,
+    releaseModelRegistries,
     isPopulateOwner,
 } from '../sync/syncState';
 import { elementSnapshotsOf, snapshotUnchanged, layoutKeyOnlyChange, rekeyedNode } from '../sync/vertexSnapshot';
@@ -1651,16 +1647,10 @@ export function useJjomSync(
             // The registries are module-level and shared by every instance: they clear
             // only when the last instance of the held model unmounts (L4, R-MT-17), and
             // then only the entries of that model and of the shared bucket (L4c, R-MT-29).
-            // An instance that never held a model clears every model, as before L4c.
+            // An instance that holds no model releases nothing and clears nothing (L4d).
             const heldModel = heldModelRef.current;
             heldModelRef.current = undefined;
-            if (heldModel === undefined || releasePopulateOwner(heldModel, populateTokenRef.current)) {
-                clearAllCanvasUpdated(heldModel);
-                clearSyncModes(heldModel);
-                clearDropCreated(heldModel);
-                clearEdgeRefIds(heldModel);
-                clearCanvasEdgePairs(heldModel);
-            }
+            releaseModelRegistries(heldModel, populateTokenRef.current);
             rfNodeCache.current.clear();
             rfEdgeCache.current.clear();
             prevElementsRef.current.clear();

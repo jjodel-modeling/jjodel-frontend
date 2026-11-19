@@ -465,7 +465,7 @@ function syncChildToFlow(
         createVertexForObject(graphId, childId, x, y);
         // Needs both vertices in `graph.subElements`; the child's was just created, and the
         // parent's absence is the function's own no-op case (it warns and returns null).
-        createCompositionEdgeForObjects(graphId, parentId, childId, childKey);
+        createCompositionEdgeForObjects(graphId, parentId, childId, childKey, modelId);
     } catch (err) {
         console.warn('[createAdapter] syncChildToFlow failed', { modelId, parentId, childId, childKey, err });
     }

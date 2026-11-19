@@ -8,6 +8,29 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as S from '../syncState';
+import { createCompositionEdgeForObjects } from '../canvasToJjom';
+
+type Any = any;
+
+// Fake joiner barrel (idiom of syncDeleteEdge.test.ts): the barrel reaches monaco, which
+// dereferences `window` at import. canvasToJjom.ts runs for real against it (L4d).
+const H = vi.hoisted(() => ({
+    state: { idlookup: {} as Record<string, Any> },
+    nextEdge: 0,
+}));
+
+vi.mock('../../../../joiner', () => ({
+    store: { getState: () => H.state },
+    LPointerTargetable: { fromPointer: (id: string) => (id ? H.state.idlookup[id] ?? null : null) },
+    TRANSACTION: (_name: string, fn: () => void) => { fn(); },
+    SetFieldAction: { new: () => true },
+    DeleteElementAction: { new: () => true },
+    DVertex: {}, DEdge: {}, DObject: {}, DModel: {}, DClass: {}, DEnumerator: {}, DPackage: {}, GraphSize: {},
+    DVoidEdge: { new2: () => ({ id: `edge-${++H.nextEdge}` }) },
+}));
+vi.mock('../m1EdgeSweep', () => ({ sweepAllM1ReferenceGraphs: vi.fn() }));
+vi.mock('../../hooks/useOrphanFeatures', () => ({ captureAttributeOrphanValues: vi.fn() }));
+vi.mock('../../viewpoint/layout/vertexLayoutAdapter', () => ({ getActiveLayoutKey: () => 'abstract' }));
 
 function clearAll(): void {
     S.clearAllCanvasUpdated();
@@ -117,5 +140,76 @@ describe('syncState registries keyed by model', () => {
         S.markCanvasUpdated('v', 'A');
         S.clearCanvasUpdated('v');
         expect(S.isCanvasUpdated('v')).toBe(false);
+    });
+});
+
+// Multi-tab L4d (P-2026-11-19-1610): an editor releases registries only when it releases the
+// last canvas of its model, and then only that model's entries (and the shared bucket).
+describe('releaseModelRegistries', () => {
+    it('a model-less release leaves every model and the shared bucket untouched', () => {
+        writeFor('A', 'a');
+        writeFor('B', 'b');
+        writeFor(undefined, 'x');
+        expect(S.releaseModelRegistries(undefined, {})).toBe(false);
+        expect(present('a')).toEqual([true, true, true, true, true]);
+        expect(present('b')).toEqual([true, true, true, true, true]);
+        expect(present('x')).toEqual([true, true, true, true, true]);
+        expect(S.consumeDropCreated('d-a')).toBe(true);
+        expect(S.consumeDropCreated('d-b')).toBe(true);
+        expect(S.consumeDropCreated('d-x')).toBe(true);
+    });
+
+    it('clears only on the last release of a model, and only that model and the shared bucket', () => {
+        const t1 = {}, t2 = {};
+        S.acquirePopulateOwner('A', t1);
+        S.acquirePopulateOwner('A', t2);
+        writeFor('A', 'a');
+        writeFor('B', 'b');
+        writeFor(undefined, 'x');
+        expect(S.releaseModelRegistries('A', t1)).toBe(false);
+        expect(present('a')).toEqual([true, true, true, true, true]);
+        expect(present('x')).toEqual([true, true, true, true, true]);
+        expect(S.releaseModelRegistries('A', t2)).toBe(true);
+        expect(present('a')).toEqual([false, false, false, false, false]);
+        expect(present('x')).toEqual([false, false, false, false, false]);
+        expect(present('b')).toEqual([true, true, true, true, true]);
+        expect(S.consumeDropCreated('d-b')).toBe(true);
+    });
+
+    it('a token that does not hold the model clears nothing', () => {
+        writeFor('A', 'a');
+        expect(S.releaseModelRegistries('A', {})).toBe(false);
+        expect(present('a')).toEqual([true, true, true, true, true]);
+    });
+});
+
+describe('createCompositionEdgeForObjects files under its model', () => {
+    beforeEach(() => {
+        H.state.idlookup = {
+            g1: { id: 'g1', subElements: ['vp', 'vc'] },
+            vp: { className: 'DVertex', id: 'vp', model: 'parent' },
+            vc: { className: 'DVertex', id: 'vc', model: 'child' },
+            parent: { id: 'parent', instanceof: { allReferences: [{ id: 'ref', name: 'items' }] } },
+            child: { id: 'child' },
+        };
+    });
+
+    it('a composition edge written with a model id survives the release of another model', () => {
+        const t = {};
+        S.acquirePopulateOwner('A', t);
+        const edgeId = createCompositionEdgeForObjects('g1', 'parent', 'child', 'items', 'B');
+        expect(edgeId).not.toBeNull();
+        expect(S.isCanvasUpdated(edgeId!)).toBe(true);
+        expect(S.releaseModelRegistries('A', t)).toBe(true);
+        expect(S.isCanvasUpdated(edgeId!)).toBe(true);
+    });
+
+    it('without a model id it still files under the shared bucket', () => {
+        const t = {};
+        S.acquirePopulateOwner('A', t);
+        const edgeId = createCompositionEdgeForObjects('g1', 'parent', 'child', 'items');
+        expect(S.isCanvasUpdated(edgeId!)).toBe(true);
+        S.releaseModelRegistries('A', t);
+        expect(S.isCanvasUpdated(edgeId!)).toBe(false);
     });
 });

@@ -244,6 +244,23 @@ export function releasePopulateOwner(modelId: string, token: object): boolean {
     return true;
 }
 
+/**
+ * The unmount of an editor (multi-tab L4d, P-2026-11-19-1625). An editor that holds
+ * no model releases nothing and clears nothing. Otherwise it releases its hold, and
+ * when that was the last instance of the model it clears that model's entries and the
+ * shared bucket, never another model's. True when it cleared.
+ */
+export function releaseModelRegistries(modelId: string | undefined, token: object): boolean {
+    if (modelId === undefined) return false;
+    if (!releasePopulateOwner(modelId, token)) return false;
+    clearAllCanvasUpdated(modelId);
+    clearSyncModes(modelId);
+    clearDropCreated(modelId);
+    clearEdgeRefIds(modelId);
+    clearCanvasEdgePairs(modelId);
+    return true;
+}
+
 export function isPopulateOwner(modelId: string, token: object): boolean {
     return populateInstances.get(modelId)?.[0] === token;
 }

@@ -1559,6 +1559,7 @@ export function createCompositionEdgeForObjects(
     parentObjectId: string,
     childObjectId: string,
     referenceName: string,
+    modelId?: string,
 ): string | null {
     try {
         const parentVertexId = findVertexIdForObject(graphId, parentObjectId);
@@ -1587,7 +1588,7 @@ export function createCompositionEdgeForObjects(
             edgeId = dEdge?.id ?? null;
         });
 
-        if (edgeId) markCanvasUpdated(edgeId);
+        if (edgeId) markCanvasUpdated(edgeId, modelId);
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] createCompositionEdgeForObjects failed:', err);
