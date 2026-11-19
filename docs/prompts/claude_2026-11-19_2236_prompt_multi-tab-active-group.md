@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-2236
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · 52cdcda06, f83fc698b · verifica visiva passata 2026-11-19 23:15
 Lane: full (bug fix, no critical-zone file)
 Depends: P-2026-11-19-2125 (metamodels in editor groups), merged 83a45cf2e, closed 804ddd61d
 Worktree: ~/jjodel-w-mtact, branch multi-tab-active-group, created from the trunk at 804ddd61d plus this prompt's commit
