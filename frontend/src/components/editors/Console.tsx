@@ -48,6 +48,8 @@ import type { ConsoleLanguage } from './Console/LanguageToggle';
 import { jjelEval } from '../../jjel';
 import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
 import DockManager from '../abstract/DockManager';
+import { activeTabId } from '../abstract/tabs/dockGroups';
+import { modelOfTabId } from '../abstract/tabs/modelTabId';
 
 /**
  * Flatten a Jjodel proxy's properties into a plain object for use as JjEL context.
@@ -840,10 +842,9 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
         // 1. Try DockManager active tab — most reliable indicator of current metamodel
         try {
             if (DockManager.dock) {
-                const layout = DockManager.dock.getLayout();
-                const modelsPanel = layout?.dockbox?.children?.[0];
-                const tabs = (modelsPanel as any)?.tabs || [];
-                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                // The active tab of the active editor group (R-MT-30), mapped to its model (`<id>~tab<N>`).
+                const tabId = activeTabId(DockManager.dock.getLayout());
+                const activeId: string | null = tabId ? modelOfTabId(tabId) : null;
                 if (activeId) {
                     const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
                     if (model) return model;
@@ -1052,10 +1053,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     if (node) {
         try {
             if (DockManager.dock) {
-                const layout = DockManager.dock.getLayout();
-                const modelsPanel = layout?.dockbox?.children?.[0];
-                const tabs = (modelsPanel as any)?.tabs || [];
-                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                // The active tab of the active editor group (R-MT-30), mapped to its model (`<id>~tab<N>`).
+                const tabId = activeTabId(DockManager.dock.getLayout());
+                const activeId: string | null = tabId ? modelOfTabId(tabId) : null;
                 if (activeId && node.model && node.model.id !== activeId) {
                     // Node is from a different metamodel — clear it
                     node = null;

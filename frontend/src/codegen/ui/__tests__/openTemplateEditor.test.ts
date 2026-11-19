@@ -33,6 +33,7 @@ vi.mock('../TemplateEditorTab', async () => {
 import { openTemplateEditor } from '../openTemplateEditor';
 import { BESIDE_SHARE, generatorTabsOf, keepBeside, panelOf, selectOnModelCanvas } from '../canvasSelection';
 import { GENERATOR_GROUP } from '../generatorTabs';
+import { noteActiveTab, resetDockGroups } from '../../../components/abstract/tabs/dockGroups';
 
 type Panel = { id: string; tabs: any[]; size: number; parent?: any; activeId?: string };
 
@@ -84,6 +85,7 @@ beforeEach(() => {
     rail.collapse.mockClear();
     rail.close.mockClear();
     lookup.idlookup = {};
+    resetDockGroups();
 });
 
 describe('openTemplateEditor', () => {
@@ -204,6 +206,36 @@ describe('openTemplateEditor', () => {
         openTemplateEditor('MM', 'Turnstile', null, 'g2', 'M1');
         expect(dock.moves).toEqual([['codegen_tpl_MM_g2', 'p0', 'right']]);
         expect(shownIn(dock, 'M1')).toBe('M1');
+    });
+});
+
+describe('openTemplateEditor with two editor groups (R-MT-30, P-2026-11-19-2336)', () => {
+    it('with no canvas, a new tab joins the active group, not the first panel (kills: dockbox.children[0] kept for the fallback panel)', () => {
+        const dock = fakeDock(['project_summary'], ['doc_x']);
+        fake.dock = dock;
+        noteActiveTab('doc_x');
+        expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p1', 'middle']]);
+    });
+
+    it('with no canvas of the metamodel, opens beside the canvas shown in the active group (kills: dockbox.children[0] kept for the shown tab)', () => {
+        const dock = fakeDock(['project_summary', 'X'], ['Y']);
+        show(dock, 'X');
+        show(dock, 'Y');
+        fake.dock = dock;
+        lookup.idlookup = { X: { className: 'DModel', instanceof: 'OTHER' }, Y: { className: 'DModel', instanceof: 'OTHER' } };
+        noteActiveTab('Y');
+        openTemplateEditor('MM', 'Turnstile');
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p1', 'right']]);
+    });
+
+    it('an open tab brought forward with no canvas goes to the active group (kills: dockbox.children[0] kept in placeOpenTab)', () => {
+        const dock = fakeDock(['project_summary'], ['doc_x'], ['codegen_tpl_MM']);
+        fake.dock = dock;
+        noteActiveTab('doc_x');
+        openTemplateEditor('MM', 'Turnstile');
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p1', 'middle']]);
+        expect(dock.updateTab).toHaveBeenCalledWith('codegen_tpl_MM', null, true);
     });
 });
 

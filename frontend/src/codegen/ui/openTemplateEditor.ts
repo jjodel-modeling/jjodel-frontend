@@ -50,6 +50,7 @@ import TemplateEditorTab, {
 import { GENERATOR_GROUP, besideTarget, generatorTabTitle, rememberGenerator } from './generatorTabs';
 import type { AppBarTabHooks } from './generatorTabs';
 import { dockBeside, findPanel, generatorTabsOf, panelOf, placeOpenTab, shownCanvas } from './canvasSelection';
+import { activeGroup } from '../../components/abstract/tabs/dockGroups';
 import { DEFAULT_GENERATOR_ID, GEN_GENERATORS_KEY, decodeGenerators } from '../engine/generatorCodec';
 import { GEN_TEMPLATES_KEY } from '../engine/templateCodec';
 
@@ -81,8 +82,9 @@ export function openTemplateEditor(
         else (node.children ?? []).forEach(walk);
     };
     walk(dock.getLayout()?.dockbox);
-    const first = dock.getLayout()?.dockbox?.children?.[0];
-    const shownFirst = first && 'tabs' in first ? first.activeId ?? first.tabs[0]?.id : undefined;
+    // The active editor group (R-MT-30): with one group, the first panel of the dock box.
+    const first = activeGroup(dock.getLayout()) as PanelData | null;
+    const shownFirst = first ? first.activeId ?? first.tabs[0]?.id : undefined;
     const lookup = (store.getState() as any)?.idlookup ?? {};
     const canvas = shownCanvas(dock, besideTarget(metamodelId, model, docked, shownFirst, lookup), lookup);
     const ofMetamodel = generatorTabsOf(metamodelId);
