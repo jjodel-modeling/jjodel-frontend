@@ -450,3 +450,16 @@ active log is not touched by this lane.
 **Ticket**: Reported by Alfonso at the lane 2b visual check: a metamodel opens in the left group (group 1) whatever the active group, not in the active group as G3 says for every artifact. Next lane.
 **Priority**: medium
 **Found in**: P-2026-11-19-1915
+
+## 2026-11-19 — feat: metamodels in editor groups, second tab and Split Right (multi-tab lane mm)
+**Prompt**: `claude_2026-11-19_2125_prompt_multi-tab-metamodel-groups.md`, lane full: metamodels open in the active group (G3), second tab `<id>~tab<N>`, Split Right on metamodel tabs, tab viewpoint per metamodel tab, R-MT-31
+**Files touched**: c7e6d5661 (`DockManager.tsx`, `EditorSwitch.tsx`, `TabDataMaker.tsx`, `MetamodelTab.tsx`, `Navbar.tsx`, `dockManagerSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`); eed0b25e2 (`docs/decisions.md` R-MT-31); this commit: this inbox, Status of 2125
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 code files, above five; `TabDataMaker.tsx` and `MetamodelTab.tsx` outside the listed six, approved in chat 21:41)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 22:06 on 3087; probe T1-T7 9/9 at 1600 and 1280, 0 console errors)
+**Notes**: Gates: typecheck 0, build ok, check:docs 5/5, vitest 3 known import failures. Metamodel picker stays Abstract syntax until G10; the viewpoint-change probe step is not applicable. Tree View metamodel row does not open a tab: T2/T3 opened through open2 (rail's door). Cut-off active tab in a 396 px group (2b strips) goes to the width lane. Probe, crops in ~/.jjodel-lanes/P-2026-11-19-2125/.
+**Prompt document name**: 2026-11-19 21:25

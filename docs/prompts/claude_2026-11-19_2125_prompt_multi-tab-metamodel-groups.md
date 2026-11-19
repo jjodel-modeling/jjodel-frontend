@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-2125
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-19 · lane full · c7e6d5661, eed0b25e2 · verifica visiva passata 2026-11-19 22:06
 Lane: full (implementation, no critical-zone file)
 Depends: P-2026-11-19-1600/1745 (lane 2a) and P-2026-11-19-1820/1915 (lane 2b), both merged into the trunk; R-MT-29 (L4c, registries keyed by model)
 Worktree: ~/jjodel-w-mtgmm, branch multi-tab-groups-mm, created from the trunk after the 2b merge, at this prompt's commit
