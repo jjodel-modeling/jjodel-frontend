@@ -3,10 +3,10 @@
 Prompt-ID: P-2026-11-20-2250
 Chat: C-2026-11-20-2250
 Status: da eseguire
-Lane: fast (shell-ui, no critical zone)
+Lane: fast (multi-tab follow-up on shell chrome, no critical zone)
 Depends: none
 Request: none (typed in the project chat, not an issue)
-Front: shell-ui
+Front: multi-tab
 
 ## COSA
 
