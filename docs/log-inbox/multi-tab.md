@@ -579,3 +579,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (mouse probe 19/19 at 1600, 0 console errors; Alfonso's visual check pending on 3121)
 **Notes**: `project_summary` joins the prefixes StatusBar reads as the project context, so `useActiveModel`'s `_lastSelected` fallback no longer reaches the breadcrumb. Closes the ticket filed by this lane. With two groups and group 2 active, a click on the app bar project label opens the dashboard (probe steps P2, P3). Typecheck 0. The R-MT-34 row was written by this lane and not yet merged, so it is corrected in place.
 **Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — close: project dashboard full screen, visual GO
+**Prompt**: `P-2026-11-20-1632`, closure: Alfonso's visual GO 2026-11-20 17:46 on 3121 («ok funziona»); Status flip, dev server on 3121 stopped
+**Files touched**: this commit: the 1632 prompt (Status), this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 17:46 on 3121; mouse probe 19/19 at 1600, 0 console errors)
+**Notes**: Closes the two entries above, whose Smoke visivo said the check was pending: they were committed before the GO instead of riding in the closure commit (P13), so the GO is recorded here and they stay as written (add-only). Last code commit 963973425.
+**Prompt document name**: 2026-11-20 16:32

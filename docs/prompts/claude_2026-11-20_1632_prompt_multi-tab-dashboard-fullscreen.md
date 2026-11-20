@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-20-1632
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-20 · lane full · 963973425 · verifica visiva passata 2026-11-20 17:46
 Lane: full (implementation, no critical-zone file)
 Depends: R-MT-30..R-MT-33 and the readers lane, all merged into the trunk
 Worktree: ~/jjodel-w-mtdash, branch multi-tab-dashboard, created from the trunk after the persistence merge (d2628b041), at this prompt's commit
