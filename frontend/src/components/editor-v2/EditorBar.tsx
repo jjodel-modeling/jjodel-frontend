@@ -67,13 +67,13 @@ export function RepresentationSwitch({ active, text, textPressed, onDiagram, onT
                     aria-pressed={active === 'diagram'} title={DIAGRAM_ENTRY_TITLE} data-representation="diagram"
                     onClick={() => { if (active !== 'diagram') onDiagram?.(); }}>
                 <i className="bi bi-diagram-3" aria-hidden="true" />
-                Diagram
+                <span className="editor-bar__switch-label">Diagram</span>
             </button>
             <button type="button" className={'editor-bar__switch-btn' + (pressedText ? ' editor-bar__switch-btn--active' : '')}
                     aria-pressed={pressedText} aria-disabled={!text.enabled || undefined} title={text.title} data-representation="text"
                     onClick={() => { if (text.enabled) onText?.(); }}>
                 <i className="bi bi-file-earmark-text" aria-hidden="true" />
-                Text
+                <span className="editor-bar__switch-label">Text</span>
             </button>
         </div>
     );
