@@ -169,3 +169,19 @@ Also seen, not changed: at 1280 the textual bar clips the existing EBNF | Syntax
 1. Visual check of the two groups (dev server on 3120).
 2. The Split Right residual of §8.2: accept the scroll (R-MT-26), or order Split Right before the switch so the switch is what scrolls, or hide the switch's labels always.
 3. D4, D5 (status bar move), D6: a lane that first gives a metamodel's syntax a home, then removes EBNF and Syntax from the model tab.
+
+### 8.3 Split Right residual, decided (2026-11-20 17:10)
+
+The project chat decided (RC-25): the switch is icon-only in both bars at every width, and Split Right never scrolls out. Built in `4ec5f6196`: the left and middle zones are wrapped in `.editor-bar__scroll`, the one box that scrolls; the right zone (switch, Split Right, rail collapse) and the trailing rail cell sit outside it. The disabled Text takes `--color-text-disabled` at the 0.3 opacity of `.toolbar-btn:disabled`. It was `--color-text-placeholder`, slate-500, darker than the disabled token.
+
+Correction to the §8.2 table: its rows «metamodel alone» were measured after the split, with the metamodel in the left group. Both cases are measured below.
+
+Split Right's distance from the panel's right edge, probe 17/17 at each width:
+
+| bar | 1600 | 1280 |
+|---|---|---|
+| metamodel alone, before the split | 443 | 403 |
+| metamodel, left group of the split | 59 | 59 |
+| model, right group of the split | 35 | 35 |
+
+What scrolls now is the editing and view controls: at 1600 the left group's scroller holds 320px in 244, at 1280 320 in 104. Bar top 35 and height 40, padding 0 12px 0 8px in the split and 0 12px 0 20px alone, unchanged. Active-tab parity unchanged. The EBNF | Syntax cut at 1280 is gone as a side effect (the switch went from 145 to 58px); it was left alone otherwise, as decided.
