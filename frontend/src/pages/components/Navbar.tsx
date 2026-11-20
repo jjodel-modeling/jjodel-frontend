@@ -2031,19 +2031,13 @@ function NavbarComponent(props: AllProps) {
                 {project && debuggerr ? <DebuggerComponent /> : null}
             </section>
 
-            {/* Project label — click activates the project-summary tab (dashboard). Not in
-                consumer (R5): there the Configurator is the page and there are no tabs. */}
+            {/* Project label — click opens the project dashboard full screen over the editor groups, or closes it
+                (P-2026-11-20-1632; Esc closes it too). Not in consumer (R5): there the Configurator is the page and
+                there are no tabs. */}
             {project && !consumer && (
                 <div
                     className="project-label"
-                    onClick={() => {
-                        const dock = DockManager.dock;
-                        if (dock) {
-                            // The summary stays in group 1, first (Q4).
-                            const firstTabId = modelGroups(dock.getLayout())[0]?.tabs[0]?.id;
-                            if (firstTabId) dock.updateTab(firstTabId, null, true);
-                        }
-                    }}
+                    onClick={() => DockManager.toggleDashboard()}
                     title="Project overview"
                 >
                     <div className="project-icon">

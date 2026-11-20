@@ -65,7 +65,7 @@ export function noteActiveTab(tabId: string | null | undefined): boolean {
 export function recentTabIds(): readonly string[] { return recent; }
 
 /** Forgets every recorded tab (a new project, the bench). */
-export function resetDockGroups(): void { recent = []; splitDepth = 0; }
+export function resetDockGroups(): void { recent = []; splitDepth = 0; dashboardOpen = false; }
 
 /** The active group: the group of the most recent tab still in one, else the first group; null when there is none. */
 export function activeGroup(layout: any, recentIds: readonly string[] = recent): GroupPanel | null {
@@ -132,4 +132,30 @@ export function dockMoveAllowed(q: DockMoveQuery): boolean {
         default:
             return false;
     }
+}
+
+// The project dashboard (P-2026-11-20-1632, R-MT-34): no tab of a group any more, but a full-screen view over the whole
+// editor area, as VS Code's Explorer is not an editor group. The groups stay mounted underneath. It shows while open,
+// and whenever no group holds a tab (a project just opened, every tab closed). Whether it was open is not persisted.
+let dashboardOpen = false;
+const dashboardListeners = new Set<() => void>();
+
+export function isDashboardOpen(): boolean { return dashboardOpen; }
+
+/** Opens or closes the dashboard; a change tells the listeners. True when it changed. */
+export function setDashboardOpen(open: boolean): boolean {
+    if (dashboardOpen === open) return false;
+    dashboardOpen = open;
+    dashboardListeners.forEach(listener => listener());
+    return true;
+}
+
+export function subscribeDashboard(listener: () => void): () => void {
+    dashboardListeners.add(listener);
+    return () => { dashboardListeners.delete(listener); };
+}
+
+/** Whether the dashboard shows over the groups of `layout`: open, or no group holds a tab. */
+export function dashboardShown(layout: any, open: boolean = dashboardOpen): boolean {
+    return open || !modelGroups(layout).some(group => group.tabs.length > 0);
 }

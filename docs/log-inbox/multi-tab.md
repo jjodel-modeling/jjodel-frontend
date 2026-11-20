@@ -575,3 +575,48 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-20 16:52, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3072; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's four entries first, then the branch's lane 6 entry and ticket, verbatim. Probes as expected. Branch-tree hook run: 1 laneBoard port test timed out (10084 ms, load), green on trunk and merge. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-20 16:30
+
+## 2026-11-20 — feat: the project dashboard opens full screen over the editor groups
+**Prompt**: `P-2026-11-20-1632`, lane full: the `project_summary` tab becomes a full-screen view over all groups (groups mounted underneath), toggled by the app bar project label, Esc closes, an artifact opened from it closes it, summary mode while shown, not persisted; R-MT-34
+**Files touched**: 37a3dc87f (`Dock.tsx`, `DockManager.tsx`, `abstract/style.scss`, `tabs/dockGroups.ts` + test, `tabs/groupPersistence.ts` + test, `Navbar.tsx`, `pages/dashboard.scss`); this commit: `docs/decisions.md` R-MT-34, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (mouse probe 18/19 at 1600 and 1280, 0 console errors: over the dashboard the status bar still shows the last model's breadcrumb; Alfonso's visual check pending on 3121)
+**Notes**: Point 4 needs `StatusBar.tsx` (`_lastSelected` fallback), outside the file list: asked, not done. Group 1 lost its display with the summary tab (`.not-strip` shows only panels with a pinnable header), fixed in style.scss. Gates: typecheck 0, build ok, check:docs 5/5, decisions gates 85/85, vitest 3 known import failures plus contextCeiling.test.ts red only under the lane's JJODEL_LANE_LOG* env (32/32 without). Continuation of session 42462f6f. Crops in ~/.jjodel-lanes/P-2026-11-20-1632/.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — ticket: status bar shows the last model over the project dashboard
+**Ticket**: with the dashboard shown (R-MT-34), `StatusBar.tsx` still renders the last model's breadcrumb: the ACTIVE_TAB `project_summary` sets its context to `editor` and `useActiveModel` falls back to `_lastSelected`, which opening a model sets. The old summary tab had the same residue (P-2026-11-19-2236 Notes). Fix outside the 1632 scope: treat `project_summary` as the project context.
+**Priority**: medium
+**Found in**: P-2026-11-20-1632
+**Detail**: docs/decisions.md R-MT-34
+
+## 2026-11-20 — fix: status bar in project mode over the project dashboard
+**Prompt**: `P-2026-11-20-1632`, chat check 17:04 (RC-21 recommendation adopted): `StatusBar.tsx` approved for one change, the status bar in project mode while the dashboard shows; probe step at 1600 and typecheck again
+**Files touched**: 963973425 (`StatusBar.tsx`); this commit: `docs/decisions.md` R-MT-34 (status bar sentence, probe count), this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:32 (the same lane, its status bar step)
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (`StatusBar.tsx`, approved in the chat check before the change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (mouse probe 19/19 at 1600, 0 console errors; Alfonso's visual check pending on 3121)
+**Notes**: `project_summary` joins the prefixes StatusBar reads as the project context, so `useActiveModel`'s `_lastSelected` fallback no longer reaches the breadcrumb. Closes the ticket filed by this lane. With two groups and group 2 active, a click on the app bar project label opens the dashboard (probe steps P2, P3). Typecheck 0. The R-MT-34 row was written by this lane and not yet merged, so it is corrected in place.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — close: project dashboard full screen, visual GO
+**Prompt**: `P-2026-11-20-1632`, closure: Alfonso's visual GO 2026-11-20 17:46 on 3121 («ok funziona»); Status flip, dev server on 3121 stopped
+**Files touched**: this commit: the 1632 prompt (Status), this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 17:46 on 3121; mouse probe 19/19 at 1600, 0 console errors)
+**Notes**: Closes the two entries above, whose Smoke visivo said the check was pending: they were committed before the GO instead of riding in the closure commit (P13), so the GO is recorded here and they stay as written (add-only). Last code commit 963973425.
+**Prompt document name**: 2026-11-20 16:32

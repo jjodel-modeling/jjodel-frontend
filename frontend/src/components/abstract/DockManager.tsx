@@ -5,7 +5,7 @@ import {DProject, LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, st
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
-import { activeGroup, groupOfTab, noteActiveTab, setArtifactTabPredicate, withSplitRight } from "./tabs/dockGroups";
+import { activeGroup, dashboardShown, groupOfTab, isDashboardOpen, noteActiveTab, setArtifactTabPredicate, setDashboardOpen, withSplitRight } from "./tabs/dockGroups";
 import { buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord, setGroupsChangeListener, tabViewpointOf } from "./tabs/groupPersistence";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
@@ -150,6 +150,8 @@ class DockManager {
 
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
+        // Opening an artifact from the project dashboard closes it (P-2026-11-20-1632); the artifact opens in the active group.
+        DockManager.closeDashboard();
         const target = DockManager.activeGroupPanel();
         // G3 (R-MT-30): a model or metamodel (R-MT-31) opens as a tab in the active group, or is focused there when the
         // group has one of its tabs; open only in another group, a copy opens in the active group. Any other tab is
@@ -190,32 +192,37 @@ class DockManager {
     }
 
     /**
-     * Activate the `project_summary` tab if it is not already the active one.
+     * Bring the project dashboard forward (it was the `project_summary` tab until P-2026-11-20-1632).
      *
-     * Callers are affordances outside the dock (the project rail) that trigger UI
-     * owned by ProjectEditor — modals and the metamodel-selection dropdown. That UI
-     * lives inside the `project_summary` tab content, and rc-dock lays inactive panes
-     * out off-screen inside a clipped container, so a `position:fixed` modal rendered
-     * in a hidden pane resolves against the translated ancestor and never shows.
+     * Callers are affordances outside the dock (the project rail, File › New) that trigger UI
+     * owned by ProjectEditor — modals and the metamodel-selection dropdown. That UI lives in the
+     * dashboard, which is hidden while the editor groups show, so it is opened first.
      *
-     * The rail is visible on the summary tab (already active — this is a no-op) and on
-     * the Documentation tab (`doc_*`), which is the case this exists for.
-     *
-     * @returns true if the tab was found (and thus activated), false otherwise.
+     * @returns true when the dock is there (and the dashboard thus open), false otherwise.
      */
     static activateProjectSummary(): boolean {
         if (!DockManager.dock) return false;
-        try {
-            const existing = DockManager.dock.find('project_summary');
-            if (!existing || !('content' in existing)) return false;
-            // Same activation call as the open() guard: null payload, activate = true.
-            DockManager.dock.updateTab('project_summary', null as any, true);
-            return true;
-        } catch (error) {
-            console.error('[DockManager] Error activating project summary:', error);
-            return false;
-        }
+        DockManager.openDashboard();
+        return true;
     }
+
+    /**
+     * The project dashboard (P-2026-11-20-1632, R-MT-34): a full-screen view over the whole editor area, no tab of a
+     * group, as VS Code's Explorer is not an editor group. The groups stay mounted underneath (`Dock.tsx`). It shows while
+     * open and whenever no group holds a tab; closing it shows the groups as they were.
+     */
+    static openDashboard(): void { setDashboardOpen(true); }
+
+    static closeDashboard(): void { setDashboardOpen(false); }
+
+    /** The project label of the app bar: opens the dashboard, or closes it when it is open. */
+    static toggleDashboard(): void { setDashboardOpen(!isDashboardOpen()); }
+
+    /** Whether the dashboard shows now: open, or no group holds a tab (no dock yet counts as none). */
+    static isDashboardShown = (): boolean => {
+        const layout = DockManager.dock?.getLayout();
+        return layout ? dashboardShown(layout) : true;
+    };
 
     static async open2(me: LModel): Promise<void> {
         // #157 Fase 3: in consumer mode (a ?profile= is active) metamodels are not editable —
@@ -500,6 +507,7 @@ class DockManager {
         }
 
         const tabId = `doc_${project.id}`;
+        DockManager.closeDashboard();
 
         try {
             // Check if tab already exists
@@ -723,6 +731,7 @@ class DockManager {
             onExecuteTransformation: onExecuteTransformation,
             getLastRun: getLastRun
         });
+        DockManager.closeDashboard();
 
         try {
             // Check if tab already exists
