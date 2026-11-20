@@ -1,4 +1,5 @@
-import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import type { NotationMode, ActiveColorScheme, CustomColorScheme } from './types';
@@ -38,6 +39,12 @@ import { publishValidationProblems } from './problems/validationToProblems';
 import { buildVertexResolver } from './problems/vertexResolver';
 import { buildValidationSignature, noteValidationRun, resetFreshness } from './problems/validationFreshness';
 import { useValidationFreshness } from './problems/ValidationFreshnessSync';
+// The syntax chip, its popover and View › Syntax read one entry list (P-2026-11-20-2310).
+import { NOTATION_OPTIONS, publishCanvasView, retractCanvasView, syntaxChipLabel, syntaxChipLabels, syntaxChoices } from './canvasViewChoices';
+import type { CanvasView, CanvasViewActions, ConcreteSyntaxOption, ViewChoice } from './canvasViewChoices';
+import ToolbarOverflow, { useOverflowFit } from './ToolbarOverflow';
+import type { OverflowEntry } from './ToolbarOverflow';
+import './CanvasViewControls.scss';
 // TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
 // dropped, the component is not: it is the only conformance summary in the codebase and
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
@@ -101,6 +108,9 @@ interface ToolbarProps {
     activeHighlightColor?: number;
     onSelectHighlightColor?: (n: number) => void;
     onClearHighlights?: () => void;
+    /** The dock tab this canvas renders in: the View menu finds the canvas of the active tab by it (P-2026-11-20-2310).
+     *  Omitted (the standalone route): the canvas is not offered to the View menu. */
+    tabId?: string;
 }
 
 /* ── Syntax picker (NAV2) ────────────────────────────────────────────────────
@@ -147,13 +157,18 @@ function metamodelNameOf(lookup: Readonly<Record<string, any>> | undefined, mode
 const SYNTAX_LISTBOX_ID = 'toolbar-syntax-listbox';
 const syntaxOptionId = (i: number) => `toolbar-syntax-option-${i}`;
 
-const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
-    { id: 'uml',        name: 'Structured',        desc: 'Class diagram like',  icon: 'bi-diagram-3' },
-    { id: 'simplified',  name: 'Simplified', desc: 'Names only, minimal',     icon: 'bi-list' },
-    { id: 'compact',     name: 'Compact',    desc: 'Headers only',            icon: 'bi-textarea' },
-    { id: 'wireframe',   name: 'Wireframe',  desc: 'Blueprint style',         icon: 'bi-bounding-box-circles' },
-    { id: 'er',          name: 'ER',         desc: 'Entity-Relationship',     icon: 'bi-database' },
-];
+/** One button of the bar's left zone, in priority order, with the entry the overflow lists when it leaves the bar
+ *  (P-2026-11-20-2310). `group` is the bordered group it draws in; a run of the same group draws as one. */
+interface BarItem {
+    readonly key: string;
+    readonly group: 'align' | 'history' | 'layout' | 'selection' | 'rules' | 'validate' | 'views';
+    readonly node: ReactNode;
+    readonly entry: OverflowEntry;
+}
+
+const LAYOUT_DISABLED_TITLE = 'Layout controls only available with the flow editor';
+
+// NOTATION_OPTIONS moved to canvasViewChoices.ts (P-2026-11-20-2310): the chip and the View menu read it there.
 
 /**
  * Compact toolbar (Row 2) for the editor.
@@ -281,12 +296,15 @@ function Toolbar({
     activeHighlightColor = 1,
     onSelectHighlightColor,
     onClearHighlights,
+    tabId,
 }: ToolbarProps) {
     // Toggle is always rendered. When no viewpoint is active the buttons are
     // visible but inert (greyed out, "flow" stays highlighted as the default).
     const activeEditorMode = editorMode ?? 'flow';
     const modeToggleDisabled = !hasViewpoint;
     const layoutDisabled = editorMode === 'classic';
+    // TODO: cleanup — the notation dropdown left the bar (P-2026-11-20-2310): `notationOpen`, `dropdownRef`,
+    // `currentNotation`, `handleSelect` and their two closing effects have no reader since.
     const [notationOpen, setNotationOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     // TODO: cleanup — no reader since the fullscreen toggle was retired (2026-08-26).
@@ -482,26 +500,73 @@ function Toolbar({
     /** What the trigger reads. Falls back to «Abstract syntax» for the same reason the
      *  `<select>` was normalized to '' upstream: an active id with no entry would otherwise
      *  leave the control blank. */
+    // TODO: cleanup — the eye trigger's label, no reader since the chip reads `chipLabel` (P-2026-11-20-2310).
     const currentSyntax = syntaxEntries.find(e => e.value === shownViewpointId) ?? ABSTRACT_SYNTAX_ENTRY;
+
+    // ── The canvas view: what this canvas shows and the setters it already has (P-2026-11-20-2310) ──
+    // The picker's vocabulary after «Abstract syntax» is the concrete part of the one syntax list; the five notations
+    // take the place of «Abstract syntax» itself. The chip's popover and View › Syntax both render `syntaxChoices`,
+    // and the View menu reaches this canvas through the registry, by tab id. No state of its own: notation and colors
+    // stay EditorV2's, the viewpoint stays the tab's.
+    const concreteSyntaxes: ConcreteSyntaxOption[] = syntaxEntries.slice(1).map(e => ({
+        value: e.value,
+        label: e.label,
+        icon: e.icon,
+        opensTab: isTextualOption(e.value) || isDataManagerOption(e.value),
+    }));
+    const concreteSignature = concreteSyntaxes.map(c => `${c.value}\u0001${c.label}\u0001${c.opensTab ? 1 : 0}`).join('\u0002');
+    /** The bar's viewport rect while View › Colors › Manage palettes… holds ColorSchemeSelector open under it. */
+    const [paletteManagerRect, setPaletteManagerRect] = useState<DOMRect | null>(null);
+    const viewActionsRef = useRef<CanvasViewActions | null>(null);
+    viewActionsRef.current = {
+        setNotation: onNotationChange,
+        pickSyntax: handleViewpointChange,
+        setColorScheme: onColorSchemeChange,
+        managePalettes: () => {
+            const bar = syntaxTriggerRef.current?.closest('.editor-v2-toolbar');
+            if (bar) setPaletteManagerRect(bar.getBoundingClientRect());
+        },
+    };
+    // Stable, so what is published changes with what the canvas shows and not with every render of the bar.
+    const viewActions = useMemo<CanvasViewActions>(() => ({
+        setNotation: n => viewActionsRef.current?.setNotation(n),
+        pickSyntax: v => viewActionsRef.current?.pickSyntax(v),
+        setColorScheme: c => viewActionsRef.current?.setColorScheme(c),
+        managePalettes: () => viewActionsRef.current?.managePalettes(),
+    }), []);
+    // `concreteSyntaxes` is rebuilt every render; its signature is the dependency.
+    const canvasView = useMemo<CanvasView>(() => ({
+        state: { notation, colorScheme, customPalettes, shownViewpointId, concreteSyntaxes },
+        actions: viewActions,
+    }), [notation, colorScheme, customPalettes, shownViewpointId, concreteSignature, viewActions]);
+    useEffect(() => {
+        if (!tabId) return;
+        publishCanvasView(tabId, canvasView);
+        return () => retractCanvasView(tabId, canvasView);
+    }, [tabId, canvasView]);
+    const syntaxList = syntaxChoices(canvasView);
+    const chipLabel = syntaxChipLabel(canvasView.state);
+    const chipLabels = syntaxChipLabels(canvasView.state);
+    const chipCurrent = chipLabels.indexOf(chipLabel);
 
     const openSyntaxMenu = () => {
         const el = syntaxTriggerRef.current;
         if (!el) return;
         setSyntaxRect(el.getBoundingClientRect());
-        const i = syntaxEntries.findIndex(e => e.value === shownViewpointId);
+        const i = syntaxList.findIndex(e => e.checked);
         setSyntaxHighlighted(i >= 0 ? i : 0);
         syntaxTypeahead.current = { buf: '', at: 0 };
         setSyntaxOpen(true);
     };
 
-    const pickSyntax = (value: string) => {
+    const pickSyntax = (choice: ViewChoice | undefined) => {
         setSyntaxOpen(false);
+        if (!choice) return;
         // Focus goes back to the trigger, as it does when a `<select>` closes — except for
         // the manager entry, which moves to another tab: pulling focus back onto a control
         // of the tab just left is worse than leaving it where the dock puts it. The textual entry opens a tab too.
-        if (isTextualOption(value)) { handleViewpointChange(value); return; }
-        if (!isDataManagerOption(value)) syntaxTriggerRef.current?.focus();
-        handleViewpointChange(value);
+        if (!choice.opensTab) syntaxTriggerRef.current?.focus();
+        choice.run?.();
     };
 
     /* Closing. `mousedown` and not `click`: a press that starts inside the panel and ends
@@ -570,20 +635,21 @@ function Toolbar({
     /** Enter and Space open the menu because the trigger is a `<button>`; the arrows are
      *  what a `<select>` adds on top, and they open it too. */
     const onSyntaxTriggerKeyDown = (e: React.KeyboardEvent) => {
-        if (syntaxOpen || isMetamodel) return;
+        // A metamodel has the five notations to choose from now, so the chip opens there too (P-2026-11-20-2310).
+        if (syntaxOpen) return;
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openSyntaxMenu(); }
     };
 
     const onSyntaxListKeyDown = (e: React.KeyboardEvent) => {
         e.stopPropagation();
-        const last = syntaxEntries.length - 1;
+        const last = syntaxList.length - 1;
         switch (e.key) {
             case 'ArrowDown': e.preventDefault(); setSyntaxHighlighted(h => Math.min(h + 1, last)); return;
             case 'ArrowUp': e.preventDefault(); setSyntaxHighlighted(h => Math.max(h - 1, 0)); return;
             case 'Home': e.preventDefault(); setSyntaxHighlighted(0); return;
             case 'End': e.preventDefault(); setSyntaxHighlighted(last); return;
             case 'Enter':
-            case ' ': e.preventDefault(); pickSyntax(syntaxEntries[syntaxHighlighted]?.value ?? ''); return;
+            case ' ': e.preventDefault(); pickSyntax(syntaxList[syntaxHighlighted]); return;
             case 'Escape': e.preventDefault(); setSyntaxOpen(false); syntaxTriggerRef.current?.focus(); return;
             case 'Tab': setSyntaxOpen(false); return;
             default: break;
@@ -598,9 +664,9 @@ function Toolbar({
         t.at = now;
         const q = t.buf.toLowerCase();
         const from = q.length === 1 ? syntaxHighlighted + 1 : syntaxHighlighted;
-        for (let k = 0; k < syntaxEntries.length; k++) {
-            const i = (from + k) % syntaxEntries.length;
-            if (syntaxEntries[i].label.toLowerCase().startsWith(q)) { setSyntaxHighlighted(i); break; }
+        for (let k = 0; k < syntaxList.length; k++) {
+            const i = (from + k) % syntaxList.length;
+            if (syntaxList[i].label.toLowerCase().startsWith(q)) { setSyntaxHighlighted(i); break; }
         }
     };
 
@@ -858,338 +924,184 @@ function Toolbar({
         setNotationOpen(false);
     }, [onNotationChange]);
 
-    return (
-        // The shared editor bar (R-MT-38, P-2026-11-20-1610): editing actions left, zoom in the middle, the representation,
-        // Split Right and the rail collapse right, the rail's identity cell after them. The root and the fieldset keep the
-        // classes the sheets are written against; the inactive pane of a split disables every control at once.
-        <EditorBar className="editor-v2-toolbar" controlsClassName="editor-v2-toolbar__commands" disabled={!!commandsDisabled}
-                   ariaLabel="Diagram editor"
-            left={<>
-            {/* ── Actions / Alignment group (swaps in-place) ── */}
-            {selectedCount >= 2 && onAlignLeft ? (
-                <div className="toolbar-group toolbar-group--align">
-                    <span className="toolbar-group__label">ALIGN</span>
-                    <button className="toolbar-btn" onClick={onAlignLeft} title="Align left">
-                        {AlignIcons.left}
-                    </button>
-                    <button className="toolbar-btn" onClick={onAlignCenterV} title="Align center (vertical axis)">
-                        {AlignIcons.centerV}
-                    </button>
-                    <button className="toolbar-btn" onClick={onAlignRight} title="Align right">
-                        {AlignIcons.right}
-                    </button>
-                    <div className="toolbar-align-divider" />
-                    <button className="toolbar-btn" onClick={onAlignTop} title="Align top">
-                        {AlignIcons.top}
-                    </button>
-                    <button className="toolbar-btn" onClick={onAlignCenterH} title="Align center (horizontal axis)">
-                        {AlignIcons.centerH}
-                    </button>
-                    <button className="toolbar-btn" onClick={onAlignBottom} title="Align bottom">
-                        {AlignIcons.bottom}
-                    </button>
-                    {selectedCount >= 3 && onDistributeH && (
-                        <>
-                            <div className="toolbar-align-divider" />
-                            <button className="toolbar-btn" onClick={onDistributeH} title="Distribute horizontally">
-                                {AlignIcons.distributeH}
-                            </button>
-                            <button className="toolbar-btn" onClick={onDistributeV} title="Distribute vertically">
-                                {AlignIcons.distributeV}
-                            </button>
-                        </>
-                    )}
-                    <span className="toolbar-selection-count">{selectedCount} selected</span>
-                </div>
-            ) : (
-                <div className="toolbar-group">
-                    <button
-                        className="toolbar-btn"
-                        onClick={onUndo}
-                        disabled={!canUndo}
-                        title="Undo (Ctrl+Z)"
-                    >
-                        <i className="bi bi-arrow-counterclockwise" />
-                    </button>
-                    <button
-                        className="toolbar-btn"
-                        onClick={onRedo}
-                        disabled={!canRedo}
-                        title="Redo (Ctrl+Shift+Z)"
-                    >
-                        <i className="bi bi-arrow-clockwise" />
-                    </button>
-                    {onDuplicateSelected && (
-                        <button
-                            className="toolbar-btn"
-                            onClick={onDuplicateSelected}
-                            title="Duplicate selected"
-                        >
-                            <i className="bi bi-copy" />
-                        </button>
-                    )}
-                    <button
-                        className="toolbar-btn danger"
-                        onClick={onDeleteSelected}
-                        title="Delete selected (Delete/Backspace)"
-                    >
-                        <i className="bi bi-trash" />
-                    </button>
-                </div>
-            )}
-
-            {/* ── REGOLE DI VALIDAZIONE (R-VAL, Step 4) ──
-                Solo sui metamodelli e solo in Advanced: le regole si scrivono sulle
-                classi M2, ed e' materia da language designer. */}
-            {isMetamodel && advancedMode && !!modelId && (
-                <>
-                    <div className="toolbar-separator" />
-                    <div className="toolbar-group">
-                        <button
-                            className="toolbar-btn"
-                            onClick={handleOpenRules}
-                            title="Validation rules of this metamodel"
-                        >
-                            <i className="bi bi-list-check" />
-                        </button>
-                    </div>
-                </>
-            )}
-
-            {/* ── VALIDATE (R-VAL, Step 3) ──
-                Solo sui modelli: le regole predicano sulle istanze M1, e su un
-                metamodello non c'e' niente da validare in questo senso. */}
-            {!isMetamodel && !!validationModelId && (
-                <>
-                    <div className="toolbar-separator" />
-                    <div className="toolbar-group">
-                        <button
-                            className="toolbar-btn"
-                            onClick={handleValidate}
-                            title="Validate the open model against the active rules"
-                        >
-                            <i className="bi bi-shield-check" />
-                        </button>
-                        {/* I tre stati sono distinti a vista, e «mai validato» non e'
-                            «pulito»: il verde arriva solo dopo un giro che ha guardato. */}
-                        {freshness.status === 'never' && (
-                            <span
-                                className="validation-freshness validation-freshness--never"
-                                title="This model has not been validated in this session. No dots means nothing has been checked."
-                            >
-                                <i className="bi bi-shield" aria-hidden="true" /> Not validated
-                            </span>
-                        )}
-                        {freshness.status === 'fresh' && (
-                            <span
-                                className={`validation-freshness validation-freshness--${freshness.violationCount > 0 ? 'violated' : 'clean'}`}
-                                title={freshness.violationCount > 0
-                                    ? 'Validated against the active rules. The dots on the canvas are the violations of this run.'
-                                    : 'Validated against the active rules: no violations.'}
-                            >
-                                <i
-                                    className={`bi ${freshness.violationCount > 0 ? 'bi-shield-exclamation' : 'bi-shield-check'}`}
-                                    aria-hidden="true"
-                                />{' '}
-                                {freshness.violationCount === 0
-                                    ? 'No violations'
-                                    : `${freshness.violationCount} ${freshness.violationCount === 1 ? 'violation' : 'violations'}`}
-                            </span>
-                        )}
-                        {freshness.status === 'stale' && (
-                            <span
-                                className="validation-freshness validation-freshness--stale"
-                                title="The model or the rules changed after the last run: the dots were withdrawn rather than left to age. Validate again."
-                            >
-                                <i className="bi bi-shield-slash" aria-hidden="true" /> Changed since validation
-                            </span>
-                        )}
-                    </div>
-                </>
-            )}
-
-            <div className="toolbar-separator" />
-
-            {/* ── VIEW group (with label) ── */}
-            <div className="toolbar-group toolbar-group--labeled">
-                <span className="toolbar-group__label">VIEW</span>
-
-                {/* Notation/Structure dropdown */}
-                <div className="notation-selector" ref={dropdownRef}>
-                    <button
-                        className="toolbar-dropdown-btn"
-                        onClick={() => setNotationOpen(prev => !prev)}
-                        disabled={viewControlsDisabled}
-                        title={viewControlsDisabled ? 'The active viewpoint defines the notation — switch to Abstract syntax to change it' : 'Notation mode'}
-                    >
-                        <span>{currentNotation.name}</span>
-                        <i className="bi bi-chevron-down toolbar-dropdown-btn__chevron" />
-                    </button>
-                    {notationOpen && (
-                        <div className="notation-selector__dropdown">
-                            {NOTATION_OPTIONS.map(opt => (
-                                <button
-                                    key={opt.id}
-                                    className={`notation-selector__option ${notation === opt.id ? 'active' : ''}`}
-                                    onClick={() => handleSelect(opt.id)}
-                                >
-                                    <i className={`bi ${opt.icon}`} />
-                                    <div>
-                                        <div className="notation-selector__option-name">{opt.name}</div>
-                                        <div className="notation-selector__option-desc">{opt.desc}</div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Theme/Color scheme dropdown */}
-                <ColorSchemeSelector
-                    disabled={viewControlsDisabled}
-                    colorScheme={colorScheme}
-                    onColorSchemeChange={onColorSchemeChange}
-                    customPalettes={customPalettes}
-                    onCreateCustomPalette={onCreateCustomPalette}
-                    onRenamePalette={onRenamePalette}
-                    onDeletePalette={onDeletePalette}
-                />
-            </div>
-
-            {/* Highlight mode palette — only while highlight mode is active */}
-            {highlightModeActive && (
-                <>
-                    <div className="toolbar-separator" />
-                    <HighlightPalette
-                        activeColor={activeHighlightColor}
-                        onSelect={(n) => onSelectHighlightColor?.(n)}
-                        onClear={() => onClearHighlights?.()}
-                    />
-                </>
-            )}
-
-            <div className="toolbar-separator" />
-
-            {/* ── LAYOUT group (with label) ── */}
-            <div className="toolbar-group toolbar-group--labeled">
-                <span className="toolbar-group__label">LAYOUT</span>
-                <button
-                    className={`toolbar-btn ${snapEnabled ? 'active' : ''}`}
-                    onClick={onToggleSnap}
-                    disabled={layoutDisabled}
-                    title={layoutDisabled ? 'Layout controls only available with the flow editor' : (snapEnabled ? 'Disable snap to grid' : 'Enable snap to grid')}
-                >
-                    <i className="bi bi-grid-3x3" />
+    // ── The left zone, by priority (P-2026-11-20-2310) ──
+    // Drawn in priority order, so the overflow trims from the end: undo, redo | grid, auto-layout | delete, duplicate |
+    // rules or validate | views. At 2+ selected the ALIGN group stands in for undo, redo, delete and duplicate, as it
+    // did. Every button carries the entry the overflow menu lists once it leaves the bar; none hides on selection.
+    const glyph = (cls: string) => <i className={`bi ${cls}`} />;
+    const alignMode = selectedCount >= 2 && !!onAlignLeft;
+    const barItems: BarItem[] = [];
+    if (alignMode) {
+        const align = (key: string, label: string, svg: ReactNode, onClick: (() => void) | undefined, divider = false) => barItems.push({
+            key,
+            group: 'align',
+            node: (
+                <Fragment key={key}>
+                    {divider && <div className="toolbar-align-divider" />}
+                    <button className="toolbar-btn" onClick={onClick} title={label}>{svg}</button>
+                </Fragment>
+            ),
+            entry: { key, label, icon: svg, onClick },
+        });
+        align('align-left', 'Align left', AlignIcons.left, onAlignLeft);
+        align('align-center-v', 'Align center (vertical axis)', AlignIcons.centerV, onAlignCenterV);
+        align('align-right', 'Align right', AlignIcons.right, onAlignRight);
+        align('align-top', 'Align top', AlignIcons.top, onAlignTop, true);
+        align('align-center-h', 'Align center (horizontal axis)', AlignIcons.centerH, onAlignCenterH);
+        align('align-bottom', 'Align bottom', AlignIcons.bottom, onAlignBottom);
+        if (selectedCount >= 3 && onDistributeH) {
+            align('distribute-h', 'Distribute horizontally', AlignIcons.distributeH, onDistributeH, true);
+            align('distribute-v', 'Distribute vertically', AlignIcons.distributeV, onDistributeV);
+        }
+    } else {
+        barItems.push({
+            key: 'undo',
+            group: 'history',
+            node: (
+                <button key="undo" className="toolbar-btn" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+                    {glyph('bi-arrow-counterclockwise')}
                 </button>
-                {onAutoLayout && (
+            ),
+            entry: { key: 'undo', label: 'Undo', icon: glyph('bi-arrow-counterclockwise'), onClick: onUndo, disabled: !canUndo },
+        });
+        barItems.push({
+            key: 'redo',
+            group: 'history',
+            node: (
+                <button key="redo" className="toolbar-btn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
+                    {glyph('bi-arrow-clockwise')}
+                </button>
+            ),
+            entry: { key: 'redo', label: 'Redo', icon: glyph('bi-arrow-clockwise'), onClick: onRedo, disabled: !canRedo },
+        });
+    }
+    const snapLabel = snapEnabled ? 'Disable snap to grid' : 'Enable snap to grid';
+    barItems.push({
+        key: 'snap',
+        group: 'layout',
+        node: (
+            <button key="snap" className={`toolbar-btn ${snapEnabled ? 'active' : ''}`} onClick={onToggleSnap}
+                    disabled={layoutDisabled} title={layoutDisabled ? LAYOUT_DISABLED_TITLE : snapLabel}>
+                {glyph('bi-grid-3x3')}
+            </button>
+        ),
+        entry: { key: 'snap', label: snapLabel, icon: glyph('bi-grid-3x3'), onClick: onToggleSnap, disabled: layoutDisabled },
+    });
+    if (onAutoLayout) {
+        barItems.push({
+            key: 'auto-layout',
+            group: 'layout',
+            node: (
+                <button key="auto-layout" className="toolbar-btn" onClick={onAutoLayout} disabled={layoutDisabled}
+                        title={layoutDisabled ? LAYOUT_DISABLED_TITLE : 'Auto layout'}>
+                    {glyph('bi-diagram-3')}
+                </button>
+            ),
+            entry: { key: 'auto-layout', label: 'Auto layout', icon: glyph('bi-diagram-3'), onClick: onAutoLayout, disabled: layoutDisabled },
+        });
+    }
+    if (!alignMode) {
+        barItems.push({
+            key: 'delete',
+            group: 'selection',
+            node: (
+                <button key="delete" className="toolbar-btn danger" onClick={onDeleteSelected} title="Delete selected (Delete/Backspace)">
+                    {glyph('bi-trash')}
+                </button>
+            ),
+            entry: { key: 'delete', label: 'Delete selected', icon: glyph('bi-trash'), onClick: onDeleteSelected, danger: true },
+        });
+        if (onDuplicateSelected) {
+            barItems.push({
+                key: 'duplicate',
+                group: 'selection',
+                node: (
+                    <button key="duplicate" className="toolbar-btn" onClick={onDuplicateSelected} title="Duplicate selected">
+                        {glyph('bi-copy')}
+                    </button>
+                ),
+                entry: { key: 'duplicate', label: 'Duplicate selected', icon: glyph('bi-copy'), onClick: onDuplicateSelected },
+            });
+        }
+    }
+    // REGOLE DI VALIDAZIONE (R-VAL, Step 4): solo sui metamodelli e solo in Advanced, come prima.
+    if (isMetamodel && advancedMode && !!modelId) {
+        barItems.push({
+            key: 'rules',
+            group: 'rules',
+            node: (
+                <button key="rules" className="toolbar-btn" onClick={handleOpenRules} title="Validation rules of this metamodel">
+                    {glyph('bi-list-check')}
+                </button>
+            ),
+            entry: { key: 'rules', label: 'Validation rules', icon: glyph('bi-list-check'), onClick: handleOpenRules },
+        });
+    }
+    // VALIDATE (R-VAL, Step 3): solo sui modelli, come prima. The freshness pill goes with the button; in the overflow
+    // its state is the entry's second line.
+    const freshnessText = freshness.status === 'never' ? 'Not validated'
+        : freshness.status === 'stale' ? 'Changed since validation'
+        : freshness.violationCount === 0 ? 'No violations'
+        : `${freshness.violationCount} ${freshness.violationCount === 1 ? 'violation' : 'violations'}`;
+    if (!isMetamodel && !!validationModelId) {
+        barItems.push({
+            key: 'validate',
+            group: 'validate',
+            node: (
+                <Fragment key="validate">
                     <button
                         className="toolbar-btn"
-                        onClick={onAutoLayout}
-                        disabled={layoutDisabled}
-                        title={layoutDisabled ? 'Layout controls only available with the flow editor' : 'Auto layout'}
+                        onClick={handleValidate}
+                        title="Validate the open model against the active rules"
                     >
-                        <i className="bi bi-diagram-3" />
+                        <i className="bi bi-shield-check" />
                     </button>
-                )}
-            </div>
-
-            <div className="toolbar-separator" />
-
-            {/* ── Viewpoint selector: this IS the syntax control (R-IRN-10) ──
-                Choosing a viewpoint is choosing the concrete syntax, so the first entry
-                reads "Abstract syntax" and the retired pill said nothing this does not.
-                The lit state stays legible through toolbar-viewpoint-selector--active.
-
-                Rendered on metamodels too, but inert: in editor-v2 viewpoints do not
-                reach the M2 canvas (ClassNode resolves no IR, its jsxString branch is
-                unreachable, getIRIndex feeds ObjectNode only), and activateViewpoint
-                writes project-global state, so an active selector here would change how
-                the M1 tabs render without changing a pixel where it was used. The
-                metamodel's own rendering stays governed by the notation selector. */}
-            <div className="toolbar-viewpoint-group">
-                <div className={`toolbar-viewpoint-selector${shownViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
-                    {/* The eye moves INSIDE the trigger (it was a sibling of the <select>):
-                        the mock draws one control carrying glyph, label and chevron. It stays
-                        a `.bi-eye` descendant of `.toolbar-viewpoint-selector`, so the lit
-                        rule of `--active` reaches it exactly as before. */}
-                    <button
-                        ref={syntaxTriggerRef}
-                        type="button"
-                        className="toolbar-viewpoint-trigger"
-                        aria-haspopup="listbox"
-                        aria-expanded={syntaxOpen}
-                        aria-controls={SYNTAX_LISTBOX_ID}
-                        aria-label="Viewpoint"
-                        disabled={isMetamodel}
-                        title={isMetamodel ? 'Metamodels use abstract syntax only' : 'Select viewpoint'}
-                        onClick={() => (syntaxOpen ? setSyntaxOpen(false) : openSyntaxMenu())}
-                        onKeyDown={onSyntaxTriggerKeyDown}
-                    >
-                        <i className="bi bi-eye" aria-hidden="true" />
-                        <span className="toolbar-viewpoint-trigger__label">{currentSyntax.label}</span>
-                        <i className="bi bi-chevron-down toolbar-viewpoint-trigger__chevron" aria-hidden="true" />
-                    </button>
-
-                    {/* Portalled onto `document.body`, and `fixed` from the trigger's rect.
-                        Inside the bar it would be clipped: the toolbar is a flex row in an
-                        rc-dock pane, the trap the Columns panel of 10k hit from the other
-                        side of the app. The portal also settles the rail: the views menu
-                        beside this one is anchored right because the rail overlay is
-                        `position: fixed` on <body> and forms a stacking context ABOVE the
-                        toolbar's, so its 900 paints over a 1000 that lives inside the bar.
-                        A panel that is itself on <body> is that overlay's sibling, and
-                        `computeListStyle`'s z-index 10000 then means what it says.
-
-                        The theme lives on `html[data-theme]`, so the tokens follow the panel
-                        out of the subtree; its rules are flat BEM classes, not descendants of
-                        `.editor-v2-toolbar`, and reach it by construction. */}
-                    {syntaxOpen && syntaxRect && createPortal(
-                        <div
-                            id={SYNTAX_LISTBOX_ID}
-                            ref={syntaxListRef}
-                            className="toolbar-viewpoint-menu"
-                            role="listbox"
-                            aria-label="Viewpoint"
-                            aria-activedescendant={syntaxOptionId(syntaxHighlighted)}
-                            tabIndex={0}
-                            style={computeListStyle(syntaxRect)}
-                            onKeyDown={onSyntaxListKeyDown}
+                    {/* I tre stati sono distinti a vista, e «mai validato» non e'
+                        «pulito»: il verde arriva solo dopo un giro che ha guardato. */}
+                    {freshness.status === 'never' && (
+                        <span
+                            className="validation-freshness validation-freshness--never"
+                            title="This model has not been validated in this session. No dots means nothing has been checked."
                         >
-                            {syntaxEntries.map((entry, i) => (
-                                <Fragment key={entry.value || '__abstract__'}>
-                                    {entry.sep && (
-                                        <div className="toolbar-viewpoint-menu__sep" role="presentation" />
-                                    )}
-                                    <div
-                                        id={syntaxOptionId(i)}
-                                        className={'toolbar-viewpoint-menu__option'
-                                            + (i === syntaxHighlighted ? ' toolbar-viewpoint-menu__option--highlighted' : '')}
-                                        role="option"
-                                        aria-selected={entry.value === shownViewpointId}
-                                        onClick={() => pickSyntax(entry.value)}
-                                        onMouseEnter={() => setSyntaxHighlighted(i)}
-                                    >
-                                        <i className={`bi ${entry.icon} toolbar-viewpoint-menu__icon`} aria-hidden="true" />
-                                        <span className="toolbar-viewpoint-menu__label">{entry.label}</span>
-                                        {entry.value === shownViewpointId && (
-                                            <i className="bi bi-check-lg toolbar-viewpoint-menu__check" aria-hidden="true" />
-                                        )}
-                                    </div>
-                                </Fragment>
-                            ))}
-                        </div>,
-                        document.body,
+                            <i className="bi bi-shield" aria-hidden="true" /> Not validated
+                        </span>
                     )}
-                </div>
-
-                {/* Views menu — the way into the views editor from the canvas toolbar.
-                    Borrows the .notation-selector shape (relative wrapper + absolute
-                    dropdown) so it behaves like the other toolbar menus; the syntax picker
-                    beside it is untouched — NAV2 rebuilt that one on its own listbox, not
-                    on this shape, because it needs a selected state and per-entry glyphs
-                    that `.notation-selector__option` does not carry. aria-haspopup/aria-expanded are on this button
-                    only: the older .notation-selector is not retrofitted here. */}
-                {showViewsMenu && (
+                    {freshness.status === 'fresh' && (
+                        <span
+                            className={`validation-freshness validation-freshness--${freshness.violationCount > 0 ? 'violated' : 'clean'}`}
+                            title={freshness.violationCount > 0
+                                ? 'Validated against the active rules. The dots on the canvas are the violations of this run.'
+                                : 'Validated against the active rules: no violations.'}
+                        >
+                            <i
+                                className={`bi ${freshness.violationCount > 0 ? 'bi-shield-exclamation' : 'bi-shield-check'}`}
+                                aria-hidden="true"
+                            />{' '}
+                            {freshness.violationCount === 0
+                                ? 'No violations'
+                                : `${freshness.violationCount} ${freshness.violationCount === 1 ? 'violation' : 'violations'}`}
+                        </span>
+                    )}
+                    {freshness.status === 'stale' && (
+                        <span
+                            className="validation-freshness validation-freshness--stale"
+                            title="The model or the rules changed after the last run: the dots were withdrawn rather than left to age. Validate again."
+                        >
+                            <i className="bi bi-shield-slash" aria-hidden="true" /> Changed since validation
+                        </span>
+                    )}
+                </Fragment>
+            ),
+            entry: { key: 'validate', label: 'Validate', icon: glyph('bi-shield-check'), onClick: handleValidate, desc: freshnessText },
+        });
+    }
+    // The views menu (bi-pencil) edits the views of the viewpoint shown: an editing command, so it stays in the bar.
+    if (showViewsMenu) {
+        barItems.push({
+            key: 'views',
+            group: 'views',
+            node: (
+                <Fragment key="views">
                     <div className="notation-selector" ref={viewsMenuRef}>
                         <button
                             className="toolbar-dropdown-btn toolbar-dropdown-btn--icon"
@@ -1226,8 +1138,85 @@ function Toolbar({
                             </div>
                         )}
                     </div>
-                )}
-            </div>
+                </Fragment>
+            ),
+            entry: {
+                key: 'views',
+                label: 'Views of this viewpoint',
+                icon: glyph('bi-pencil'),
+                children: [
+                    ...viewpointViews.map(v => ({ key: 'view:' + v.id, label: v.name, icon: glyph('bi-eye'), onClick: () => DockManager.openView(v.id) })),
+                    { key: 'views-editor', label: 'Open views editor', icon: glyph('bi-pencil-square'), onClick: handleOpenViewsEditor },
+                ],
+            },
+        });
+    }
+
+    // How many fit: the scroll box of the bar is measured, the buttons that do not fit become the overflow's entries.
+    const overflowRef = useRef<HTMLSpanElement>(null);
+    const fitSignature = barItems.map(i => i.key).join(',') + '|' + freshnessText + '|' + (highlightModeActive ? 'h' : '')
+        + '|' + chipLabels.join('\u0001');
+    const fit = useOverflowFit(barItems.length, fitSignature, overflowRef);
+    const overflowEntries = barItems.slice(fit).map(i => i.entry);
+    const barRuns: Array<{ group: BarItem['group']; nodes: ReactNode[] }> = [];
+    for (const item of barItems.slice(0, fit)) {
+        const last = barRuns[barRuns.length - 1];
+        if (last && last.group === item.group) last.nodes.push(item.node);
+        else barRuns.push({ group: item.group, nodes: [item.node] });
+    }
+    const renderRun = (run: { group: BarItem['group']; nodes: ReactNode[] }) => {
+        switch (run.group) {
+            case 'align':
+                return (
+                    <div className="toolbar-group toolbar-group--align">
+                        <span className="toolbar-group__label">ALIGN</span>
+                        {run.nodes}
+                        <span className="toolbar-selection-count">{selectedCount} selected</span>
+                    </div>
+                );
+            case 'layout':
+                return (
+                    <div className="toolbar-group toolbar-group--labeled">
+                        <span className="toolbar-group__label">LAYOUT</span>
+                        {run.nodes}
+                    </div>
+                );
+            case 'views':
+                return <div className="toolbar-viewpoint-group">{run.nodes}</div>;
+            default:
+                return <div className="toolbar-group">{run.nodes}</div>;
+        }
+    };
+
+    return (
+        // The shared editor bar (R-MT-38, P-2026-11-20-1610): editing actions left, zoom in the middle, the representation,
+        // Split Right and the rail collapse right, the rail's identity cell after them. The root and the fieldset keep the
+        // classes the sheets are written against; the inactive pane of a split disables every control at once.
+        <EditorBar className="editor-v2-toolbar" controlsClassName="editor-v2-toolbar__commands" disabled={!!commandsDisabled}
+                   ariaLabel="Diagram editor"
+            left={<>
+            {/* The VIEW group (notation, colors) and the eye left this zone (P-2026-11-20-2310): the syntax is the chip
+                at the right end, both are View › Syntax and View › Colors in the topbar. What stays is editing. */}
+            {barRuns.map((run, i) => (
+                <Fragment key={run.group}>
+                    {i > 0 && <div className="toolbar-separator" />}
+                    {renderRun(run)}
+                </Fragment>
+            ))}
+
+            {/* Highlight mode palette — only while highlight mode is active. Never in the overflow. */}
+            {highlightModeActive && (
+                <>
+                    {barRuns.length > 0 && <div className="toolbar-separator" />}
+                    <HighlightPalette
+                        activeColor={activeHighlightColor}
+                        onSelect={(n) => onSelectHighlightColor?.(n)}
+                        onClear={() => onClearHighlights?.()}
+                    />
+                </>
+            )}
+
+            <ToolbarOverflow rootRef={overflowRef} entries={overflowEntries} />
             </>}
             middle={<>
             {/* Retired from this bar on 2026-08-26, and not relocated:
@@ -1293,6 +1282,103 @@ function Toolbar({
             </>}
             right={<>
             {/* R-MT-35: the other tab of the same artifact, the Text tab of a model; Text disabled on a metamodel. */}
+            {/* The syntax chip (P-2026-11-20-2310): the syntax this canvas shows, the eye's job, in the zone that never
+                scrolls. As wide as its longest label, every label stacked in one cell, so a change does not shift the
+                bar. The popover is the picker's listbox, with the notations folded in. */}
+            <button
+                ref={syntaxTriggerRef}
+                type="button"
+                className={'syntax-chip' + (shownViewpointId ? ' syntax-chip--active' : '')}
+                aria-haspopup="listbox"
+                aria-expanded={syntaxOpen}
+                aria-controls={SYNTAX_LISTBOX_ID}
+                aria-label={`Syntax: ${chipLabel}`}
+                title="Change syntax"
+                onClick={() => (syntaxOpen ? setSyntaxOpen(false) : openSyntaxMenu())}
+                onKeyDown={onSyntaxTriggerKeyDown}
+            >
+                <span className="syntax-chip__labels" aria-hidden="true">
+                    {chipLabels.map((label, i) => (
+                        <span key={i} className={'syntax-chip__label' + (i === chipCurrent ? ' syntax-chip__label--current' : '')}>{label}</span>
+                    ))}
+                </span>
+                <i className="bi bi-chevron-down syntax-chip__chevron" aria-hidden="true" />
+            </button>
+            {/* Portalled onto `document.body`, and `fixed` from the trigger's rect.
+                Inside the bar it would be clipped: the toolbar is a flex row in an
+                rc-dock pane, the trap the Columns panel of 10k hit from the other
+                side of the app. The portal also settles the rail: the views menu
+                beside this one is anchored right because the rail overlay is
+                `position: fixed` on <body> and forms a stacking context ABOVE the
+                toolbar's, so its 900 paints over a 1000 that lives inside the bar.
+                A panel that is itself on <body> is that overlay's sibling, and
+                `computeListStyle`'s z-index 10000 then means what it says.
+
+                The theme lives on `html[data-theme]`, so the tokens follow the panel
+                out of the subtree; its rules are flat BEM classes, not descendants of
+                `.editor-v2-toolbar`, and reach it by construction. */}
+            {syntaxOpen && syntaxRect && createPortal(
+                <div
+                    id={SYNTAX_LISTBOX_ID}
+                    ref={syntaxListRef}
+                    className="toolbar-viewpoint-menu"
+                    role="listbox"
+                    aria-label="Syntax"
+                    aria-activedescendant={syntaxOptionId(syntaxHighlighted)}
+                    tabIndex={0}
+                    style={computeListStyle(syntaxRect)}
+                    onKeyDown={onSyntaxListKeyDown}
+                >
+                    {syntaxList.map((entry, i) => (
+                        <Fragment key={entry.key}>
+                            {entry.sep && (
+                                <div className="toolbar-viewpoint-menu__sep" role="presentation" />
+                            )}
+                            {entry.section && (
+                                <div className="toolbar-viewpoint-menu__section" role="presentation">{entry.section}</div>
+                            )}
+                            <div
+                                id={syntaxOptionId(i)}
+                                className={'toolbar-viewpoint-menu__option'
+                                    + (i === syntaxHighlighted ? ' toolbar-viewpoint-menu__option--highlighted' : '')}
+                                role="option"
+                                aria-selected={entry.checked}
+                                onClick={() => pickSyntax(entry)}
+                                onMouseEnter={() => setSyntaxHighlighted(i)}
+                            >
+                                <i className={`bi ${entry.icon} toolbar-viewpoint-menu__icon`} aria-hidden="true" />
+                                <span className="toolbar-viewpoint-menu__label">{entry.label}</span>
+                                {entry.desc && <span className="toolbar-viewpoint-menu__desc">{entry.desc}</span>}
+                                {entry.checked && (
+                                    <i className="bi bi-check-lg toolbar-viewpoint-menu__check" aria-hidden="true" />
+                                )}
+                            </div>
+                        </Fragment>
+                    ))}
+                </div>,
+                document.body,
+            )}
+            {/* View › Colors › Manage palettes…: the palette editor ColorSchemeSelector already holds, mounted open
+                under the bar, and gone when it closes. */}
+            {paletteManagerRect && createPortal(
+                <div
+                    className="toolbar-palette-manager"
+                    style={{ left: paletteManagerRect.left + 8, top: paletteManagerRect.top, height: paletteManagerRect.height }}
+                >
+                    <ColorSchemeSelector
+                        defaultOpen
+                        onOpenChange={(open) => { if (!open) setPaletteManagerRect(null); }}
+                        disabled={viewControlsDisabled}
+                        colorScheme={colorScheme}
+                        onColorSchemeChange={onColorSchemeChange}
+                        customPalettes={customPalettes}
+                        onCreateCustomPalette={onCreateCustomPalette}
+                        onRenamePalette={onRenamePalette}
+                        onDeletePalette={onDeletePalette}
+                    />
+                </div>,
+                document.body,
+            )}
             <RepresentationSwitch active="diagram" text={textEntry} onText={openTextView} />
             {/* R-MT-38: zoom moved to the middle zone, its own box; Split Right and the rail collapse share this one,
                 so the hairline that kept zoom apart from them went with it. */}
