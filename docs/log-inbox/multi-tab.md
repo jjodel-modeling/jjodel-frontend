@@ -633,3 +633,94 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-20 22:13, unattended, on the gates and Alfonso's visual GO on the branch at 17:46 on 3121; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's lane 6 entry, its ticket and the 1630 merge entry first, then the branch's four 1632 entries, verbatim. Probes as expected (R-MT-34 once, R-MT-35 none, six headings once). New tests counted on the two tabs test files: 37 trunk, 43 branch. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-20 21:59
+
+## 2026-11-20 — discovery: editor chrome parity, stopped before Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for canvas and text editor, D1..D7 decided by the chat; Phase 1 discovery, then Phase 2 unless a stop condition holds
+**Files touched**: 779ea395e (`docs/discovery/discovery_2026-11-20_editor_chrome_parity.md`); this commit: this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Stop conditions 1 and 2 hold: the Code pill launches the code generator (CodePanel.tsx:9), Text opens a separate txt_ tab (openTextualTab.tsx:46), Text|EBNF|Syntax switches the textual tab's content; SyntaxForm and the EBNF editor are mounted only in TextualTab. Phase 2 would also exceed ten source files. No code, no R-MT rows, no dev server. Questions in the report §7.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — feat: editor chrome parity, narrowed Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, Phase 2 as narrowed by the chat (16:35): S1 one active-tab style, S2 shared editor bar, S3 `Diagram | Text` as a tab switch; D4, D5 move, D6 deferred; continued after a context ceiling
+**Files touched**: fc0d8987b `DockManagerStyles.scss`; f8f03322b `EditorBar.tsx`, `EditorBar.scss`, `representationSwitch.ts`, its test, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`; 4ec528ab8 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-33..36, discovery report §8, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: yes
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 12/12 at 1600 and 1280; Split Right residual, report §8.2; Alfonso's visual check pending)
+**Notes**: 8 source files, over five: listed above; representationSwitch.ts was not in DOVE. Probe found Split Right pushed out of narrow canvas bars by the switch (−119px at 1600); 4ec528ab8 shrinks the labels first, residual −32px (R-MT-26 scroll). contextCeiling.test.ts red only under lane env. Report: docs/discovery/discovery_2026-11-20_editor_chrome_parity.md §8.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: icon-only Diagram | Text, Split Right never scrolls out (multi-tab lane edchrome)
+**Prompt**: chat decision on the Split Right residual (RC-25, unattended): switch icon-only in both bars at every width, Split Right never scrolls out, disabled Text on the existing disabled token, EBNF/Syntax cut left as is, R-MT row amended
+**Files touched**: 4ec5f6196 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-34 and R-MT-35 amended, discovery report §8.3, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 17/17 at 1600 and 1280; Alfonso's visual check pending)
+**Notes**: Icon-only alone could not hold Split Right (the switch was already 59px where it measured −32): the left and middle zones now scroll in `.editor-bar__scroll`, the right zone and rail cell stay out. Split Right gap 443/403 alone, 59/59 left group, 35/35 right group. §8.2's «metamodel alone» rows were the left group of the split: corrected in §8.3.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: one control style for both bars, identity cell removed (multi-tab lane edchrome)
+**Prompt**: Alfonso's visual check 21:59-22:07: remove the canvas bar's identity cell; Text tab filter and breadcrumb rows of one height and one bottom line; flat 28px icon buttons, one divider, no zoom pill, one secondary-text style in both bars; R-MT-34 amended
+**Files touched**: e36a00f7a `Toolbar.tsx`, `EditorBar.tsx`, `EditorBar.scss`, `TextualTab.scss`; docs: `decisions.md` R-MT-34 amended, discovery report §8.4, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe-uni and probe-ecp 17/17 at 1600 and 1280, no console errors; Alfonso's visual check pending)
+**Notes**: The cell was also the bar's room over the rail: the rail overlay starts at y 91, inside the bar band, so without it Split Right took no click. An empty `editor-bar__rail-reserve` replaces it. Also: status dot-separated from the language, name keeps a 48px floor at 1280. Report §8.4.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — close: editor chrome parity, visual GO (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for the diagram canvas and the Text tab (D1-D7, R-MT-33..36), closure after Alfonso's visual GO
+**Files touched**: code fc0d8987b, f8f03322b, 4ec528ab8, 4ec5f6196, e36a00f7a, 331035777 (`DockManagerStyles.scss`, `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `representationSwitch.ts`, its test); docs: `decisions.md` R-MT-33..36, discovery report §1-§8.4; this commit: this inbox, Status of 1610
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (8 source files, above five; `representationSwitch.ts` and its test not in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 22:51 on 3120; probe-ecp 17/17 and probe-uni at 1600 and 1280, 0 console errors)
+**Notes**: GO covers shared bar, neutral active tab, icon-only Diagram|Text, identity cell removed, filter and breadcrumb rows aligned, uniform controls. Partial against the prompt: Phase 2 ran as narrowed by the chat (report §8), D4 (EBNF/Syntax), D5 status move and D6 (tree, shared breadcrumb) deferred. Open finding: the rail overlay's top ignores the tab strip (report §8.4).
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — docs: branch R-MT-33 and R-MT-34 renumbered to R-MT-37 and R-MT-38 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_2305_prompt_editor-chrome-renumber.md`, lane fast: the merge lane P-2026-11-20-2257 found the trunk already holding R-MT-33 (editor groups persist, P-2026-11-19-2328) and R-MT-34 (full-screen dashboard, P-2026-11-20-1632); RC-14, the branch resolves the id collision before the merge
+**Files touched**: code comments `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `DockManagerStyles.scss`; docs: `decisions.md` (the two P-2026-11-20-1610 rows), discovery report §8, this inbox, Status of 2305
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Correction to the add-only entries above: in the five entries of P-2026-11-20-1610 (discovery, feat, two fixes, close), R-MT-33 reads R-MT-37 and R-MT-34 reads R-MT-38; «R-MT-33..36» reads «R-MT-35..38». R-MT-35 and R-MT-36 keep their ids. The prompt file of 1610 keeps its text.
+**Prompt document name**: 2026-11-20 23:05
+
+## 2026-11-20 — merge: editor-chrome-parity into alfonso-frontend-jjtl (P-2026-11-20-2309)
+**Prompt**: `claude_2026-11-20_2309_prompt_merge_editor-chrome-parity.md`, lane full (merge; 2 conflicts measured, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`): bring `editor-chrome-parity` at f2e75e4ed into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d4ddede1d; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: a448f35d1 (merge), 13 files — `TextualTab.scss`, `TextualTab.tsx`, `DockManagerStyles.scss`, `EditorBar.scss`, `EditorBar.tsx`, `Toolbar.tsx`, `representationSwitch.ts`, `representationSwitch.test.ts`, the editor chrome parity discovery report, the 1610 and 2305 prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2309
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 632 passed files, 16570 passed, 0 failed and 3 skipped (16573, expected 16562 + 8): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 13, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 23:27, unattended: 3001 answers 200 and serves the trunk's EditorBar.tsx, the code Alfonso approved visually on 3120 at 22:51; Alfonso in the morning digest)
+**Notes**: Two conflicts, one hunk each, union from the stage files: decisions R-MT-33/34 then R-MT-37/38/35/36; this inbox, trunk's ten entries then the branch's six, one blank line between, verbatim. Probes as expected (six rows once, R-MT-39 none, sixteen headings once). New tests: 8 in representationSwitch.test.ts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 23:09

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-20-1610
 Chat: C-2026-11-20-1610
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-20 · lane edchrome · 331035777 · verifica visiva passata 2026-11-20
 Lane: full (UI consolidation over two editors, discovery report first, no critical-zone file)
 Depends: P-2026-11-19-2236 (active group), merged d29dcd79c, closed 7480c672d
 Worktree: ~/jjodel-w-edchrome, branch editor-chrome-parity, created from the trunk at 7480c672d plus this prompt's commit
