@@ -13,6 +13,11 @@
  * markup are remapped onto the new control and each says, in place, what it used to read.
  * The suite grew a NAV2 section for what the old control gave for free and this one has to
  * declare: roles, `aria-selected`, `aria-activedescendant`, the keys, and the portal.
+ *
+ * P-2026-11-20-2310 moved the trigger out of the left zone into the syntax chip of the editor bar, and folded the
+ * five notations into the list (`syntaxChoices`, canvasViewChoices.ts, exercised as a unit in
+ * canvasViewChoices.test.ts). The six assertions that read the eye trigger are remapped onto the chip, each saying in
+ * place what it used to read; the routing, the keys and the portal are untouched.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -47,9 +52,10 @@ function listboxBody(): string {
     return TSX.slice(start, end);
 }
 
-/** The trigger button. NAV2 only. */
+/** The trigger button. NAV2 only. REMAPPED (P-2026-11-20-2310): the trigger is the syntax chip, it read
+ *  `className="toolbar-viewpoint-trigger"`. */
 function triggerBody(): string {
-    const start = TSX.indexOf('className="toolbar-viewpoint-trigger"');
+    const start = TSX.indexOf("className={'syntax-chip'");
     expect(start).toBeGreaterThan(-1);
     const end = TSX.indexOf('</button>', start);
     expect(end).toBeGreaterThan(start);
@@ -236,12 +242,15 @@ describe('NAV2 — no native select is left behind', () => {
     // and «not.toContain('<select')» would read that prose as markup. A closing tag
     // cannot appear in a sentence about a control that no longer renders.
     it('the picker is a button plus a listbox, not a <select>', () => {
-        const start = TSX.indexOf('<div className="toolbar-viewpoint-group">');
+        // REMAPPED (P-2026-11-20-2310): the slice ran from `<div className="toolbar-viewpoint-group">` to the
+        // spacer and held the eye trigger; it now runs from the chip to the close of its listbox portal.
+        const start = TSX.indexOf("className={'syntax-chip'");
         expect(start).toBeGreaterThan(-1);
-        const group = TSX.slice(start, TSX.indexOf('{/* ── Spacer ── */}', start));
+        const group = TSX.slice(start, TSX.indexOf('document.body,', start));
         // Positive control: the slice DOES hold the group, so a silence below is a
         // measurement and not an empty read.
-        expect(group).toContain('className="toolbar-viewpoint-trigger"');
+        expect(group).toContain('aria-haspopup="listbox"');
+        expect(group).toContain('role="listbox"');
         expect(group).not.toContain('</select>');
         expect(group).not.toContain('<option value=');
         expect(group).not.toContain('onChange=');
@@ -261,16 +270,18 @@ describe('NAV2 — accessibility parity with the control it replaces', () => {
         expect(body).toContain('aria-haspopup="listbox"');
         expect(body).toContain('aria-expanded={syntaxOpen}');
         expect(body).toContain('aria-controls={SYNTAX_LISTBOX_ID}');
-        expect(body).toContain('aria-label="Viewpoint"');
-        // Inert on metamodels exactly as the <select> was.
-        expect(body).toContain('disabled={isMetamodel}');
+        // REMAPPED (P-2026-11-20-2310): read `aria-label="Viewpoint"` and `disabled={isMetamodel}`. The chip names
+        // the syntax it shows, and opens on a metamodel too, where the five notations are the choice.
+        expect(body).toContain('aria-label={`Syntax: ${chipLabel}`}');
+        expect(body).not.toContain('disabled={isMetamodel}');
     });
 
     it('the panel is a listbox and its entries are options with aria-selected', () => {
         const body = listboxBody();
         expect(body).toContain('role="listbox"');
         expect(body).toContain('role="option"');
-        expect(body).toContain('aria-selected={entry.value === shownViewpointId}');
+        // REMAPPED (P-2026-11-20-2310): read `aria-selected={entry.value === shownViewpointId}`; the entry says it.
+        expect(body).toContain('aria-selected={entry.checked}');
     });
 
     it('the keyboard cursor is published as aria-activedescendant, with real ids', () => {
@@ -307,11 +318,14 @@ describe('NAV2 — accessibility parity with the control it replaces', () => {
 
     it('Escape and a pick both return focus to the trigger', () => {
         expect(TSX).toContain('syntaxTriggerRef.current?.focus();');
-        const start = TSX.indexOf('const pickSyntax = (value: string) => {');
+        // REMAPPED (P-2026-11-20-2310): read `pickSyntax = (value: string)` and `if (!isDataManagerOption(value))`.
+        // The entry carries `opensTab`, set for the manager and the textual entry alike.
+        const start = TSX.indexOf('const pickSyntax = (choice: ViewChoice | undefined) => {');
         expect(start).toBeGreaterThan(-1);
         const pick = TSX.slice(start, TSX.indexOf('};', start));
         // …except for the manager entry, which moves to another tab.
-        expect(pick).toContain('if (!isDataManagerOption(value)) syntaxTriggerRef.current?.focus();');
+        expect(pick).toContain('if (!choice.opensTab) syntaxTriggerRef.current?.focus();');
+        expect(TSX).toContain('opensTab: isTextualOption(e.value) || isDataManagerOption(e.value),');
     });
 
     it('the trigger keeps a visible focus ring — the one the <select> drew itself', () => {
@@ -375,7 +389,8 @@ describe('NAV2 — the mock: glyphs and the ratified cyan selection', () => {
     it('the selected entry is checked with bi-check-lg on the right', () => {
         const body = listboxBody();
         expect(body).toContain('bi bi-check-lg toolbar-viewpoint-menu__check');
-        expect(body).toContain('{entry.value === shownViewpointId && (');
+        // REMAPPED (P-2026-11-20-2310): read `{entry.value === shownViewpointId && (`.
+        expect(body).toContain('{entry.checked && (');
     });
 
     it('the selected state is drawn with the ratified tokens, not the mock hexes', () => {
@@ -429,7 +444,10 @@ describe('NAV2 — the shrink ladder followed the element', () => {
         expect(block).toContain('.toolbar-viewpoint-trigger {');
         expect(block).toContain('.bi-eye {');
         expect(block).toContain('color: #0ea5e9;');
-        // The eye moved inside the button but stays a descendant of the wrapper.
-        expect(triggerBody()).toContain('<i className="bi bi-eye" aria-hidden="true" />');
+        // REMAPPED (P-2026-11-20-2310): read the eye inside the trigger. The chip carries no eye; the lit state
+        // follows it as `syntax-chip--active`, keyed on the same `shownViewpointId`.
+        expect(triggerBody()).toContain("(shownViewpointId ? ' syntax-chip--active' : '')");
+        const CHIP_SCSS = readFileSync(resolve(__dirname, '../CanvasViewControls.scss'), 'utf8');
+        expect(CHIP_SCSS).toContain('&--active {\n        color: #0369a1;');
     });
 });

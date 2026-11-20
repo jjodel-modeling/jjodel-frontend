@@ -268,6 +268,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                             viewpointId={shownViewpointId}
                             onViewpointChange={setTabViewpointId}
                         onSplitRight={splitRight}
+                        tabId={ownTabId}
                         />
                     </div>
                 </div>
@@ -292,6 +293,7 @@ export function EditorSwitch({ modelid, tabId, initialViewpointId, children, isM
                         viewpointId={shownViewpointId}
                         onViewpointChange={setTabViewpointId}
                         onSplitRight={splitRight}
+                        tabId={ownTabId}
                     />
                 </div>
             </div>
