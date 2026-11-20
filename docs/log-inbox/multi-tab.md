@@ -515,3 +515,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 23:34, unattended, on the gates and Alfonso's visual GO on the branch at 23:15 on 3095; Alfonso in the morning digest)
 **Notes**: Zero conflicts, no union; merge tree 57629800d equals the commit's tree. Probes as expected (R-MT-32 once, R-MT-33 none, the lane heading once). Trunk side 1 file: 80d501973 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 23:20
+
+## 2026-11-20 — discovery: editor chrome parity, stopped before Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for canvas and text editor, D1..D7 decided by the chat; Phase 1 discovery, then Phase 2 unless a stop condition holds
+**Files touched**: 779ea395e (`docs/discovery/discovery_2026-11-20_editor_chrome_parity.md`); this commit: this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Stop conditions 1 and 2 hold: the Code pill launches the code generator (CodePanel.tsx:9), Text opens a separate txt_ tab (openTextualTab.tsx:46), Text|EBNF|Syntax switches the textual tab's content; SyntaxForm and the EBNF editor are mounted only in TextualTab. Phase 2 would also exceed ten source files. No code, no R-MT rows, no dev server. Questions in the report §7.
+**Prompt document name**: 2026-11-20 16:10
