@@ -711,3 +711,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Correction to the add-only entries above: in the five entries of P-2026-11-20-1610 (discovery, feat, two fixes, close), R-MT-33 reads R-MT-37 and R-MT-34 reads R-MT-38; «R-MT-33..36» reads «R-MT-35..38». R-MT-35 and R-MT-36 keep their ids. The prompt file of 1610 keeps its text.
 **Prompt document name**: 2026-11-20 23:05
+
+## 2026-11-20 — merge: editor-chrome-parity into alfonso-frontend-jjtl (P-2026-11-20-2309)
+**Prompt**: `claude_2026-11-20_2309_prompt_merge_editor-chrome-parity.md`, lane full (merge; 2 conflicts measured, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`): bring `editor-chrome-parity` at f2e75e4ed into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d4ddede1d; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: a448f35d1 (merge), 13 files — `TextualTab.scss`, `TextualTab.tsx`, `DockManagerStyles.scss`, `EditorBar.scss`, `EditorBar.tsx`, `Toolbar.tsx`, `representationSwitch.ts`, `representationSwitch.test.ts`, the editor chrome parity discovery report, the 1610 and 2305 prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2309
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 632 passed files, 16570 passed, 0 failed and 3 skipped (16573, expected 16562 + 8): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 13, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 23:27, unattended: 3001 answers 200 and serves the trunk's EditorBar.tsx, the code Alfonso approved visually on 3120 at 22:51; Alfonso in the morning digest)
+**Notes**: Two conflicts, one hunk each, union from the stage files: decisions R-MT-33/34 then R-MT-37/38/35/36; this inbox, trunk's ten entries then the branch's six, one blank line between, verbatim. Probes as expected (six rows once, R-MT-39 none, sixteen headings once). New tests: 8 in representationSwitch.test.ts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 23:09
