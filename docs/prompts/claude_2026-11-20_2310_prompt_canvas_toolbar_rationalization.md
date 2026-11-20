@@ -6,7 +6,7 @@ Status: da eseguire
 Lane: full (discovery then Phase 2 in cascade; shell chrome, no critical zone)
 Depends: none
 Request: none (typed in the project chat, not an issue)
-Front: shell-ui
+Front: multi-tab
 
 ## COSA
 
