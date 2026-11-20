@@ -6,6 +6,8 @@
 import { ExecutionContext } from '../types';
 import { DUser, L, LUser, LProject, LModel, store, LPointerTargetable, LModelElement, DState, GObject } from '../../joiner';
 import DockManager from '../../components/abstract/DockManager';
+import { activeTabId } from '../../components/abstract/tabs/dockGroups';
+import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
 import { resolveActiveArtifact, resolveActiveLevel } from './activeArtifact';
 import type { ActiveArtifactCache } from './activeArtifact';
 
@@ -97,11 +99,10 @@ function getActiveTabMetamodel(): LModel | null {
     try {
         if (!DockManager.dock) return null;
 
-        const layout = DockManager.dock.getLayout();
-        const modelsPanel = layout?.dockbox?.children?.[0];
-        const tabs = (modelsPanel as any)?.tabs || [];
-        const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
-        if (!activeId) return null;
+        // The active tab of the active editor group (R-MT-30), mapped to its model (`<id>~tab<N>`).
+        const tabId = activeTabId(DockManager.dock.getLayout());
+        if (!tabId) return null;
+        const activeId = modelOfTabId(tabId);
 
         // Resolve the active tab ID to an LModel
         const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
@@ -140,12 +141,10 @@ export function getActiveModel(): LModel | null {
                 // 1. DockManager active tab
                 () => {
                     if (!DockManager.dock) return null;
-                    const layout = DockManager.dock.getLayout();
-                    const modelsPanel = layout?.dockbox?.children?.[0];
-                    const tabs = (modelsPanel as any)?.tabs || [];
-                    const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
-                    if (!activeId) return null;
-                    return LPointerTargetable.fromPointer(activeId) as LModel | null;
+                    // The active tab of the active editor group (R-MT-30), mapped to its model (`<id>~tab<N>`).
+                    const tabId = activeTabId(DockManager.dock.getLayout());
+                    if (!tabId) return null;
+                    return LPointerTargetable.fromPointer(modelOfTabId(tabId)) as LModel | null;
                 },
                 // 2. Fall back to _lastSelected.modelElement
                 () => {

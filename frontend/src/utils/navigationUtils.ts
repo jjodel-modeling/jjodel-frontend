@@ -4,6 +4,12 @@
 // File: frontend/src/utils/navigationUtils.ts (o altro percorso appropriato)
 
 import DockManager from '../components/abstract/DockManager';
+import { modelGroups } from '../components/abstract/tabs/dockGroups';
+
+/** The tabs of every editor group (R-MT-30): with one group, the tabs of its only panel. */
+function openTabsOf(groups: ReturnType<typeof modelGroups>): number {
+    return groups.reduce((n, group) => n + group.tabs.length, 0);
+}
 
 /**
  * Verifica se l'utente si trova nella pagina di overview del progetto
@@ -22,13 +28,13 @@ export function isProjectOverviewPage(): boolean {
     try {
         const layout = dock.getLayout();
         
-        // Il pannello 'models' è il primo child del dockbox
-        const modelsPanel = layout?.dockbox?.children?.[0];
+        // I pannelli 'models' sono i gruppi di editor (R-MT-30): con un gruppo solo, il primo child del dockbox
+        const groups = modelGroups(layout);
         
-        if (modelsPanel && 'tabs' in modelsPanel) {
+        if (groups.length > 0) {
             // Se c'è solo 1 tab (ModelsSummary), siamo nella pagina overview
             // Se ci sono 2+ tabs, c'è un metamodello/modello aperto
-            return modelsPanel.tabs.length <= 1;
+            return openTabsOf(groups) <= 1;
         }
         
         // Se non riusciamo a determinare, assumiamo overview
@@ -60,10 +66,10 @@ export function getOpenTabsCount(): number {
     
     try {
         const layout = dock.getLayout();
-        const modelsPanel = layout?.dockbox?.children?.[0];
+        const groups = modelGroups(layout);
         
-        if (modelsPanel && 'tabs' in modelsPanel) {
-            return modelsPanel.tabs.length;
+        if (groups.length > 0) {
+            return openTabsOf(groups);
         }
         
         return 0;

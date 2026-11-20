@@ -128,17 +128,18 @@ export function shownCanvas(dock: DockLayout, besideId: string | null, lookup: L
 
 /**
  * Brings the open generator tab `id` forward where it belongs (P-2026-10-25-1310): with a canvas shown, out of the
- * canvas's panel when it shares it (`keepBeside`), left where it is otherwise; with none, into the first panel of the
- * dock box, which the app bar lists, when it sits in another panel of the dock box. Activated in either case; the
+ * canvas's panel when it shares it (`keepBeside`), left where it is otherwise; with none, into the active editor group
+ * (R-MT-30; with one group, the first panel of the dock box) when it sits in another panel of the dock box. Activated in either case; the
  * canvas stays active in its own panel. True when it moved.
  */
 export function placeOpenTab(dock: DockLayout, id: string, canvasId: string | null, siblings: (tabId: string) => boolean = () => false): boolean {
     let moved = false;
     if (canvasId !== null) moved = keepBeside(dock, id, canvasId, siblings);
     else {
-        const first = dock.getLayout()?.dockbox?.children?.[0];
+        // The active editor group (R-MT-30): with one group, the first panel of the dock box.
+        const first = activeGroup(dock.getLayout()) as PanelData | null;
         const panel = panelOf(dock, id);
-        if (first && 'tabs' in first && panel && panel !== first && inDockbox(dock, panel)) {
+        if (first && panel && panel !== first && inDockbox(dock, panel)) {
             dock.dockMove(dock.find(id) as TabData, first, 'middle');
             moved = true;
         }
