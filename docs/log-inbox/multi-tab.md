@@ -620,3 +620,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-20 17:46 on 3121; mouse probe 19/19 at 1600, 0 console errors)
 **Notes**: Closes the two entries above, whose Smoke visivo said the check was pending: they were committed before the GO instead of riding in the closure commit (P13), so the GO is recorded here and they stay as written (add-only). Last code commit 963973425.
 **Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — merge: multi-tab-dashboard into alfonso-frontend-jjtl (P-2026-11-20-2159)
+**Prompt**: `claude_2026-11-20_2159_prompt_merge_multi-tab-dashboard.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-dashboard` at 27b2de300 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d2628b041; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: e58a5d187 (merge), 13 files — `StatusBar.tsx`, `Dock.tsx`, `DockManager.tsx`, `abstract/style.scss`, `dockGroups.ts`, `dockGroups.test.ts`, `groupPersistence.ts`, `groupPersistence.test.ts`, `Navbar.tsx`, `dashboard.scss`, the 1632 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2159
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 631 passed files, 16562 passed, 0 failed and 3 skipped (16565, expected 16556 + 6): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 13, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 22:13, unattended, on the gates and Alfonso's visual GO on the branch at 17:46 on 3121; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's lane 6 entry, its ticket and the 1630 merge entry first, then the branch's four 1632 entries, verbatim. Probes as expected (R-MT-34 once, R-MT-35 none, six headings once). New tests counted on the two tabs test files: 37 trunk, 43 branch. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 21:59
