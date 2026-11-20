@@ -1491,3 +1491,21 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Smoke visivo**: passato — chat, unattended: no UI in scope; the chat checked the merge commit a4f62729e on the trunk and the lane P-2026-11-18-1815 gates (JjTL and JjEL suites, typecheck, build green)
 **Notes**: Rollback tag `pre-jjtl-parent-scope` on `4bfd26add` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-18-2211/result.json`.
 **Prompt document name**: 2026-11-18 22:11
+
+## 2026-11-20 — style(ui): one slim vertical splitter contract across the platform (P-2026-11-19-2200)
+**Prompt**: `claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, full lane, Phase 2 after the chat's GO (C-2026-11-19-2200, 2026-11-20 16:45), Q1-Q5 of the Phase 1 report adopted unattended (RC-25): every vertical pane splitter draws one «sash» from a single SCSS partial, DOM and drag handlers unchanged except the two JjTL grip icons. Continued after a context ceiling (verified handoff).
+**Files touched**: `5d81fd6c6`: `frontend/src/styles/components/_vsplit.scss` (new), `components/ResizeHandle/resize-handle.scss`, `components/abstract/style.scss`, `components/editors/properties-with-tree-view.scss`, `codegen/ui/TemplateEditorTab.scss`. `4d9d27a22`: `frontend/scripts/probe/vsplit-uniform.ts` (new), `abstract/style.scss`, `codegen/ui/TemplateEditorTab.scss`, `codegen/textual/ui/SyntaxForm.scss`, `abstract/tabs/ScriptTab.scss`, `jjtl/styles/jjtl.scss`, `jjtl/components/JjtlDevelopmentEnv.tsx`, `editors/Console/console-tab.scss`, `Jodie/JodieWindow.css`. `c0b5c9bdd`: the discovery report §13, `docs/decisions.md` (D-UI-17). This commit: this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Probe `vsplit-uniform.ts` 185 PASS on 3006, exit 0; mutant (hover slate-500) red, restored; typecheck exit 0; build exit 0; check:scripts exit 0; vitest 628 of 632 files green, the 3 known import failures plus `contextCeiling.test.ts`, green with the lane env unset (ticket below). Unmeasured: the RC-23 visual check, Basic mode, the horizontal `ResizeHandle`.
+**Out-of-scope changes**: no. 14 files over the three commits, all in the prompt's DOVE; `instanceManagerTab.scss` not needed, dead CSS not deleted (RC-26).
+**Layer Impact Report**: not-required
+**Smoke visivo**: before/after crop pairs in ~/.jjodel-lanes/P-2026-11-19-2200/crops for the chat (RC-23), listed in the report §13.5; the lane judged none
+**Notes**: Geometry exceptions: rail 6px at left 0, JjTL and Jjodie 8px inside the pane. Site D (rail over the plain divider, marker state) hits 5 of 8 samples, was 1 of 9. Detail: `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md` §13.
+**Prompt document name**: 2026-11-19 22:00
+
+## 2026-11-20 — ticket: contextCeiling hook test reads the lane's JJODEL_LANE_LOG_FROM
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` › "transcript_path wins over JJODEL_LANE_LOG" fails (`expected null to be 'deny'`, :226) when the calling shell has `JJODEL_LANE_LOG_FROM` set, as a lane session does, and passes with only that variable unset. The test is not hermetic: a lane's own vitest gate shows a red that is neither the lane's nor the tip's.
+**Priority**: low
+**Found in**: P-2026-11-19-2200
