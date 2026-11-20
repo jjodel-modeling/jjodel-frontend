@@ -554,3 +554,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (probe 17/17 at 1600 and 1280; Alfonso's visual check pending)
 **Notes**: Icon-only alone could not hold Split Right (the switch was already 59px where it measured −32): the left and middle zones now scroll in `.editor-bar__scroll`, the right zone and rail cell stay out. Split Right gap 443/403 alone, 59/59 left group, 35/35 right group. §8.2's «metamodel alone» rows were the left group of the split: corrected in §8.3.
 **Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: one control style for both bars, identity cell removed (multi-tab lane edchrome)
+**Prompt**: Alfonso's visual check 21:59-22:07: remove the canvas bar's identity cell; Text tab filter and breadcrumb rows of one height and one bottom line; flat 28px icon buttons, one divider, no zoom pill, one secondary-text style in both bars; R-MT-34 amended
+**Files touched**: e36a00f7a `Toolbar.tsx`, `EditorBar.tsx`, `EditorBar.scss`, `TextualTab.scss`; docs: `decisions.md` R-MT-34 amended, discovery report §8.4, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe-uni and probe-ecp 17/17 at 1600 and 1280, no console errors; Alfonso's visual check pending)
+**Notes**: The cell was also the bar's room over the rail: the rail overlay starts at y 91, inside the bar band, so without it Split Right took no click. An empty `editor-bar__rail-reserve` replaces it. Also: status dot-separated from the language, name keeps a 48px floor at 1280. Report §8.4.
+**Prompt document name**: 2026-11-20 16:10
