@@ -562,3 +562,16 @@ active log is not touched by this lane.
 **Prompt document name**: 2026-11-19 23:36
 
 **Ticket** (lane 6 findings, not fixed): (1) the JjScript probe step does not discriminate: the EDITOR_TYPE_CHANGE cache names Office on HEAD too, so the dock reader of `jjscript/executor/utils.ts` is a fallback the UI rarely reaches. (2) `children[0]` hits left outside the five: `Dock.tsx` 197, 217 (known, R-MT-30), `MyRcDock.tsx` 276, `Navbar.tsx` 736, 1938, 1941. (3) A template tab in group 2 squeezes group 1 to about 135 px (crop s4); lane 5 width rule. (4) The generator pane says «No model conforms to SmartBuilding» with Apartment and Office open, on HEAD too.
+
+## 2026-11-20 — merge: multi-tab-readers into alfonso-frontend-jjtl (P-2026-11-20-1630)
+**Prompt**: `claude_2026-11-20_1630_prompt_merge_multi-tab-readers.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-readers` at b82fbe793 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d29dcd79c; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 04f913cba (merge), 9 files — `Console.tsx`, `navigationUtils.ts`, `navigationUtils.test.ts`, `jjscript/executor/utils.ts`, `openTemplateEditor.ts`, `openTemplateEditor.test.ts`, `canvasSelection.ts`, the 2336 prompt, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 1630
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 631 passed files, 16556 passed, 0 failed and 3 skipped (16559, expected 16549 + 7): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 9, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 16:52, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3072; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's four entries first, then the branch's lane 6 entry and ticket, verbatim. Probes as expected. Branch-tree hook run: 1 laneBoard port test timed out (10084 ms, load), green on trunk and merge. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 16:30
