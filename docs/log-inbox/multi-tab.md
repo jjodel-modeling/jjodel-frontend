@@ -528,3 +528,16 @@ active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Stop conditions 1 and 2 hold: the Code pill launches the code generator (CodePanel.tsx:9), Text opens a separate txt_ tab (openTextualTab.tsx:46), Text|EBNF|Syntax switches the textual tab's content; SyntaxForm and the EBNF editor are mounted only in TextualTab. Phase 2 would also exceed ten source files. No code, no R-MT rows, no dev server. Questions in the report §7.
 **Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — feat: editor chrome parity, narrowed Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, Phase 2 as narrowed by the chat (16:35): S1 one active-tab style, S2 shared editor bar, S3 `Diagram | Text` as a tab switch; D4, D5 move, D6 deferred; continued after a context ceiling
+**Files touched**: fc0d8987b `DockManagerStyles.scss`; f8f03322b `EditorBar.tsx`, `EditorBar.scss`, `representationSwitch.ts`, its test, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`; 4ec528ab8 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-33..36, discovery report §8, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: yes
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 12/12 at 1600 and 1280; Split Right residual, report §8.2; Alfonso's visual check pending)
+**Notes**: 8 source files, over five: listed above; representationSwitch.ts was not in DOVE. Probe found Split Right pushed out of narrow canvas bars by the switch (−119px at 1600); 4ec528ab8 shrinks the labels first, residual −32px (R-MT-26 scroll). contextCeiling.test.ts red only under lane env. Report: docs/discovery/discovery_2026-11-20_editor_chrome_parity.md §8.
+**Prompt document name**: 2026-11-20 16:10
