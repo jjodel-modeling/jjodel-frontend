@@ -129,7 +129,7 @@ A `Diagram | Text` control «in the same tab, keeping today's behaviour of each 
 
 ## 8. Addendum, 2026-11-20 17:00: Phase 2 as narrowed
 
-The project chat adopted the `Recommended:` line (RC-21, 16:35). Built: S1 D1 (`fc0d8987b`), S2+S3 D2 and D3 narrowed (`f8f03322b`), a fix from the mouse probe (`4ec528ab8`). Registered as R-MT-33 (D1), R-MT-34 (D2 as built), R-MT-35 (D3 narrowed: a switch between two tabs), R-MT-36 (D7).
+The project chat adopted the `Recommended:` line (RC-21, 16:35). Built: S1 D1 (`fc0d8987b`), S2+S3 D2 and D3 narrowed (`f8f03322b`), a fix from the mouse probe (`4ec528ab8`). Registered as R-MT-37 (D1), R-MT-38 (D2 as built), R-MT-35 (D3 narrowed: a switch between two tabs), R-MT-36 (D7).
 
 Deferred, not registered as rows: D4 (EBNF and Syntax stay in the textual bar's right zone; no syntax surface outside the model tab, §4.5), D5's move of «Up to date» to the status bar (the status and its Delete, Discard, Save actions stay in the bar's left zone), D6 (tree and filter still mounted; breadcrumb not shared, §4.8).
 
@@ -156,9 +156,9 @@ Also seen, not changed: at 1280 the textual bar clips the existing EBNF | Syntax
 
 ### Decisions taken (unattended), Phase 2
 
-1. Active strip tab per R-MT-33; `data-jj-kind` still written by `Navbar.tsx` (the menu reads it), only the overrides went.
+1. Active strip tab per R-MT-37; `data-jj-kind` still written by `Navbar.tsx` (the menu reads it), only the overrides went.
 2. EditorBar zones `display: contents`; root and fieldset keep `editor-v2-toolbar` and `editor-v2-toolbar__commands` (Rule 2).
-3. Canvas zones and textual zones as in R-MT-34; no Split Right on the Text tab (`txt_<id>` is unique).
+3. Canvas zones and textual zones as in R-MT-38; no Split Right on the Text tab (`txt_<id>` is unique).
 4. Text hidden when the textual view is off, so Basic mode and the MODELS demo show nothing new.
 5. Diagram from the Text tab without importing `TabDataMaker` (it broke 12 textual test files at import through the joiner mock).
 6. Switch labels shrink first, floor 59px (`4ec528ab8`).

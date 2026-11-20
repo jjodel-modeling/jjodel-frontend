@@ -580,3 +580,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (Alfonso GO 2026-11-20 22:51 on 3120; probe-ecp 17/17 and probe-uni at 1600 and 1280, 0 console errors)
 **Notes**: GO covers shared bar, neutral active tab, icon-only Diagram|Text, identity cell removed, filter and breadcrumb rows aligned, uniform controls. Partial against the prompt: Phase 2 ran as narrowed by the chat (report §8), D4 (EBNF/Syntax), D5 status move and D6 (tree, shared breadcrumb) deferred. Open finding: the rail overlay's top ignores the tab strip (report §8.4).
 **Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — docs: branch R-MT-33 and R-MT-34 renumbered to R-MT-37 and R-MT-38 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_2305_prompt_editor-chrome-renumber.md`, lane fast: the merge lane P-2026-11-20-2257 found the trunk already holding R-MT-33 (editor groups persist, P-2026-11-19-2328) and R-MT-34 (full-screen dashboard, P-2026-11-20-1632); RC-14, the branch resolves the id collision before the merge
+**Files touched**: code comments `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `DockManagerStyles.scss`; docs: `decisions.md` (the two P-2026-11-20-1610 rows), discovery report §8, this inbox, Status of 2305
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Correction to the add-only entries above: in the five entries of P-2026-11-20-1610 (discovery, feat, two fixes, close), R-MT-33 reads R-MT-37 and R-MT-34 reads R-MT-38; «R-MT-33..36» reads «R-MT-35..38». R-MT-35 and R-MT-36 keep their ids. The prompt file of 1610 keeps its text.
+**Prompt document name**: 2026-11-20 23:05

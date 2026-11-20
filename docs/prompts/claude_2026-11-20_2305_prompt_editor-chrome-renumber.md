@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-20-2305
 Chat: C-2026-11-20-1610
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-20 · lane fast · eb6a17b4d
 Lane: fast (docs and code comments only, id renumbering on the branch, RC-14)
 Depends: P-2026-11-20-1610 (closed 0d3eba646); P-2026-11-20-2257 (merge, stopped on Outcome: question)
 Worktree: ~/jjodel-w-edchrome, branch editor-chrome-parity, at 0d3eba646 plus this prompt's commit
