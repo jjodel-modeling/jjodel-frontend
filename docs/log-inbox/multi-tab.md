@@ -567,3 +567,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (probe-uni and probe-ecp 17/17 at 1600 and 1280, no console errors; Alfonso's visual check pending)
 **Notes**: The cell was also the bar's room over the rail: the rail overlay starts at y 91, inside the bar band, so without it Split Right took no click. An empty `editor-bar__rail-reserve` replaces it. Also: status dot-separated from the language, name keeps a 48px floor at 1280. Report §8.4.
 **Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — close: editor chrome parity, visual GO (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for the diagram canvas and the Text tab (D1-D7, R-MT-33..36), closure after Alfonso's visual GO
+**Files touched**: code fc0d8987b, f8f03322b, 4ec528ab8, 4ec5f6196, e36a00f7a, 331035777 (`DockManagerStyles.scss`, `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `representationSwitch.ts`, its test); docs: `decisions.md` R-MT-33..36, discovery report §1-§8.4; this commit: this inbox, Status of 1610
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (8 source files, above five; `representationSwitch.ts` and its test not in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 22:51 on 3120; probe-ecp 17/17 and probe-uni at 1600 and 1280, 0 console errors)
+**Notes**: GO covers shared bar, neutral active tab, icon-only Diagram|Text, identity cell removed, filter and breadcrumb rows aligned, uniform controls. Partial against the prompt: Phase 2 ran as narrowed by the chat (report §8), D4 (EBNF/Syntax), D5 status move and D6 (tree, shared breadcrumb) deferred. Open finding: the rail overlay's top ignores the tab strip (report §8.4).
+**Prompt document name**: 2026-11-20 16:10
