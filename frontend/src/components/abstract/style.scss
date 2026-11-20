@@ -1290,3 +1290,23 @@ body[data-layout-mode="canvas-only"] {
    The CSS approach was removed because rc-dock caches tab
    contents and doesn't unmount components when switching tabs.
    ============================================ */
+
+// P-2026-11-20-1632: group 1 is kept when its tabs close (rc-dock's panelLock), as the project summary kept it; empty,
+// it takes no width while another group exists, and the other groups share the row (as a group holding only the
+// summary did, DockManagerStyles.scss).
+// The dock shows a top-level panel only when it holds a pinnable tab header (`.not-strip`, DockManagerStyles.scss); the
+// summary tab was group 1's, the groups after it are shown by ScriptTab.scss. Without the summary, group 1 is shown here.
+.not-strip > .dock-layout .dock-box > .dock-panel.dock-style-models {
+    display: block;
+}
+
+.not-strip > .dock-layout > .dock-hbox:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models) {
+    > .dock-panel.dock-style-models[data-dockid]:not(:has(> .dock > .dock-bar .dock-tab)) {
+        flex: 0 0 0px !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+
+        + .dock-divider { display: none !important; }
+    }
+}

@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     activeGroup, activeTabId, dockMoveAllowed, groupOfTab, modelGroups, noteActiveTab, recentTabIds,
     resetDockGroups, setArtifactTabPredicate, splitRightInProgress, withSplitRight, SUMMARY_TAB_ID,
+    dashboardShown, isDashboardOpen, setDashboardOpen, subscribeDashboard,
 } from '../dockGroups';
 
 const tab = (id: string) => ({ id, group: 'models' });
@@ -194,6 +195,41 @@ describe('dockGroups', () => {
 
         it('any other group moves as ever', () => {
             expect(dockMoveAllowed({ kind: 'panel', id: 'p', group: 'pinned', direction: 'float' })).toBe(true);
+        });
+    });
+
+    // P-2026-11-20-1632: the project dashboard is a full-screen view over the groups, no tab of a group.
+    describe('the project dashboard', () => {
+        it('toggles: open, closed, and each change tells the listeners once', () => {
+            let calls = 0;
+            const off = subscribeDashboard(() => calls++);
+            expect(isDashboardOpen()).toBe(false);
+            expect(setDashboardOpen(true)).toBe(true);
+            expect(isDashboardOpen()).toBe(true);
+            expect(setDashboardOpen(true)).toBe(false);
+            expect(setDashboardOpen(false)).toBe(true);
+            expect(isDashboardOpen()).toBe(false);
+            expect(calls).toBe(2);
+            off();
+            setDashboardOpen(true);
+            expect(calls).toBe(2);
+        });
+
+        it('a new project starts with it closed', () => {
+            setDashboardOpen(true);
+            resetDockGroups();
+            expect(isDashboardOpen()).toBe(false);
+        });
+
+        it('shows when open, or when no group holds a tab (a project just opened, every tab closed)', () => {
+            const open = layout(panel('g1', ['A']), panel('g2', ['B']));
+            expect(dashboardShown(open, false)).toBe(false);
+            expect(dashboardShown(open, true)).toBe(true);
+            const empty = layout({ id: 'g1', group: 'models', tabs: [] });
+            expect(dashboardShown(empty, false)).toBe(true);
+            expect(dashboardShown(layout(), false)).toBe(true);
+            // An empty group 1 beside a group with a tab: the tab shows.
+            expect(dashboardShown(layout({ id: 'g1', group: 'models', tabs: [] }, panel('g2', ['B'])), false)).toBe(false);
         });
     });
 });
