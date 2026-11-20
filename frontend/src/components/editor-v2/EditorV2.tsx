@@ -69,7 +69,7 @@ import { HighlightProvider, type HighlightState } from './contexts/HighlightCont
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import { getSideFromHandle } from './utils/edgeUtils';
 import { isMetamodelConnectionValid } from './utils/connectionValidity';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, AnchorSide, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
 import { useJjomSync } from './hooks/useJjomSync';
@@ -99,6 +99,7 @@ import {
     syncSizeBatchToJjom,
     syncSizeResetToJjom,
     syncIREdgeLayoutToJjom,
+    syncEdgeLayoutToJjom,
     syncInheritanceEdge,
     syncReferenceEdge,
     syncDeleteVertex,
@@ -127,6 +128,7 @@ import { computeContainedAutoLayout } from './utils/elkContainers';
 import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
+import { mergeEdgeAnchorChange } from './utils/syncPatchIdentity';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
@@ -2198,6 +2200,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 // RF edge. Without this, the sync detects the new DVoidEdge in
                 // subElementIds and appends a second RF edge to the canvas.
                 markDropCreated(edgeId);
+                syncEdgeLayoutToJjom(edgeId, {
+                    sourceSide: sourceSide as AnchorSide,
+                    targetSide: targetSide as AnchorSide,
+                });
             } else {
                 edgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
             }
@@ -2319,6 +2325,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
 
             markDropCreated(edgeId);
+            syncEdgeLayoutToJjom(edgeId, {
+                sourceSide: sourceSide as AnchorSide,
+                targetSide: targetSide as AnchorSide,
+            });
 
             const newEdge: Edge = {
                 id: edgeId,
@@ -4686,12 +4696,40 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return;
             }
             takeSnapshot();
+            const incomingData = (data as any)?.data;
+            let edgeChange = data;
+            if (incomingData && typeof incomingData === 'object') {
+                const current = getEdges().find((e) => e.id === edgeId);
+                const mergedData = mergeEdgeAnchorChange(
+                    (current?.data as Record<string, unknown> | undefined),
+                    incomingData as Record<string, unknown>,
+                );
+                edgeChange = { ...data, data: mergedData };
+            }
+            if (isJjomMode) {
+                const current = getEdges().find((e) => e.id === edgeId);
+                const next = current ? { ...current, ...edgeChange } : null;
+                const nextData = (next?.data as any) ?? {};
+                const sourceSide = nextData.sourceAnchor?.mode === 'pinned'
+                    ? nextData.sourceAnchor.side
+                    : undefined;
+                const targetSide = nextData.targetAnchor?.mode === 'pinned'
+                    ? nextData.targetAnchor.side
+                    : undefined;
+                const waypoints = Array.isArray(nextData.waypoints) && nextData.waypoints.length > 0
+                    ? nextData.waypoints
+                    : undefined;
+                syncEdgeLayoutToJjom(edgeId, sourceSide || targetSide || waypoints
+                    ? { sourceSide, targetSide, waypoints }
+                    : undefined);
+                scheduleLayoutSave();
+            }
             setEdges((eds) => {
-                const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e));
+                const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...edgeChange } : e));
                 return applyDistribution(updated);
             });
         },
-        [setEdges, takeSnapshot, applyDistribution, persistIREdgeLayout]
+        [setEdges, takeSnapshot, applyDistribution, persistIREdgeLayout, isJjomMode, getEdges, scheduleLayoutSave]
     );
 
     // Convert edge to inheritance

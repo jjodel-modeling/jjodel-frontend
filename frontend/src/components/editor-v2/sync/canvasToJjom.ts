@@ -27,7 +27,7 @@ import {
     store,
 } from '../../../joiner';
 import type { Node } from '@xyflow/react';
-import type { ClassNodeData } from '../types';
+import type { AnchorSide, ClassNodeData, EdgeWaypoint } from '../types';
 import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair, clearCanvasEdgePair } from './syncState';
 import { resolveVertexLayoutWrite, type VertexLayout, type VertexLayoutSource, type VertexLayoutWrite } from '../viewpoint/layout/vertexLayout';
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
@@ -197,6 +197,27 @@ export function syncIREdgeLayoutToJjom(
 ): void {
     TRANSACTION('EditorV2 IR edge layout', () => {
         SetFieldAction.new(vertexId as any, 'irEdgeLayout' as any, layout, undefined, false);
+    });
+}
+
+export interface PersistedEdgeLayout {
+    sourceSide?: AnchorSide;
+    targetSide?: AnchorSide;
+    waypoints?: EdgeWaypoint[];
+}
+
+/** Persist manual geometry for a real graph edge (M1 and M2). */
+export function syncEdgeLayoutToJjom(edgeId: string, layout?: PersistedEdgeLayout): void {
+    const raw = store.getState()?.idlookup?.[edgeId];
+    if (!raw) {
+        console.warn('[canvasToJjom] Edge layout target not found:', edgeId);
+        return;
+    }
+    // Prevent the JjOM write from immediately bouncing an older edge snapshot
+    // back over the canvas update that initiated this transaction.
+    markCanvasUpdated(edgeId);
+    TRANSACTION('EditorV2 edge layout', () => {
+        SetFieldAction.new(edgeId as any, 'edgeLayout' as any, layout, undefined, false);
     });
 }
 

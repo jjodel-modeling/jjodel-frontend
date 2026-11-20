@@ -1494,11 +1494,19 @@ export function useJjomSync(
                 } else if (isEdgeClassName(className)) {
                     const rfEdge = jjomEdgeToRFEdge(lProxy, layoutKey);
                     if (rfEdge) {
-                        // Preserve handles from applyDistribution
+                        // Preserve distribution indexes for edges without persisted
+                        // endpoint pins. A persisted pin must provide the logical
+                        // side again, otherwise a stale cached handle wins when a
+                        // later selection update refreshes the edge.
                         const existing = rfEdgeCache.current.get(id);
                         if (existing) {
-                            rfEdge.sourceHandle = existing.sourceHandle;
-                            rfEdge.targetHandle = existing.targetHandle;
+                            const data = (rfEdge.data as any) ?? {};
+                            if (data.sourceAnchor?.mode !== 'pinned') {
+                                rfEdge.sourceHandle = existing.sourceHandle;
+                            }
+                            if (data.targetAnchor?.mode !== 'pinned') {
+                                rfEdge.targetHandle = existing.targetHandle;
+                            }
                         }
                         rfEdgeCache.current.set(id, rfEdge);
                         patchedEdges.set(id, rfEdge);

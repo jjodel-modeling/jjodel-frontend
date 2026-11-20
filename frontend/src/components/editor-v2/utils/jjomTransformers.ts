@@ -596,6 +596,18 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
     // Compute optimal handle sides from vertex positions
     const isInheritance = !!edge.isExtend;
     const handles = computeOptimalHandles(startVertex, endVertex, isInheritance, layoutKey ?? getActiveLayoutKey());
+    const persistedLayout = edge.edgeLayout;
+    const sourceSide = persistedLayout?.sourceSide;
+    const targetSide = persistedLayout?.targetSide;
+    const sourceHandle = sourceSide ? `${sourceSide}-0` : handles.sourceHandle;
+    const targetHandle = targetSide ? `${targetSide}-0` : handles.targetHandle;
+    const persistedEdgeData = {
+        ...(sourceSide ? { sourceAnchor: { mode: 'pinned' as const, side: sourceSide } } : {}),
+        ...(targetSide ? { targetAnchor: { mode: 'pinned' as const, side: targetSide } } : {}),
+        ...(Array.isArray(persistedLayout?.waypoints) && persistedLayout.waypoints.length > 0
+            ? { waypoints: persistedLayout.waypoints }
+            : {}),
+    };
 
     // Check M1 instance edges FIRST — before isReference/isExtend.
     // M1 edges also have isReference === true but need different RF types
@@ -615,13 +627,14 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
                 id: edge.id,
                 source: startVertex.id,
                 target: endVertex.id,
-                sourceHandle: handles.sourceHandle,
-                targetHandle: handles.targetHandle,
+                sourceHandle,
+                targetHandle,
                 type: 'composition',
                 label: refName,
                 data: {
                     referenceName: refName,
                     referenceId: refId,
+                    ...persistedEdgeData,
                 } as CompositionEdgeData,
             };
         }
@@ -630,13 +643,14 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
             id: edge.id,
             source: startVertex.id,
             target: endVertex.id,
-            sourceHandle: handles.sourceHandle,
-            targetHandle: handles.targetHandle,
+            sourceHandle,
+            targetHandle,
             type: 'instanceRef',
             label: refName,
             data: {
                 referenceName: refName,
                 referenceId: refId,
+                ...persistedEdgeData,
             } as InstanceReferenceEdgeData,
         };
     }
@@ -676,6 +690,7 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
                 opposite: refModel?.opposite?.name,
             },
             jjomRefId: refModel?.id,
+            ...persistedEdgeData,
         } as any;
 
         // Register in the stable module-level registry so commitLabel can
@@ -688,8 +703,8 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
             id: edge.id,
             source: startVertex.id,
             target: endVertex.id,
-            sourceHandle: handles.sourceHandle,
-            targetHandle: handles.targetHandle,
+            sourceHandle,
+            targetHandle,
             type: 'reference',
             reconnectable: 'target',   // only the target endpoint is grabbable (re-target via drag)
             label: refModel?.name ?? '',
@@ -703,10 +718,10 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
             id: edge.id,
             source: startVertex.id,
             target: endVertex.id,
-            sourceHandle: handles.sourceHandle,
-            targetHandle: handles.targetHandle,
+            sourceHandle,
+            targetHandle,
             type: 'inheritance',
-            data: {} as InheritanceEdgeData,
+            data: { ...persistedEdgeData } as InheritanceEdgeData,
         };
     }
 
@@ -715,8 +730,8 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
         id: edge.id,
         source: startVertex.id,
         target: endVertex.id,
-        sourceHandle: handles.sourceHandle,
-        targetHandle: handles.targetHandle,
+        sourceHandle,
+        targetHandle,
         type: 'reference',
         data: {
             reference: {
@@ -728,6 +743,7 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
                 upperBound: -1,
                 containment: false,
             },
+            ...persistedEdgeData,
         } as ReferenceEdgeData,
     };
 }
