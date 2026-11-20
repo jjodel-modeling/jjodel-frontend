@@ -290,3 +290,84 @@ Q1 to Q5 of §9. Draft row for `docs/decisions.md`, written in Phase 2:
 - Body-cursor rules via `:has()` run style recalculation on `body`; `:active` is per element, so the cost is bounded,
   but it is not measured.
 - Dark theme and Basic mode were not measured.
+
+## 13. Addendum, Phase 2 (2026-11-20)
+
+GO by the project chat 2026-11-20 16:45 (C-2026-11-19-2200). Code commits `5d81fd6c6` (partial, `ResizeHandle`, rc-dock,
+rail) and `4d9d27a22` (bespoke sites, Jjodie, probe), on `cd279111b`. Executor: Opus 5.5, continued after a context
+ceiling (verified handoff); the committed tree was checked line for line against the probe-green working tree.
+
+### 13.1 Answers adopted (RC-25, provisional, unattended)
+
+- Q1: JjTL strips move inside each panel, 8px, line on the seam (side `right: 0`, right panel `left: 0`).
+- Q2: Jjodie's drawing is emitted from `abstract/style.scss` through the mixin; `JodieWindow.css` keeps the geometry
+  only (6px to 8px, its own `::after`, hover, focus and cursor rules removed).
+- Q3: `col-resize` on `body` via `body:has(…)` for rc-dock, codegen, syntax form, Script tab, Jjodie; the rail, Instance
+  Manager and JjTL handlers already set it inline.
+- Q4: one drawing for every rc-dock hbox divider; the canvas-split rule (P-2026-11-08-2045) and the site 12 rule
+  (P-2026-10-25-1355) are replaced by comments.
+- Q5: no dead-CSS deletion. Only the two JjTL `<i class="bi bi-grip-vertical">` and `.resize-grip-icon-vertical` went
+  (no other user; control `resize-grip-icon-horizontal` found by the same grep). Sites 5, 6, 11,
+  `.tree-view-panel-resize-handle`, `style_ap.scss` untouched, waiting for Alfonso (RC-26).
+
+### 13.2 As built
+
+- Partial `frontend/src/styles/components/_vsplit.scss`, used as `@use '…/styles/components/vsplit'`. Literals: `$strip:
+  8px`, `$line: 2px`, `$delay: 150ms`, each commented once. Mixins: `sash($seam: center|start|end, $rest: true)` (the
+  line is `::before` in every state; states change width and colour only, never position), `sash-drag`, `sash-strip`
+  (an 8px transparent centred `::after` for 1px seams). Names checked free: `sash` has no other hit in `frontend/src`;
+  `vsplit` occurs only in the class `.tree-view-panel-vsplit`, a horizontal splitter, which keeps its name.
+- Geometry as built: rc-dock dividers, codegen splitter, syntax form, Script tab keep a 1px box (the seam) with the 8px
+  pseudo strip, so no pane moves and `splitArea()` still subtracts a measured 1px bar. `ResizeHandle` vertical: 8px
+  centred. Properties rail: 6px at `left: 0`, no line at rest (the rail's border is the seam). Instance Manager:
+  unchanged geometry (already 8px straddling). JjTL side and right, Jjodie: 8px inside the pane, line on the seam, no
+  line at rest (the panes paint the seam). `instanceManagerTab.scss` not touched.
+- DOM: only the two JjTL `<i>` removed (the divs are now self-closing). No drag handler, no exported interface changed.
+
+### 13.3 Measured (probe `frontend/scripts/probe/vsplit-uniform.ts`, port 3006, lane-run)
+
+185 PASS, 0 FAIL, 0 page errors, exit 0. Log `~/.jjodel-lanes/P-2026-11-19-2200/probe-vsplit-uniform.run4.log`. Every
+reached site: rest line 1px `--color-panel-border` (rgb 226,232,240) or transparent as designed; hover still at rest at
+1-2ms, 2px rgb(148,163,184) at 200ms; mid-drag 2px rgb(6,182,212) and `body` `col-resize`; the 2px focus line on every
+focusable site. Rail strip 516.5-524.5 vs rail handle 1201-1207 in the same box: no overlap.
+
+| Site | Box | Hit samples (of 9) | Drag dx → shift | Pane width before → after |
+|---|---|---|---|---|
+| dock-canvas-split | 1x918 | 9 | -80 → -79.94 (seam -3 → -39.56, +3 → +40) | 599.5 → 519.56 |
+| rail | 6x877 | 7 (of 7) | -60 → -60 | 400 → 460 |
+| im-outline / im-classes | 8x882 | 9 / 9 | +40 → +40 / -40 → -40 | |
+| jjtl-side | 8x618 | 9 | +60 → +54.52 | 280 → 334.52 |
+| jjtl-right | 8 | 9 | -60 → -55 | 400 → 455 |
+| jodie-dock | 8x918 | 9 | -60 → -60 | 460 → 520 |
+| dock-divider-generator-beside | 1x918 | 8 | +60 → +60 (seam ±3 → ±40) | 1289 → 1349 |
+| codegen-tpl-wide | 1x882 | 9 | -80 → -79.5 | 842.41 → 762.91 |
+| syntax-form | 1x818 | 8 | +80 → +80 | 1097 → 1177 |
+| dock-divider-plain | 1x918 | **5** | -60 → -59.97 (seam +3 → +40.47) | 999.5 → 939.53 |
+| script-tab | 1x840 | 8 | +60 → +60 | 600 → 660 |
+
+The two JjTL drags moved 54.52 and 55 of 60: the handle was grabbed and the pane widened by the shift; the residue was
+not investigated.
+
+Mutant: hover colour of the mixin set to `--color-slate-500`, `VSPLIT_ONLY=E`: `FAIL script-tab: hover after 200ms, a
+2px slate-400 line` (rgb 100,116,139), exit 1; restored, `slate-500` count 0.
+
+### 13.4 Findings and limits
+
+- Site D (`dock-divider-plain`, the marker state of Phase 1 pass 5 A2): the floating Properties rail ends on the seam
+  and its body (`section.properties-tab.properties-panel`, x 994-998) covers the strip's left half: 5 of 8 samples hit,
+  a drag from -3 moves 0, from +3 moves 40. Not two handles stealing each other's drag, and better than before (Phase
+  1: 1 sample of 9 on the same state). Encoded in the probe as `minHit: 5`. Whether a real Script-beside layout puts
+  the rail there is unmeasured: `DockManager.openBeside` never splits (`DockManager.tsx:268-277`), so the probe
+  reproduces the state with a split and a hidden `.script-tab--beside` marker.
+- Generator beside (B): the left panel stops at 1289px (§7), so the probe drags right first.
+- Gate side finding: `scripts/hooks/__tests__/contextCeiling.test.ts` ("transcript_path wins over JJODEL_LANE_LOG")
+  fails when the lane session's `JJODEL_LANE_LOG_FROM` is in the environment and passes with it unset. No file under
+  `frontend/scripts/hooks/` is in this diff.
+
+### 13.5 Visual check (RC-23): before/after pairs
+
+Under `~/.jjodel-lanes/P-2026-11-19-2200/crops/`, same file name in `before/` and `after/`: `dock-canvas-split`,
+`rail`, `im-outline`, `im-classes`, `jjtl-side`, `jjtl-right`, `jodie-dock`, `rail-with-jodie`,
+`dock-divider-generator-beside` (+ `-hover`), `codegen-tpl-wide`, `syntax-form`, `dock-divider-plain` (+ `-hover`),
+`script-tab`. After only: the `-hover` crop of every site and `dock-canvas-split-drag`. Before only:
+`dock-divider-generator`, `codegen-tpl` (not re-shot in Phase 2).
