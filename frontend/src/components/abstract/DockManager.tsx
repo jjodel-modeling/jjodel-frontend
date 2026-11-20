@@ -1,11 +1,12 @@
 import {BoxData, DockLayout, PanelData, TabData} from 'rc-dock';
 import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
-import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
+import {DProject, LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
-import { activeGroup, groupOfTab, noteActiveTab, withSplitRight } from "./tabs/dockGroups";
+import { activeGroup, groupOfTab, noteActiveTab, setArtifactTabPredicate, withSplitRight } from "./tabs/dockGroups";
+import { buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord, setGroupsChangeListener, tabViewpointOf } from "./tabs/groupPersistence";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
@@ -150,12 +151,13 @@ class DockManager {
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
         const target = DockManager.activeGroupPanel();
-        // G3 (R-MT-30): a model opens as a tab in the active group, or is focused there when the group has one of its
-        // tabs; open only in another group, a copy opens in the active group. Any other tab is focused where it is (Q3).
+        // G3 (R-MT-30): a model or metamodel (R-MT-31) opens as a tab in the active group, or is focused there when the
+        // group has one of its tabs; open only in another group, a copy opens in the active group. Any other tab is
+        // focused where it is (Q3).
         if (tab.id) {
             const modelId = modelOfTabId(tab.id);
             const model = (store.getState() as any).idlookup?.[modelId];
-            const isModelTab = model?.className === 'DModel' && !model.isMetamodel && tab.id === modelId;
+            const isModelTab = model?.className === 'DModel' && tab.id === modelId;
             const here = isModelTab && target ? target.tabs.find(t => modelOfTabId(t.id as string) === modelId) : undefined;
             if (here) {
                 DockManager.dock.updateTab(here.id as string, null as any, true);
@@ -272,7 +274,8 @@ class DockManager {
      * the only way to make a group (R-MT-30, Q12), so with no group right of `besideTabId`'s it returns
      * false and the Refactoring tab keeps its own class-box pane. `ratio` is no longer read (it sized the split).
      * Never a second instance of the tab. Returns false when the dock cannot place it (no group to the
-     * right, the tab is floating, maximized or nested, no such model, consumer mode for a metamodel).
+     * right, the tab is floating, maximized or nested, no such model, consumer mode for a metamodel). A metamodel's
+     * further tab (`<id>~tab<N>`) is placed like a model's (R-MT-31).
      */
     static openBeside(besideTabId: string, tabId: string, ratio: number, viewpointId?: string | null): boolean {
         const dock = DockManager.dock;
@@ -281,7 +284,6 @@ class DockManager {
         const model = (store.getState() as any).idlookup?.[modelId];
         if (model?.className !== 'DModel') return false;
         if (isConsumerMode() && model.isMetamodel) return false;
-        if (tabId !== modelId && model.isMetamodel) return false;
         try {
             const layout = dock.getLayout();
             if (layout?.dockbox?.mode !== 'horizontal' || layout.maxbox?.children?.length) return false;
@@ -295,7 +297,7 @@ class DockManager {
             const target = children.find(c => c.id === action.panelId);
             if (!target || !('tabs' in target)) return false;
             const open = () => dock.find(tabId) as TabData | undefined;
-            const fresh = () => (model.isMetamodel ? TabDataMaker.metamodel(model) : TabDataMaker.model(model, { tabId, viewpointId }));
+            const fresh = () => (model.isMetamodel ? TabDataMaker.metamodel(model, { tabId, viewpointId }) : TabDataMaker.model(model, { tabId, viewpointId }));
             switch (action.kind) {
                 case 'activate': dock.updateTab(tabId, null as any, true); return true;
                 case 'move-into': dock.dockMove(open() as TabData, target, 'middle'); return true;
@@ -311,8 +313,8 @@ class DockManager {
     }
 
     /**
-     * A further tab on the M1 model `modelId`, on `viewpointId` (null: abstract syntax), or the model's
-     * first tab when none is open (R-MT-9). No second tab on a metamodel: it owns no tab viewpoint.
+     * A further tab on the model `modelId`, on `viewpointId` (null: abstract syntax), or the model's
+     * first tab when none is open (R-MT-9). A metamodel gets one too (R-MT-31).
      */
     static async openModelTab(modelId: string, viewpointId: string | null): Promise<void> {
         const tab = DockManager.makeModelTab(modelId, viewpointId);
@@ -339,7 +341,7 @@ class DockManager {
     /**
      * Split Right (R-MT-30, G2): a new group immediately right of the group of the tab `tabId`, holding a copy of it on
      * `viewpointId` (same model, so the layout is shared, R-MT-4); rc-dock halves the group's width (Q2). The new tab is
-     * active. False when the tab is no M1 model's (a metamodel has no second tab), not in a group, or something is maximized.
+     * active. False when the tab is no model's or metamodel's (R-MT-31), not in a group, or something is maximized.
      */
     static splitRight(tabId: string, viewpointId: string | null): boolean {
         const layout = DockManager.dock?.getLayout();
@@ -347,7 +349,7 @@ class DockManager {
         return !!group && DockManager.splitRightOf(group as PanelData, modelOfTabId(tabId), viewpointId);
     }
 
-    /** Split Right of the active group with a further tab on the M1 model `modelId`, on `viewpointId` (Q8). */
+    /** Split Right of the active group with a further tab on the model `modelId`, on `viewpointId` (Q8). */
     static splitRightModel(modelId: string, viewpointId: string | null): boolean {
         const group = DockManager.activeGroupPanel();
         return !!group && DockManager.splitRightOf(group, modelId, viewpointId);
@@ -370,12 +372,94 @@ class DockManager {
         return true;
     }
 
+    // Editor groups persistence (G7, P-2026-11-19-2328): the key of the project whose groups are restored and saved,
+    // null until the restore at project open ran, so the default layout of the mount never overwrites the record.
+    private static groupsKey: string | null = null;
+    private static groupsProjectId: string | null = null;
+    private static groupsPersister = createGroupsPersister(400);
+
+    /**
+     * rc-dock's `loadTab`: a tab of a saved layout rebuilt through `TabDataMaker` on its model or metamodel, on its saved
+     * viewpoint (`{ id, modelId, viewpointId }`), or on the one the tab showed when the record carries none. A full tab
+     * passes as it is; a tab whose model cannot open, or of any other kind, is null (rc-dock drops it).
+     */
+    static loadTab = (saved: any): TabData | null => {
+        if (saved && 'content' in saved && 'title' in saved) return saved as TabData;
+        const id = saved?.id;
+        if (typeof id !== 'string') return null;
+        const model = (store.getState() as any).idlookup?.[modelOfTabId(id)];
+        if (model?.className !== 'DModel' || (model.isMetamodel && isConsumerMode())) return null;
+        const viewpointId: string | null | undefined = 'viewpointId' in saved ? (saved.viewpointId ?? null) : tabViewpointOf(id);
+        const options = { tabId: id, viewpointId };
+        return model.isMetamodel ? TabDataMaker.metamodel(model, options) : TabDataMaker.model(model, options);
+    };
+
+    /**
+     * Restores the editor groups the user `userId` left on the project `projectId`, once, at project open (G7): the
+     * record pruned against the project now (`pruneGroupsRecord`), loaded into the dock, its active group noted. From
+     * here on, changes are saved under that key. False when there was nothing valid to restore: the dock stays as it is.
+     */
+    static restoreGroups(userId: string | null | undefined, projectId: string | null | undefined): boolean {
+        DockManager.groupsPersister.flush();
+        DockManager.groupsKey = null;
+        DockManager.groupsProjectId = null;
+        const dock = DockManager.dock;
+        if (!dock || !projectId) return false;
+        const key = editorGroupsKey(userId, projectId);
+        const record = readGroupsRecord(key);
+        let restored = false;
+        if (record) {
+            const state = store.getState() as any;
+            const plan = pruneGroupsRecord(record, {
+                canOpenModel: modelId => {
+                    const model = state.idlookup?.[modelId];
+                    return model?.className === 'DModel' && !(model.isMetamodel && isConsumerMode());
+                },
+                viewpointKnown: viewpointId => ((state.viewpoints || []) as string[]).includes(viewpointId),
+            });
+            try {
+                dock.loadLayout(plan.layout as any);
+                restored = true;
+            } catch (error) {
+                console.error('[DockManager] restoreGroups:', error);
+            }
+            // A tab behind its group's active one mounts only when shown: its viewpoint is the record's until then.
+            if (restored) for (const tab of plan.tabs) noteTabViewpoint(tab.id, tab.viewpointId);
+            if (restored && plan.activeTab) noteActiveTab(plan.activeTab);
+        }
+        DockManager.groupsKey = key;
+        DockManager.groupsProjectId = projectId;
+        return restored;
+    }
+
+    /** Takes the groups record of the dock now and writes it once the changes stop (G7). `savedLayout`: the one `onLayoutChange` received. */
+    static noteGroupsChanged = (savedLayout?: any): void => {
+        const dock = DockManager.dock;
+        const key = DockManager.groupsKey;
+        if (!dock || !key || DProject.getProject()?.id !== DockManager.groupsProjectId) return;
+        try {
+            const layout = savedLayout ?? dock.saveLayout();
+            const record = buildGroupsRecord(layout, activeGroup(layout)?.id, { isArtifactTab: isArtifactTabId, viewpointOf: tabViewpointOf });
+            DockManager.groupsPersister.schedule(key, record);
+        } catch (error) {
+            console.error('[DockManager] noteGroupsChanged:', error);
+        }
+    };
+
+    /** Writes the pending groups record now (page unload); `close`: the project closes, nothing more is saved under its key. */
+    static flushGroups = (close: boolean = false): void => {
+        DockManager.groupsPersister.flush();
+        if (close) { DockManager.groupsKey = null; DockManager.groupsProjectId = null; }
+    };
+
     private static makeModelTab(modelId: string, viewpointId: string | null | undefined): TabData | null {
         const dock = DockManager.dock;
         const model = (store.getState() as any).idlookup?.[modelId];
-        if (!dock || model?.className !== 'DModel' || model.isMetamodel) return null;
+        if (!dock || model?.className !== 'DModel') return null;
+        // A metamodel's further tab (R-MT-31) owns its tab viewpoint like a model's; none in consumer mode (#157).
+        if (model.isMetamodel && isConsumerMode()) return null;
         const tabId = nextModelTabId(modelId, layoutTabIds(dock.getLayout()));
-        return TabDataMaker.model(model, { tabId, viewpointId });
+        return model.isMetamodel ? TabDataMaker.metamodel(model, { tabId, viewpointId }) : TabDataMaker.model(model, { tabId, viewpointId });
     }
 
     /** The share of the width the tab `besideTabId`'s panel takes from it and the panel to its right; null when there is none. */
@@ -686,5 +770,11 @@ class DockManager {
     }
 
 }
+
+// Only a model's or a metamodel's tab makes its group the active one (P-2026-11-19-2236): the test `open` uses, on the model of the tab id.
+const isArtifactTabId = (tabId: string): boolean => (store.getState() as any).idlookup?.[modelOfTabId(tabId)]?.className === 'DModel';
+setArtifactTabPredicate(isArtifactTabId);
+// A tab's viewpoint change is a change of the groups record (G7).
+setGroupsChangeListener(() => DockManager.noteGroupsChanged());
 
 export default DockManager;

@@ -463,3 +463,115 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 21:37, unattended, on the gates and Alfonso's visual GO on 2b at 21:18; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, resolved by union (trunk's 2a merge entry first, then the branch's 2b entry and its ticket; a pure addition, 18 lines over the trunk, 13 over the branch). Probes as expected (three headings once). Trunk side 4 files, not 3: c1f08b3c5 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 21:24
+
+## 2026-11-19 — feat: metamodels in editor groups, second tab and Split Right (multi-tab lane mm)
+**Prompt**: `claude_2026-11-19_2125_prompt_multi-tab-metamodel-groups.md`, lane full: metamodels open in the active group (G3), second tab `<id>~tab<N>`, Split Right on metamodel tabs, tab viewpoint per metamodel tab, R-MT-31
+**Files touched**: c7e6d5661 (`DockManager.tsx`, `EditorSwitch.tsx`, `TabDataMaker.tsx`, `MetamodelTab.tsx`, `Navbar.tsx`, `dockManagerSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`); eed0b25e2 (`docs/decisions.md` R-MT-31); this commit: this inbox, Status of 2125
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 code files, above five; `TabDataMaker.tsx` and `MetamodelTab.tsx` outside the listed six, approved in chat 21:41)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 22:06 on 3087; probe T1-T7 9/9 at 1600 and 1280, 0 console errors)
+**Notes**: Gates: typecheck 0, build ok, check:docs 5/5, vitest 3 known import failures. Metamodel picker stays Abstract syntax until G10; the viewpoint-change probe step is not applicable. Tree View metamodel row does not open a tab: T2/T3 opened through open2 (rail's door). Cut-off active tab in a 396 px group (2b strips) goes to the width lane. Probe, crops in ~/.jjodel-lanes/P-2026-11-19-2125/.
+**Prompt document name**: 2026-11-19 21:25
+
+## 2026-11-19 — merge: multi-tab-groups-mm into alfonso-frontend-jjtl (P-2026-11-19-2214)
+**Prompt**: `claude_2026-11-19_2214_prompt_merge_multi-tab-groups-mm.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-groups-mm` at f9fe85e46 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base f84c48f21; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 83a45cf2e (merge), 11 files — `DockManager.tsx`, `EditorSwitch.tsx`, `MetamodelTab.tsx`, `TabDataMaker.tsx`, `Navbar.tsx`, `dockManagerSecondTab.test.ts`, `editorSwitchSecondTab.test.ts`, two prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2214
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16531 passed, 0 failed and 3 skipped (16534, expected 16522 + 9, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 11, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 22:30, unattended, on the gates and Alfonso's visual GO on the branch at 22:06 on 3087; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union (trunk's 2b merge entry first, then the branch's lane mm entry; a pure addition, 13 lines over either side). Probes as expected (R-MT-31 once, R-MT-32 none, two headings once). Trunk side 4 files, not 3: 7f4222a73 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 22:14
+
+## 2026-11-19 — fix: the project tab does not make its group active (multi-tab lane active-group)
+**Prompt**: `claude_2026-11-19_2236_prompt_multi-tab-active-group.md`, lane full: a model or metamodel opened from the project dashboard landed in group 1, not the active group; only artifact tabs now count for the active group, R-MT-32
+**Files touched**: 52cdcda06 (`dockGroups.ts`, `Dock.tsx`, `DockManager.tsx`, `dockGroups.test.ts`, `dockManagerSecondTab.test.ts`); f83fc698b (`docs/decisions.md` R-MT-32); this commit: this inbox, Status of 2236
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 16:00
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (6 files, above five, all on the prompt's approved list: the five above and `docs/decisions.md`; `MyRcDock.tsx` untouched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-19 23:15 on 3095; mouse probe 9/9 at 1600 and 1280, 0 console errors)
+**Notes**: Root cause: the app bar project label and the dashboard press noted the summary tab, so group 1 went active before open. Filter in noteActiveTab via DockManager's DModel test. Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. Probe without the filter fails the 3 reported steps. Known residue, not this lane: left bar and status bar follow the last artifact tab while the dashboard shows. Crops in ~/.jjodel-lanes/P-2026-11-19-2236/.
+**Prompt document name**: 2026-11-19 22:36
+
+## 2026-11-19 — merge: multi-tab-active-group into alfonso-frontend-jjtl (P-2026-11-19-2320)
+**Prompt**: `claude_2026-11-19_2320_prompt_merge_multi-tab-active-group.md`, lane full (merge; zero conflicts measured): bring `multi-tab-active-group` at fe8ba6e90 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base 804ddd61d; re-measure, probes, gates, hard stop for the chat's GO.
+**Files touched**: d29dcd79c (merge), 8 files — `dockGroups.ts`, `Dock.tsx`, `DockManager.tsx`, `dockGroups.test.ts`, `dockManagerSecondTab.test.ts`, the 2236 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2320
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 629 passed files, 16537 passed, 0 failed and 3 skipped (16540, expected 16531 + 6, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 8, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-19 23:34, unattended, on the gates and Alfonso's visual GO on the branch at 23:15 on 3095; Alfonso in the morning digest)
+**Notes**: Zero conflicts, no union; merge tree 57629800d equals the commit's tree. Probes as expected (R-MT-32 once, R-MT-33 none, the lane heading once). Trunk side 1 file: 80d501973 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-19 23:20
+
+## 2026-11-20 — feat: editor groups persist per user and project (multi-tab lane 3, G7)
+**Prompt**: `claude_2026-11-19_2328_prompt_multi-tab-group-persistence.md`, lane full: groups, tab order, active tabs, widths, active group and tab viewpoints restored at project open from `localStorage`, R-MT-33
+**Files touched**: 6ba59e56f and 5099d9d14 (`groupPersistence.ts` + test, `Dock.tsx`, `DockManager.tsx`, `EditorSwitch.tsx`); 93eebb0f5 (`docs/decisions.md` R-MT-33); this commit: this inbox, Status of 2328
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 16:06 on 3110; mouse probe 15/15 at 1600, 0 console errors)
+**Notes**: Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. The probe caught two defects, fixed before commit: a press moving the active group took no record; tabs not mounted after restore lost their viewpoint (seeded from the plan). Dock calls use `?.` as the test mock lacks them. Crops in ~/.jjodel-lanes/P-2026-11-19-2328/.
+**Prompt document name**: 2026-11-19 23:28
+
+## 2026-11-20 — ticket: G7 residues for the width lane
+**Ticket**: (1) at 1280 the viewpoint picker of a half-width group does not open (narrow toolbar under the floating rail), so the G7 probe's viewpoint step was not run there; (2) the `loadTab` prop now also serves the `LAYOUT_MODE_CHANGE` handler of `Dock.tsx`, whose `loadLayout` rebuilds model tabs instead of dropping them; not probed, and the handler still reads the first two dock panels as left and right.
+**Priority**: medium
+**Found in**: P-2026-11-19-2328
+**Detail**: docs/decisions.md R-MT-33
+
+## 2026-11-20 — merge: multi-tab-persistence into alfonso-frontend-jjtl (P-2026-11-20-1611)
+**Prompt**: `claude_2026-11-20_1611_prompt_merge_multi-tab-persistence.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-persistence` at 7a10ea867 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d29dcd79c; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 4d390832f (merge), 8 files — `groupPersistence.ts`, `groupPersistence.test.ts`, `Dock.tsx`, `DockManager.tsx`, `EditorSwitch.tsx`, the 2328 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 1611
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 630 passed files, 16549 passed, 0 failed and 3 skipped (16552, expected 16537 + 12, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 8, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 16:26, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3110; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union: trunk's 2320 merge entry first, then the branch's G7 entry and ticket, verbatim. Probes as expected (R-MT-33 once, R-MT-34 none, the three headings once). Trunk side 4 files: the 2320 flip, the 1610 and 1611 prompts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 16:11
+
+## 2026-11-20 — fix: the last children[0] readers go through the active group (multi-tab lane 6)
+**Prompt**: `claude_2026-11-19_2336_prompt_multi-tab-readers.md`, lane full: Console, navigationUtils, JjScript utils, openTemplateEditor and canvasSelection read the active tab of the dock's first panel; route them through `dockGroups.ts`, one-group behaviour unchanged, outside hits reported only
+**Files touched**: 8f6d70f46 (`Console.tsx`, `navigationUtils.ts`, `jjscript/executor/utils.ts`, `openTemplateEditor.ts`, `canvasSelection.ts`, `openTemplateEditor.test.ts`, new `utils/__tests__/navigationUtils.test.ts`); this commit: this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 files, above five, all on the prompt's approved list: the five and their tests)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (mouse probe 11/11 at 1600, 0 console errors, dev server 3072; Alfonso's look pending at the hard stop)
+**Notes**: activeTabId + modelOfTabId (Console, JjScript), modelGroups (navigationUtils counts every group), activeGroup (codegen). Gates: typecheck 0, vitest 3 known import failures only, build ok. Bench: 4 two-group tests die on HEAD. Probe control on HEAD: 9/11, S3 and S4 fail. Crops, probe and control in ~/.jjodel-lanes/P-2026-11-19-2336/.
+**Prompt document name**: 2026-11-19 23:36
+
+**Ticket** (lane 6 findings, not fixed): (1) the JjScript probe step does not discriminate: the EDITOR_TYPE_CHANGE cache names Office on HEAD too, so the dock reader of `jjscript/executor/utils.ts` is a fallback the UI rarely reaches. (2) `children[0]` hits left outside the five: `Dock.tsx` 197, 217 (known, R-MT-30), `MyRcDock.tsx` 276, `Navbar.tsx` 736, 1938, 1941. (3) A template tab in group 2 squeezes group 1 to about 135 px (crop s4); lane 5 width rule. (4) The generator pane says «No model conforms to SmartBuilding» with Apartment and Office open, on HEAD too.
+
+## 2026-11-20 — merge: multi-tab-readers into alfonso-frontend-jjtl (P-2026-11-20-1630)
+**Prompt**: `claude_2026-11-20_1630_prompt_merge_multi-tab-readers.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-readers` at b82fbe793 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d29dcd79c; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 04f913cba (merge), 9 files — `Console.tsx`, `navigationUtils.ts`, `navigationUtils.test.ts`, `jjscript/executor/utils.ts`, `openTemplateEditor.ts`, `openTemplateEditor.test.ts`, `canvasSelection.ts`, the 2336 prompt, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 1630
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 631 passed files, 16556 passed, 0 failed and 3 skipped (16559, expected 16549 + 7): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 9, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 16:52, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3072; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's four entries first, then the branch's lane 6 entry and ticket, verbatim. Probes as expected. Branch-tree hook run: 1 laneBoard port test timed out (10084 ms, load), green on trunk and merge. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 16:30

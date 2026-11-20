@@ -14,7 +14,7 @@ vi.mock('../../../joiner', () => ({
 vi.mock('../tabs/TabDataMaker', () => ({
     default: {
         model: (m: any, o?: any) => ({ id: o?.tabId ?? m.id, viewpointId: o?.viewpointId, kind: 'model' }),
-        metamodel: (m: any) => ({ id: m.id, kind: 'metamodel' }),
+        metamodel: (m: any, o?: any) => ({ id: o?.tabId ?? m.id, viewpointId: o?.viewpointId, kind: 'metamodel' }),
     },
 }));
 vi.mock('../tabs/DocumentationTab', () => ({ DocumentationTab: () => null }));
@@ -51,7 +51,7 @@ describe('DockManager, several tabs on one model', () => {
     beforeEach(() => {
         resetDockGroups();
         h.consumer = false;
-        h.state = { idlookup: { M: { id: M, className: 'DModel', isMetamodel: false }, MM: { id: 'MM', className: 'DModel', isMetamodel: true } } };
+        h.state = { idlookup: { M: { id: M, className: 'DModel', isMetamodel: false }, MM: { id: 'MM', className: 'DModel', isMetamodel: true }, N: { id: 'N', className: 'DModel', isMetamodel: false } } };
     });
 
     describe('closeTabsForEntity', () => {
@@ -115,9 +115,19 @@ describe('DockManager, several tabs on one model', () => {
             expect(dock.dockMove.mock.calls[0][0]).toMatchObject({ id: 'MM', kind: 'metamodel' });
         });
 
-        it('no second tab on a metamodel in this lane', () => {
-            const dock = install(horizontal(panel('p1', ['MM'])));
-            expect(DockManager.openBeside('MM', 'MM~tab2', 0.5, 'V')).toBe(false);
+        it('a metamodel\'s second tab with a group to the right: opens that tab there (R-MT-31)', () => {
+            const dock = install(horizontal(panel('p1', ['MM']), panel('p2', ['N'])));
+            expect(DockManager.openBeside('MM', 'MM~tab2', 0.5, null)).toBe(true);
+            const [tab, target, where] = dock.dockMove.mock.calls[0];
+            expect(tab).toMatchObject({ id: 'MM~tab2', viewpointId: null, kind: 'metamodel' });
+            expect([target.id, where]).toEqual(['p2', 'middle']);
+        });
+
+        it('consumer mode: no metamodel tab, first or second', () => {
+            h.consumer = true;
+            const dock = install(horizontal(panel('p1', ['MM']), panel('p2', ['N'])));
+            expect(DockManager.openBeside('MM', 'MM~tab2', 0.5, null)).toBe(false);
+            expect(DockManager.splitRight('MM', null)).toBe(false);
             expect(dock.dockMove).not.toHaveBeenCalled();
         });
 
@@ -177,12 +187,29 @@ describe('DockManager, several tabs on one model', () => {
             expect(splitRightInProgress()).toBe(false);
         });
 
-        it('splitRight on a metamodel, or with something maximized: nothing moves', () => {
-            const dock = install(horizontal(panel('p1', ['MM'])));
-            expect(DockManager.splitRight('MM', null)).toBe(false);
-            install({ ...horizontal(panel('p1', [M])), maxbox: { children: [panel('m', ['x'])] } });
+        it('splitRight with something maximized: nothing moves', () => {
+            const dock = install({ ...horizontal(panel('p1', [M])), maxbox: { children: [panel('m', ['x'])] } });
             expect(DockManager.splitRight(M, null)).toBe(false);
             expect(dock.dockMove).not.toHaveBeenCalled();
+        });
+
+        it('splitRight on a metamodel: a second metamodel tab right of its group, on its viewpoint (R-MT-31)', () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', 'MM'], 'MM'), panel('p2', ['N'])));
+            let allowed = false;
+            dock.dockMove.mockImplementation(() => { allowed = splitRightInProgress(); });
+            DockManager.splitRight('MM', null);
+            const [tab, target, where] = dock.dockMove.mock.calls[0];
+            expect(tab).toMatchObject({ id: 'MM~tab2', viewpointId: null, kind: 'metamodel' });
+            expect([target.id, where]).toEqual(['p1', 'right']);
+            expect(allowed).toBe(true);
+        });
+
+        it('splitRight on a metamodel\'s second tab: the next tab id, not a clash', () => {
+            const dock = install(horizontal(panel('p1', ['MM']), panel('p2', ['MM~tab2'])));
+            DockManager.splitRight('MM~tab2', null);
+            const [tab, target] = dock.dockMove.mock.calls[0];
+            expect(tab).toMatchObject({ id: 'MM~tab3', kind: 'metamodel' });
+            expect(target.id).toBe('p2');
         });
 
         it('open: a new tab lands in the active group, not the first', async () => {
@@ -207,6 +234,40 @@ describe('DockManager, several tabs on one model', () => {
             noteActiveTab(`${M}~tab2`);
             await DockManager.open('models', { id: M } as any);
             expect(dock.updateTab).toHaveBeenCalledWith(`${M}~tab2`, null, true);
+            expect(dock.dockMove).not.toHaveBeenCalled();
+        });
+
+        it('open: a metamodel not open lands in the active group (G3, R-MT-31)', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', M]), panel('p2', [`${M}~tab2`])));
+            noteActiveTab(`${M}~tab2`);
+            await DockManager.open('models', { id: 'MM' } as any);
+            expect([dock.dockMove.mock.calls[0][0].id, dock.dockMove.mock.calls[0][1].id]).toEqual(['MM', 'p2']);
+        });
+
+        it('open: a metamodel open only in another group gets a second tab in the active group, nothing moves out', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', 'MM']), panel('p2', ['N'])));
+            noteActiveTab('N');
+            await DockManager.open('models', { id: 'MM' } as any);
+            expect(dock.dockMove).toHaveBeenCalledTimes(1);
+            const [tab, target, where] = dock.dockMove.mock.calls[0];
+            expect(tab).toMatchObject({ id: 'MM~tab2', kind: 'metamodel' });
+            expect([target.id, where]).toEqual(['p2', 'middle']);
+            expect(dock.updateTab).not.toHaveBeenCalled();
+        });
+
+        it('open: the active group already has a tab of the metamodel, that tab is focused', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', 'MM']), panel('p2', ['N', 'MM~tab2'])));
+            noteActiveTab('N');
+            await DockManager.open('models', { id: 'MM' } as any);
+            expect(dock.updateTab).toHaveBeenCalledWith('MM~tab2', null, true);
+            expect(dock.dockMove).not.toHaveBeenCalled();
+        });
+
+        it('open: a metamodel open in the active group only is focused there, as today', async () => {
+            const dock = install(horizontal(panel('p1', ['project_summary', 'MM'], 'MM'), panel('p2', ['N'])));
+            noteActiveTab('MM');
+            await DockManager.open('models', { id: 'MM' } as any);
+            expect(dock.updateTab).toHaveBeenCalledWith('MM', null, true);
             expect(dock.dockMove).not.toHaveBeenCalled();
         });
 
