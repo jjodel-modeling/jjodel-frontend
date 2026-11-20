@@ -2048,7 +2048,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     return (
         <div className="textual-tab">
-            {/* The shared editor bar (R-MT-34, P-2026-11-20-1610): the title, the edit status and its actions left, the
+            {/* The shared editor bar (R-MT-38, P-2026-11-20-1610): the title, the edit status and its actions left, the
                 notation and the file actions in the middle, EBNF, Syntax and `Diagram | Text` right. No close of its
                 own: the tab's close on the strip is the one. */}
             <EditorBar className="textual-tab__bar" ariaLabel="Text editor"

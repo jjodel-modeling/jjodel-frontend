@@ -1,4 +1,4 @@
-// EditorBar (R-MT-34, R-MT-36, P-2026-11-20-1610): the bar under the tab strip of the canvas and of the Text tab.
+// EditorBar (R-MT-38, R-MT-36, P-2026-11-20-1610): the bar under the tab strip of the canvas and of the Text tab.
 // One geometry for both: the height, padding, surface and separator the canvas bar had (EditorV2.scss
 // `.editor-v2-toolbar`), written once here. Design-system tokens only, none defined here (rule 28).
 
@@ -28,7 +28,7 @@
     }
 
     // The left and middle zones, and only they, scroll when the bar is short of room (R-MT-26): the right zone and the
-    // trailing cell sit outside it, so Split Right and the representation never leave the view (R-MT-34, decision
+    // trailing cell sit outside it, so Split Right and the representation never leave the view (R-MT-38, decision
     // 2026-11-20 on the Split Right residual). Inside it the canvas's ladder works as before: its items shrink to their
     // floors first, then what still does not fit scrolls.
     &__scroll {
@@ -112,7 +112,7 @@
     }
 }
 
-// ── One control grammar for both bars (R-MT-34 amended, Alfonso's visual check, P-2026-11-20-1610) ──
+// ── One control grammar for both bars (R-MT-38 amended, Alfonso's visual check, P-2026-11-20-1610) ──
 //
 // Written against `.editor-bar .editor-bar__controls` (0,3,0 with the control's class), so it outranks the canvas's
 // split container query (`.editor-v2-toolbar .toolbar-btn`, 0,2,0, width 22px), the shell rules under

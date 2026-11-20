@@ -739,7 +739,7 @@ html[data-group-strips="on"] .not-strip .dock-panel:is(.dock-style-models, .dock
             .dock-tab-close-btn { opacity: 1 !important; }
         }
 
-        // The active tab of a group: one style for every group and every kind (R-MT-33, P-2026-11-20-1610), slate text
+        // The active tab of a group: one style for every group and every kind (R-MT-37, P-2026-11-20-1610), slate text
         // and a cyan underline; the kind shows through the letter badge only. Was cyan, violet on a metamodel, teal on a
         // viewpoint, as `.appbar-tab--active`.
         &.dock-tab-active > .dock-tab-btn {

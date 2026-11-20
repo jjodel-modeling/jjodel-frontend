@@ -1,6 +1,6 @@
 /**
  * EditorBar — the one bar under the tab strip of an editor, shared by the diagram canvas (Toolbar.tsx) and the Text
- * tab (codegen/textual/ui/TextualTab.tsx) (R-MT-34, P-2026-11-20-1610). Same height, padding and separator for both
+ * tab (codegen/textual/ui/TextualTab.tsx) (R-MT-38, P-2026-11-20-1610). Same height, padding and separator for both
  * (R-MT-36); each editor passes its own zone contents.
  *
  * Three zones, left to right: editing actions, view controls, and, at the right end, the representation

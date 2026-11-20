@@ -859,7 +859,7 @@ function Toolbar({
     }, [onNotationChange]);
 
     return (
-        // The shared editor bar (R-MT-34, P-2026-11-20-1610): editing actions left, zoom in the middle, the representation,
+        // The shared editor bar (R-MT-38, P-2026-11-20-1610): editing actions left, zoom in the middle, the representation,
         // Split Right and the rail collapse right, the rail's identity cell after them. The root and the fieldset keep the
         // classes the sheets are written against; the inactive pane of a split disables every control at once.
         <EditorBar className="editor-v2-toolbar" controlsClassName="editor-v2-toolbar__commands" disabled={!!commandsDisabled}
@@ -1294,7 +1294,7 @@ function Toolbar({
             right={<>
             {/* R-MT-35: the other tab of the same artifact, the Text tab of a model; Text disabled on a metamodel. */}
             <RepresentationSwitch active="diagram" text={textEntry} onText={openTextView} />
-            {/* R-MT-34: zoom moved to the middle zone, its own box; Split Right and the rail collapse share this one,
+            {/* R-MT-38: zoom moved to the middle zone, its own box; Split Right and the rail collapse share this one,
                 so the hairline that kept zoom apart from them went with it. */}
             <div className="toolbar-commands">
                 {/* Split Right (R-MT-30): the only way to make an editor group, as in VS Code. */}
@@ -1332,7 +1332,7 @@ function Toolbar({
             </div>
             </>}
             /* The identity cell at the end of the bar (revision 2b: badge, name, inert chevron) is gone at every width
-               and rail state (Alfonso's visual check, P-2026-11-20-1610, R-MT-34): the tab already names the artifact
+               and rail state (Alfonso's visual check, P-2026-11-20-1610, R-MT-38): the tab already names the artifact
                and carries its letter badge, so the cell repeated it. Its styles stay in EditorV2.scss (Rule 9).
                What stays is the room it held: the rail overlay starts inside this bar's band (its top does not count
                the tab strip), so without an empty reserve as wide as the rail, Split Right and the rail collapse
