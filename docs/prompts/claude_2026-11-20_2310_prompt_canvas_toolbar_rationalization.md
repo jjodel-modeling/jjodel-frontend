@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-11-20-2310
 Chat: C-2026-11-20-2310
-Status: da eseguire
+Status: eseguito 2026-11-21 · lane toolbar · d8fff434d · verifica visiva passata 2026-11-21 (chat, RC-23)
 Lane: full (discovery then Phase 2 in cascade; shell chrome, no critical zone)
 Depends: none
 Request: none (typed in the project chat, not an issue)

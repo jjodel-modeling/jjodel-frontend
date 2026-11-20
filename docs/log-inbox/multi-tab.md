@@ -724,3 +724,21 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-20 23:27, unattended: 3001 answers 200 and serves the trunk's EditorBar.tsx, the code Alfonso approved visually on 3120 at 22:51; Alfonso in the morning digest)
 **Notes**: Two conflicts, one hunk each, union from the stage files: decisions R-MT-33/34 then R-MT-37/38/35/36; this inbox, trunk's ten entries then the branch's six, one blank line between, verbatim. Probes as expected (six rows once, R-MT-39 none, sixteen headings once). New tests: 8 in representationSwitch.test.ts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-20 23:09
+
+## 2026-11-21 — feat: canvas bar keeps editing, View › Syntax and Colors, syntax chip, overflow (P-2026-11-20-2310)
+**Prompt**: `claude_2026-11-20_2310_prompt_canvas_toolbar_rationalization.md`, lane full, discovery then Phase 2 in cascade: syntax and colors leave the canvas bar for View › Syntax and View › Colors, one syntax chip per group, buttons by priority with an overflow menu, Basic and Advanced alike; no data moves.
+**Files touched**: defd1fc19 (discovery report); d8fff434d, 10 files — `canvasViewChoices.ts` (new), `ToolbarOverflow.tsx` (new), `CanvasViewControls.scss` (new), `__tests__/canvasViewChoices.test.ts` (new, 23 tests), `Toolbar.tsx`, `EditorV2.tsx`, `ColorSchemeSelector.tsx`, `tabs/EditorSwitch.tsx`, `pages/components/Navbar.tsx`, `__tests__/dataManagerPicker.test.ts`; docs commit — this entry, the ticket below, R-MT-39 in `docs/decisions.md`, the Status of 2310
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (accepted at the GO): in a group below the 280px floor (200px, a third Split Right at 1600) the right zone fills the bar and the editing buttons, before reachable in a 109px scroll box, are out of reach; left to the splitter lane's floor. Nothing else: probe scenes a-d as specified.
+**Out-of-scope changes**: yes (above five files, listed in discovery §8; `dataManagerPicker.test.ts` outside that list: six source-text assertions on the eye remapped onto the chip)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe on 3140, scenes a-d measured from the DOM; visual GO from the project chat 2026-11-21, RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest 1 failed test beyond the 3 known import reds, contextCeiling.test.ts, an env leak of this continuation session (ticket below; green with the variable unset). Chip 85px across Structured to ER, no shift. Commit subject shortened, 89 > 72. The eye was the syntax picker, so nothing moved to View as a checkable entry. Phase 2 decisions recorded in R-MT-39, not in a discovery addendum. Rule 16: active log not read in this continuation.
+**Prompt document name**: 2026-11-20 23:10
+
+## 2026-11-21 — ticket: contextCeiling.test.ts inherits JJODEL_LANE_LOG_FROM and goes red inside a lane continuation
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, «transcript_path wins over JJODEL_LANE_LOG», expects `deny` and gets null when `npm run test` runs in a session that exports `JJODEL_LANE_LOG_FROM`, as a lane-run continuation does. `run()` resets `JJODEL_LANE_LOG` but not `JJODEL_LANE_LOG_FROM`; `hookRunner.runScript` spawns with `{ ...process.env, ...env }`; `context-ceiling.mjs:265` then scopes the lane log to the session and offset. Measured 2026-11-21: red 3/3 with it, green with `env -u JJODEL_LANE_LOG_FROM`. An empty string does not reset it (`!== undefined` at :265): the helper has to drop the key.
+**Priority**: medium
+**Found in**: P-2026-11-20-2310
