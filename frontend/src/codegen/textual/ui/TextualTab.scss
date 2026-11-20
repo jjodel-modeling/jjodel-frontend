@@ -15,15 +15,14 @@
     color: var(--color-text-primary);
     font-family: inherit;
 
+    // The geometry (height, padding, surface, separator) is the shared editor bar's (EditorBar.scss, R-MT-34, R-MT-36);
+    // only the text's own spacing and size stay here.
     &__bar {
-        display: flex;
-        flex: 0 0 32px;
-        align-items: center;
-        gap: 8px;
-        padding: 0 8px 0 12px;
-        border-bottom: 1px solid var(--color-border-secondary);
-        background: var(--color-bg-tertiary);
         font-size: 11px;
+
+        &.editor-bar {
+            gap: 8px;
+        }
 
         .bi,
         .bi:hover {

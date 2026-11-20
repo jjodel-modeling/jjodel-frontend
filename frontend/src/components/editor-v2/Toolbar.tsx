@@ -29,6 +29,8 @@ import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { saveViewpointPreference } from '../abstract/tabs/EditorSwitch';
 import { useEditorContextSafe } from './contexts/EditorContext';
+import EditorBar, { RepresentationSwitch } from './EditorBar';
+import { textAvailability } from './representationSwitch';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
@@ -410,6 +412,11 @@ function Toolbar({
         // isMetamodel stays out of the deps: it is fixed for a given modelId.
         if (modelId && !isMetamodel) saveViewpointPreference(modelId, vpId || null);
     }, [modelId]);
+
+    // The Text entry of the bar's `Diagram | Text` (R-MT-35, P-2026-11-20-1610): the picker's textual entry through
+    // another door, so the Text tab opens, or comes forward, exactly as it does from the picker.
+    const textEntry = textAvailability({ isMetamodel: !!isMetamodel, modelId, textualEnabled: codegenEnabled });
+    const openTextView = useCallback(() => handleViewpointChange(TEXTUAL_OPTION_VALUE), [handleViewpointChange]);
 
     // ── The picker itself: a custom listbox, no longer a <select> (NAV2) ──
     //
@@ -852,9 +859,12 @@ function Toolbar({
     }, [onNotationChange]);
 
     return (
-        <div className="editor-v2-toolbar">
-            {/* The inactive pane of a split disables every control at once; display: contents leaves the toolbar's layout as it is. */}
-            <fieldset className="editor-v2-toolbar__commands" disabled={!!commandsDisabled}>
+        // The shared editor bar (R-MT-34, P-2026-11-20-1610): editing actions left, zoom in the middle, the representation,
+        // Split Right and the rail collapse right, the rail's identity cell after them. The root and the fieldset keep the
+        // classes the sheets are written against; the inactive pane of a split disables every control at once.
+        <EditorBar className="editor-v2-toolbar" controlsClassName="editor-v2-toolbar__commands" disabled={!!commandsDisabled}
+                   ariaLabel="Diagram editor"
+            left={<>
             {/* ── Actions / Alignment group (swaps in-place) ── */}
             {selectedCount >= 2 && onAlignLeft ? (
                 <div className="toolbar-group toolbar-group--align">
@@ -1218,10 +1228,8 @@ function Toolbar({
                     </div>
                 )}
             </div>
-
-            {/* ── Spacer ── */}
-            <div className="toolbar-spacer" />
-
+            </>}
+            middle={<>
             {/* Retired from this bar on 2026-08-26, and not relocated:
                 — the conformance pill (`ValidationPill`), whose counts read as a
                   notifications badge next to the identity of the open model. The
@@ -1281,9 +1289,14 @@ function Toolbar({
                     calls `activeController.setZoom(1)` — an absolute 100%, no fit, no
                     recentering. `handleFitView` (`fitView({padding, maxZoom: 1,
                     duration: 200})`) is a separate handler, not reachable from this group. */}
-
-                <div className="toolbar-commands__hairline" aria-hidden="true" />
-
+            </div>
+            </>}
+            right={<>
+            {/* R-MT-35: the other tab of the same artifact, the Text tab of a model; Text disabled on a metamodel. */}
+            <RepresentationSwitch active="diagram" text={textEntry} onText={openTextView} />
+            {/* R-MT-34: zoom moved to the middle zone, its own box; Split Right and the rail collapse share this one,
+                so the hairline that kept zoom apart from them went with it. */}
+            <div className="toolbar-commands">
                 {/* Split Right (R-MT-30): the only way to make an editor group, as in VS Code. */}
                 {onSplitRight && (
                     <button
@@ -1317,7 +1330,8 @@ function Toolbar({
                     <i className={`bi ${isRailVisible ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
                 </button>
             </div>
-
+            </>}
+            trailing={<>
             {/* ── Identity of the open editor, in the rail's own column (2b) ──
                 Subject is the TAB's model, not the owner of the selection: a tab's
                 subject must not move when the selection does. The retired rail header
@@ -1352,8 +1366,8 @@ function Toolbar({
                     </div>
                 </div>
             )}
-            </fieldset>
-        </div>
+            </>}
+        />
     );
 }
 
