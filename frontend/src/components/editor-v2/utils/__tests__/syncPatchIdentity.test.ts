@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Edge } from '@xyflow/react';
-import { samePlainData, mergeSyncedEdge } from '../syncPatchIdentity';
+import { samePlainData, mergeEdgeAnchorChange, mergeSyncedEdge } from '../syncPatchIdentity';
 
 // ---------------------------------------------------------------------------
 // samePlainData — structural equality over plain data, conservative elsewhere
@@ -100,6 +100,36 @@ describe('samePlainData', () => {
     });
 });
 
+describe('mergeEdgeAnchorChange', () => {
+    it('A1 — moving a pinned source anchor clears existing waypoints', () => {
+        const out = mergeEdgeAnchorChange(
+            {
+                sourceAnchor: { mode: 'pinned', side: 'left' },
+                targetAnchor: { mode: 'pinned', side: 'right' },
+                waypoints: [{ segmentIndex: 1, offset: 24 }],
+            },
+            {
+                sourceAnchor: { mode: 'pinned', side: 'top' },
+            },
+        );
+        expect(out.waypoints).toEqual([]);
+    });
+
+    it('A2 — data that does not change an anchor keeps existing waypoints', () => {
+        const waypoints = [{ segmentIndex: 1, offset: 24 }];
+        const out = mergeEdgeAnchorChange(
+            {
+                sourceAnchor: { mode: 'pinned', side: 'left' },
+                waypoints,
+            },
+            {
+                sourceAnchor: { mode: 'pinned', side: 'left' },
+            },
+        );
+        expect(out.waypoints).toBe(waypoints);
+    });
+});
+
 // ---------------------------------------------------------------------------
 // mergeSyncedEdge — the merge of useJjomSync's edge patch, keeping identity
 // ---------------------------------------------------------------------------
@@ -173,7 +203,23 @@ describe('mergeSyncedEdge', () => {
         expect(out).toBe(current);
     });
 
-    it('M8 — the merge does not carry the canvas selection flag (EditorV2 re-applies it)', () => {
+    it('M8 — persisted pinned sides replace stale session handles', () => {
+        const current = refEdge({ sourceHandle: 'right-0', targetHandle: 'left-0' });
+        const incoming = refEdge(
+            { sourceHandle: 'top-0', targetHandle: 'bottom-0' },
+            {
+                sourceAnchor: { mode: 'pinned', side: 'top' },
+                targetAnchor: { mode: 'pinned', side: 'bottom' },
+                waypoints: [{ segmentIndex: 1, offset: 24 }],
+            },
+        );
+        const out = mergeSyncedEdge(current, incoming);
+        expect(out.sourceHandle).toBe('top-0');
+        expect(out.targetHandle).toBe('bottom-0');
+        expect((out.data as any).waypoints).toEqual([{ segmentIndex: 1, offset: 24 }]);
+    });
+
+    it('M9 — the merge does not carry the canvas selection flag (EditorV2 re-applies it)', () => {
         const current = refEdge({ selected: true });
         const out = mergeSyncedEdge(current, refEdge());
         expect(out).not.toBe(current);

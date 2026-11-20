@@ -2,6 +2,71 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-20 — fix(#223): reset edge waypoints when an anchor changes
+**Prompt**: When an arrow anchor point is moved, reset the arrow geometry instead of retaining the previous waypoint shape
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/syncPatchIdentity.ts`, `frontend/src/components/editor-v2/utils/__tests__/syncPatchIdentity.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 11:05 (#223: persist initial geometry for newly created edges)
+**Causa**: c
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile — browser smoke test not available in this run
+**Notes**: Anchor gestures now merge against the current edge data and clear waypoints when the source or target pinned side changes. Focused tests (27) and typecheck passed.
+**Prompt document name**: —
+
+## 2026-11-20 — fix(#223): persist initial geometry for newly created edges
+**Prompt**: Preserve arrow geometry regardless of manual modification, including untouched arrows whose initial geometry previously changed after reopen
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 10:41 (#223: prevent live edge-anchor bounce after drag)
+**Causa**: c
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile — browser smoke test not available in this run
+**Notes**: M2 reference/inheritance and M1 reference/composition creation now persist their initial logical source and target sides, establishing a stable reopen baseline even without a manual gesture. Focused tests (40) and typecheck passed.
+**Prompt document name**: —
+
+## 2026-11-20 — fix(#223): retain persisted anchors during selection refresh
+**Prompt**: Correct the remaining issue where clicking the canvas after moving an arrow restores its old anchor
+**Files touched**: `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 10:41 (#223: prevent live edge-anchor bounce after drag)
+**Causa**: c
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile — browser smoke test not available in this run
+**Notes**: Incremental edge refresh now keeps cached handle indexes only when the incoming edge has no persisted pin; persisted logical sides remain authoritative. Focused tests (40) and typecheck passed.
+**Prompt document name**: —
+
+## 2026-11-20 — fix(#223): prevent live edge-anchor bounce after drag
+**Prompt**: Correct the visible flicker where a newly selected edge anchor briefly returns to its old point, although reopen restores the new point
+**Files touched**: `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/sync/__tests__/canvasToJjomLayoutKey.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 10:26 (#223: persist editor-v2 edge positions and shapes)
+**Causa**: c
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile — browser smoke test not available in this run
+**Notes**: Marking the edge as canvas-updated before the SetFieldAction prevents useJjomSync from applying a stale edge snapshot during the existing anti-bounce window. Focused tests (33) and typecheck passed.
+**Prompt document name**: —
+
+## 2026-11-20 — fix(#223): persist editor-v2 edge positions and shapes
+**Prompt**: Implement GitHub issue #223 so manually adjusted model and metamodel edge geometry survives save and reopen
+**Files touched**: `frontend/src/model/dataStructure/GraphDataElements.tsx`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/utils/syncPatchIdentity.ts`, `frontend/src/components/editor-v2/utils/__tests__/syncPatchIdentity.test.ts`, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile — browser smoke test not available in this run
+**Notes**: Persists logical endpoint sides and waypoint offsets on DVoidEdge, restores them during JjOM-to-React Flow hydration, and preserves them across incremental sync. Focused tests (32), typecheck, build, and diff checks passed; build retained only the existing chunk-size warning.
+**Prompt document name**: —
+
 ## 2026-11-12 — feat(#213): a cross-model link records the target model as a dependency of the caller model
 **Prompt**: user in chat (same lane as #213): «Add a little improvement: when a external reference is added, add the target model (if not already set) as dependency of the caller model»
 **Files touched**: `src/jjscript/executor/commands/instance.ts` (`ensureModelDependency`, the cross branch, both write transactions), `src/jjscript/executor/__tests__/crossModelLink.test.ts` (+7), `src/jjscript/executor/commands/help.ts`, the discovery report addendum (§7), this entry

@@ -29,7 +29,9 @@ vi.mock('../m1EdgeSweep', () => ({ sweepAllM1ReferenceGraphs: () => undefined })
 
 import {
     syncPositionToJjom, syncPositionBatchToJjom, syncSizeToJjom, syncSizeResetToJjom, syncSizeBatchToJjom,
+    syncEdgeLayoutToJjom,
 } from '../canvasToJjom';
+import { clearAllCanvasUpdated, isCanvasUpdated } from '../syncState';
 
 const A = { x: 10, y: 20, w: 120, h: 60, isResized: true };
 const B = { x: 300, y: 400, w: 220, h: 160, isResized: true };
@@ -44,10 +46,34 @@ const writes = () => actions.map(a => {
 
 beforeEach(() => {
     actions.length = 0;
+    clearAllCanvasUpdated();
     redux.state = {
         viewpoint: 'A',
         idlookup: { A: { id: 'A', isExclusiveView: true }, B: { id: 'B', isExclusiveView: true }, v1: vertex('v1'), v2: vertex('v2') },
     };
+});
+
+describe('canvasToJjom: edge layout writes suppress stale sync bounces', () => {
+    it('marks the edge updated before writing its persisted geometry', () => {
+        redux.state.idlookup.edge1 = { id: 'edge1', className: 'DVoidEdge' };
+        syncEdgeLayoutToJjom('edge1', {
+            sourceSide: 'top',
+            targetSide: 'bottom',
+            waypoints: [{ segmentIndex: 1, offset: 24 }],
+        });
+
+        expect(isCanvasUpdated('edge1')).toBe(true);
+        expect(actions).toEqual([{
+            id: 'edge1',
+            field: 'edgeLayout',
+            value: {
+                sourceSide: 'top',
+                targetSide: 'bottom',
+                waypoints: [{ segmentIndex: 1, offset: 24 }],
+            },
+            op: undefined,
+        }]);
+    });
 });
 
 describe('canvasToJjom: the five layout writes take the key as a parameter', () => {

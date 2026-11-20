@@ -60,6 +60,30 @@ export function samePlainData(a: unknown, b: unknown): boolean {
 }
 
 /**
+ * A manual endpoint drag replaces the previous Manhattan route. Merge the
+ * incoming edge data and clear waypoints when the source or target anchor
+ * really changes sides.
+ */
+export function mergeEdgeAnchorChange(
+    existingData: Record<string, unknown> | undefined,
+    incomingData: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+    const existing = existingData ?? {};
+    const incoming = incomingData ?? {};
+    const merged = { ...existing, ...incoming };
+    const existingSource = existing.sourceAnchor as { mode?: string; side?: string } | undefined;
+    const incomingSource = incoming.sourceAnchor as { mode?: string; side?: string } | undefined;
+    const existingTarget = existing.targetAnchor as { mode?: string; side?: string } | undefined;
+    const incomingTarget = incoming.targetAnchor as { mode?: string; side?: string } | undefined;
+    const sourceChanged = incomingSource?.mode === 'pinned'
+        && (existingSource?.mode !== 'pinned' || existingSource.side !== incomingSource.side);
+    const targetChanged = incomingTarget?.mode === 'pinned'
+        && (existingTarget?.mode !== 'pinned' || existingTarget.side !== incomingTarget.side);
+    if (sourceChanged || targetChanged) merged.waypoints = [];
+    return merged;
+}
+
+/**
  * The edge an incremental-sync patch leaves in React Flow's state: the
  * transformer's `incoming` edge, with what only the canvas knows carried over from
  * `current` (handles, local routing, the DReference id, a non-association kind).
@@ -72,10 +96,12 @@ export function mergeSyncedEdge(current: Edge, incoming: Edge): Edge {
     const e = current;
     const newEdge = incoming;
     const merged = { ...newEdge };
-    if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
-    if (e.targetHandle) merged.targetHandle = e.targetHandle;
     const existingData = (e.data as any) ?? {};
     const mergedData = (merged.data as any) ?? {};
+    const incomingSourcePinned = mergedData.sourceAnchor?.mode === 'pinned';
+    const incomingTargetPinned = mergedData.targetAnchor?.mode === 'pinned';
+    if (e.sourceHandle && !incomingSourcePinned) merged.sourceHandle = e.sourceHandle;
+    if (e.targetHandle && !incomingTargetPinned) merged.targetHandle = e.targetHandle;
     // Preserve local routing customizations that are not
     // persisted in JjOM and would otherwise be lost after
     // incremental sync patches.

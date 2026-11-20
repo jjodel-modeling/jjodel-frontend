@@ -1862,6 +1862,13 @@ export class DVoidEdge extends DGraphElement {
     // personal attributes
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    // Persisted editor-v2 edge geometry. Handle ids are session-relative, so only
+    // endpoint sides and waypoint offsets are stored.
+    edgeLayout?: {
+        sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+        targetSide?: 'top' | 'right' | 'bottom' | 'left';
+        waypoints?: { segmentIndex: number; offset: number }[];
+    };
     __isDVoidEdge!: true;
 
     midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
