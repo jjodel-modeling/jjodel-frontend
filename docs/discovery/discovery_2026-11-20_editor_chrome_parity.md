@@ -185,3 +185,26 @@ Split Right's distance from the panel's right edge, probe 17/17 at each width:
 | model, right group of the split | 35 | 35 |
 
 What scrolls now is the editing and view controls: at 1600 the left group's scroller holds 320px in 244, at 1280 320 in 104. Bar top 35 and height 40, padding 0 12px 0 8px in the split and 0 12px 0 20px alone, unchanged. Active-tab parity unchanged. The EBNF | Syntax cut at 1280 is gone as a side effect (the switch went from 145 to 58px); it was left alone otherwise, as decided.
+
+### 8.4 Visual-check round (Alfonso 2026-11-20 21:59-22:07)
+
+Three asks, built in `e36a00f7a`: the canvas's identity cell removed, the Text tab's filter and breadcrumb rows aligned, one control style in both bars. Measured with `probe-uni.mjs` (split: Families canvas left, sample-Families text right) and `probe-ecp.mjs` (17/17 at 1600 and 1280), no console errors.
+
+| measure (split, 1600 and 1280 alike) | before | after |
+|---|---|---|
+| canvas icon buttons | 22x28, 1px slate-200 border, white or slate-50 surface | 28x28, no border, transparent |
+| Text icon buttons | 22x22 flat | 28x28 flat |
+| zoom, Split Right + rail collapse | bordered boxes 86x32 and 50x32, radius 8 | flat, no box |
+| dividers | none (canvas separators hidden by the split query) | one 1px x 20px `--color-panel-border` divider before the middle zone and before the right zone, both bars |
+| dropdowns and segmented | canvas 26px slate-200; Text select 22px and EBNF/Syntax 24px slate-300 | all 26px, slate-200 |
+| secondary text | name slate-900, language and status slate-600, 11px | all 11px slate-700 (`--color-text-secondary`), name 600 |
+| bar bottom y, first-control x | 125, 8 | 125, 8 |
+| filter row / crumb row | 125-157 / 125-149 | 125-157 / 125-157, crumb text centred (131-151) |
+| first node / first text line | 157 / 149 | 157 / 157 |
+| canvas identity cell | badge «M» (name hidden in the left group) | none |
+
+Found on the way: the cell was also the bar's room over the rail. The rail overlay starts at y 91 (`properties-with-tree-view.scss`, appbar + 1 + toolbar height, the tab strip not counted), inside the 85-125 bar band, so without the cell Split Right and the rail collapse sat under `.tree-scope-bar` and took no click (hit test at 1600). `trailing` now carries an empty `editor-bar__rail-reserve` as wide as the rail, hidden in a pane with no rail under it. Hit test after: switch, Split Right and rail collapse of the right group all reachable at 1600 and 1280.
+
+Also fixed: «Families» and «Up to date» read as one word in a split (2px gap): the status takes the `·` the language takes. At 1280 the wider buttons squeezed the model's name to nothing; it now keeps a 48px floor and the language shrinks first.
+
+Remaining differences: the active toggle states stay as each sheet has them (canvas snap-to-grid on the accent-muted surface, Text outline toggle on `--color-bg-active`); icon glyph colours in advanced mode follow the canvas's own `html[data-mode="advanced"]` rule, not unified; the canvas's in-zone separators stay hidden in the split, as the split query decided (R-MT-24), so a split shows only the zone dividers. The rail's `top` not counting the tab strip is a separate finding, not touched.
