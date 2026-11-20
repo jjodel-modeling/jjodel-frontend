@@ -151,40 +151,17 @@
     overflow: hidden;
 }
 
-/* Vertical drag handle on the left edge; 6px hit area, 2px line on hover/drag. */
+/* Vertical drag handle on the left edge: the 8px strip of the one vertical splitter, inside the window because outside
+   it is the canvas; the window's border-left is the seam. Only the geometry is here: the drawing is emitted by
+   components/abstract/style.scss through the contract's mixin (P-2026-11-19-2200). */
 .jodie-dock-handle {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
-    width: 6px;
+    width: 8px;
     z-index: 10;
-    cursor: col-resize;
     touch-action: none;
-}
-
-.jodie-dock-handle::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 2px;
-    background: transparent;
-    transition: background 0.15s ease;
-}
-
-.jodie-dock-handle:hover::after,
-.jodie-window.jodie-resizing .jodie-dock-handle::after {
-    background: rgba(71, 85, 105, 0.35);
-}
-
-.jodie-dock-handle:focus-visible {
-    outline: none;
-}
-
-.jodie-dock-handle:focus-visible::after {
-    background: #0ea5e9;
 }
 
 /* ========================================

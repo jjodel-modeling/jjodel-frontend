@@ -1,4 +1,10 @@
 // Editor tab of a project script file (S6a). Tokens only, from styles/tokens/.
+@use '../../../styles/components/vsplit';
+
+body:has(.script-tab__handle:active) {
+    cursor: col-resize;
+}
+
 .script-tab {
     display: flex;
     flex-direction: column;
@@ -191,16 +197,16 @@
         flex: 1;
     }
 
+    // The one vertical splitter (P-2026-11-19-2200): a 1px seam with an 8px hit strip.
     &__handle {
         flex: none;
-        width: 5px;
-        border-left: 1px solid var(--color-form-border);
-        cursor: col-resize;
+        width: 1px;
+        z-index: 2;
         touch-action: none;
+        @include vsplit.sash(center);
+        @include vsplit.sash-strip;
 
-        &:hover {
-            background: var(--color-bg-hover);
-        }
+        &:active { @include vsplit.sash-drag; }
     }
 
     &__right {

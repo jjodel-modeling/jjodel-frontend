@@ -4,6 +4,8 @@
  * Following Jjodel design system (slate/cyan)
  */
 
+@use '../../styles/components/vsplit';
+
 // ============================================
 // Variables
 // ============================================
@@ -306,14 +308,14 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
-// Resize handle for side panel
+// Resize handle for side panel: the one vertical splitter (P-2026-11-19-2200). The 8px strip lies inside the panel,
+// against its border-right (the seam), because the editor beyond the seam covered the outer half of the old 12px one.
 .jjtl-side-panel-resize-handle {
     position: absolute;
     top: 0;
-    right: -6px;
+    right: 0;
     bottom: 0;
-    width: 12px;
-    cursor: col-resize;
+    width: vsplit.$strip;
     background: transparent;
     z-index: 10;
     display: flex;
@@ -321,12 +323,10 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     justify-content: center;
     user-select: none;
     flex-shrink: 0;
+    @include vsplit.sash(end, $rest: false);
 
-    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
-
-    &:focus {
-        outline: none;
-    }
+    &:active,
+    .resizing > & { @include vsplit.sash-drag; }
 }
 
 .jjtl-dev-env-side-header {
@@ -387,14 +387,14 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 // Note: The right panel now only contains SuggestedMappingsPanel
 // (no tabs - simplified layout)
 
-// Resize handle for right panel (on left edge)
+// Resize handle for right panel (on left edge): the one vertical splitter (P-2026-11-19-2200), its 8px strip inside the
+// panel against its border-left (the seam), as the side panel's.
 .jjtl-right-panel-resize-handle {
     position: absolute;
     top: 0;
-    left: -6px;
+    left: 0;
     bottom: 0;
-    width: 12px;
-    cursor: col-resize;
+    width: vsplit.$strip;
     background: transparent;
     z-index: 10;
     display: flex;
@@ -402,12 +402,10 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     justify-content: center;
     user-select: none;
     flex-shrink: 0;
+    @include vsplit.sash(start, $rest: false);
 
-    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
-
-    &:focus {
-        outline: none;
-    }
+    &:active,
+    .resizing > & { @include vsplit.sash-drag; }
 }
 
 // ============================================

@@ -625,6 +625,19 @@ body:has(.dock-hbox > .dock-divider:active) {
   cursor: col-resize;
 }
 
+/* Jjodie's docked window: its left edge is a vertical splitter too. JodieWindow.css is plain CSS and cannot include the
+   mixin, so the drawing is emitted here and that file keeps the geometry (an 8px strip inside the window, whose own
+   border-left is the seam). P-2026-11-19-2200. */
+.jodie-dock-handle {
+  @include vsplit.sash(start, $rest: false);
+
+  .jodie-window.jodie-resizing & { @include vsplit.sash-drag; }
+}
+
+body:has(.jodie-window.jodie-resizing) {
+  cursor: col-resize;
+}
+
 .dock-vbox {
   flex-direction: column;
 }

@@ -6,6 +6,12 @@
 //
 // Design-system tokens only, none defined here (rule 28). Cyan marks focus and the unsaved dot, as the canvas accent.
 
+@use '../../styles/components/vsplit';
+
+body:has(.codegen-tpl__splitter:active) {
+    cursor: col-resize;
+}
+
 // The dock panel that holds a generator tab beside the canvas (P-2026-10-24-1515). PinnableDock hides every panel
 // without a pinnable tab header (DockManagerStyles.scss `.not-strip`), and the split layout caps a last panel at
 // 710px (abstract/style.scss, the retired Properties column): both are lifted for this panel only. The class repeated
@@ -178,17 +184,17 @@ body[data-layout-mode="canvas-only"] {
     }
 
     // -- splitter (P-2026-10-24-1515) --------------------------------------------
+    // The one vertical splitter (P-2026-11-19-2200): a 1px seam with an 8px hit strip. 1px and not 0, so that
+    // `splitArea()` (TemplateEditorTab.tsx) still subtracts the bar it measures. The preview's border-left is the
+    // seam at rest.
     &__splitter {
-        flex: 0 0 6px;
-        cursor: col-resize;
-        background: var(--color-border-secondary);
+        flex: 0 0 1px;
+        z-index: 2;
         touch-action: none;
+        @include vsplit.sash(center, $rest: false);
+        @include vsplit.sash-strip;
 
-        &:hover,
-        &:focus-visible {
-            outline: none;
-            background: var(--color-border-focus);
-        }
+        &:active { @include vsplit.sash-drag; }
     }
 
     &__field {
