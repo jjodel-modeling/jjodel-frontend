@@ -547,3 +547,22 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-20 16:26, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3110; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, resolved by union: trunk's 2320 merge entry first, then the branch's G7 entry and ticket, verbatim. Probes as expected (R-MT-33 once, R-MT-34 none, the three headings once). Trunk side 4 files: the 2320 flip, the 1610 and 1611 prompts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-20 16:11
+
+## 2026-11-20 — feat: the project dashboard opens full screen over the editor groups
+**Prompt**: `P-2026-11-20-1632`, lane full: the `project_summary` tab becomes a full-screen view over all groups (groups mounted underneath), toggled by the app bar project label, Esc closes, an artifact opened from it closes it, summary mode while shown, not persisted; R-MT-34
+**Files touched**: 37a3dc87f (`Dock.tsx`, `DockManager.tsx`, `abstract/style.scss`, `tabs/dockGroups.ts` + test, `tabs/groupPersistence.ts` + test, `Navbar.tsx`, `pages/dashboard.scss`); this commit: `docs/decisions.md` R-MT-34, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (mouse probe 18/19 at 1600 and 1280, 0 console errors: over the dashboard the status bar still shows the last model's breadcrumb; Alfonso's visual check pending on 3121)
+**Notes**: Point 4 needs `StatusBar.tsx` (`_lastSelected` fallback), outside the file list: asked, not done. Group 1 lost its display with the summary tab (`.not-strip` shows only panels with a pinnable header), fixed in style.scss. Gates: typecheck 0, build ok, check:docs 5/5, decisions gates 85/85, vitest 3 known import failures plus contextCeiling.test.ts red only under the lane's JJODEL_LANE_LOG* env (32/32 without). Continuation of session 42462f6f. Crops in ~/.jjodel-lanes/P-2026-11-20-1632/.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — ticket: status bar shows the last model over the project dashboard
+**Ticket**: with the dashboard shown (R-MT-34), `StatusBar.tsx` still renders the last model's breadcrumb: the ACTIVE_TAB `project_summary` sets its context to `editor` and `useActiveModel` falls back to `_lastSelected`, which opening a model sets. The old summary tab had the same residue (P-2026-11-19-2236 Notes). Fix outside the 1632 scope: treat `project_summary` as the project context.
+**Priority**: medium
+**Found in**: P-2026-11-20-1632
+**Detail**: docs/decisions.md R-MT-34
