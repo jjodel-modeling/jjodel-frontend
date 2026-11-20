@@ -1,11 +1,12 @@
 import {BoxData, DockLayout, PanelData, TabData} from 'rc-dock';
 import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
-import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
+import {DProject, LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
 import { activeGroup, groupOfTab, noteActiveTab, setArtifactTabPredicate, withSplitRight } from "./tabs/dockGroups";
+import { buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord, setGroupsChangeListener, tabViewpointOf } from "./tabs/groupPersistence";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
@@ -371,6 +372,86 @@ class DockManager {
         return true;
     }
 
+    // Editor groups persistence (G7, P-2026-11-19-2328): the key of the project whose groups are restored and saved,
+    // null until the restore at project open ran, so the default layout of the mount never overwrites the record.
+    private static groupsKey: string | null = null;
+    private static groupsProjectId: string | null = null;
+    private static groupsPersister = createGroupsPersister(400);
+
+    /**
+     * rc-dock's `loadTab`: a tab of a saved layout rebuilt through `TabDataMaker` on its model or metamodel, on its saved
+     * viewpoint (`{ id, modelId, viewpointId }`), or on the one the tab showed when the record carries none. A full tab
+     * passes as it is; a tab whose model cannot open, or of any other kind, is null (rc-dock drops it).
+     */
+    static loadTab = (saved: any): TabData | null => {
+        if (saved && 'content' in saved && 'title' in saved) return saved as TabData;
+        const id = saved?.id;
+        if (typeof id !== 'string') return null;
+        const model = (store.getState() as any).idlookup?.[modelOfTabId(id)];
+        if (model?.className !== 'DModel' || (model.isMetamodel && isConsumerMode())) return null;
+        const viewpointId: string | null | undefined = 'viewpointId' in saved ? (saved.viewpointId ?? null) : tabViewpointOf(id);
+        const options = { tabId: id, viewpointId };
+        return model.isMetamodel ? TabDataMaker.metamodel(model, options) : TabDataMaker.model(model, options);
+    };
+
+    /**
+     * Restores the editor groups the user `userId` left on the project `projectId`, once, at project open (G7): the
+     * record pruned against the project now (`pruneGroupsRecord`), loaded into the dock, its active group noted. From
+     * here on, changes are saved under that key. False when there was nothing valid to restore: the dock stays as it is.
+     */
+    static restoreGroups(userId: string | null | undefined, projectId: string | null | undefined): boolean {
+        DockManager.groupsPersister.flush();
+        DockManager.groupsKey = null;
+        DockManager.groupsProjectId = null;
+        const dock = DockManager.dock;
+        if (!dock || !projectId) return false;
+        const key = editorGroupsKey(userId, projectId);
+        const record = readGroupsRecord(key);
+        let restored = false;
+        if (record) {
+            const state = store.getState() as any;
+            const plan = pruneGroupsRecord(record, {
+                canOpenModel: modelId => {
+                    const model = state.idlookup?.[modelId];
+                    return model?.className === 'DModel' && !(model.isMetamodel && isConsumerMode());
+                },
+                viewpointKnown: viewpointId => ((state.viewpoints || []) as string[]).includes(viewpointId),
+            });
+            try {
+                dock.loadLayout(plan.layout as any);
+                restored = true;
+            } catch (error) {
+                console.error('[DockManager] restoreGroups:', error);
+            }
+            // A tab behind its group's active one mounts only when shown: its viewpoint is the record's until then.
+            if (restored) for (const tab of plan.tabs) noteTabViewpoint(tab.id, tab.viewpointId);
+            if (restored && plan.activeTab) noteActiveTab(plan.activeTab);
+        }
+        DockManager.groupsKey = key;
+        DockManager.groupsProjectId = projectId;
+        return restored;
+    }
+
+    /** Takes the groups record of the dock now and writes it once the changes stop (G7). `savedLayout`: the one `onLayoutChange` received. */
+    static noteGroupsChanged = (savedLayout?: any): void => {
+        const dock = DockManager.dock;
+        const key = DockManager.groupsKey;
+        if (!dock || !key || DProject.getProject()?.id !== DockManager.groupsProjectId) return;
+        try {
+            const layout = savedLayout ?? dock.saveLayout();
+            const record = buildGroupsRecord(layout, activeGroup(layout)?.id, { isArtifactTab: isArtifactTabId, viewpointOf: tabViewpointOf });
+            DockManager.groupsPersister.schedule(key, record);
+        } catch (error) {
+            console.error('[DockManager] noteGroupsChanged:', error);
+        }
+    };
+
+    /** Writes the pending groups record now (page unload); `close`: the project closes, nothing more is saved under its key. */
+    static flushGroups = (close: boolean = false): void => {
+        DockManager.groupsPersister.flush();
+        if (close) { DockManager.groupsKey = null; DockManager.groupsProjectId = null; }
+    };
+
     private static makeModelTab(modelId: string, viewpointId: string | null | undefined): TabData | null {
         const dock = DockManager.dock;
         const model = (store.getState() as any).idlookup?.[modelId];
@@ -691,6 +772,9 @@ class DockManager {
 }
 
 // Only a model's or a metamodel's tab makes its group the active one (P-2026-11-19-2236): the test `open` uses, on the model of the tab id.
-setArtifactTabPredicate(tabId => (store.getState() as any).idlookup?.[modelOfTabId(tabId)]?.className === 'DModel');
+const isArtifactTabId = (tabId: string): boolean => (store.getState() as any).idlookup?.[modelOfTabId(tabId)]?.className === 'DModel';
+setArtifactTabPredicate(isArtifactTabId);
+// A tab's viewpoint change is a change of the groups record (G7).
+setGroupsChangeListener(() => DockManager.noteGroupsChanged());
 
 export default DockManager;

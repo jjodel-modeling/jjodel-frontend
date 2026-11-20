@@ -515,3 +515,22 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-19 23:34, unattended, on the gates and Alfonso's visual GO on the branch at 23:15 on 3095; Alfonso in the morning digest)
 **Notes**: Zero conflicts, no union; merge tree 57629800d equals the commit's tree. Probes as expected (R-MT-32 once, R-MT-33 none, the lane heading once). Trunk side 1 file: 80d501973 adds this prompt. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-19 23:20
+
+## 2026-11-20 — feat: editor groups persist per user and project (multi-tab lane 3, G7)
+**Prompt**: `claude_2026-11-19_2328_prompt_multi-tab-group-persistence.md`, lane full: groups, tab order, active tabs, widths, active group and tab viewpoints restored at project open from `localStorage`, R-MT-33
+**Files touched**: 6ba59e56f and 5099d9d14 (`groupPersistence.ts` + test, `Dock.tsx`, `DockManager.tsx`, `EditorSwitch.tsx`); 93eebb0f5 (`docs/decisions.md` R-MT-33); this commit: this inbox, Status of 2328
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 16:06 on 3110; mouse probe 15/15 at 1600, 0 console errors)
+**Notes**: Gates: typecheck 0, build ok, vitest 3 known import failures, check:docs 5/5, decisions gates 85/85. The probe caught two defects, fixed before commit: a press moving the active group took no record; tabs not mounted after restore lost their viewpoint (seeded from the plan). Dock calls use `?.` as the test mock lacks them. Crops in ~/.jjodel-lanes/P-2026-11-19-2328/.
+**Prompt document name**: 2026-11-19 23:28
+
+## 2026-11-20 — ticket: G7 residues for the width lane
+**Ticket**: (1) at 1280 the viewpoint picker of a half-width group does not open (narrow toolbar under the floating rail), so the G7 probe's viewpoint step was not run there; (2) the `loadTab` prop now also serves the `LAYOUT_MODE_CHANGE` handler of `Dock.tsx`, whose `loadLayout` rebuilds model tabs instead of dropping them; not probed, and the handler still reads the first two dock panels as left and right.
+**Priority**: medium
+**Found in**: P-2026-11-19-2328
+**Detail**: docs/decisions.md R-MT-33
