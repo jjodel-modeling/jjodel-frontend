@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-2336
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-20 · lane full · 8f6d70f46, 7ea61dece · verifica visiva passata 2026-11-20 16:06
 Lane: full (small, no critical-zone file)
 Depends: lanes 2a, 2b, R-MT-31, R-MT-32 merged into the trunk (d29dcd79c)
 Worktree: ~/jjodel-w-mtread, branch multi-tab-readers, created from the trunk at d29dcd79c, at this prompt's commit
