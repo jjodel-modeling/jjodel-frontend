@@ -534,3 +534,16 @@ active log is not touched by this lane.
 **Priority**: medium
 **Found in**: P-2026-11-19-2328
 **Detail**: docs/decisions.md R-MT-33
+
+## 2026-11-20 — merge: multi-tab-persistence into alfonso-frontend-jjtl (P-2026-11-20-1611)
+**Prompt**: `claude_2026-11-20_1611_prompt_merge_multi-tab-persistence.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-persistence` at 7a10ea867 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d29dcd79c; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: 4d390832f (merge), 8 files — `groupPersistence.ts`, `groupPersistence.test.ts`, `Dock.tsx`, `DockManager.tsx`, `EditorSwitch.tsx`, the 2328 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 1611
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 630 passed files, 16549 passed, 0 failed and 3 skipped (16552, expected 16537 + 12, the branch measured identical): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 8, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 16:26, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3110; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, resolved by union: trunk's 2320 merge entry first, then the branch's G7 entry and ticket, verbatim. Probes as expected (R-MT-33 once, R-MT-34 none, the three headings once). Trunk side 4 files: the 2320 flip, the 1610 and 1611 prompts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 16:11
