@@ -112,6 +112,107 @@
     }
 }
 
+// ── One control grammar for both bars (R-MT-34 amended, Alfonso's visual check, P-2026-11-20-1610) ──
+//
+// Written against `.editor-bar .editor-bar__controls` (0,3,0 with the control's class), so it outranks the canvas's
+// split container query (`.editor-v2-toolbar .toolbar-btn`, 0,2,0, width 22px), the shell rules under
+// `.editor-v2-toolbar` and the Text bar's own `.textual-tab__bar .bi` (0,2,0), and it stays inside the bar: the same
+// classes rendered elsewhere (Catalog, Console, Logger) keep their look.
+.editor-bar .editor-bar__controls {
+    // The divider between zones, the only one either bar shows in a split.
+    .editor-bar__divider {
+        flex: none;
+        width: 1px;
+        height: 20px;
+        margin: 0 4px;
+        background: var(--color-panel-border);
+    }
+
+    // Icon buttons: flat 28x28, no border, no surface; the hover paints the surface. An active toggle keeps the state
+    // its own sheet gives it (`.toolbar-btn.active`, `.textual-tab__outline-toggle--on`).
+    :is(.toolbar-btn, .toolbar-commands__btn, .textual-tab__outline-toggle) {
+        flex: none;
+        width: 28px;
+        min-width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        box-shadow: none;
+
+        .bi {
+            font-size: 14px;
+        }
+    }
+
+    :is(.toolbar-btn, .toolbar-commands__btn, .textual-tab__outline-toggle):not(.active, .textual-tab__outline-toggle--on) {
+        background: transparent;
+    }
+
+    :is(.toolbar-btn, .toolbar-commands__btn, .textual-tab__outline-toggle):not(.active, .textual-tab__outline-toggle--on):hover:not(:disabled) {
+        background: var(--color-bg-hover);
+    }
+
+    // The zoom level is a button with text: the icon buttons' height, its own width.
+    .toolbar-commands__level {
+        height: 28px;
+        border-radius: 4px;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+    }
+
+    // The canvas's command boxes (zoom; Split Right and the rail collapse) lose their pill: flat, as the Text bar.
+    .toolbar-commands {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    // Dropdown-like and segmented controls keep a border: one colour and one height (26px with the border) in both bars.
+    :is(.toolbar-dropdown-btn, .toolbar-viewpoint-trigger, .textual-tab__style-select) {
+        box-sizing: border-box;
+        height: 26px;
+        border: 1px solid var(--color-panel-border);
+        border-radius: 4px;
+    }
+
+    .textual-tab__modes {
+        border-color: var(--color-panel-border);
+    }
+
+    .textual-tab__mode {
+        height: 24px;
+
+        & + .textual-tab__mode {
+            border-left-color: var(--color-panel-border);
+        }
+    }
+
+    // Secondary text and labels: one size, one colour. The artifact's name keeps its weight.
+    :is(.textual-tab__name, .textual-tab__language, .textual-tab__status:not(.textual-tab__status--error), .textual-tab__style, .toolbar-group__label) {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+}
+
+// The room the canvas keeps over its rail column (Toolbar.tsx `trailing`), empty since the identity cell went: as wide
+// as the rail, back over the bar's 12px right padding, no box of its own to see. The `- 1px` is the cell's, for the
+// same rc-dock border (EditorV2.scss `.toolbar-rail-cell`). Under a pane with no rail beneath it, the first of a
+// split, it takes no room.
+.editor-bar__rail-reserve {
+    flex: none;
+    align-self: stretch;
+    width: calc(var(--jj-rail-width, 0px) - 1px);
+    margin-right: -12px;
+}
+
+.not-strip > .dock-layout > .dock-hbox:has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models) > .dock-panel:not(:last-child) .editor-bar__rail-reserve {
+    display: none;
+}
+
 // Two editor groups side by side: the padding the canvas bar takes there (EditorV2.scss, R-MT-24), for every bar, so a
 // Text tab beside a canvas starts its controls at the same inset.
 .not-strip > .dock-layout > .dock-hbox:not(:has(> .dock-panel .script-tab--beside)):has(> .dock-panel.dock-style-models ~ .dock-panel.dock-style-models) .editor-bar {

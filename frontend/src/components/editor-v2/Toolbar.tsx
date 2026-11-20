@@ -1331,42 +1331,13 @@ function Toolbar({
                 </button>
             </div>
             </>}
-            trailing={<>
-            {/* ── Identity of the open editor, in the rail's own column (2b) ──
-                Subject is the TAB's model, not the owner of the selection: a tab's
-                subject must not move when the selection does. The retired rail header
-                walked up from `_lastSelected` instead, which is why it went blank with
-                nothing selected. The chevron is an affordance for switching model and
-                is inert for now — there is no model-selection dropdown to hang it on
-                (open models are switched through the dock tabs).
-
-                What 2b changes is where it sits. It was flush with the toolbar's right
-                edge, separated from the command group by a 1x22 divider; it is now a
-                CELL as wide as the rail below it, sharing its left hairline, so the
-                model name reads as the header of that column rather than as one more
-                item in the bar. The width comes from `--jj-rail-width` (published by
-                PropertiesWithTreeView, the rail's own writer), so the cell follows the
-                drag handle live — see EditorV2.scss for the geometry.
-
-                Gated on `isRailVisible`, the same predicate the rail itself is gated
-                on: a cell that outlived its column would be a header over nothing. The
-                title is still gated too — with no editorTitle there is nothing to put
-                in the cell, and an empty 440px box would eat the bar. */}
-            {editorTitle && isRailVisible && (
-                <div className="toolbar-rail-cell">
-                    <div className="toolbar-identity" title={editorTitle}>
-                        <span
-                            className={`toolbar-identity__badge toolbar-identity__badge--${isMetamodel ? 'metamodel' : 'model'}`}
-                            aria-hidden="true"
-                        >
-                            {isMetamodel ? 'M' : 'm'}
-                        </span>
-                        <span className="toolbar-identity__name">{editorTitle}</span>
-                        <i className="bi bi-chevron-expand toolbar-identity__chevron" aria-hidden="true" />
-                    </div>
-                </div>
-            )}
-            </>}
+            /* The identity cell at the end of the bar (revision 2b: badge, name, inert chevron) is gone at every width
+               and rail state (Alfonso's visual check, P-2026-11-20-1610, R-MT-34): the tab already names the artifact
+               and carries its letter badge, so the cell repeated it. Its styles stay in EditorV2.scss (Rule 9).
+               What stays is the room it held: the rail overlay starts inside this bar's band (its top does not count
+               the tab strip), so without an empty reserve as wide as the rail, Split Right and the rail collapse
+               would sit under the rail and take no click (measured at 1600: hit test on `.tree-scope-bar`). */
+            trailing={isRailVisible ? <span className="editor-bar__rail-reserve" aria-hidden="true" /> : undefined}
         />
     );
 }

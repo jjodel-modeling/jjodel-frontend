@@ -7,8 +7,9 @@
  * (`Diagram | Text`, R-MT-35) with what follows it. The left and middle zones sit in the one box that scrolls when the
  * bar is short of room, so the right zone and `trailing` never leave the view. A zone adds no box of its own
  * (`display: contents`, the right one excepted), so the
- * canvas's groups keep the flex layout they had as direct children of its bar. `trailing` comes after the right zone:
- * the canvas puts the identity cell of its rail there.
+ * canvas's groups keep the flex layout they had as direct children of its bar. `trailing` comes after the right zone
+ * (no editor passes it since the canvas's identity cell went, P-2026-11-20-1610). One 1px divider separates the left
+ * zone from the middle one and the scroller from the right zone, the same in both bars.
  */
 
 import type { ReactNode } from 'react';
@@ -37,8 +38,10 @@ export default function EditorBar({ className, controlsClassName, disabled, left
             <fieldset className={'editor-bar__controls' + (controlsClassName ? ` ${controlsClassName}` : '')} disabled={!!disabled}>
                 <div className="editor-bar__scroll">
                     <div className="editor-bar__zone editor-bar__zone--left">{left}</div>
+                    {middle !== undefined && <span className="editor-bar__divider" aria-hidden="true" />}
                     <div className="editor-bar__zone editor-bar__zone--middle">{middle}</div>
                 </div>
+                {right !== undefined && <span className="editor-bar__divider" aria-hidden="true" />}
                 <div className="editor-bar__zone editor-bar__zone--right">{right}</div>
                 {trailing}
             </fieldset>
