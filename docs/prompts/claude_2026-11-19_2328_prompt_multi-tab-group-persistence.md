@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-2328
 Chat: C-2026-11-18-2337
 Front: multi-tab
-Status: da eseguire
+Status: eseguito 2026-11-20 · lane full · 6ba59e56f, 5099d9d14, 93eebb0f5 · verifica visiva passata 2026-11-20 16:06
 Lane: full (implementation, no critical-zone file)
 Depends: lanes 2a, 2b, metamodels in groups (R-MT-31) and active group (R-MT-32), all merged into the trunk
 Worktree: ~/jjodel-w-mtpers, branch multi-tab-persistence, created from the trunk after the active-group merge, at this prompt's commit
