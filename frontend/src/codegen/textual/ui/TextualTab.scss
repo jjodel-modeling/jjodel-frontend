@@ -15,15 +15,14 @@
     color: var(--color-text-primary);
     font-family: inherit;
 
+    // The geometry (height, padding, surface, separator) is the shared editor bar's (EditorBar.scss, R-MT-38, R-MT-36);
+    // only the text's own spacing and size stay here.
     &__bar {
-        display: flex;
-        flex: 0 0 32px;
-        align-items: center;
-        gap: 8px;
-        padding: 0 8px 0 12px;
-        border-bottom: 1px solid var(--color-border-secondary);
-        background: var(--color-bg-tertiary);
         font-size: 11px;
+
+        &.editor-bar {
+            gap: 8px;
+        }
 
         .bi,
         .bi:hover {
@@ -41,13 +40,20 @@
         white-space: nowrap;
     }
 
+    // Short of room the language gives first and the name keeps a floor, so a split at 1280 still shows «samp…» rather
+    // than the metamodel's name alone (P-2026-11-20-1610, after the flat 28px buttons widened the bar's controls).
     &__name {
+        min-width: 48px;
         overflow: hidden;
         font-weight: 600;
         text-overflow: ellipsis;
     }
 
     &__language {
+        min-width: 0;
+        overflow: hidden;
+        flex-shrink: 4;
+        text-overflow: ellipsis;
         color: var(--color-text-tertiary);
 
         &::before {
@@ -189,6 +195,13 @@
         &--error {
             color: var(--color-error-text);
         }
+    }
+
+    // After the title, the same `·` the language takes: in a split the bar's gap is 2px, and «Families» and «Up to
+    // date» read as one word (P-2026-11-20-1610).
+    &__title + &__status::before {
+        content: '·';
+        margin: 0 6px 0 4px;
     }
 
     &__create {
@@ -579,9 +592,11 @@
         min-height: 0;
     }
 
+    // The height of the outline's filter row (`&__outline-filter`), so their bottom borders make one line and the first
+    // node of the tree and the first line of the text start at the same y (P-2026-11-20-1610).
     &__crumbs {
         display: flex;
-        flex: 0 0 24px;
+        flex: 0 0 32px;
         align-items: center;
         min-width: 0;
         padding: 0 8px;
