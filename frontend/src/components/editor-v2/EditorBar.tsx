@@ -8,7 +8,7 @@
  * bar is short of room, so the right zone and `trailing` never leave the view. A zone adds no box of its own
  * (`display: contents`, the right one excepted), so the
  * canvas's groups keep the flex layout they had as direct children of its bar. `trailing` comes after the right zone
- * (no editor passes it since the canvas's identity cell went, P-2026-11-20-1610). One 1px divider separates the left
+ * (the canvas's empty reserve over its rail, since its identity cell went, P-2026-11-20-1610). One 1px divider separates the left
  * zone from the middle one and the scroller from the right zone, the same in both bars.
  */
 
