@@ -566,3 +566,16 @@ active log is not touched by this lane.
 **Priority**: medium
 **Found in**: P-2026-11-20-1632
 **Detail**: docs/decisions.md R-MT-34
+
+## 2026-11-20 — fix: status bar in project mode over the project dashboard
+**Prompt**: `P-2026-11-20-1632`, chat check 17:04 (RC-21 recommendation adopted): `StatusBar.tsx` approved for one change, the status bar in project mode while the dashboard shows; probe step at 1600 and typecheck again
+**Files touched**: 963973425 (`StatusBar.tsx`); this commit: `docs/decisions.md` R-MT-34 (status bar sentence, probe count), this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:32 (the same lane, its status bar step)
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (`StatusBar.tsx`, approved in the chat check before the change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (mouse probe 19/19 at 1600, 0 console errors; Alfonso's visual check pending on 3121)
+**Notes**: `project_summary` joins the prefixes StatusBar reads as the project context, so `useActiveModel`'s `_lastSelected` fallback no longer reaches the breadcrumb. Closes the ticket filed by this lane. With two groups and group 2 active, a click on the app bar project label opens the dashboard (probe steps P2, P3). Typecheck 0. The R-MT-34 row was written by this lane and not yet merged, so it is corrected in place.
+**Prompt document name**: 2026-11-20 16:32
