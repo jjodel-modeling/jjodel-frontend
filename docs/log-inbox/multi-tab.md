@@ -742,3 +742,16 @@ active log is not touched by this lane.
 **Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, «transcript_path wins over JJODEL_LANE_LOG», expects `deny` and gets null when `npm run test` runs in a session that exports `JJODEL_LANE_LOG_FROM`, as a lane-run continuation does. `run()` resets `JJODEL_LANE_LOG` but not `JJODEL_LANE_LOG_FROM`; `hookRunner.runScript` spawns with `{ ...process.env, ...env }`; `context-ceiling.mjs:265` then scopes the lane log to the session and offset. Measured 2026-11-21: red 3/3 with it, green with `env -u JJODEL_LANE_LOG_FROM`. An empty string does not reset it (`!== undefined` at :265): the helper has to drop the key.
 **Priority**: medium
 **Found in**: P-2026-11-20-2310
+
+## 2026-11-21 — merge: toolbar-rationalize into alfonso-frontend-jjtl (P-2026-11-21-0028)
+**Prompt**: `claude_2026-11-21_0028_prompt_merge_toolbar-rationalize.md`, direct merge by `lane-run merge --direct` (no conflicts, no file changed on both sides, trunk already merged into the branch at f15e52035), rollback tag `pre-toolbar-rationalize` on 92271b39b.
+**Files touched**: cbbae0da3 (merge), 14 files from the branch (canvas toolbar rationalization of P-2026-11-20-2310: `Toolbar.tsx`, `ToolbarOverflow.tsx`, `canvasViewChoices.ts` and its test, `CanvasViewControls.scss`, `ColorSchemeSelector.tsx`, `EditorV2.tsx`, `EditorSwitch.tsx`, `Navbar.tsx`, `dataManagerPicker.test.ts`, discovery report, prompt, decisions, this inbox); 366c6a046 (R-MT-39 header).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no in the product. Gates on the merge: typecheck 0, typecheck:scripts 0, build 0, check:docs, check:agents, check:scripts, check:addonly ok; vitest red with 2 failures beyond the 3 known import failures, both in the decisions parser gates (`docsDigest.test.ts` HeaderParseError, `decisionsQuery.test.ts` recogniser ratio): the R-MT-39 header carried a nested parenthesis and no ratification clause. Fixed in 366c6a046 by rewriting the header in the register format; both files then pass (60/60, 25/25) and check:addonly stays clean. The `contextCeiling.test.ts` failure seen in the lane did not reproduce in the merge run.
+**Out-of-scope changes**: yes (366c6a046, the R-MT-39 header of this merge's own branch).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat RC-23 on the lane shots `advanced-a-chip-popover.png`, `menu-view_notation_wireframe.png` and the DOM measures of scenes a-d, 2026-11-21 00:24; Alfonso in the morning digest)
+**Notes**: The direct worker exited `blocked` on the red vitest gate and left the merge commit in place, as designed; the chat fixed the cause on the trunk instead of rolling back.
+**Prompt document name**: 2026-11-21 00:28
