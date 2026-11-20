@@ -126,3 +126,46 @@ A `Diagram | Text` control «in the same tab, keeping today's behaviour of each 
 ## Decisions awaiting Alfonso
 
 - None from the RC-26 list: no critical-zone edit, no deletion, no exported-interface break, no MODELS-demo change was reached. The open questions above go to the project chat, which decided D1..D7 by delegation.
+
+## 8. Addendum, 2026-11-20 17:00: Phase 2 as narrowed
+
+The project chat adopted the `Recommended:` line (RC-21, 16:35). Built: S1 D1 (`fc0d8987b`), S2+S3 D2 and D3 narrowed (`f8f03322b`), a fix from the mouse probe (`4ec528ab8`). Registered as R-MT-33 (D1), R-MT-34 (D2 as built), R-MT-35 (D3 narrowed: a switch between two tabs), R-MT-36 (D7).
+
+Deferred, not registered as rows: D4 (EBNF and Syntax stay in the textual bar's right zone; no syntax surface outside the model tab, §4.5), D5's move of «Up to date» to the status bar (the status and its Delete, Discard, Save actions stay in the bar's left zone), D6 (tree and filter still mounted; breadcrumb not shared, §4.8).
+
+### 8.1 Mouse probe
+
+`~/.jjodel-lanes/P-2026-11-20-1610/probe-ecp.mjs`, real clicks, fixture `frontend/public/library/gallery/families-persons/1.jjodel` (Families, sample-Families). Families opened from the dashboard, Split Right, sample-Families opened in group 2, Text pressed in group 2, then Diagram, then Text. Dev server 3120 with `VITE_CODEGEN=true`; baseline at `fc0d8987b` (old toolbar) on a temporary worktree, port 3122, since removed. JSON `probe-ecp-{before,after}-{1600,1280}.json`, crops `crop-{before,after}-*`.
+
+After, at 1600 and 1280, 12/12 checks: both active tabs `rgb(15,23,42)`, transparent, `inset 0 -2px 0 rgb(14,165,233)` on `.dock-tab-btn`; both bars top 35, height 40, padding 0 12px 0 8px, separator 1px `rgb(226,232,240)`; the switch ends 12px from the bar's right end in the Text tab (the canvas's rail cell trails its right zone, so the panel offset differs by that cell); Text tab lands in group 2 and shows Text pressed; no close button in the textual bar; Text on the metamodel `aria-disabled` with the title «A metamodel has no textual view: open one of its models as text»; bar geometry identical across Diagram, Text, Diagram, Text; EBNF and Syntax present, the old Text entry gone; no console errors.
+
+### 8.2 Regression found and partly fixed
+
+Split Right's distance from the panel's right edge (positive: in view; negative: scrolled out, R-MT-26):
+
+| bar | before | after S2+S3 | after fix |
+|---|---|---|---|
+| metamodel alone, 1600 (bar 395px) | 34 | −119 | −32 |
+| model, right group of the split, 1600 | 35 | 34 | 35 |
+| metamodel alone, 1280 (bar 255px) | −106 | −259 | −172 |
+| model, right group of the split, 1280 | 35 | −103 | −17 |
+
+The 145px switch had no floor below its labels. The fix puts it on step 1 of the canvas bar's ladder: its labels shrink first, with the group labels' factor, down to two icon-only entries (59px, titles kept). Residual: in a bar already at its floor before this lane (395px bar, overflowing 25px), any added control scrolls something out; Split Right does, by 32px at 1600 and 17px in the 1280 split.
+
+Also seen, not changed: at 1280 the textual bar clips the existing EBNF | Syntax labels («Synt»); the disabled Text entry reads only slightly lighter than an inactive one.
+
+### Decisions taken (unattended), Phase 2
+
+1. Active strip tab per R-MT-33; `data-jj-kind` still written by `Navbar.tsx` (the menu reads it), only the overrides went.
+2. EditorBar zones `display: contents`; root and fieldset keep `editor-v2-toolbar` and `editor-v2-toolbar__commands` (Rule 2).
+3. Canvas zones and textual zones as in R-MT-34; no Split Right on the Text tab (`txt_<id>` is unique).
+4. Text hidden when the textual view is off, so Basic mode and the MODELS demo show nothing new.
+5. Diagram from the Text tab without importing `TabDataMaker` (it broke 12 textual test files at import through the joiner mock).
+6. Switch labels shrink first, floor 59px (`4ec528ab8`).
+7. `scripts/hooks/__tests__/contextCeiling.test.ts` fails in the full suite run from a lane (it reads `JJODEL_LANE_LOG*`) and passes 32/32 with those unset: environmental, not this lane's.
+
+### Decisions awaiting Alfonso
+
+1. Visual check of the two groups (dev server on 3120).
+2. The Split Right residual of §8.2: accept the scroll (R-MT-26), or order Split Right before the switch so the switch is what scrolls, or hide the switch's labels always.
+3. D4, D5 (status bar move), D6: a lane that first gives a metamodel's syntax a home, then removes EBNF and Syntax from the model tab.
