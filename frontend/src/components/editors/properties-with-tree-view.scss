@@ -161,8 +161,8 @@ $radius-md: 6px;
 // per non pescare l'`ew-resize` del `.dock-divider` rc-dock adiacente. z-index 11
 // (> tree handle 10, > divider) così cattura lui il drag nell'area di confine.
 // Trascinare a sinistra allarga Properties → il tab cresce, il canvas cede spazio.
-// Dal 2026-08-28 e' il `ResizeHandle` condiviso in verticale: linea, pill hover-reveal,
-// ciano del drag e chip `w NNN` stanno in `components/ResizeHandle/resize-handle.scss`.
+// Dal 2026-08-28 e' il `ResizeHandle` condiviso in verticale: linea, ciano del drag e
+// chip `w NNN` stanno in `components/ResizeHandle/resize-handle.scss` (pill tolta, P-2026-11-19-2200).
 // Qui resta la geometria, che e' l'unica cosa che sa solo il rail. Selettore doppiato
 // (0,2,0) di proposito: deve battere `.resize-handle--vertical` senza dipendere
 // dall'ordine in cui i due fogli entrano nel bundle.
@@ -182,6 +182,11 @@ $radius-md: 6px;
         left: 0;
         transform: none;
     }
+
+    // A riposo niente hairline: la cucitura ha gia' il `border-left` del rail, e la
+    // linea del contratto (P-2026-11-19-2200) lo raddoppiava a 2px. Torna su hover,
+    // focus e drag, come nell'Instance Manager.
+    &:not(:hover):not(:focus-visible):not(.dragging)::before { background: transparent; }
 
     // Misurato: `.properties-with-tree-view--rail` ha `overflow: hidden`, quindi un chip
     // centrato su un divider a x=0 perde la meta' sinistra. Spostato dentro la colonna.

@@ -1,0 +1,124 @@
+// Vertical splitter contract (P-2026-11-19-2200, D-UI-17): one drawing for every bar between
+// two side-by-side panes, the "sash" of VS Code and Linear.
+//
+// At rest a 1px hairline on the seam, or nothing where the seam already paints a border. On a
+// held hover the line turns 2px slate. While dragging it is 2px cyan: the canvas accent, kept for
+// the drag alone (the 2026-08-28 rule of resize-handle.scss). Keyboard focus draws the same 2px
+// line in the focus colour, never an outline box. No pill, no grip, no tint, no filled bar.
+//
+// Each site keeps its DOM, its drag handler and its geometry. It includes `sash` with where the
+// seam lies in its box, `sash-strip` when its box is the 1px seam itself, and `sash-drag` under
+// the selector that says a drag is running there (a class, `:active`, a parent's class). The
+// line is always `::before`; `::after` is the hit strip of `sash-strip`. Only the drawing lives
+// here, written so that a horizontal splitter can take the same rules turned by 90 degrees.
+//
+// Colours are tokens, none defined here (rule 28). Three literals are the contract itself:
+
+// The hit strip: 8px straddling the seam, 4px each side. A site that cannot straddle (the pane
+// beyond the seam would cover half of it, or another handle owns that side) keeps the 8px inside
+// its own pane and says so where it sets its geometry.
+$strip: 8px;
+
+// The line on hover, focus and drag: twice the resting hairline.
+$line: 2px;
+
+// How long a hover waits before the line answers it: a pointer crossing the seam on its way
+// somewhere else does not flash it.
+$delay: 150ms;
+
+// Where the line sits in the element's box. `center`: the box straddles the seam (or is the 1px
+// seam). `start` / `end`: the box lies inside a pane and the seam is its left / right edge.
+@mixin _line-at($seam) {
+  @if $seam == center {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  } @else if $seam == start {
+    left: 0;
+    right: auto;
+    transform: none;
+  } @else if $seam == end {
+    left: auto;
+    right: 0;
+    transform: none;
+  } @else {
+    @error "vsplit.sash: $seam is center, start or end, not #{$seam}";
+  }
+}
+
+// The drawing. `$rest: false` where the seam already has a border: no doubled 2px seam.
+// The states change only the width and the colour of the line, never its position, so a site
+// may move the line (`::before { left: ... }`) with a rule of its own and keep it moved.
+@mixin sash($seam: center, $rest: true) {
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    @include _line-at($seam);
+    width: 1px;
+    @if $rest {
+      background: var(--color-panel-border);
+    } @else {
+      background: transparent;
+    }
+    box-shadow: none;
+    pointer-events: none;
+    // Leaving the hover takes the line back at once.
+    transition: none;
+  }
+
+  &:hover::before {
+    width: $line;
+    background: var(--color-slate-400);
+    transition-property: width, background-color;
+    transition-duration: 0s;
+    transition-delay: $delay;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::before {
+    width: $line;
+    background: var(--color-border-focus);
+    transition: none;
+  }
+}
+
+// The drag state, included under the selector that names it, after `sash`.
+@mixin sash-drag {
+  &::before {
+    width: $line;
+    background: var(--color-canvas-accent);
+    box-shadow: none;
+    transition: none;
+  }
+}
+
+// The hit strip of a box that is the seam itself (1px wide, a flex item or rc-dock's divider):
+// an 8px transparent `::after` centred on it. Events on a pseudo-element go to its element, so
+// the handler of the box receives the drag. The resets are for rc-dock, whose `::after` is a pill.
+@mixin sash-strip {
+  position: relative;
+
+  &::after,
+  &:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: $strip;
+    height: auto;
+    transform: translateX(-50%);
+    background: none;
+    border-radius: 0;
+    transition: none;
+    pointer-events: auto;
+  }
+}
