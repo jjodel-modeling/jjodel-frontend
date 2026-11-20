@@ -3,8 +3,10 @@
  * tab (codegen/textual/ui/TextualTab.tsx) (R-MT-34, P-2026-11-20-1610). Same height, padding and separator for both
  * (R-MT-36); each editor passes its own zone contents.
  *
- * Three zones, left to right: editing actions, view controls, and, pushed to the right end, the representation
- * (`Diagram | Text`, R-MT-35) with what follows it. A zone adds no box of its own (`display: contents`), so the
+ * Three zones, left to right: editing actions, view controls, and, at the right end, the representation
+ * (`Diagram | Text`, R-MT-35) with what follows it. The left and middle zones sit in the one box that scrolls when the
+ * bar is short of room, so the right zone and `trailing` never leave the view. A zone adds no box of its own
+ * (`display: contents`, the right one excepted), so the
  * canvas's groups keep the flex layout they had as direct children of its bar. `trailing` comes after the right zone:
  * the canvas puts the identity cell of its rail there.
  */
@@ -28,14 +30,15 @@ export interface EditorBarProps {
     readonly ariaLabel?: string;
 }
 
-/** The bar: root, one fieldset, the three zones, a spacer before the right one, then `trailing`. */
+/** The bar: root, one fieldset, the left and middle zones in the one box that scrolls, the right zone, `trailing`. */
 export default function EditorBar({ className, controlsClassName, disabled, left, middle, right, trailing, ariaLabel }: EditorBarProps) {
     return (
         <div className={'editor-bar' + (className ? ` ${className}` : '')} role="toolbar" aria-label={ariaLabel ?? 'Editor'}>
             <fieldset className={'editor-bar__controls' + (controlsClassName ? ` ${controlsClassName}` : '')} disabled={!!disabled}>
-                <div className="editor-bar__zone editor-bar__zone--left">{left}</div>
-                <div className="editor-bar__zone editor-bar__zone--middle">{middle}</div>
-                <span className="editor-bar__spacer" aria-hidden="true" />
+                <div className="editor-bar__scroll">
+                    <div className="editor-bar__zone editor-bar__zone--left">{left}</div>
+                    <div className="editor-bar__zone editor-bar__zone--middle">{middle}</div>
+                </div>
                 <div className="editor-bar__zone editor-bar__zone--right">{right}</div>
                 {trailing}
             </fieldset>
@@ -64,16 +67,14 @@ export function RepresentationSwitch({ active, text, textPressed, onDiagram, onT
     return (
         <div className="editor-bar__switch" role="group" aria-label="Representation">
             <button type="button" className={'editor-bar__switch-btn' + (active === 'diagram' ? ' editor-bar__switch-btn--active' : '')}
-                    aria-pressed={active === 'diagram'} title={DIAGRAM_ENTRY_TITLE} data-representation="diagram"
+                    aria-pressed={active === 'diagram'} aria-label="Diagram" title={DIAGRAM_ENTRY_TITLE} data-representation="diagram"
                     onClick={() => { if (active !== 'diagram') onDiagram?.(); }}>
                 <i className="bi bi-diagram-3" aria-hidden="true" />
-                <span className="editor-bar__switch-label">Diagram</span>
             </button>
             <button type="button" className={'editor-bar__switch-btn' + (pressedText ? ' editor-bar__switch-btn--active' : '')}
-                    aria-pressed={pressedText} aria-disabled={!text.enabled || undefined} title={text.title} data-representation="text"
+                    aria-pressed={pressedText} aria-disabled={!text.enabled || undefined} aria-label="Text" title={text.title} data-representation="text"
                     onClick={() => { if (text.enabled) onText?.(); }}>
                 <i className="bi bi-file-earmark-text" aria-hidden="true" />
-                <span className="editor-bar__switch-label">Text</span>
             </button>
         </div>
     );
