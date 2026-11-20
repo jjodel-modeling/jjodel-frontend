@@ -541,3 +541,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (probe 12/12 at 1600 and 1280; Split Right residual, report §8.2; Alfonso's visual check pending)
 **Notes**: 8 source files, over five: listed above; representationSwitch.ts was not in DOVE. Probe found Split Right pushed out of narrow canvas bars by the switch (−119px at 1600); 4ec528ab8 shrinks the labels first, residual −32px (R-MT-26 scroll). contextCeiling.test.ts red only under lane env. Report: docs/discovery/discovery_2026-11-20_editor_chrome_parity.md §8.
 **Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: icon-only Diagram | Text, Split Right never scrolls out (multi-tab lane edchrome)
+**Prompt**: chat decision on the Split Right residual (RC-25, unattended): switch icon-only in both bars at every width, Split Right never scrolls out, disabled Text on the existing disabled token, EBNF/Syntax cut left as is, R-MT row amended
+**Files touched**: 4ec5f6196 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-34 and R-MT-35 amended, discovery report §8.3, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 17/17 at 1600 and 1280; Alfonso's visual check pending)
+**Notes**: Icon-only alone could not hold Split Right (the switch was already 59px where it measured −32): the left and middle zones now scroll in `.editor-bar__scroll`, the right zone and rail cell stay out. Split Right gap 443/403 alone, 59/59 left group, 35/35 right group. §8.2's «metamodel alone» rows were the left group of the split: corrected in §8.3.
+**Prompt document name**: 2026-11-20 16:10
