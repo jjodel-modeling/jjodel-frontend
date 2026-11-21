@@ -57,6 +57,8 @@
 // `--font-size-xs`.
 // ============================================================================
 
+@use '../../styles/components/vsplit';
+
 // Design tokens
 $color-border: #e2e4e8;
 $color-border-light: #f0f1f2;
@@ -178,15 +180,19 @@ $radius-md: 6px;
     // la striscia non puo' stare a cavallo della cucitura senza mangiarsi la hit-zone
     // del `.dock-divider` rc-dock, quindi la linea si ancora alla cucitura e la
     // striscia le sta dentro.
-    &::before {
-        left: 0;
-        transform: none;
-    }
-
+    // The knob, instead, is centred on the seam (`start`): its outer half lies beyond the
+    // rail, which makes room for it (`knob-room` on `.properties-with-tree-view--rail`);
+    // without `overflow-clip-margin` (Safari) the knob stays inside the strip.
     // A riposo niente hairline: la cucitura ha gia' il `border-left` del rail, e la
     // linea del contratto (P-2026-11-19-2200) lo raddoppiava a 2px. Torna su hover,
     // focus e drag, come nell'Instance Manager.
-    &:not(:hover):not(:focus-visible):not(.dragging)::before { background: transparent; }
+    // The knob shows at all times, at the height of the others (`rail`: this box starts
+    // below the toolbar, not below the tab strip). The whole contract is restated here,
+    // with this selector's specificity, so that the `.resize-handle--vertical` rules do
+    // not move the knob back to the middle of the strip.
+    @include vsplit.sash(start, $rest: false, $span: rail);
+
+    &.dragging { @include vsplit.sash-drag; }
 
     // Misurato: `.properties-with-tree-view--rail` ha `overflow: hidden`, quindi un chip
     // centrato su un divider a x=0 perde la meta' sinistra. Spostato dentro la colonna.
@@ -1460,6 +1466,9 @@ body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models 
     // here since D-UI-10 publishes the theme tokens on :root.
     border-left: 1px solid var(--border-subtle);
     overflow: hidden;   // the shell still clips its zones
+    // ...with room for half the knob of its width handle, centred on the left seam
+    // (P-2026-11-19-2200): `clip` and a 4px margin where the browser has it.
+    @include vsplit.knob-room;
 
     // The two zones were `order: 1` / `order: 3` to stack the cards around the
     // splitter. In the shell they follow DOM order, together with the header and the

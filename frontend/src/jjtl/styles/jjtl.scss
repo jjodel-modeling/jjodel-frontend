@@ -298,6 +298,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     position: relative;
     background-color: $color-bg-primary;
     overflow: hidden;
+    // Room for half the knob of the resize handle, centred on the right seam (P-2026-11-19-2200).
+    @include vsplit.knob-room;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -371,6 +373,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     position: relative;
     background-color: $color-bg-primary;
     overflow: hidden;
+    // Room for half the knob of the resize handle, centred on the left seam (P-2026-11-19-2200).
+    @include vsplit.knob-room;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;

@@ -120,14 +120,13 @@
 
   // Vertical: resizes width (col-resize). The platform's vertical splitter contract
   // (P-2026-11-19-2200, D-UI-17), which replaces the hover-reveal pill of 2026-08-28: an
-  // 8px strip, the hairline at rest, 2px slate on a held hover, 2px cyan while dragging.
+  // 8px strip, the hairline and the 6x28 knob at rest, 2px slate on a held hover, 2px cyan
+  // while dragging. The knob is the contract's `::after`, not the pill above.
   // The strip tint and the focus outline above are the horizontal handle's; here they go.
   // A site that sets its own geometry keeps it (the rail, the Instance Manager).
   &--vertical {
     width: vsplit.$strip;
     @include vsplit.sash(center);
-
-    &::after { content: none; }
 
     &:hover,
     &.dragging { background: transparent; }

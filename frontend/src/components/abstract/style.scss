@@ -610,12 +610,14 @@ body.dock-dragging iframe {
 }
 
 /* Every divider between side-by-side panels is the platform's vertical splitter (P-2026-11-19-2200, D-UI-17): the 1px
-   box is the seam and keeps the layout, its ::after is the 8px hit strip, its ::before the line. One drawing for every
-   box, the split of two canvases and the generator beside a canvas included. rc-dock's drag sets no cursor on body. */
+   box is the seam and keeps the layout, its ::before is the 8px hit strip and the line, its ::after the knob, which
+   replaces the pill above in every state. The box spans the tab strip, the knob sits half a strip lower (`dock`). One
+   drawing for every box, the split of two canvases and the generator beside a canvas included. rc-dock's drag sets no
+   cursor on body. */
 .dock-hbox > .dock-divider {
   border-left: none;
   z-index: 2;
-  @include vsplit.sash(center);
+  @include vsplit.sash(center, $span: dock);
   @include vsplit.sash-strip;
 
   &:active { @include vsplit.sash-drag; }
@@ -627,9 +629,9 @@ body:has(.dock-hbox > .dock-divider:active) {
 
 /* Jjodie's docked window: its left edge is a vertical splitter too. JodieWindow.css is plain CSS and cannot include the
    mixin, so the drawing is emitted here and that file keeps the geometry (an 8px strip inside the window, whose own
-   border-left is the seam). P-2026-11-19-2200. */
+   border-left is the seam). Its box spans the tab strip like rc-dock's dividers (`dock`). P-2026-11-19-2200. */
 .jodie-dock-handle {
-  @include vsplit.sash(start, $rest: false);
+  @include vsplit.sash(start, $rest: false, $span: dock);
 
   .jodie-window.jodie-resizing & { @include vsplit.sash-drag; }
 }
