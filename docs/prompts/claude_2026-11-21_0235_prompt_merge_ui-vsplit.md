@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-21-0235
 Chat: C-2026-11-19-2200
 Request: https://claude.ai/code/session_01DQt9R6xGnqUtiRzRQbr61k (merge of ui-vsplit launched by chat C-2026-11-19-2200)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-21 · lane merge · c7e40d3b9 · verifica visiva passata 2026-11-21 (visual GO by Alfonso 2026-11-21 01:25 on the ui-vsplit worktree (3006); probe vsplit-uniform 435/435 after the trunk merge; merge gates green (typecheck, vitest, build, check:docs/agents/scripts/addonly))
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-21-0235 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

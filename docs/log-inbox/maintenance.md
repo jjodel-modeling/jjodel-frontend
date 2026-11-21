@@ -1541,3 +1541,16 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Smoke visivo**: non applicabile: probe by DOM and pixels, screenshot of the hidden divider in the lane folder
 **Notes**: Dashboard hypothesis refuted: `.project-dashboard` is display none after open2. Failures 1, 2, 4, 5, 6: the divider rule. 3: half-pixel seam (jjtl handle 1072.5..1080.5), the grab now samples the knob's layout columns, minimum unchanged. 7: `toolbar-viewpoint-trigger` gone, the syntax chip opens.
 **Prompt document name**: 2026-11-21 01:55
+
+## 2026-11-21 — merge: ui-vsplit into alfonso-frontend-jjtl (P-2026-11-21-0235)
+**Prompt**: `claude_2026-11-21_0235_prompt_merge_ui-vsplit.md`, a direct merge by `lane-run merge --direct`, no session: `ui-vsplit` at `1234fa65e` into `alfonso-frontend-jjtl`, merge base `bacae8815`, 15 commits on the branch side.
+**Files touched**: merge `c7e40d3b9`: 18 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, `docs/prompts/claude_2026-11-21_0155_prompt_vsplit_probe_after_trunk.md`, `frontend/scripts/probe/vsplit-uniform.ts`, `frontend/src/codegen/textual/ui/SyntaxForm.scss`, `frontend/src/codegen/ui/TemplateEditorTab.scss`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c7e40d3b9` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16602 tests in 636 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual GO by Alfonso 2026-11-21 01:25 on the ui-vsplit worktree (3006); probe vsplit-uniform 435/435 after the trunk merge; merge gates green (typecheck, vitest, build, check:docs/agents/scripts/addonly)
+**Notes**: Rollback tag `pre-ui-vsplit` on `a8ecb9ef6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0235/result.json`.
+**Prompt document name**: 2026-11-21 02:35
