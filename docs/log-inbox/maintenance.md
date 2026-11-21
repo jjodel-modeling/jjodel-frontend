@@ -1509,3 +1509,22 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` › "transcript_path wins over JJODEL_LANE_LOG" fails (`expected null to be 'deny'`, :226) when the calling shell has `JJODEL_LANE_LOG_FROM` set, as a lane session does, and passes with only that variable unset. The test is not hermetic: a lane's own vitest gate shows a red that is neither the lane's nor the tip's.
 **Priority**: low
 **Found in**: P-2026-11-19-2200
+
+## 2026-11-21 — style(ui): splitter knob centred on every seam, rework 2 (P-2026-11-19-2200)
+**Prompt**: `claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, rework 2 after Alfonso's visual checks of Phase 2, the chat's spec (RC-25, unattended): a floating 6x28 knob on every vertical splitter, held hover 36px, every knob at one height, centred on its seam (overflow-clip room on the four clipping panes), and the docked-Jjodie z-order (option 1, fallback option 3, option 2 as an open item). Four sessions, context-ceiling handoffs.
+**Files touched**: `21644454a`: `frontend/src/styles/components/_vsplit.scss`, `components/ResizeHandle/resize-handle.scss`, `components/abstract/style.scss`, `components/editors/properties-with-tree-view.scss`, `jjtl/styles/jjtl.scss`, `components/Jodie/JodieWindow.css`, `frontend/scripts/probe/vsplit-uniform.ts`. `8ed6dd3ac`: `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md` (§14), `docs/decisions.md` (D-UI-17 amended). This commit: `docs/log-inbox/maintenance.md`, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 22:00 (`claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, Phase 2 `5d81fd6c6`, `4d9d27a22`)
+**Causa**: (d)
+**Regressions**: unknown. Probe `vsplit-uniform.ts` A..F 435 PASS, 0 FAIL on 3007, exit 0; mutant (resting knob border) red, restored; build, typecheck, check:scripts, splitter vitest exit 0. The visual check is the chat's (RC-23).
+**Out-of-scope changes**: yes. The chat widened DOVE (2026-11-20 22:52 and 2026-11-21) to the pane rules of the four clipping panes (rail, two JjTL panes, Jjodie's window) and to the docked window's z-order; 11 files over three commits, listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: before/after crop pairs for the chat (RC-23), report §14.4
+**Notes**: Option 1 (handle z 901, window without transform) failed on the pointer: the handle covered the rail tree's context menu, 209 of 228 points against 38. Option 3 adopted: the jodie-dock knob shows 4 of 6px, exception like D. Second cause (a): the knob is a spec change. Detail: report §14.
+**Prompt document name**: 2026-11-19 22:00
+
+## 2026-11-21 — ticket: rail tree context menus portalled to body, so Jjodie's dock knob shows whole
+**Ticket**: The rail tree's context menus (`TreeViewContent.tsx` `useClassifierContextMenu` ~685, `useModelTabContextMenu` ~792) render inside the floating rail with an inline `position: fixed; z-index: 9999`, so they paint at the rail's z 900. Docked Jjodie's dock handle therefore cannot go above the rail (z 901) without covering them (measured 2026-11-21), and its knob shows 4 of 6px. Portalling the menus to `document.body` (option 2 of the chat) lifts both.
+**Priority**: low
+**Found in**: P-2026-11-19-2200
+**Detail**: docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md
