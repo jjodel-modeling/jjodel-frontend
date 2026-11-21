@@ -1378,7 +1378,8 @@ function Toolbar({
                 so the hairline that kept zoom apart from them went with it.
                 The rail collapse left the bar on 2026-11-21 (P-2026-11-20-2250): the rail is one column for every
                 canvas open, so its toggle lives on the rail (`.rail-collapse-toggle` in PropertiesWithTreeView.tsx),
-                and a collapsed rail leaves a strip holding the way back. It moved, it did not go (R-MT-39). The box is
+                and a collapsed rail leaves only its reopen button, floating, as the way back. It moved, it did not go
+                (R-MT-39). The box is
                 rendered only with Split Right in it, so it never stands empty. */}
             {onSplitRight && (
                 <div className="toolbar-commands">
@@ -1400,8 +1401,9 @@ function Toolbar({
                What stays is the room it held: the rail overlay starts inside this bar's band (its top does not count
                the tab strip), so without an empty reserve as wide as the rail, Split Right and the rail collapse
                would sit under the rail and take no click (measured at 1600: hit test on `.tree-scope-bar`).
-               Rendered in every rail state since P-2026-11-20-2250: a collapsed rail leaves its 28px strip, and the rail
-               writer publishes that width as --jj-rail-width, so the reserve follows it with no branch here. */
+               Rendered in every rail state since P-2026-11-20-2250: a collapsed rail leaves only its reopen button over
+               this bar's right end, and the rail writer publishes the room it needs as --jj-rail-reopen-width, so the
+               reserve follows that or the rail width with no branch here. */
             trailing={<span className="editor-bar__rail-reserve" aria-hidden="true" />}
         />
     );

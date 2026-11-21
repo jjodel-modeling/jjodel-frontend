@@ -201,11 +201,13 @@
 // The room the canvas keeps over its rail column (Toolbar.tsx `trailing`), empty since the identity cell went: as wide
 // as the rail, back over the bar's 12px right padding, no box of its own to see. The `- 1px` is the cell's, for the
 // same rc-dock border (EditorV2.scss `.toolbar-rail-cell`). Under a pane with no rail beneath it, the first of a
-// split, it takes no room.
+// split, it takes no room. A collapsed rail leaves no column, only its floating reopen button over this bar's right end
+// (P-2026-11-20-2250): the rail writer then publishes --jj-rail-width 0 and --jj-rail-reopen-width as the button plus
+// its gaps, so the reserve takes whichever is on screen and the last controls stay clear of the button.
 .editor-bar__rail-reserve {
     flex: none;
     align-self: stretch;
-    width: calc(var(--jj-rail-width, 0px) - 1px);
+    width: calc(max(var(--jj-rail-width, 0px), var(--jj-rail-reopen-width, 0px)) - 1px);
     margin-right: -12px;
 }
 

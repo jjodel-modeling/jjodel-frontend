@@ -1329,10 +1329,10 @@ body[data-active-tab="documentation"] .properties-tree-overlay,
 // porta sulla stessa stanza. Valore proprio, non 'documentation': nascondono la
 // stessa cosa per ragioni diverse.
 body[data-active-tab="manager"] .properties-tree-overlay,
-// The collapsed rail's strip (P-2026-11-20-2250) is the rail too: it goes wherever the column goes.
-body[data-layout-mode="canvas-only"] .properties-tree-strip,
-body[data-active-tab="documentation"] .properties-tree-strip,
-body[data-active-tab="manager"] .properties-tree-strip {
+// The collapsed rail's reopen button (P-2026-11-20-2250) is the rail too: it goes wherever the column goes.
+body[data-layout-mode="canvas-only"] .rail-collapse-toggle--floating,
+body[data-active-tab="documentation"] .rail-collapse-toggle--floating,
+body[data-active-tab="manager"] .rail-collapse-toggle--floating {
     display: none !important;
 }
 
@@ -1383,9 +1383,13 @@ body[data-active-tab="manager"] .properties-tree-strip {
 // Two canvases side by side (R-MT-24, P-2026-11-08-1729): the last panel leaves a column of the rail's width at its right
 // (abstract/style.scss) and the inline `right` of useCanvasPanelGap measures the first panel's edge, so the stylesheet's
 // value goes back in, past the inline one: the rail sits at the window's edge as with a single tab. `:has` cannot nest, hence
-// the two conditions on <body>.
-body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) :is(.properties-tree-overlay, .properties-tree-strip) {
+// the two conditions on <body>. The collapsed rail's reopen button (P-2026-11-20-2250) goes back the same way, to its own
+// 4px in from that edge.
+body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) .properties-tree-overlay {
     right: var(--jj-jodie-dock-width, 0px) !important;
+}
+body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) .rail-collapse-toggle--floating {
+    right: calc(var(--jj-jodie-dock-width, 0px) + 4px) !important;
 }
 
 // Off-screen position, and the only declaration that separates the two directions:
@@ -1405,19 +1409,19 @@ body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models 
     }
 }
 
-// ─── Rail collapse toggle and the collapsed strip (P-2026-11-20-2250) ──────────
+// ─── Rail collapse toggle and the collapsed rail's reopen button (P-2026-11-20-2250) ─
 //
 // The toggle left the canvas bar, where every pane had one, for the rail, which every
 // pane shares. In the column it is laid over the top right of whichever row comes first,
-// 4px in from the top and the right; in the strip it is the only thing there, at the same
-// 4px from the same top, so collapsing does not move it vertically. 24px hit (`--shell-hit`),
+// 4px in from the top and the right; a collapsed rail leaves no strip, only the reopen
+// button, floating at that same rect, so collapsing does not move it. 24px hit (`--shell-hit`),
 // glyph muted at the third text level and back to the first on hover and focus, in Basic
 // and in Advanced alike. The <i> is painted by the global `i.bi` at (0,1,1), so the colour
 // goes on `.rail-collapse-toggle i.bi`, (0,2,1).
 //
 // Every `--shell-*` read carries its fallback: the tokens are declared on the six shell
-// roots only (tokens/_shell.scss), `.properties-tree-overlay` among them, and the strip is
-// portaled beside that root, not inside it. The fallbacks are the tokens' own aliases.
+// roots only (tokens/_shell.scss), `.properties-tree-overlay` among them, and the floating
+// button is portaled beside that root, not inside it. The fallbacks are the tokens' own aliases.
 .rail-collapse-toggle {
     position: absolute;
     top: 4px;
@@ -1465,23 +1469,21 @@ body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models 
     }
 }
 
-// The strip: the rail's tint and outer hairline, full height, the column's own top, bottom and
-// `right` (the inline gap beside a generator tab, and the two-canvas rule above). One
-// below the column, which slides out over it. Not animated.
-.properties-tree-strip {
+// The reopen button of a collapsed rail: no strip under it, the panes keep the whole width.
+// The column's own top plus the toggle's 4px, and the column's `right` plus the same 4px
+// (the inline gap beside a generator tab, and the two-canvas rule above), so it is at the
+// rect "Hide panel" had. The rail's tint and hairline on the button alone, so it reads over
+// the canvas dots; the base `:hover` background (0,2,0) still wins over this tint (0,1,0).
+// One below the column, which slides out over it. Not animated. The bar of the rightmost
+// pane keeps 4 + 24 + 4 clear for it (RAIL_REOPEN_RESERVE, `--jj-rail-reopen-width`).
+.rail-collapse-toggle--floating {
     position: fixed;
-    top: calc(var(--jj-appbar-height) + 1px + var(--jj-toolbar-height));
-    right: var(--jj-jodie-dock-width, 0px);
-    bottom: var(--jj-statusbar-height);
+    top: calc(var(--jj-appbar-height) + 1px + var(--jj-toolbar-height) + 4px);
+    right: calc(var(--jj-jodie-dock-width, 0px) + 4px);
     z-index: 899;
-    width: 28px;   // RAIL_STRIP_WIDTH in PropertiesWithTreeView.tsx
     box-sizing: border-box;
     background: var(--shell-surface-rail, var(--color-slate-50));
-    border-left: 1px solid var(--shell-border, var(--color-panel-border));   // the rail's own hairline (R-SHELL-3, Shell S8 below)
-
-    .rail-collapse-toggle {
-        right: 2px;
-    }
+    border: 1px solid var(--shell-border, var(--color-panel-border));
 }
 
 .properties-with-tree-view--floating {
