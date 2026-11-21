@@ -755,3 +755,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat RC-23 on the lane shots `advanced-a-chip-popover.png`, `menu-view_notation_wireframe.png` and the DOM measures of scenes a-d, 2026-11-21 00:24; Alfonso in the morning digest)
 **Notes**: The direct worker exited `blocked` on the red vitest gate and left the merge commit in place, as designed; the chat fixed the cause on the trunk instead of rolling back.
 **Prompt document name**: 2026-11-21 00:28
+
+## 2026-11-21 — fix: right rail toggle moves from the canvas bar to the rail (P-2026-11-20-2250)
+**Prompt**: `claude_2026-11-20_2250_prompt_right_rail_toggle.md`: the `>>` rail collapse leaves the canvas bar, where every editor group had one, for the rail's top row; collapsed, the rail leaves a 28px strip whose "Show panel" button sits at the same y. Phase 1 discovery, Phase 2 in a continuation after the context ceiling, on the tree merged with the trunk (R-MT-39).
+**Files touched**: 9eafca6ba (discovery report); 49c159ed8 (`frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`); the docs commit of this entry (this inbox, the prompt's Status, the discovery addendum).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Measured at 1600x1000 (probe `probe-after.mjs`, 0 console errors): single canvas and two groups, collapse, reopen, reload in both states, Cmd+B, Basic and Advanced; typecheck 0, build 0, 81/81 in the three test files that name `Toolbar`. Not measured: generator tab beside the canvas, Filter-first and Focus-first rows, kill-switch layouts, Jjodie docked.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe, DOM measures and crops `crop-after-1600-*.png` in `~/.jjodel-lanes/P-2026-11-20-2250/`); Alfonso's check pending
+**Notes**: The merged tree differs from Phase 1: R-MT-38 removed the identity cell, so the strip's room in the bar is the existing `editor-bar__rail-reserve`, now rendered in every rail state and sized by --jj-rail-width (28 while the strip shows); EditorV2.scss is untouched (the Split Right box is gated in TSX). The strip sits outside the --shell-* roots: var() fallbacks. R-MT-39: the toggle moved, nothing dropped. R-RAIL-11: the inset is still the rail's footprint. Detail: discovery addendum.
+**Prompt document name**: 2026-11-20 22:50

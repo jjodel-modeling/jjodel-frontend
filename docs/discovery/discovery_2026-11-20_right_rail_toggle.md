@@ -111,3 +111,27 @@ None (no RC-26 item: no critical zone, no exported interface, no ratified R- row
 ## Open questions
 
 1. Should the rail's top later stop at the toolbar's bottom (F4), giving the toggle a band of its own? Out of scope here.
+
+## Addendum, Phase 2 (2026-11-21, continuation after the context ceiling)
+
+The trunk was merged into the branch before Phase 2 (8feaee0a6): R-MT-38 and R-MT-39 rewrote the canvas bar, so F1's line numbers and design item 1 and item 4's toolbar half no longer held. Re-read on the merged tree:
+
+- The toggle sat in the right zone's `.toolbar-commands`, beside Split Right (`Toolbar.tsx:1409-1417` at 8feaee0a6); zoom has its own box in the middle zone and the hairline is gone (R-MT-38). The identity cell is gone too; the bar ends in `trailing={isRailVisible ? <span className="editor-bar__rail-reserve" …/> : undefined}`, sized `calc(var(--jj-rail-width, 0px) - 1px)` (`EditorBar.scss:205-210`).
+- What changed in the plan: no `toolbar-rail-cell--strip` and no `EditorV2.scss` edit. The reserve is rendered in every rail state and follows `--jj-rail-width` (28 while the strip shows); the commands box is rendered only with Split Right in it, so `:empty` is not needed. `useTreeViewPanel` left `Toolbar.tsx` with the toggle (its only reader there).
+- The `--shell-*` tokens are declared on six shell roots only (`styles/tokens/_shell.scss:20-25`), `.properties-tree-overlay` among them, not the strip: the strip's rules read them with fallbacks, the pattern the tokens file prescribes. The rail's outer hairline is `--shell-border` (Shell S8, R-SHELL-3), not the `--border-subtle` the base `.properties-with-tree-view--rail` rule still declares (Shell S8 overrides it): the strip uses `--shell-border`.
+- The demo absence claim is now proven: positive control `command grep -r -c "Semantic type class" docs/demo/` = 4, the search for "hide panel|show panel|chevron|side panel" = 0 (exit 1).
+
+Measured after (probe `~/.jjodel-lanes/P-2026-11-20-2250/probe-after.mjs`, dev server 3130, 1600x1000, 0 console errors):
+
+| State | Toggle | Rail / strip | `--jj-rail-width` / inset | Panes (width / margin-right) |
+|---|---|---|---|---|
+| single, open | Hide `[1572,95,24,24]`, in the rail, hit | rail `[1200,91,400,877]` | 400 / 408 | 1600 / 0 |
+| single, collapsed | Show `[1574,95,24,24]`, in the strip, hit | strip `[1572,91,28,877]` | 28 / 36 | 1600 / 0 |
+| two groups, open | one toggle, in the rail | rail as above | 400 / 408 | 600 / 0, 600 / 400 |
+| two groups, collapsed | Show `[1574,95,24,24]` | strip as above | 28 / 36 | 786 / 0, 786 / 28 |
+
+The y stays 95 through the collapse (the pointer stays on the button: the crop shows it hovered); x moves 2px. No `bi-chevron-double-*` in any `.toolbar-commands`. Split Right takes the hit in every state (`[1540,91]` beside the strip). Pane ratio 1:1 before and after. The state survives a reload in both directions (`jjodel_treeview_visible`, `jjodel_property_panel_visible`). Basic (Redux `advanced` false, `html[data-mode="basic"]`) behaves the same. First row clear of the toggle: scope bar content ends at 1568, the toggle starts at 1572; with Cmd+B the Structure row is first, padding-right 32px. Strip background and hairline equal the rail's (`rgb(248,250,252)`, `1px solid rgb(226,232,240)`).
+
+Not measured: the generator tab beside the canvas (`canvasGap`), the Filter-first and Focus-first rows, the kill-switch layouts, Jjodie docked.
+
+Left as found (Rule 8): comments that still place the collapse control in the canvas topbar (`PropertiesWithTreeView.tsx`, the context comment above `useTreeViewPanel()` and the `overlayActive` comment) and the zoom box's comment in `Toolbar.tsx` ("then the rail collapse"). One reserve edge, pre-existing for an open rail and now for a collapsed one too: over a group whose active editor is not a model or metamodel, `--jj-rail-width` is 0 and the reserve's `margin-right: -12px` takes the bar's right padding.
