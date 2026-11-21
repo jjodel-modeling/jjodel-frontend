@@ -768,3 +768,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (probe by mouse on 3141 at 1600, 11/11, 0 page errors; crops `tabprefs-a/b/c-*.png` in the lane folder)
 **Notes**: Mutation bench 8/8 killed (commit message). `canvasViewChoices.ts` and `ColorSchemeSelector.tsx` unchanged: every choice reaches EditorV2's two setters. The probe must press Save before reload, else a new metamodel is lost (pre-existing). The in-memory check after close imports the module in the page; its control proves the module was reached, not that it is the app's instance; the store check is the spec'd one.
 **Prompt document name**: 2026-11-21 01:00
+
+## 2026-11-21 — merge: per-tab-view-prefs into alfonso-frontend-jjtl (P-2026-11-21-0127)
+**Prompt**: `claude_2026-11-21_0127_prompt_merge_per-tab-view-prefs.md`, a direct merge by `lane-run merge --direct`, no session: `per-tab-view-prefs` at `7d8077241` into `alfonso-frontend-jjtl`, merge base `bacae8815`, 4 commits on the branch side.
+**Files touched**: merge `1ca31c62c`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-21_per_tab_notation_colors.md`, `docs/log-inbox/multi-tab.md`, `docs/prompts/claude_2026-11-21_0100_prompt_per_tab_notation_colors.md`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/abstract/tabs/__tests__/groupPersistence.test.ts`, `frontend/src/components/abstract/tabs/groupPersistence.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1ca31c62c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16602 tests in 636 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat check 2026-11-21 01:38 (RC-23, unattended): 3001 answers 200 and serves the trunk; the UI is unchanged by this merge and the behaviour was verified by the lane probe on 3141 (11/11 DOM steps, saved-record check). Alfonso in the morning digest.
+**Notes**: Rollback tag `pre-per-tab-view-prefs` on `bacae8815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0127/result.json`.
+**Prompt document name**: 2026-11-21 01:27
