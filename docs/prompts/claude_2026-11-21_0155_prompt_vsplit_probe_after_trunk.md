@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-21-0155
 Chat: C-2026-11-19-2200
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-21 · lane fast · 5fe23fba6, eca23597e · regression found and fixed in DockManagerStyles.scss (DOVE widened by the chat, RC-25)
 Lane: fast (probe update on a branch already reviewed; no critical zone)
 Depends: P-2026-11-19-2200
 Request: https://claude.ai/code/session_01DQt9R6xGnqUtiRzRQbr61k (Alfonso gave the visual GO on the splitters 2026-11-21 01:25; the merge into the trunk waits on this probe)

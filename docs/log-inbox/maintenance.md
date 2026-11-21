@@ -1528,3 +1528,16 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Priority**: low
 **Found in**: P-2026-11-19-2200
 **Detail**: docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md
+
+## 2026-11-21 — test(probe): vsplit probe after the trunk merge, dock divider fix (P-2026-11-21-0155)
+**Prompt**: `claude_2026-11-21_0155_prompt_vsplit_probe_after_trunk.md`, fast lane: the 7 failures of `vsplit-uniform.ts` after the trunk merge, drift or regression, by measurement. Stopped on a regression outside DOVE; the chat widened DOVE to one rule of `DockManagerStyles.scss` (RC-25).
+**Files touched**: `5fe23fba6`: `frontend/scripts/probe/vsplit-uniform.ts`. `eca23597e`: `frontend/src/components/dock/DockManagerStyles.scss`. This commit: `docs/log-inbox/maintenance.md`, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 22:00 (`claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, probe drift after the merge `99b18d7df`)
+**Causa**: (c)
+**Regressions**: yes. Found, not caused: since R-MT-34 the 2024 rule at DockManagerStyles.scss:322 hid every dock divider when no group held 2 tabs, so split one-tab groups could not be resized. On the trunk too. Fixed in `eca23597e`; full probe 435 PASS, 0 FAIL on 3007, build exit 0.
+**Out-of-scope changes**: yes. `DockManagerStyles.scss`, one rule, widened by the chat (RC-25).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: probe by DOM and pixels, screenshot of the hidden divider in the lane folder
+**Notes**: Dashboard hypothesis refuted: `.project-dashboard` is display none after open2. Failures 1, 2, 4, 5, 6: the divider rule. 3: half-pixel seam (jjtl handle 1072.5..1080.5), the grab now samples the knob's layout columns, minimum unchanged. 7: `toolbar-viewpoint-trigger` gone, the syntax chip opens.
+**Prompt document name**: 2026-11-21 01:55
