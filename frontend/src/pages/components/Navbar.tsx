@@ -38,7 +38,9 @@ import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
 import { modelOfTabId } from '../../components/abstract/tabs/modelTabId';
-import { modelGroups, SUMMARY_TAB_ID } from '../../components/abstract/tabs/dockGroups';
+import { activeTabId, modelGroups, SUMMARY_TAB_ID } from '../../components/abstract/tabs/dockGroups';
+import { colorChoices, syntaxChoices, useCanvasViewOf } from '../../components/editor-v2/canvasViewChoices';
+import type { ViewChoice } from '../../components/editor-v2/canvasViewChoices';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -608,6 +610,36 @@ function placeholder(){}
 const allowPlaceholders = true;
 function open (url: string) { window.open(url, '_blank'); }
 
+/** View › Syntax and View › Colors when no tab shows a diagram (P-2026-11-20-2310). */
+const NO_CANVAS_TITLE = 'No diagram is active';
+
+/**
+ * View › Syntax and View › Colors (P-2026-11-20-2310): the entries canvasViewChoices.ts defines for the canvas of the
+ * active tab, the same list the syntax chip of its editor bar opens, as menu entries. A heading is a `section` row,
+ * a hairline a divisor, the check mark the `  \u2713` suffix of the other toggles of this menu. The description's
+ * class is styled in editor-v2/CanvasViewControls.scss, loaded with the canvas these entries need.
+ */
+function viewChoiceEntries(choices: readonly ViewChoice[]): MenuEntry[] {
+    const out: MenuEntry[] = [];
+    for (const c of choices) {
+        const id = 'view_' + c.key.replace(/[^A-Za-z0-9_-]/g, '_');
+        if (c.sep) out.push({name: 'divisor', function: placeholder});
+        if (c.section) out.push({id: id + '_section', name: c.section, section: true});
+        out.push({
+            id,
+            name: c.checked ? `${c.label}  \u2713` : c.label,
+            jsx: <span>{c.checked ? `${c.label}  \u2713` : c.label}{c.desc && <span className="view-menu-choice__desc">{c.desc}</span>}</span>,
+            icon: <i className={`bi ${c.icon}`} />,
+            title: c.title ?? c.desc,
+            disabled: c.disabled,
+            subItems: c.children ? viewChoiceEntries(c.children) : undefined,
+            // A disabled row still takes the click of its <li>; a parent opens its submenu and runs nothing.
+            function: c.disabled || c.children ? undefined : c.run,
+        });
+    }
+    return out;
+}
+
 // Helper function to perform zoom on active graph
 function performGraphZoom(metamodels: LModel[], action: 'in' | 'out' | 'reset') {
     const activeMetamodel = metamodels.find(m => m);
@@ -744,6 +776,9 @@ function NavbarComponent(props: AllProps) {
             return { id: modelId, isModel: raw.isMetamodel === false };
         } catch { return null; }
     }, []);
+
+    // View › Syntax and View › Colors act on the canvas of the active tab, found by its tab id (P-2026-11-20-2310).
+    const activeCanvasView = useCanvasViewOf(() => activeTabId(DockManager.dock?.getLayout?.()));
 
     const [showSingletons, setShowSingletons] = useState<boolean>(() => {
         const tab = getActiveModelTab();
@@ -1608,6 +1643,21 @@ function NavbarComponent(props: AllProps) {
                     icon: <i className="bi bi-arrow-counterclockwise" />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_RESET),
                     disabled: isDashboard
+                },
+                {name: 'divisor', function: placeholder},
+                /* View settings of the active diagram, in Basic and Advanced alike (P-2026-11-20-2310): the syntax
+                   chip of its editor bar opens the same list. */
+                {id: 'view_syntax', name: 'Syntax',
+                    icon: <i className="bi bi-diagram-3" />,
+                    disabled: !activeCanvasView,
+                    title: activeCanvasView ? undefined : NO_CANVAS_TITLE,
+                    subItems: activeCanvasView ? viewChoiceEntries(syntaxChoices(activeCanvasView)) : undefined
+                },
+                {id: 'view_colors', name: 'Colors',
+                    icon: <i className="bi bi-palette" />,
+                    disabled: !activeCanvasView,
+                    title: activeCanvasView ? undefined : NO_CANVAS_TITLE,
+                    subItems: activeCanvasView ? viewChoiceEntries(colorChoices(activeCanvasView)) : undefined
                 },
                 {name: 'divisor', function: placeholder},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},

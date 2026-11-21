@@ -30,6 +30,10 @@ import { PinnedHoverCard } from './PinnedHoverCard';
 import { buildEvalContext } from '../../../jjscript';
 import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
+import { groupOfTab, modelGroups } from '../../../components/abstract/tabs/dockGroups';
+import { modelOfTabId } from '../../../components/abstract/tabs/modelTabId';
+import EditorBar, { RepresentationSwitch } from '../../../components/editor-v2/EditorBar';
+import { diagramTabFor, textAvailability } from '../../../components/editor-v2/representationSwitch';
 import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGrammar';
 import { JjodelEvents } from '../../../events/registry';
@@ -1036,6 +1040,28 @@ function TextNavigator({ editor, session, open, children, onPick }: TextNavigato
 
 type TextualMode = 'text' | 'ebnf' | 'syntax';
 
+/**
+ * The Diagram entry of the bar's `Diagram | Text` (R-MT-35, P-2026-11-20-1610): brings forward a canvas tab on the
+ * model, the one in this tab's group first, else one in another group; with none open, the model's first tab opens in
+ * the active group (`DockManager.openModelTab`, R-MT-31), on the abstract syntax.
+ */
+function showDiagram(modelId: string, tabId: string, lookup: Record<string, any>): void {
+    const dock = DockManager.dock;
+    if (!dock) return;
+    const layout = dock.getLayout();
+    const own = groupOfTab(layout, tabId);
+    const others = modelGroups(layout).filter(g => g !== own).map(g => g.tabs);
+    const id = diagramTabFor(modelId, tabId, own ? own.tabs : null, others, modelOfTabId);
+    if (id) {
+        dock.updateTab(id, null as any, true);
+        return;
+    }
+    if (lookup[modelId]?.className === 'DModel') void DockManager.openModelTab(modelId, null);
+}
+
+/** The Text entry on a Text tab: always on, the tab shows it. */
+const TEXT_ENTRY_HERE = textAvailability({ isMetamodel: false, modelId: 'here', textualEnabled: true });
+
 const MODES: ReadonlyArray<{ readonly mode: TextualMode; readonly label: string; readonly icon: string; readonly title: string }> = [
     { mode: 'text', label: 'Text', icon: 'bi-file-earmark-text', title: 'The model in the textual notation' },
     { mode: 'ebnf', label: 'EBNF', icon: 'bi-braces', title: 'The concrete grammar of the notation' },
@@ -2022,7 +2048,11 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     return (
         <div className="textual-tab">
-            <div className="textual-tab__bar">
+            {/* The shared editor bar (R-MT-38, P-2026-11-20-1610): the title, the edit status and its actions left, the
+                notation and the file actions in the middle, EBNF, Syntax and `Diagram | Text` right. No close of its
+                own: the tab's close on the strip is the one. */}
+            <EditorBar className="textual-tab__bar" ariaLabel="Text editor"
+                left={<>
                 <span className="textual-tab__title" title={`${modelName} · ${shownLabel}`}>
                     <i className="bi bi-file-earmark-text" aria-hidden="true" />
                     <span className="textual-tab__name">{modelName}</span>
@@ -2060,7 +2090,6 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         )}
                     </span>
                 ) : null}
-                <span className="textual-tab__spacer" />
                 {stale && (
                     <span className="textual-tab__stale" role="alert">
                         <i className="bi bi-exclamation-triangle" aria-hidden="true" />
@@ -2077,6 +2106,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         {STYLE_CATALOG[styleRefused.base].name} refused: {styleRefused.reason}
                     </span>
                 )}
+                </>}
+                middle={<>
                 {writeSyntax && metamodel && (
                     <label className="textual-tab__style"
                            title={styleFree ? 'The style of the notation, stored with the metamodel' : 'Apply or discard the edit to change the style'}>
@@ -2109,26 +2140,29 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         <i className="bi bi-layout-sidebar" aria-hidden="true" />
                     </button>
                 )}
+                </>}
+                right={<>
+                {/* EBNF and Syntax (R-MT-35): the Text entry moved to `Diagram | Text`; pressing the shown mode again
+                    gives the text back. */}
                 <div className="textual-tab__modes" role="group" aria-label="Shown text">
-                    {MODES.filter(m => m.mode !== 'syntax' || writeSyntax).map(m => (
+                    {MODES.filter(m => m.mode !== 'text' && (m.mode !== 'syntax' || writeSyntax)).map(m => (
                         <button
                             key={m.mode}
                             type="button"
                             className={'textual-tab__mode' + (mode === m.mode ? ' textual-tab__mode--active' : '')}
                             aria-pressed={mode === m.mode}
                             title={m.title}
-                            onClick={() => setMode(m.mode)}
+                            onClick={() => setMode(mode === m.mode ? 'text' : m.mode)}
                         >
                             <i className={`bi ${m.icon}`} aria-hidden="true" />
                             {m.label}
                         </button>
                     ))}
                 </div>
-                <button type="button" className="textual-tab__close" aria-label="Close the text" title="Close"
-                        onClick={() => DockManager.closeTab(tabId)}>
-                    <i className="bi bi-x-lg" aria-hidden="true" />
-                </button>
-            </div>
+                <RepresentationSwitch active="text" text={TEXT_ENTRY_HERE} textPressed={mode === 'text'}
+                                      onText={() => setMode('text')} onDiagram={() => showDiagram(modelId, tabId, lookup ?? {})} />
+                </>}
+            />
             {model && <NotationIssues issues={issues} warnings={view.warnings} />}
             <div className="textual-tab__body textual-tab__body--layered">
                 {!model ? (
@@ -2519,7 +2553,8 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
 
     return (
         <div className="textual-tab">
-            <div className="textual-tab__bar">
+            <EditorBar className="textual-tab__bar" ariaLabel="New model text editor"
+                left={<>
                 <span className="textual-tab__title" title={`New model of ${metamodelName} · ${shownLabel}`}>
                     <i className="bi bi-file-earmark-plus" aria-hidden="true" />
                     <span className="textual-tab__name">New model</span>
@@ -2530,7 +2565,8 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
                     <input type="text" value={name} spellCheck={false} aria-label="Model name"
                            onChange={e => setName(e.target.value)} />
                 </label>
-                <span className="textual-tab__spacer" />
+                </>}
+                right={<>
                 <span className={'textual-tab__status' + (current && reading.lines === null ? ' textual-tab__status--error' : '')}
                       role="status">
                     {status}
@@ -2541,11 +2577,8 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
                     <i className="bi bi-plus-lg" aria-hidden="true" />
                     {creating ? 'Creating…' : 'Create model'}
                 </button>
-                <button type="button" className="textual-tab__close" aria-label="Close the text" title="Close"
-                        onClick={() => DockManager.closeTab(tabId)}>
-                    <i className="bi bi-x-lg" aria-hidden="true" />
-                </button>
-            </div>
+                </>}
+            />
             {metamodel && <NotationIssues issues={input.issues} />}
             <div className="textual-tab__body">
                 {!metamodel ? (

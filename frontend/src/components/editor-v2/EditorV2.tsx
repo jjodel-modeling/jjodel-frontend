@@ -414,6 +414,9 @@ export interface EditorV2Props {
     onViewpointChange?: (viewpointId: string | null) => void;
     /** Split Right of this canvas's tab (R-MT-30): a new group right of it, a copy on the same viewpoint. Omitted: no split icon. */
     onSplitRight?: () => void;
+    /** The dock tab this canvas renders in, for the View menu's Syntax and Colors (P-2026-11-20-2310). Omitted: the
+     *  standalone route, and the View menu does not reach this canvas. */
+    tabId?: string;
 }
 
 /**
@@ -512,7 +515,7 @@ function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: b
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight }: EditorV2Props) {
+function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight, tabId }: EditorV2Props) {
     // Phase 3: React Flow state — initialised from demo data when standalone,
     // or populated by useJjomSync when modelid is provided.
     const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
@@ -5543,6 +5546,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {bindingMetamodel && <OntoBindingModal modelId={bindingMetamodel} onClose={() => setBindingMetamodel(null)} />}
                 <div className="editor-v2__main" onPointerDownCapture={activatePane} onFocusCapture={activatePane}>
                     <Toolbar
+                        tabId={tabId}
                         commandsDisabled={autoLayoutBusy || (paneEl !== null && paneIsInactive(canvasSplit, paneEl))}
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
@@ -5691,7 +5695,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight }: EditorV2Props) {
+function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange, viewpointId, onViewpointChange, onSplitRight, tabId }: EditorV2Props) {
     return (
         <ReactFlowProvider>
             <EditorV2Inner
@@ -5704,6 +5708,7 @@ function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoi
                 viewpointId={viewpointId}
                 onViewpointChange={onViewpointChange}
                 onSplitRight={onSplitRight}
+                tabId={tabId}
             />
         </ReactFlowProvider>
     );

@@ -11,6 +11,10 @@ interface ColorSchemeSelectorProps {
     onDeletePalette: (id: string) => void;
     /** Inert while a concrete-syntax viewpoint is active: the theme stops governing the render. */
     disabled?: boolean;
+    /** Mounts with the menu and the Palette submenu open: View › Colors › Manage palettes… (P-2026-11-20-2310). */
+    defaultOpen?: boolean;
+    /** Told when the menu opens or closes, so a host that mounted it open can unmount it on close. */
+    onOpenChange?: (open: boolean) => void;
 }
 
 interface SchemeOption {
@@ -26,7 +30,7 @@ interface PaletteOption {
     swatches: string[]; // 4 hex colors: [class, abstract, enum, package]
 }
 
-const MAIN_OPTIONS: SchemeOption[] = [
+export const MAIN_OPTIONS: SchemeOption[] = [
     { id: 'default',        name: 'Default',        desc: 'Theme colors',     icon: 'bi-palette' },
     { id: 'monochrome',     name: 'Monochrome',     desc: 'Uniform grays',    icon: 'bi-circle-half' },
     // pastel group handled separately
@@ -34,7 +38,7 @@ const MAIN_OPTIONS: SchemeOption[] = [
     { id: 'print',          name: 'Print',           desc: 'No fills, B&W',   icon: 'bi-printer' },
 ];
 
-const PALETTE_OPTIONS: PaletteOption[] = [
+export const PALETTE_OPTIONS: PaletteOption[] = [
     { id: 'sapphire',    name: 'Sapphire',    swatches: ['#3b82f6', '#94a3b8', '#38bdf8', '#475569'] },
     { id: 'amethyst',    name: 'Amethyst',    swatches: ['#8b5cf6', '#6d5da0', '#a78bfa', '#4c1d95'] },
     { id: 'jade',        name: 'Jade',        swatches: ['#10b981', '#3d7a60', '#2dd4bf', '#134e4a'] },
@@ -51,9 +55,9 @@ const ALL_OPTIONS = new Map<ColorScheme, { name: string; icon: string }>([
 // Lower-cased built-in labels — reserved names a custom palette cannot reuse.
 const BUILTIN_NAMES = [...MAIN_OPTIONS, ...PALETTE_OPTIONS].map(o => o.name.toLowerCase());
 
-function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes, onCreateCustomPalette, onRenamePalette, onDeletePalette, disabled = false }: ColorSchemeSelectorProps) {
-    const [open, setOpen] = useState(false);
-    const [submenuOpen, setSubmenuOpen] = useState(false);
+function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes, onCreateCustomPalette, onRenamePalette, onDeletePalette, disabled = false, defaultOpen = false, onOpenChange }: ColorSchemeSelectorProps) {
+    const [open, setOpen] = useState(defaultOpen);
+    const [submenuOpen, setSubmenuOpen] = useState(defaultOpen);
     const [creating, setCreating] = useState(false);
     const [newName, setNewName] = useState('');
     const [newSeed, setNewSeed] = useState('#3b82f6');
@@ -65,6 +69,14 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes,
     const creatingRef = useRef(false);
     const actionActiveRef = useRef(false);  // true while a rename/delete row action is open
     const editRowRef = useRef<HTMLDivElement>(null);
+
+    const onOpenChangeRef = useRef(onOpenChange);
+    onOpenChangeRef.current = onOpenChange;
+    const didMountOpenRef = useRef(false);
+    useEffect(() => {
+        if (!didMountOpenRef.current) { didMountOpenRef.current = true; return; }
+        onOpenChangeRef.current?.(open);
+    }, [open]);
 
     // A menu left hanging open under a now-disabled trigger would still take clicks.
     useEffect(() => {
