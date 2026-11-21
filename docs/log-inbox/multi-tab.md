@@ -755,3 +755,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat RC-23 on the lane shots `advanced-a-chip-popover.png`, `menu-view_notation_wireframe.png` and the DOM measures of scenes a-d, 2026-11-21 00:24; Alfonso in the morning digest)
 **Notes**: The direct worker exited `blocked` on the red vitest gate and left the merge commit in place, as designed; the chat fixed the cause on the trunk instead of rolling back.
 **Prompt document name**: 2026-11-21 00:28
+
+## 2026-11-21 — fix: notation and colors persisted per tab (P-2026-11-21-0100)
+**Prompt**: `claude_2026-11-21_0100_prompt_per_tab_notation_colors.md`, lane full, discovery then Phase 2 in cascade: notation and colors persisted per tab with the viewpoint's store, read order tab, global key, default; a choice writes both.
+**Files touched**: bb0ebf6d9 (discovery report); 0c342c802 — `tabs/groupPersistence.ts`, `tabs/__tests__/groupPersistence.test.ts` (+6 tests), `EditorV2.tsx`, `DockManager.tsx`; docs commit — this entry, R-MT-40 in `docs/decisions.md`, the Status of 0100
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0, build 0, vitest 16599 passed with only the 3 known import reds; probe scenes all green
+**Out-of-scope changes**: yes (`DockManager.tsx`, not named in DOVE; read as part of the per-tab viewpoint persistence, discovery §0)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe by mouse on 3141 at 1600, 11/11, 0 page errors; crops `tabprefs-a/b/c-*.png` in the lane folder)
+**Notes**: Mutation bench 8/8 killed (commit message). `canvasViewChoices.ts` and `ColorSchemeSelector.tsx` unchanged: every choice reaches EditorV2's two setters. The probe must press Save before reload, else a new metamodel is lost (pre-existing). The in-memory check after close imports the module in the page; its control proves the module was reached, not that it is the app's instance; the store check is the spec'd one.
+**Prompt document name**: 2026-11-21 01:00

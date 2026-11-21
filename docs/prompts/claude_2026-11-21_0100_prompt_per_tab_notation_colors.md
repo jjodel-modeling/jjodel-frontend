@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-11-21-0100
 Chat: C-2026-11-20-2310
-Status: da eseguire
+Status: eseguito 2026-11-21 · lane tabprefs · 0c342c802 · probe 11/11 on 3141, visual check pending (chat, RC-23)
 Lane: full (discovery then Phase 2 in cascade; editor-v2 state, no critical zone)
 Depends: P-2026-11-20-2310 (merged, cbbae0da3)
 Request: none (open question 2 of the 2026-11-21 checkpoint, «ok alle raccomandazioni» by Alfonso 2026-11-21 00:59)
