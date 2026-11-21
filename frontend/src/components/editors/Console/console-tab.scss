@@ -689,29 +689,6 @@ $transition-normal: 250ms ease;
   }
 }
 
-// Vertical grip (for horizontal resize - between side panels)
-.resize-grip-icon-vertical {
-  font-size: 16px;
-  color: #94a3b8;
-  padding: 8px 2px;
-  border-radius: 4px;
-  background-color: transparent;
-  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
-  cursor: ew-resize;
-
-  &:hover {
-    color: #64748b;
-    background-color: #f1f5f9;
-    transform: scaleX(1.1);
-  }
-
-  &.dragging {
-    color: #0ea5e9;
-    background-color: rgba(14, 165, 233, 0.08);
-    transform: scaleX(1.2);
-  }
-}
-
 // Horizontal grip (for vertical resize - console footer)
 .resize-grip-icon-horizontal {
   font-size: 16px;

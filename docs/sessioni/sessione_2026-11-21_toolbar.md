@@ -35,24 +35,26 @@ fino alla fine». Supersedes the 2026-11-16 instance-of checkpoint as `sessione_
 
 Shots: `~/.jjodel-lanes/P-2026-11-20-2310/shots/`.
 
-## Open questions for Alfonso (each with the recommendation)
+## Questions closed (Alfonso 2026-11-21 00:59, «ok alle raccomandazioni»)
 
-1. Groups below 280 px (a third Split Right gives 200 px): chip, switch, Split and `>>` fill the bar and the editing
-   buttons do not even reach the overflow. Recommended: leave it to the splitter lane's minimum width (280 px), check
-   once `ui-vsplit` lands.
-2. Notation and colors are stored once for all groups (one `localStorage` key each) while the viewpoint is stored per
-   tab: after a reload every group shows the last notation and colors chosen anywhere. Recommended: a small follow-up
-   lane that stores both per tab next to the viewpoint, with migration from the global key as default.
-3. `scripts/hooks/__tests__/contextCeiling.test.ts` («transcript_path wins over JJODEL_LANE_LOG») failed three times in
-   the lane run and passed in the merge run; ticket filed in `bd50d9ffa`. Recommended: treat as flaky and look at it
-   with the next harness lane.
+1. Groups below 280 px: left to the splitter lane's minimum width (280 px); check once `ui-vsplit` lands.
+2. Notation and colors per tab: done by lane P-2026-11-21-0100 (R-MT-40). Each tab persists its own pair next to the
+   viewpoint; reading order tab value, then the global «last used» key, then the default; a choice writes both; closed
+   tabs are cleared. Commits `bb0ebf6d9` (discovery), `0c342c802` (fix, 4 files, 6 tests), `7d8077241` (close);
+   merged directly as P-2026-11-21-0127 (`7444d9673`, `1ca31c62c`, `542f8a436`), all gates green, rollback tag
+   `pre-per-tab-view-prefs` on `bacae8815`.
+3. `contextCeiling.test.ts`: treated as flaky, to look at with the next harness lane (ticket in `bd50d9ffa`).
+
+Worktrees `~/jjodel-w-toolbar` and `~/jjodel-w-tabprefs` removed, dev servers 3140 and 3141 stopped. Trunk at
+`542f8a436` before this checkpoint commit.
 
 ## Next
 
-1. Alfonso's look on 3001 (hard refresh): one group, Split Right twice, chip and View menu, overflow.
-2. Answer the three questions above.
-3. Retire `~/jjodel-w-toolbar` and stop the 3140 dev server.
-4. Still open from 2026-11-16: visual check and merge of `oi-multilevel`, then `oi-notation`.
+1. Alfonso's look on 3001 (hard refresh): Split Right twice, chip and View menu, overflow; set different notations per
+   group and reload.
+2. Unmerged branch `multi-tab-split-n` (last commit 2026-11-19) touches `EditorV2.tsx` and `DockManager.tsx`: expect
+   conflicts if it is ever merged.
+3. Still open from 2026-11-16: visual check and merge of `oi-multilevel`, then `oi-notation`.
 
 ## Lessons
 

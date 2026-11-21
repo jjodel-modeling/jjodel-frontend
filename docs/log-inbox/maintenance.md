@@ -1491,3 +1491,66 @@ Found by lane P-2026-11-15-2305 (book verification of Chapter 15). Report: jjode
 **Smoke visivo**: passato — chat, unattended: no UI in scope; the chat checked the merge commit a4f62729e on the trunk and the lane P-2026-11-18-1815 gates (JjTL and JjEL suites, typecheck, build green)
 **Notes**: Rollback tag `pre-jjtl-parent-scope` on `4bfd26add` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-18-2211/result.json`.
 **Prompt document name**: 2026-11-18 22:11
+
+## 2026-11-20 — style(ui): one slim vertical splitter contract across the platform (P-2026-11-19-2200)
+**Prompt**: `claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, full lane, Phase 2 after the chat's GO (C-2026-11-19-2200, 2026-11-20 16:45), Q1-Q5 of the Phase 1 report adopted unattended (RC-25): every vertical pane splitter draws one «sash» from a single SCSS partial, DOM and drag handlers unchanged except the two JjTL grip icons. Continued after a context ceiling (verified handoff).
+**Files touched**: `5d81fd6c6`: `frontend/src/styles/components/_vsplit.scss` (new), `components/ResizeHandle/resize-handle.scss`, `components/abstract/style.scss`, `components/editors/properties-with-tree-view.scss`, `codegen/ui/TemplateEditorTab.scss`. `4d9d27a22`: `frontend/scripts/probe/vsplit-uniform.ts` (new), `abstract/style.scss`, `codegen/ui/TemplateEditorTab.scss`, `codegen/textual/ui/SyntaxForm.scss`, `abstract/tabs/ScriptTab.scss`, `jjtl/styles/jjtl.scss`, `jjtl/components/JjtlDevelopmentEnv.tsx`, `editors/Console/console-tab.scss`, `Jodie/JodieWindow.css`. `c0b5c9bdd`: the discovery report §13, `docs/decisions.md` (D-UI-17). This commit: this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Probe `vsplit-uniform.ts` 185 PASS on 3006, exit 0; mutant (hover slate-500) red, restored; typecheck exit 0; build exit 0; check:scripts exit 0; vitest 628 of 632 files green, the 3 known import failures plus `contextCeiling.test.ts`, green with the lane env unset (ticket below). Unmeasured: the RC-23 visual check, Basic mode, the horizontal `ResizeHandle`.
+**Out-of-scope changes**: no. 14 files over the three commits, all in the prompt's DOVE; `instanceManagerTab.scss` not needed, dead CSS not deleted (RC-26).
+**Layer Impact Report**: not-required
+**Smoke visivo**: before/after crop pairs in ~/.jjodel-lanes/P-2026-11-19-2200/crops for the chat (RC-23), listed in the report §13.5; the lane judged none
+**Notes**: Geometry exceptions: rail 6px at left 0, JjTL and Jjodie 8px inside the pane. Site D (rail over the plain divider, marker state) hits 5 of 8 samples, was 1 of 9. Detail: `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md` §13.
+**Prompt document name**: 2026-11-19 22:00
+
+## 2026-11-20 — ticket: contextCeiling hook test reads the lane's JJODEL_LANE_LOG_FROM
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` › "transcript_path wins over JJODEL_LANE_LOG" fails (`expected null to be 'deny'`, :226) when the calling shell has `JJODEL_LANE_LOG_FROM` set, as a lane session does, and passes with only that variable unset. The test is not hermetic: a lane's own vitest gate shows a red that is neither the lane's nor the tip's.
+**Priority**: low
+**Found in**: P-2026-11-19-2200
+
+## 2026-11-21 — style(ui): splitter knob centred on every seam, rework 2 (P-2026-11-19-2200)
+**Prompt**: `claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, rework 2 after Alfonso's visual checks of Phase 2, the chat's spec (RC-25, unattended): a floating 6x28 knob on every vertical splitter, held hover 36px, every knob at one height, centred on its seam (overflow-clip room on the four clipping panes), and the docked-Jjodie z-order (option 1, fallback option 3, option 2 as an open item). Four sessions, context-ceiling handoffs.
+**Files touched**: `21644454a`: `frontend/src/styles/components/_vsplit.scss`, `components/ResizeHandle/resize-handle.scss`, `components/abstract/style.scss`, `components/editors/properties-with-tree-view.scss`, `jjtl/styles/jjtl.scss`, `components/Jodie/JodieWindow.css`, `frontend/scripts/probe/vsplit-uniform.ts`. `8ed6dd3ac`: `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md` (§14), `docs/decisions.md` (D-UI-17 amended). This commit: `docs/log-inbox/maintenance.md`, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 22:00 (`claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, Phase 2 `5d81fd6c6`, `4d9d27a22`)
+**Causa**: (d)
+**Regressions**: unknown. Probe `vsplit-uniform.ts` A..F 435 PASS, 0 FAIL on 3007, exit 0; mutant (resting knob border) red, restored; build, typecheck, check:scripts, splitter vitest exit 0. The visual check is the chat's (RC-23).
+**Out-of-scope changes**: yes. The chat widened DOVE (2026-11-20 22:52 and 2026-11-21) to the pane rules of the four clipping panes (rail, two JjTL panes, Jjodie's window) and to the docked window's z-order; 11 files over three commits, listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: before/after crop pairs for the chat (RC-23), report §14.4
+**Notes**: Option 1 (handle z 901, window without transform) failed on the pointer: the handle covered the rail tree's context menu, 209 of 228 points against 38. Option 3 adopted: the jodie-dock knob shows 4 of 6px, exception like D. Second cause (a): the knob is a spec change. Detail: report §14.
+**Prompt document name**: 2026-11-19 22:00
+
+## 2026-11-21 — ticket: rail tree context menus portalled to body, so Jjodie's dock knob shows whole
+**Ticket**: The rail tree's context menus (`TreeViewContent.tsx` `useClassifierContextMenu` ~685, `useModelTabContextMenu` ~792) render inside the floating rail with an inline `position: fixed; z-index: 9999`, so they paint at the rail's z 900. Docked Jjodie's dock handle therefore cannot go above the rail (z 901) without covering them (measured 2026-11-21), and its knob shows 4 of 6px. Portalling the menus to `document.body` (option 2 of the chat) lifts both.
+**Priority**: low
+**Found in**: P-2026-11-19-2200
+**Detail**: docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md
+
+## 2026-11-21 — test(probe): vsplit probe after the trunk merge, dock divider fix (P-2026-11-21-0155)
+**Prompt**: `claude_2026-11-21_0155_prompt_vsplit_probe_after_trunk.md`, fast lane: the 7 failures of `vsplit-uniform.ts` after the trunk merge, drift or regression, by measurement. Stopped on a regression outside DOVE; the chat widened DOVE to one rule of `DockManagerStyles.scss` (RC-25).
+**Files touched**: `5fe23fba6`: `frontend/scripts/probe/vsplit-uniform.ts`. `eca23597e`: `frontend/src/components/dock/DockManagerStyles.scss`. This commit: `docs/log-inbox/maintenance.md`, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-19 22:00 (`claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, probe drift after the merge `99b18d7df`)
+**Causa**: (c)
+**Regressions**: yes. Found, not caused: since R-MT-34 the 2024 rule at DockManagerStyles.scss:322 hid every dock divider when no group held 2 tabs, so split one-tab groups could not be resized. On the trunk too. Fixed in `eca23597e`; full probe 435 PASS, 0 FAIL on 3007, build exit 0.
+**Out-of-scope changes**: yes. `DockManagerStyles.scss`, one rule, widened by the chat (RC-25).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile: probe by DOM and pixels, screenshot of the hidden divider in the lane folder
+**Notes**: Dashboard hypothesis refuted: `.project-dashboard` is display none after open2. Failures 1, 2, 4, 5, 6: the divider rule. 3: half-pixel seam (jjtl handle 1072.5..1080.5), the grab now samples the knob's layout columns, minimum unchanged. 7: `toolbar-viewpoint-trigger` gone, the syntax chip opens.
+**Prompt document name**: 2026-11-21 01:55
+
+## 2026-11-21 — merge: ui-vsplit into alfonso-frontend-jjtl (P-2026-11-21-0235)
+**Prompt**: `claude_2026-11-21_0235_prompt_merge_ui-vsplit.md`, a direct merge by `lane-run merge --direct`, no session: `ui-vsplit` at `1234fa65e` into `alfonso-frontend-jjtl`, merge base `bacae8815`, 15 commits on the branch side.
+**Files touched**: merge `c7e40d3b9`: 18 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-19_vertical_splitters_inventory.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-19_2200_prompt_vertical_splitters_unify.md`, `docs/prompts/claude_2026-11-21_0155_prompt_vsplit_probe_after_trunk.md`, `frontend/scripts/probe/vsplit-uniform.ts`, `frontend/src/codegen/textual/ui/SyntaxForm.scss`, `frontend/src/codegen/ui/TemplateEditorTab.scss`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c7e40d3b9` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16602 tests in 636 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual GO by Alfonso 2026-11-21 01:25 on the ui-vsplit worktree (3006); probe vsplit-uniform 435/435 after the trunk merge; merge gates green (typecheck, vitest, build, check:docs/agents/scripts/addonly)
+**Notes**: Rollback tag `pre-ui-vsplit` on `a8ecb9ef6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0235/result.json`.
+**Prompt document name**: 2026-11-21 02:35

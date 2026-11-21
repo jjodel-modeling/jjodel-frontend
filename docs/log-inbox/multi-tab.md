@@ -768,3 +768,28 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (lane probe, DOM measures and crops `crop-after-1600-*.png` in `~/.jjodel-lanes/P-2026-11-20-2250/`); Alfonso's check pending
 **Notes**: The merged tree differs from Phase 1: R-MT-38 removed the identity cell, so the strip's room in the bar is the existing `editor-bar__rail-reserve`, now rendered in every rail state and sized by --jj-rail-width (28 while the strip shows); EditorV2.scss is untouched (the Split Right box is gated in TSX). The strip sits outside the --shell-* roots: var() fallbacks. R-MT-39: the toggle moved, nothing dropped. R-RAIL-11: the inset is still the rail's footprint. Detail: discovery addendum.
 **Prompt document name**: 2026-11-20 22:50
+## 2026-11-21 — fix: notation and colors persisted per tab (P-2026-11-21-0100)
+**Prompt**: `claude_2026-11-21_0100_prompt_per_tab_notation_colors.md`, lane full, discovery then Phase 2 in cascade: notation and colors persisted per tab with the viewpoint's store, read order tab, global key, default; a choice writes both.
+**Files touched**: bb0ebf6d9 (discovery report); 0c342c802 — `tabs/groupPersistence.ts`, `tabs/__tests__/groupPersistence.test.ts` (+6 tests), `EditorV2.tsx`, `DockManager.tsx`; docs commit — this entry, R-MT-40 in `docs/decisions.md`, the Status of 0100
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0, build 0, vitest 16599 passed with only the 3 known import reds; probe scenes all green
+**Out-of-scope changes**: yes (`DockManager.tsx`, not named in DOVE; read as part of the per-tab viewpoint persistence, discovery §0)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe by mouse on 3141 at 1600, 11/11, 0 page errors; crops `tabprefs-a/b/c-*.png` in the lane folder)
+**Notes**: Mutation bench 8/8 killed (commit message). `canvasViewChoices.ts` and `ColorSchemeSelector.tsx` unchanged: every choice reaches EditorV2's two setters. The probe must press Save before reload, else a new metamodel is lost (pre-existing). The in-memory check after close imports the module in the page; its control proves the module was reached, not that it is the app's instance; the store check is the spec'd one.
+**Prompt document name**: 2026-11-21 01:00
+
+## 2026-11-21 — merge: per-tab-view-prefs into alfonso-frontend-jjtl (P-2026-11-21-0127)
+**Prompt**: `claude_2026-11-21_0127_prompt_merge_per-tab-view-prefs.md`, a direct merge by `lane-run merge --direct`, no session: `per-tab-view-prefs` at `7d8077241` into `alfonso-frontend-jjtl`, merge base `bacae8815`, 4 commits on the branch side.
+**Files touched**: merge `1ca31c62c`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-21_per_tab_notation_colors.md`, `docs/log-inbox/multi-tab.md`, `docs/prompts/claude_2026-11-21_0100_prompt_per_tab_notation_colors.md`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/abstract/tabs/__tests__/groupPersistence.test.ts`, `frontend/src/components/abstract/tabs/groupPersistence.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1ca31c62c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 16602 tests in 636 files, 3 red at import, hooks 985; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat check 2026-11-21 01:38 (RC-23, unattended): 3001 answers 200 and serves the trunk; the UI is unchanged by this merge and the behaviour was verified by the lane probe on 3141 (11/11 DOM steps, saved-record check). Alfonso in the morning digest.
+**Notes**: Rollback tag `pre-per-tab-view-prefs` on `bacae8815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0127/result.json`.
+**Prompt document name**: 2026-11-21 01:27

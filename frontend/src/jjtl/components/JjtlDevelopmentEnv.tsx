@@ -660,9 +660,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             aria-orientation="vertical"
                             tabIndex={0}
                             title="Drag to resize"
-                        >
-                            <i className={`bi bi-grip-vertical resize-grip-icon-vertical ${isResizingSidePanel ? 'dragging' : ''}`} />
-                        </div>
+                        />
                     </div>
                 )}
 
@@ -767,9 +765,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             aria-orientation="vertical"
                             tabIndex={0}
                             title="Drag to resize"
-                        >
-                            <i className={`bi bi-grip-vertical resize-grip-icon-vertical ${isResizingRightPanel ? 'dragging' : ''}`} />
-                        </div>
+                        />
 
                         {/* Suggested Mappings - unico contenuto */}
                         <SuggestedMappingsPanel
