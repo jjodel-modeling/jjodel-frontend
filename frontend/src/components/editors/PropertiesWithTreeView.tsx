@@ -81,6 +81,14 @@ const MIN_INSPECTOR_HEIGHT = 160;
 const RAIL_MOTION_MS = 250;
 
 /**
+ * Room the reopen button of a collapsed rail needs at the right end of the canvas bar (P-2026-11-20-2250), in px:
+ * the 24px button and a 4px gap on each side. A collapsed rail leaves no strip, only that button floating over the
+ * canvas at the place "Hide panel" had; this is what `--jj-rail-reopen-width` publishes so the bar of the rightmost
+ * pane keeps its last controls clear of it. The stylesheet writes the 24 and the 4 on `.rail-collapse-toggle--floating`.
+ */
+const RAIL_REOPEN_RESERVE = 32;
+
+/**
  * First-open width by viewport class. Read ONLY when nothing is persisted yet: a
  * width the user has already dragged wins at every resolution, forever. 400 is
  * `DEFAULT_OVERLAY_WIDTH` unchanged, so the middle band behaves exactly as before.
@@ -504,6 +512,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         activeEditorType,
         isInspectorVisible: isPropertiesVisible,
         showInspector,
+        toggleRail,
     } = useTreeViewPanel();
 
     // ─── Pin (2026-07-05 fase 2): freeze Properties content on a captured selection triple
@@ -696,16 +705,26 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // wants, not a fact about the column, and a reader that subtracted it would inherit a
     // constant it has no reason to know. Two names, one writer, one effect: they can never
     // disagree about whether the rail is on screen.
+    //
+    // Third name, same writer (P-2026-11-20-2250): --jj-rail-reopen-width. A collapsed
+    // rail leaves no column, so the two names above stay 0 and the panes take the whole
+    // width; what it leaves is the floating "Show panel" button over the canvas bar's
+    // right end, and this name is the room the bar keeps for it, RAIL_REOPEN_RESERVE
+    // while the button shows, else 0. Published here and not read from context so the
+    // button and the bar's reserve cannot disagree about whether it is on screen.
     useEffect(() => {
         if (mode !== 'floating') return;
-        const overlayShown = (activeEditorType === 'model' || activeEditorType === 'metamodel')
-            && (showPropertiesPanel || showTreePanel);
+        const overlayEditor = activeEditorType === 'model' || activeEditorType === 'metamodel';
+        const overlayShown = overlayEditor && (showPropertiesPanel || showTreePanel);
+        const reopenShown = overlayEditor && !overlayShown;
         const inset = overlayShown ? overlayWidth + 8 : 0;
         document.body.style.setProperty('--jj-canvas-right-inset', `${inset}px`);
         document.body.style.setProperty('--jj-rail-width', `${overlayShown ? overlayWidth : 0}px`);
+        document.body.style.setProperty('--jj-rail-reopen-width', `${reopenShown ? RAIL_REOPEN_RESERVE : 0}px`);
         return () => {
             document.body.style.removeProperty('--jj-canvas-right-inset');
             document.body.style.removeProperty('--jj-rail-width');
+            document.body.style.removeProperty('--jj-rail-reopen-width');
         };
     }, [mode, activeEditorType, showPropertiesPanel, showTreePanel, overlayWidth]);
 
@@ -800,7 +819,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const railShouldShow = overlayActive && !bothCollapsed;
     const [railMounted, setRailMounted] = useState(railShouldShow);
     const [railOpen, setRailOpen] = useState(railShouldShow);
-    const canvasGap = useCanvasPanelGap(isFloating && railMounted);
+    // The reopen button a collapsed rail leaves (P-2026-11-20-2250): the same editors, the
+    // other half of the same condition. It is not animated: it sits under the column
+    // (z-index one below), so the exit slides over it; on entry it goes at once and the
+    // column slides in from the same edge.
+    const reopenShown = isFloating && overlayActive && bothCollapsed;
+    const canvasGap = useCanvasPanelGap(isFloating && (railMounted || reopenShown));
 
     /**
      * What the column shows WHILE it is leaving.
@@ -981,6 +1005,23 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 readoutPrefix="w"
             />
 
+            {/* Rail collapse (P-2026-11-20-2250), moved here from the canvas bar: the rail
+                is one column for every canvas open, so a button per canvas read as a
+                per-canvas command. The WHOLE column, both zones (`toggleRail`, which
+                remembers the pair so the strip's button restores what was there); the
+                tree keeps its own ⌘B. Overlaid on the top right of whichever row comes
+                first (scope bar, Filter, Structure or Focus bar), which reserve its
+                width, so no row is added and the rail's content does not move. */}
+            <button
+                type="button"
+                className="rail-collapse-toggle"
+                onClick={toggleRail}
+                aria-label="Hide panel"
+                title="Hide panel"
+            >
+                <i className="bi bi-chevron-double-right" aria-hidden="true" />
+            </button>
+
             {/* No header row (2026-08-26). The rail used to open with a 44px bar carrying
                 the model name, a badge, the Focus/Browse posture button, the contextual
                 help, the pin and the inspector collapse. The name and the badge moved up
@@ -1160,19 +1201,29 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.getElementById('root') ?? document.body
               ))
             : splitPanel}
-        {/* No reopen pill (2026-08-26). A floating cluster of two buttons used to
-            appear on the right edge while the rail was hidden, one to bring back the
-            inspector and one the tree. It was the only way back when the rail's own
-            header was the thing that collapsed it; now the topbar's own control is the
-            way in and the way out, always in the same place, so the cluster was a
-            second door onto a room that already has one — and one that sat on the
-            canvas, which is exactly the surface the user asked to clear.
-
-            No dead end follows. The topbar renders wherever the rail can: both are
-            gated on a model/metamodel editor. The two states the CSS kill-switch
-            covered are not exceptions either — `canvas-only` is normalised away at
-            mount (Toolbar.tsx), and on the documentation tab the rail is hidden by
-            CSS without any state change, so leaving the tab brings it back by itself. */}
+        {/* The collapsed rail's way back (P-2026-11-20-2250). It used to be the canvas
+            topbar's own control, the reopen pill having gone on 2026-08-26 as a second
+            door; with the control moved onto the rail, a collapsed rail leaves only this
+            button, floating, no strip: the panes keep the whole width. Same top and the
+            same 4px inset as "Hide panel", so it is at that button's rect and the
+            pointer does not move; the bar of the rightmost pane keeps room for it
+            (--jj-rail-reopen-width). Same editors as the column, the same portal target
+            and the same `right`: the inline gap beside a generator tab, the stylesheet's
+            rule with two canvases, and the kill-switch (canvas-only, documentation,
+            manager). */}
+        {reopenShown && createPortal(
+            <button
+                type="button"
+                className="rail-collapse-toggle rail-collapse-toggle--floating"
+                style={canvasGap > 0 ? { right: `${canvasGap + 4}px` } : undefined}
+                onClick={toggleRail}
+                aria-label="Show panel"
+                title="Show panel"
+            >
+                <i className="bi bi-chevron-double-left" aria-hidden="true" />
+            </button>,
+            document.getElementById('root') ?? document.body
+        )}
         </>
     );
 };

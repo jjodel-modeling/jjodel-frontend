@@ -756,6 +756,18 @@ active log is not touched by this lane.
 **Notes**: The direct worker exited `blocked` on the red vitest gate and left the merge commit in place, as designed; the chat fixed the cause on the trunk instead of rolling back.
 **Prompt document name**: 2026-11-21 00:28
 
+## 2026-11-21 — fix: right rail toggle moves from the canvas bar to the rail (P-2026-11-20-2250)
+**Prompt**: `claude_2026-11-20_2250_prompt_right_rail_toggle.md`: the `>>` rail collapse leaves the canvas bar, where every editor group had one, for the rail's top row; collapsed, the rail leaves a 28px strip whose "Show panel" button sits at the same y. Phase 1 discovery, Phase 2 in a continuation after the context ceiling, on the tree merged with the trunk (R-MT-39).
+**Files touched**: 9eafca6ba (discovery report); 49c159ed8 (`frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`); the docs commit of this entry (this inbox, the prompt's Status, the discovery addendum).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Measured at 1600x1000 (probe `probe-after.mjs`, 0 console errors): single canvas and two groups, collapse, reopen, reload in both states, Cmd+B, Basic and Advanced; typecheck 0, build 0, 81/81 in the three test files that name `Toolbar`. Not measured: generator tab beside the canvas, Filter-first and Focus-first rows, kill-switch layouts, Jjodie docked.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe, DOM measures and crops `crop-after-1600-*.png` in `~/.jjodel-lanes/P-2026-11-20-2250/`); Alfonso's check pending
+**Notes**: The merged tree differs from Phase 1: R-MT-38 removed the identity cell, so the strip's room in the bar is the existing `editor-bar__rail-reserve`, now rendered in every rail state and sized by --jj-rail-width (28 while the strip shows); EditorV2.scss is untouched (the Split Right box is gated in TSX). The strip sits outside the --shell-* roots: var() fallbacks. R-MT-39: the toggle moved, nothing dropped. R-RAIL-11: the inset is still the rail's footprint. Detail: discovery addendum.
+**Prompt document name**: 2026-11-20 22:50
 ## 2026-11-21 — fix: notation and colors persisted per tab (P-2026-11-21-0100)
 **Prompt**: `claude_2026-11-21_0100_prompt_per_tab_notation_colors.md`, lane full, discovery then Phase 2 in cascade: notation and colors persisted per tab with the viewpoint's store, read order tab, global key, default; a choice writes both.
 **Files touched**: bb0ebf6d9 (discovery report); 0c342c802 — `tabs/groupPersistence.ts`, `tabs/__tests__/groupPersistence.test.ts` (+6 tests), `EditorV2.tsx`, `DockManager.tsx`; docs commit — this entry, R-MT-40 in `docs/decisions.md`, the Status of 0100
@@ -781,3 +793,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat check 2026-11-21 01:38 (RC-23, unattended): 3001 answers 200 and serves the trunk; the UI is unchanged by this merge and the behaviour was verified by the lane probe on 3141 (11/11 DOM steps, saved-record check). Alfonso in the morning digest.
 **Notes**: Rollback tag `pre-per-tab-view-prefs` on `bacae8815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0127/result.json`.
 **Prompt document name**: 2026-11-21 01:27
+
+## 2026-11-21 — fix: collapsed rail leaves only the reopen button (P-2026-11-20-2250)
+**Prompt**: rework after Alfonso's visual check on 3008 (2026-11-21 09:06): open rail fine; collapsed, leave only the `<<` button, no vertical strip taking space. Continuation after the context ceiling, on the tree merged with the trunk (200b50060).
+**Files touched**: 9e1233cbc (`frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editor-v2/EditorBar.scss`, `frontend/src/components/editor-v2/Toolbar.tsx`, comments only in the last); the docs commit of this entry (this inbox, the prompt's Status).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 22:50
+**Causa**: (f)
+**Regressions**: unknown. Probe `probe-rework.mjs` at 1600 and 1280, 0 console errors: one and two panes, collapse, reload collapsed, reopen, Cmd+B, Basic and Advanced; Show rect = Hide rect, vars rail 0 / inset 0 / reopen 32 collapsed, panes margin-right 0, last-pane reserve 31, Split Right and syntax chip hit true. typecheck 0, build ok, 81/81 in the three `Toolbar` test files. Not measured: generator tab beside, kill-switch layouts, Jjodie docked.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe, DOM measures and crops `crop-rework-{1600,1280}-*.png` in `~/.jjodel-lanes/P-2026-11-20-2250/`); Alfonso's check pending
+**Notes**: Causa (f): the strip was the prompt's own item 3, the spec changed at the visual check; (a) arguable. New body var `--jj-rail-reopen-width` from the same single writer; the bar reserve takes max(rail, reopen). Button z-index 899 (one below the column, as the strip was), not the handoff's 900, so the exit still slides over it. Hover background still wins over the tint (measured rgb(233,239,246) under the pointer, rgb(248,250,252) after reload).
+**Prompt document name**: 2026-11-20 22:50
