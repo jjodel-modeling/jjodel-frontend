@@ -1,0 +1,260 @@
+// Vertical splitter contract (P-2026-11-19-2200, D-UI-17): one drawing for every bar between
+// two side-by-side panes, the "sash" of VS Code and Linear, with a knob on it.
+//
+// At rest a 1px slate-300 hairline on the seam, or nothing where the seam already paints a
+// border, and the knob: a 6x28 capsule in the pane surface, a 1px slate-300 border and a faint
+// shadow, on the seam, hiding the line under it. On a held hover the line turns 2px slate-400,
+// the knob's border slate-400 and the knob grows to 36px. While dragging the line, the knob's
+// border and its fill are cyan: the canvas accent, kept for the drag alone (the 2026-08-28 rule
+// of resize-handle.scss). Keyboard focus draws the 2px line and the knob's border in the focus
+// colour, never an outline box. No tint, no filled bar, no margins. Amended twice on 2026-11-20
+// after Alfonso's checks on the canvas split: the stronger resting line, then the knob.
+//
+// Every knob visible at once sits at one height: the centre of the editor area below the tab
+// strips, not the centre of its own box. `$span` says how a box lies against that area.
+//
+// Each site keeps its DOM, its drag handler and its geometry. It includes `sash` with where the
+// seam lies in its box, `sash-strip` when its box is the 1px seam itself, and `sash-drag` under
+// the selector that says a drag is running there (a class, `:active`, a parent's class). The
+// line is always `::before`, the knob always `::after`: on a 1px seam the `::before` of
+// `sash-strip` is also the hit strip, the line its 1px content box. A pane that holds a `start` /
+// `end` box and clips its content includes `knob-room`, or the knob loses its outer half (amended
+// a third time on 2026-11-20: every knob centred on its seam). Only the drawing lives here,
+// written so that a horizontal splitter can take the same rules turned by 90 degrees.
+//
+// Colours are tokens, none defined here (rule 28). The literals are the contract itself:
+
+// The hit strip: 8px straddling the seam, 4px each side. A site that cannot straddle (the pane
+// beyond the seam would cover half of it, or another handle owns that side) keeps the 8px inside
+// its own pane and says so where it sets its geometry.
+$strip: 8px;
+
+// The line on hover, focus and drag: twice the resting hairline.
+$line: 2px;
+
+// How long a hover waits before the splitter answers it: a pointer crossing the seam on its way
+// somewhere else does not flash it.
+$delay: 150ms;
+
+// The knob: a 6px capsule, 28px long at rest and 36px under a held hover or a drag, growing in
+// 120ms. Long enough to read as a handle on a short pane, short enough not to read as a bar.
+$knob-width: 6px;
+$knob-height: 28px;
+$knob-height-held: 36px;
+$knob-grow: 120ms;
+
+// The knob's shadow, the chat's spec of 2026-11-20: slate-900 at 8%. No shadow token matches it
+// (`--shadow-xs` is black at 5%).
+$knob-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+
+// The tab strip of an rc-dock panel (`.dock-bar`), measured 34px on 2026-11-20 at both canvases of
+// a split, the Jjodie and the generator states. No token names it: its height is the tab's own
+// margin, borders and line height. If the tabs change height, the knobs of `dock` and `rail` move
+// off the others' height by half the change.
+$tab-strip: 34px;
+
+// Where the line sits in the element's box. `center`: the box straddles the seam (or is the 1px
+// seam). `start` / `end`: the box lies inside a pane and the seam is its left / right edge.
+@mixin _line-at($seam) {
+  @if $seam == center {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  } @else if $seam == start {
+    left: 0;
+    right: auto;
+    transform: none;
+  } @else if $seam == end {
+    left: auto;
+    right: 0;
+    transform: none;
+  } @else {
+    @error "vsplit.sash: $seam is center, start or end, not #{$seam}";
+  }
+}
+
+// How far down its box the knob sits, so that it lands on the centre of the editor area below
+// the tab strips (measured 85..967 at 1000px, centre 526):
+//   `area`: the box is that area, a splitter inside a tab (Instance Manager, generator, ...).
+//   `dock`: the box spans the dock layout, tab strip included (rc-dock's dividers, Jjodie's docked
+//           window, 50..968): half a tab strip lower. The 1px borders of the dock panel, top and
+//           bottom, cancel out.
+//   `rail`: the box is placed by the layout tokens (the floating Properties rail, 91..968): its
+//           top is the canvas toolbar's height below the app bar, not the tab strip's, and its
+//           bottom 1px lower than the area's (the dock panel's bottom border, rc-dock's CSS).
+@function _knob-y($span) {
+  @if $span == area {
+    @return 50%;
+  } @else if $span == dock {
+    @return calc(50% + #{$tab-strip * 0.5});
+  } @else if $span == rail {
+    @return calc(50% - (var(--jj-toolbar-height) - #{$tab-strip} + 1px) / 2);
+  }
+  @error "vsplit.sash: $span is area, dock or rail, not #{$span}";
+}
+
+// Half a knob, 3px, rounded up to 4px: how far beyond its padding box the pane that holds a
+// `start` / `end` splitter lets its content paint, so the knob can sit centred on the seam.
+$knob-overhang: 4px;
+
+// Where the knob sits across the box: centred on the seam, always. When the box lies on one side
+// of the seam (`start` / `end`), half the knob lies beyond the box, over the next pane, and the
+// pane that holds the box must give it room (`knob-room`): each of the four (the rail, both JjTL
+// panels, Jjodie's window) clips its content, which cut the knob to 3 of its 6px (measured
+// 2026-11-20). Where the room cannot be given (no `overflow-clip-margin`: Safari), the knob stays
+// whole inside the box, against the seam. The half beyond the box takes no pointer: it lies on
+// the next pane, and the hit strip stays inside its own.
+@mixin _knob-at($seam, $span) {
+  top: _knob-y($span);
+  bottom: auto;
+  @if $seam == center {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+  } @else if $seam == start {
+    left: 0;
+    right: auto;
+    transform: translateY(-50%);
+    @supports (overflow-clip-margin: #{$knob-overhang}) {
+      transform: translate(-50%, -50%);
+    }
+  } @else if $seam == end {
+    left: auto;
+    right: 0;
+    transform: translateY(-50%);
+    @supports (overflow-clip-margin: #{$knob-overhang}) {
+      transform: translate(50%, -50%);
+    }
+  } @else {
+    @error "vsplit.sash: $seam is center, start or end, not #{$seam}";
+  }
+}
+
+// The drawing. `$rest: false` where the seam already has a border: no doubled 2px seam, the
+// knob stays. The states change only widths, heights and colours, never a position, so a site
+// may move the line (`::before { left: ... }`) with a rule of its own and keep it moved. Colours
+// of the line are `background-color` alone: on a 1px seam the line is the content box of the
+// strip (`background-clip`), which the `background` shorthand would reset.
+@mixin sash($seam: center, $rest: true, $span: area) {
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    @include _line-at($seam);
+    width: 1px;
+    background-image: none;
+    @if $rest {
+      background-color: var(--color-slate-300);
+    } @else {
+      background-color: transparent;
+    }
+    box-shadow: none;
+    pointer-events: none;
+    // Leaving the hover takes the line back at once.
+    transition: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    @include _knob-at($seam, $span);
+    box-sizing: border-box;
+    width: $knob-width;
+    height: $knob-height;
+    padding: 0;
+    border: 1px solid var(--color-slate-300);
+    border-radius: var(--radius-full);
+    background: var(--color-panel-bg);
+    box-shadow: $knob-shadow;
+    opacity: 1;
+    pointer-events: none;
+    // Leaving the hover takes the knob back at once.
+    transition: none;
+  }
+
+  &:hover::before {
+    width: $line;
+    background-color: var(--color-slate-400);
+    transition-property: width, background-color;
+    transition-duration: 0s;
+    transition-delay: $delay;
+  }
+
+  &:hover::after {
+    height: $knob-height-held;
+    border-color: var(--color-slate-400);
+    background-color: var(--color-panel-bg);
+    transition:
+      border-color 0s $delay,
+      height $knob-grow var(--ease-out) $delay;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::before {
+    width: $line;
+    background-color: var(--color-border-focus);
+    transition: none;
+  }
+
+  &:focus-visible::after {
+    border-color: var(--color-border-focus);
+    background-color: var(--color-panel-bg);
+    transition: none;
+  }
+}
+
+// The drag state, included under the selector that names it, after `sash`. The knob keeps the
+// held height: the pointer that drags is the one that held it.
+@mixin sash-drag {
+  &::before {
+    width: $line;
+    background-color: var(--color-canvas-accent);
+    box-shadow: none;
+    transition: none;
+  }
+
+  &::after {
+    height: $knob-height-held;
+    border-color: var(--color-canvas-accent);
+    background-color: var(--color-canvas-accent);
+    transition: none;
+  }
+}
+
+// The room for half a knob, included by the pane that holds a `start` / `end` splitter and clips
+// its content: `overflow: clip` with `$knob-overhang` of margin instead of `overflow: hidden`.
+// Two differences, both checked for the four panes on 2026-11-20: `clip` forbids programmatic
+// scrolling, which `hidden` allows (no code scrolls them: grep), and a pane that is no longer a
+// scroll container would take its content's minimum size as a flex item (`min-*: 0` keeps the
+// zero it had). Without `overflow-clip-margin` the pane stays as it was, and so does the knob.
+@mixin knob-room {
+  @supports (overflow-clip-margin: #{$knob-overhang}) {
+    overflow: clip;
+    overflow-clip-margin: $knob-overhang;
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+// The hit strip of a box that is the seam itself (1px wide, a flex item or rc-dock's divider):
+// its `::before`, the line's layer, padded to an 8px strip centred on it that takes the pointer,
+// the line painted on its 1px content box (2px on hover, focus and drag: the strip is then 9px).
+// Events on a pseudo-element go to its element, so the handler of the box receives the drag; the
+// knob above it takes none.
+@mixin sash-strip {
+  position: relative;
+
+  &::before {
+    box-sizing: content-box;
+    padding: 0 (($strip - 1px) * 0.5);
+    background-clip: content-box;
+    pointer-events: auto;
+  }
+}

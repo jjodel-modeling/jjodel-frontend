@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-19-2200
 Chat: C-2026-11-19-2200
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-20, rework 2 2026-11-21 · lane full · 5d81fd6c6, 4d9d27a22, 21644454a · verifica visiva (RC-23) affidata alla chat
 Lane: full (visual change on more than three files, shared component restyle)
 Depends: none
 Request: https://claude.ai/code/session_01DQt9R6xGnqUtiRzRQbr61k (Alfonso, 2026-11-19 18:20: make all the vertical resizers slicker, slimmer and above all uniform; there are several kinds across the platform)

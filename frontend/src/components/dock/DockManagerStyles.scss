@@ -320,7 +320,7 @@
 }
 
 .not-strip>.dock-layout:not(:has(.dock-style-models .dock-tab:nth-child(2))){
-    .dock-style-editors, .dock-divider{ display: none; }
+    .dock-style-editors{ display: none; }
 }
 .dock-nav{
     height: 100%;

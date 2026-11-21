@@ -6,6 +6,12 @@
 // Design-system tokens only, none defined here (rule 28): the tab's accent marks the active and the annotated, errors
 // take the error text colour, labels the tertiary text at 11 px, spacing the --space-* grid.
 
+@use '../../../styles/components/vsplit';
+
+body:has(.syntax-form__splitter:active) {
+    cursor: col-resize;
+}
+
 .syntax-form {
     display: flex;
     flex-direction: column;
@@ -399,15 +405,14 @@
         color: var(--color-error-text);
     }
 
-    // The preview.
+    // The preview. The splitter is the one vertical splitter (P-2026-11-19-2200): a 1px seam with an 8px hit strip.
     &__splitter {
-        flex: 0 0 4px;
-        border-left: 1px solid var(--color-border-secondary);
-        cursor: col-resize;
+        flex: 0 0 1px;
+        z-index: 2;
+        @include vsplit.sash(center);
+        @include vsplit.sash-strip;
 
-        &:hover {
-            background: var(--color-bg-hover);
-        }
+        &:active { @include vsplit.sash-drag; }
     }
 
     &__preview {
