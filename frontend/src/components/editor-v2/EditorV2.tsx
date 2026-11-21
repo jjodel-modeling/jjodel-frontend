@@ -138,6 +138,7 @@ import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polym
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { chooseViewPref, noteTabViewPref, openingViewPref } from '../abstract/tabs/groupPersistence';
 import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
@@ -1178,16 +1179,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
     const irPlanRef = useRef<IRInteractionPlan | null>(null);
 
-    // Notation mode state with localStorage persistence
+    // Notation and colors are per tab (P-2026-11-21-0100): a canvas opens on its tab's value (the editor groups record),
+    // else on the last value chosen anywhere (the global key), else on the default. The tab's value is noted at mount
+    // and on every change, as EditorSwitch notes the viewpoint; only a choice writes the global key, so a reload that
+    // mounts several tabs leaves it on the last choice.
     const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
-    const [notation, setNotation] = useState<NotationMode>(() => {
-        const saved = localStorage.getItem('editor-v2-notation');
-        return VALID_NOTATIONS.includes(saved as NotationMode) ? (saved as NotationMode) : 'uml';
-    });
+    const [notation, setNotation] = useState<NotationMode>(() =>
+        openingViewPref<NotationMode>(tabId, 'notation', v => VALID_NOTATIONS.includes(v as NotationMode), 'uml'));
 
-    useEffect(() => {
-        localStorage.setItem('editor-v2-notation', notation);
-    }, [notation]);
+    useEffect(() => { noteTabViewPref(tabId, 'notation', notation); }, [tabId, notation]);
+
+    // A choice (the chip, View › Syntax): the tab's value and the global key.
+    const chooseNotation = useCallback((next: NotationMode) => {
+        setNotation(next);
+        chooseViewPref(tabId, 'notation', next);
+    }, [tabId]);
 
     // User-created (seed-driven) palettes — declared above colorScheme so the
     // colorScheme initializer below can validate a persisted custom id.
@@ -1206,19 +1212,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Inject the runtime <style> for the custom palettes (built-ins are static SCSS).
     useCustomPaletteStyleSheet(customPalettes);
 
-    // Color scheme state with localStorage persistence
+    // Color scheme: per tab, as the notation above. A custom palette id is valid while the palette exists.
     const VALID_SCHEMES: ColorScheme[] = ['default', 'monochrome', 'sapphire', 'amethyst', 'jade', 'terracotta', 'crimson', 'high-contrast', 'print'];
-    const [colorScheme, setColorScheme] = useState<ActiveColorScheme>(() => {
-        const saved = localStorage.getItem('editor-v2-color-scheme');
-        if (!saved) return 'default';
-        const isBuiltIn = VALID_SCHEMES.includes(saved as ColorScheme);
-        const isCustom = customPalettes.some(p => p.id === saved);
-        return isBuiltIn || isCustom ? saved : 'default';
-    });
+    const [colorScheme, setColorScheme] = useState<ActiveColorScheme>(() =>
+        openingViewPref<ActiveColorScheme>(tabId, 'colorScheme',
+            v => VALID_SCHEMES.includes(v as ColorScheme) || customPalettes.some(p => p.id === v), 'default'));
 
-    useEffect(() => {
-        localStorage.setItem('editor-v2-color-scheme', colorScheme);
-    }, [colorScheme]);
+    useEffect(() => { noteTabViewPref(tabId, 'colorScheme', colorScheme); }, [tabId, colorScheme]);
+
+    // A choice (View › Colors, its Palette submenu, the palette manager, a new palette): the tab's value and the global key.
+    const chooseColorScheme = useCallback((next: ActiveColorScheme) => {
+        setColorScheme(next);
+        chooseViewPref(tabId, 'colorScheme', next);
+    }, [tabId]);
 
     // Create a seed-driven palette and immediately activate it.
     const handleCreateCustomPalette = useCallback((name: string, seed: string) => {
@@ -1227,8 +1233,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
         const id = `custom-${uuid}`;
         setCustomPalettes(prev => [...prev, { id, name, seed }]);
-        setColorScheme(id);
-    }, []);
+        chooseColorScheme(id);
+    }, [chooseColorScheme]);
 
     // Rename a custom palette (name only — id/seed unchanged, so colors and the
     // active scheme are unaffected). Persistence runs through the existing effect.
@@ -5559,9 +5565,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         canUndo={isJjomMode ? dUndoLen > 0 : canUndo}
                         canRedo={isJjomMode ? dRedoLen > 0 : canRedo}
                         notation={notation}
-                        onNotationChange={setNotation}
+                        onNotationChange={chooseNotation}
                         colorScheme={colorScheme}
-                        onColorSchemeChange={setColorScheme}
+                        onColorSchemeChange={chooseColorScheme}
                         customPalettes={customPalettes}
                         onCreateCustomPalette={handleCreateCustomPalette}
                         onRenamePalette={handleRenameCustomPalette}

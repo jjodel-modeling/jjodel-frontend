@@ -3,8 +3,9 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-    buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord,
-    resetTabViewpoints, setGroupsChangeListener, tabViewpointOf, validateGroupsRecord, writeGroupsRecord,
+    buildGroupsRecord, chooseViewPref, createGroupsPersister, editorGroupsKey, GLOBAL_VIEW_PREF_KEYS, noteTabViewPref,
+    noteTabViewpoint, openingViewPref, pruneGroupsRecord, readGroupsRecord, resetTabViewPrefs, resetTabViewpoints,
+    retainTabViewPrefs, setGroupsChangeListener, tabViewPrefsOf, tabViewpointOf, validateGroupsRecord, writeGroupsRecord,
     type EditorGroupsRecord,
 } from '../groupPersistence';
 
@@ -36,7 +37,7 @@ const twoGroups = () => {
 const keepAll = { canOpenModel: (m: string) => models.has(m), viewpointKnown: (v: string) => v === 'vpX' || v === 'vpY' };
 
 describe('groupPersistence', () => {
-    afterEach(() => { resetTabViewpoints(); setGroupsChangeListener(null); vi.useRealTimers(); });
+    afterEach(() => { resetTabViewpoints(); resetTabViewPrefs(); setGroupsChangeListener(null); vi.useRealTimers(); });
 
     it('the key is per user and per project, no user is anon', () => {
         expect(editorGroupsKey('u1', 'p1')).toBe('jjodel.editorGroups.u1.p1');
@@ -219,5 +220,89 @@ describe('groupPersistence', () => {
         expect(tabViewpointOf('A')).toBe('vpX');
         expect(tabViewpointOf('A~tab2')).toBeNull();
         expect(listener).toHaveBeenCalledTimes(2);
+    });
+
+    // P-2026-11-21-0100: notation and colors per tab, with the global key as the last value chosen anywhere.
+    const NOTATIONS = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
+    const isNotation = (v: string) => NOTATIONS.includes(v);
+
+    it('a canvas opens on its tab value, else on the global key, else on the default', () => {
+        const storage = new MemoryStorage() as any;
+        expect(openingViewPref('A', 'notation', isNotation, 'uml', storage)).toBe('uml');
+        storage.setItem(GLOBAL_VIEW_PREF_KEYS.notation, 'er');
+        expect(openingViewPref('A', 'notation', isNotation, 'uml', storage)).toBe('er');
+        noteTabViewPref('A', 'notation', 'compact');
+        expect(openingViewPref('A', 'notation', isNotation, 'uml', storage)).toBe('compact');
+        // Another tab has no value of its own: it opens on the last value chosen.
+        expect(openingViewPref('B', 'notation', isNotation, 'uml', storage)).toBe('er');
+        // No tab id: the global key.
+        expect(openingViewPref(undefined, 'notation', isNotation, 'uml', storage)).toBe('er');
+    });
+
+    it('an invalid value counts as absent, in the tab and in the global key; a throwing storage gives the default', () => {
+        const storage = new MemoryStorage() as any;
+        storage.setItem(GLOBAL_VIEW_PREF_KEYS.colorScheme, 'custom-gone');
+        const palettes = new Set(['default', 'monochrome', 'custom-1']);
+        const ok = (v: string) => palettes.has(v);
+        expect(openingViewPref('A', 'colorScheme', ok, 'default', storage)).toBe('default');
+        storage.setItem(GLOBAL_VIEW_PREF_KEYS.colorScheme, 'monochrome');
+        noteTabViewPref('A', 'colorScheme', 'custom-deleted');
+        expect(openingViewPref('A', 'colorScheme', ok, 'default', storage)).toBe('monochrome');
+        expect(openingViewPref('B', 'colorScheme', ok, 'default', throwing)).toBe('default');
+    });
+
+    it('a choice writes the tab value and the global key; noting a value does not touch the global key', () => {
+        const storage = new MemoryStorage() as any;
+        const listener = vi.fn();
+        setGroupsChangeListener(listener);
+        noteTabViewPref('A', 'notation', 'compact');
+        expect(storage.getItem(GLOBAL_VIEW_PREF_KEYS.notation)).toBeNull();
+        chooseViewPref('B', 'notation', 'er', storage);
+        chooseViewPref('B', 'colorScheme', 'monochrome', storage);
+        expect(tabViewPrefsOf('B')).toEqual({ notation: 'er', colorScheme: 'monochrome' });
+        expect(tabViewPrefsOf('A')).toEqual({ notation: 'compact' });
+        expect(storage.getItem(GLOBAL_VIEW_PREF_KEYS.notation)).toBe('er');
+        expect(storage.getItem(GLOBAL_VIEW_PREF_KEYS.colorScheme)).toBe('monochrome');
+        // Re-choosing the value a tab already shows still makes it the last value chosen.
+        chooseViewPref('A', 'notation', 'compact', storage);
+        expect(storage.getItem(GLOBAL_VIEW_PREF_KEYS.notation)).toBe('compact');
+        expect(listener).toHaveBeenCalledTimes(3);
+        expect(() => chooseViewPref('A', 'notation', 'uml', throwing)).not.toThrow();
+        expect(tabViewPrefsOf('A')?.notation).toBe('uml');
+    });
+
+    it('round trip: each tab keeps its own notation and colors; a tab with none stores none', () => {
+        const storage = new MemoryStorage() as any;
+        const prefs: Record<string, any> = { A: { notation: 'compact', colorScheme: 'monochrome' }, B: { notation: 'er', colorScheme: 'default' } };
+        const r = buildGroupsRecord(saved(panel('+2', ['A']), panel('+3', ['B', 'M'])), '+3',
+            { isArtifactTab, viewpointOf: () => null, viewPrefsOf: id => prefs[id] });
+        writeGroupsRecord('k', r, storage);
+        const plan = pruneGroupsRecord(readGroupsRecord('k', storage)!, keepAll);
+        const [g1, g2] = plan.layout.dockbox.children as any[];
+        expect(g1.tabs[0]).toEqual({ id: 'A', modelId: 'A', viewpointId: null, notation: 'compact', colorScheme: 'monochrome' });
+        expect(g2.tabs[0]).toEqual({ id: 'B', modelId: 'B', viewpointId: null, notation: 'er', colorScheme: 'default' });
+        expect('notation' in g2.tabs[1] || 'colorScheme' in g2.tabs[1]).toBe(false);
+        expect(plan.tabs.map(t => [t.id, t.notation, t.colorScheme])).toEqual([['A', 'compact', 'monochrome'], ['B', 'er', 'default'], ['M', undefined, undefined]]);
+    });
+
+    it('a record whose notation or colors is not a string is refused; an older record without them is accepted', () => {
+        const ok = twoGroups();
+        expect(validateGroupsRecord(JSON.parse(JSON.stringify(ok)))).not.toBeNull();
+        const bad = JSON.parse(JSON.stringify(ok));
+        (bad.layout.dockbox.children[0] as any).tabs[0].notation = 3;
+        expect(validateGroupsRecord(bad)).toBeNull();
+        const bad2 = JSON.parse(JSON.stringify(ok));
+        (bad2.layout.dockbox.children[1] as any).tabs[0].colorScheme = { id: 'x' };
+        expect(validateGroupsRecord(bad2)).toBeNull();
+    });
+
+    it('a closed tab loses its entry, so a later tab on the same id opens on the last value chosen', () => {
+        const storage = new MemoryStorage() as any;
+        chooseViewPref('A~tab2', 'notation', 'wireframe', storage);
+        chooseViewPref('A', 'notation', 'er', storage);
+        retainTabViewPrefs(['A', 'B']);
+        expect(tabViewPrefsOf('A~tab2')).toBeUndefined();
+        expect(tabViewPrefsOf('A')).toEqual({ notation: 'er' });
+        expect(openingViewPref('A~tab2', 'notation', isNotation, 'uml', storage)).toBe('er');
     });
 });

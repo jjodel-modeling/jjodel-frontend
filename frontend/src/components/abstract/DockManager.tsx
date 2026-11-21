@@ -6,7 +6,7 @@ import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { layoutTabIds, modelOfTabId, nextModelTabId } from "./tabs/modelTabId";
 import { activeGroup, dashboardShown, groupOfTab, isDashboardOpen, noteActiveTab, setArtifactTabPredicate, setDashboardOpen, withSplitRight } from "./tabs/dockGroups";
-import { buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord, setGroupsChangeListener, tabViewpointOf } from "./tabs/groupPersistence";
+import { buildGroupsRecord, createGroupsPersister, editorGroupsKey, noteTabViewPref, noteTabViewpoint, pruneGroupsRecord, readGroupsRecord, retainTabViewPrefs, setGroupsChangeListener, tabViewPrefsOf, tabViewpointOf } from "./tabs/groupPersistence";
 import { isConsumerMode } from '../environment/consumerMode';
 import { besideAction, type BesidePanel } from '../scripts/refactoringBeside';
 import { activateCanvasPane, NO_CANVAS_SPLIT, reconcileCanvasSplit, type CanvasSplit } from '../editor-v2/utils/canvasSplit';
@@ -397,6 +397,9 @@ class DockManager {
         const model = (store.getState() as any).idlookup?.[modelOfTabId(id)];
         if (model?.className !== 'DModel' || (model.isMetamodel && isConsumerMode())) return null;
         const viewpointId: string | null | undefined = 'viewpointId' in saved ? (saved.viewpointId ?? null) : tabViewpointOf(id);
+        // The tab's notation and colors, in the map before its canvas renders: rc-dock calls this inside `loadLayout`.
+        if (typeof saved.notation === 'string') noteTabViewPref(id, 'notation', saved.notation);
+        if (typeof saved.colorScheme === 'string') noteTabViewPref(id, 'colorScheme', saved.colorScheme);
         const options = { tabId: id, viewpointId };
         return model.isMetamodel ? TabDataMaker.metamodel(model, options) : TabDataMaker.model(model, options);
     };
@@ -446,7 +449,9 @@ class DockManager {
         if (!dock || !key || DProject.getProject()?.id !== DockManager.groupsProjectId) return;
         try {
             const layout = savedLayout ?? dock.saveLayout();
-            const record = buildGroupsRecord(layout, activeGroup(layout)?.id, { isArtifactTab: isArtifactTabId, viewpointOf: tabViewpointOf });
+            // A closed tab's notation and colors go with it, so a later tab that reuses its id opens on the last value chosen.
+            retainTabViewPrefs(layoutTabIds(layout));
+            const record = buildGroupsRecord(layout, activeGroup(layout)?.id, { isArtifactTab: isArtifactTabId, viewpointOf: tabViewpointOf, viewPrefsOf: tabViewPrefsOf });
             DockManager.groupsPersister.schedule(key, record);
         } catch (error) {
             console.error('[DockManager] noteGroupsChanged:', error);

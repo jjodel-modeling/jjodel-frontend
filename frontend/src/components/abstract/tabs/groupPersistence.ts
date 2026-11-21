@@ -1,7 +1,8 @@
 /**
  * The editor groups persist per user and project (multi-tab lane 3, G7): when a project is reopened its groups come
  * back as they were left, their order, the tabs of each group in order (further tabs `<id>~tab<N>` included, models
- * and metamodels), the active tab of each group, the group widths, the active group, and the viewpoint each tab shows.
+ * and metamodels), the active tab of each group, the group widths, the active group, and the viewpoint each tab shows,
+ * with its notation and colors (P-2026-11-21-0100).
  *
  * The record is rc-dock's saved layout (`saveLayout`, tabs reduced to `{ id }`) with each tab carrying its model id and
  * its viewpoint id, plus the index of the active group. It is a user preference in `localStorage` under
@@ -20,8 +21,11 @@ const KEY_PREFIX = 'jjodel.editorGroups.';
 const MODELS_GROUP = 'models';
 const SUMMARY_TAB_ID = 'project_summary';
 
-/** One tab of the record. The summary tab of an older record carries its id only. */
-export interface SavedGroupTab { id: string; modelId?: string; viewpointId?: string | null }
+/**
+ * One tab of the record. The summary tab of an older record carries its id only. `notation` and `colorScheme` are the
+ * tab's own canvas view (P-2026-11-21-0100), absent in an older record: the tab then opens on the last value chosen.
+ */
+export interface SavedGroupTab { id: string; modelId?: string; viewpointId?: string | null; notation?: string; colorScheme?: string }
 export interface SavedGroupPanel { id?: string; size?: number; group?: string; activeId?: string; tabs: SavedGroupTab[]; panelLock?: {} }
 export interface SavedGroupBox { id?: string; size?: number; mode?: string; children: Array<SavedGroupPanel | SavedGroupBox> }
 export interface EditorGroupsRecord { v: number; layout: { dockbox: SavedGroupBox }; activeGroup: number }
@@ -57,6 +61,62 @@ export function resetTabViewpoints(): void { tabViewpoints.clear(); }
 export function setGroupsChangeListener(listener: (() => void) | null): void { changeListener = listener; }
 
 // ---------------------------------------------------------------------------------------------------------------
+// The notation and colors each tab shows (P-2026-11-21-0100), written by its EditorV2 at mount and on every change,
+// saved in the tab's entry of the record like its viewpoint. A canvas opens on the tab's own value, else on the last
+// value chosen anywhere (the global key, what every canvas read before), else on the default. A choice writes both.
+
+export type TabViewPref = 'notation' | 'colorScheme';
+export type TabViewPrefs = { notation?: string; colorScheme?: string };
+
+/** The last value chosen anywhere, one key per preference. */
+export const GLOBAL_VIEW_PREF_KEYS: Readonly<Record<TabViewPref, string>> = {
+    notation: 'editor-v2-notation',
+    colorScheme: 'editor-v2-color-scheme',
+};
+
+const tabViewPrefs = new Map<string, TabViewPrefs>();
+
+/** Records the value of `pref` the tab `tabId` shows; a change tells the listener (the persister) once. */
+export function noteTabViewPref(tabId: string | null | undefined, pref: TabViewPref, value: string): void {
+    if (!tabId) return;
+    const prefs = tabViewPrefs.get(tabId);
+    if (prefs?.[pref] === value) return;
+    tabViewPrefs.set(tabId, { ...prefs, [pref]: value });
+    changeListener?.();
+}
+
+/** The notation and colors the tab `tabId` shows, undefined when its canvas has not said and no record seeded them. */
+export function tabViewPrefsOf(tabId: string): TabViewPrefs | undefined {
+    return tabViewPrefs.get(tabId);
+}
+
+export function resetTabViewPrefs(): void { tabViewPrefs.clear(); }
+
+/** Drops the entries of the tabs not in `tabIds` (closed tabs): a later tab that reuses the id opens on the last value chosen. */
+export function retainTabViewPrefs(tabIds: Iterable<string>): void {
+    const keep = new Set(tabIds);
+    for (const id of [...tabViewPrefs.keys()]) if (!keep.has(id)) tabViewPrefs.delete(id);
+}
+
+/** The value of `pref` a canvas of the tab `tabId` opens on: the tab's own, else the global key, else `fallback`. An invalid value counts as absent. */
+export function openingViewPref<T extends string>(
+    tabId: string | null | undefined, pref: TabViewPref, isValid: (value: string) => boolean, fallback: T,
+    storage: Storage | null = pageStorage(),
+): T {
+    const own = tabId ? tabViewPrefs.get(tabId)?.[pref] : undefined;
+    if (own !== undefined && isValid(own)) return own as T;
+    let global: string | null = null;
+    try { global = storage?.getItem(GLOBAL_VIEW_PREF_KEYS[pref]) ?? null; } catch { /* no storage */ }
+    return global !== null && isValid(global) ? global as T : fallback;
+}
+
+/** A choice of `pref` in the tab `tabId`: the tab's value and the global key (the last value chosen anywhere). Never throws. */
+export function chooseViewPref(tabId: string | null | undefined, pref: TabViewPref, value: string, storage: Storage | null = pageStorage()): void {
+    noteTabViewPref(tabId, pref, value);
+    try { storage?.setItem(GLOBAL_VIEW_PREF_KEYS[pref], value); } catch { /* quota / private mode */ }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Save: the record of a saved layout.
 
 const isPanel = (node: any): boolean => !!node && Array.isArray(node.tabs);
@@ -81,6 +141,16 @@ export interface BuildContext {
     isArtifactTab: (tabId: string) => boolean;
     /** The viewpoint the tab shows now (`tabViewpointOf`). Undefined is stored as abstract syntax. */
     viewpointOf: (tabId: string) => string | null | undefined;
+    /** The notation and colors the tab shows now (`tabViewPrefsOf`); absent fields are not stored. */
+    viewPrefsOf?: (tabId: string) => TabViewPrefs | undefined;
+}
+
+/** The tab's notation and colors that are strings, as fields to spread into a saved tab. */
+function viewPrefFields(prefs: TabViewPrefs | undefined): TabViewPrefs {
+    const out: TabViewPrefs = {};
+    if (typeof prefs?.notation === 'string') out.notation = prefs.notation;
+    if (typeof prefs?.colorScheme === 'string') out.colorScheme = prefs.colorScheme;
+    return out;
 }
 
 /**
@@ -98,7 +168,7 @@ export function buildGroupsRecord(savedLayout: any, activeGroupId: string | null
             const id = t?.id;
             if (typeof id !== 'string') continue;
             if (id === SUMMARY_TAB_ID || !ctx.isArtifactTab(id)) continue;
-            tabs.push({ id, modelId: modelOfTabId(id), viewpointId: ctx.viewpointOf(id) ?? null });
+            tabs.push({ id, modelId: modelOfTabId(id), viewpointId: ctx.viewpointOf(id) ?? null, ...viewPrefFields(ctx.viewPrefsOf?.(id)) });
         }
         if (!tabs.length) return null;
         if (panel.id !== undefined && panel.id === activeGroupId) activeGroup = index;
@@ -142,6 +212,7 @@ export function validateGroupsRecord(raw: any): EditorGroupsRecord | null {
         seen.add(t.id);
         if (t.id === SUMMARY_TAB_ID) return true;
         if (typeof t.modelId !== 'string' || modelOfTabId(t.id) !== t.modelId) return false;
+        if (!isOptString(t.notation) || !isOptString(t.colorScheme)) return false;
         return t.viewpointId === null || t.viewpointId === undefined || typeof t.viewpointId === 'string';
     };
     const okPanel = (p: any): boolean => Array.isArray(p.tabs) && p.tabs.length > 0 && p.tabs.every(okTab)
@@ -193,8 +264,9 @@ export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext)
             if (t.id === SUMMARY_TAB_ID) continue;
             if (!t.modelId || !ctx.canOpenModel(t.modelId)) continue;
             const vp = typeof t.viewpointId === 'string' && t.viewpointId && ctx.viewpointKnown(t.viewpointId) ? t.viewpointId : null;
-            tabs.push({ id: t.id, modelId: t.modelId, viewpointId: vp });
-            restored.push({ id: t.id, modelId: t.modelId, viewpointId: vp });
+            // Notation and colors pass as they are: the canvas checks them when it opens (`openingViewPref`).
+            tabs.push({ id: t.id, modelId: t.modelId, viewpointId: vp, ...viewPrefFields(t) });
+            restored.push({ id: t.id, modelId: t.modelId, viewpointId: vp, ...viewPrefFields(t) });
         }
         if (!tabs.length) return null;
         const activeId = tabs.some(t => t.id === panel.activeId) ? panel.activeId : tabs[0].id;
