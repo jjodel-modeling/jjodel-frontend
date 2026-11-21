@@ -6,8 +6,10 @@
  * The record is rc-dock's saved layout (`saveLayout`, tabs reduced to `{ id }`) with each tab carrying its model id and
  * its viewpoint id, plus the index of the active group. It is a user preference in `localStorage` under
  * `jjodel.editorGroups.<userId|anon>.<projectId>`, never in the project file. Only artifact tabs (a model's or a
- * metamodel's) and the project summary are kept; documentation, script, transformation, text and generator tabs are
- * not persisted in v1. The viewpoint id is opaque: abstract syntax is null, anything else is restored when known.
+ * metamodel's) are kept; documentation, script, transformation, text and generator tabs are not persisted in v1. The
+ * project dashboard is no tab of a group (P-2026-11-20-1632, R-MT-34): it is not saved, a record that still holds its
+ * old tab `project_summary` restores without it, and whether it was open is not persisted. The viewpoint id is opaque:
+ * abstract syntax is null, anything else is restored when known.
  *
  * Only `modelTabId.ts` is imported, which imports nothing: the bench executes this file.
  */
@@ -18,9 +20,9 @@ const KEY_PREFIX = 'jjodel.editorGroups.';
 const MODELS_GROUP = 'models';
 const SUMMARY_TAB_ID = 'project_summary';
 
-/** One tab of the record. The summary tab carries its id only. */
+/** One tab of the record. The summary tab of an older record carries its id only. */
 export interface SavedGroupTab { id: string; modelId?: string; viewpointId?: string | null }
-export interface SavedGroupPanel { id?: string; size?: number; group?: string; activeId?: string; tabs: SavedGroupTab[] }
+export interface SavedGroupPanel { id?: string; size?: number; group?: string; activeId?: string; tabs: SavedGroupTab[]; panelLock?: {} }
 export interface SavedGroupBox { id?: string; size?: number; mode?: string; children: Array<SavedGroupPanel | SavedGroupBox> }
 export interface EditorGroupsRecord { v: number; layout: { dockbox: SavedGroupBox }; activeGroup: number }
 
@@ -84,7 +86,7 @@ export interface BuildContext {
 /**
  * The record of a saved layout (`DockLayout.saveLayout()`, or the layout `onLayoutChange` receives) whose active group
  * is `activeGroupId` (a panel id). Only the dock box is kept, and in it only the editor groups, with their artifact
- * tabs and the summary; a group left with no tab is dropped. The active group falls back to the first.
+ * tabs; a group left with no tab is dropped. The active group falls back to the first.
  */
 export function buildGroupsRecord(savedLayout: any, activeGroupId: string | null | undefined, ctx: BuildContext): EditorGroupsRecord {
     let activeGroup = 0;
@@ -95,8 +97,7 @@ export function buildGroupsRecord(savedLayout: any, activeGroupId: string | null
         for (const t of panel.tabs) {
             const id = t?.id;
             if (typeof id !== 'string') continue;
-            if (id === SUMMARY_TAB_ID) { tabs.push({ id }); continue; }
-            if (!ctx.isArtifactTab(id)) continue;
+            if (id === SUMMARY_TAB_ID || !ctx.isArtifactTab(id)) continue;
             tabs.push({ id, modelId: modelOfTabId(id), viewpointId: ctx.viewpointOf(id) ?? null });
         }
         if (!tabs.length) return null;
@@ -176,19 +177,20 @@ export interface RestorePlan {
 }
 
 /**
- * The plan of a restore: a tab whose model cannot open is dropped, a group left with no tab is dropped, the active
- * group is clamped, an unknown viewpoint becomes abstract syntax (null), and the summary tab goes back first in
- * group 1 when the record lacks it. Only an artifact tab makes the active group (R-MT-32).
+ * The plan of a restore: a tab whose model cannot open is dropped, the summary tab of an older record is dropped, a
+ * group left with no tab is dropped, the active group is clamped, and an unknown viewpoint becomes abstract syntax
+ * (null). Group 1 is locked (rc-dock's `panelLock`), so it stays when its tabs close, as the summary tab kept it: the
+ * dock always has a group to open into. A record left with no tab restores one empty locked group. Only an artifact
+ * tab makes the active group (R-MT-32).
  */
 export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext): RestorePlan {
     const originalActive = groupsOf(record.layout.dockbox)[record.activeGroup] ?? null;
-    let hasSummary = false;
     const restored: SavedGroupTab[] = [];
     const pruned = new Map<any, SavedGroupPanel>();
     const prunePanel = (panel: SavedGroupPanel): SavedGroupPanel | null => {
         const tabs: SavedGroupTab[] = [];
         for (const t of panel.tabs) {
-            if (t.id === SUMMARY_TAB_ID) { hasSummary = true; tabs.push({ id: t.id }); continue; }
+            if (t.id === SUMMARY_TAB_ID) continue;
             if (!t.modelId || !ctx.canOpenModel(t.modelId)) continue;
             const vp = typeof t.viewpointId === 'string' && t.viewpointId && ctx.viewpointKnown(t.viewpointId) ? t.viewpointId : null;
             tabs.push({ id: t.id, modelId: t.modelId, viewpointId: vp });
@@ -210,9 +212,9 @@ export function pruneGroupsRecord(record: EditorGroupsRecord, ctx: PruneContext)
     };
     const dockbox: SavedGroupBox = pruneBox(record.layout.dockbox) ?? { mode: 'horizontal', children: [] };
     let groups = groupsOf(dockbox) as SavedGroupPanel[];
-    if (!hasSummary) {
-        if (groups.length) groups[0].tabs.unshift({ id: SUMMARY_TAB_ID });
-        else dockbox.children.push({ tabs: [{ id: SUMMARY_TAB_ID }], activeId: SUMMARY_TAB_ID, group: MODELS_GROUP });
+    if (groups.length) groups[0].panelLock = {};
+    else {
+        dockbox.children.push({ tabs: [], group: MODELS_GROUP, panelLock: {} });
         groups = groupsOf(dockbox) as SavedGroupPanel[];
     }
     const survivor = originalActive ? pruned.get(originalActive) : undefined;

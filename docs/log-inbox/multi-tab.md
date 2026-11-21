@@ -575,3 +575,183 @@ active log is not touched by this lane.
 **Smoke visivo**: passato (chat check 2026-11-20 16:52, unattended, on the gates and Alfonso's visual GO on the branch at 16:06 on 3072; Alfonso in the morning digest)
 **Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's four entries first, then the branch's lane 6 entry and ticket, verbatim. Probes as expected. Branch-tree hook run: 1 laneBoard port test timed out (10084 ms, load), green on trunk and merge. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
 **Prompt document name**: 2026-11-20 16:30
+
+## 2026-11-20 — feat: the project dashboard opens full screen over the editor groups
+**Prompt**: `P-2026-11-20-1632`, lane full: the `project_summary` tab becomes a full-screen view over all groups (groups mounted underneath), toggled by the app bar project label, Esc closes, an artifact opened from it closes it, summary mode while shown, not persisted; R-MT-34
+**Files touched**: 37a3dc87f (`Dock.tsx`, `DockManager.tsx`, `abstract/style.scss`, `tabs/dockGroups.ts` + test, `tabs/groupPersistence.ts` + test, `Navbar.tsx`, `pages/dashboard.scss`); this commit: `docs/decisions.md` R-MT-34, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (mouse probe 18/19 at 1600 and 1280, 0 console errors: over the dashboard the status bar still shows the last model's breadcrumb; Alfonso's visual check pending on 3121)
+**Notes**: Point 4 needs `StatusBar.tsx` (`_lastSelected` fallback), outside the file list: asked, not done. Group 1 lost its display with the summary tab (`.not-strip` shows only panels with a pinnable header), fixed in style.scss. Gates: typecheck 0, build ok, check:docs 5/5, decisions gates 85/85, vitest 3 known import failures plus contextCeiling.test.ts red only under the lane's JJODEL_LANE_LOG* env (32/32 without). Continuation of session 42462f6f. Crops in ~/.jjodel-lanes/P-2026-11-20-1632/.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — ticket: status bar shows the last model over the project dashboard
+**Ticket**: with the dashboard shown (R-MT-34), `StatusBar.tsx` still renders the last model's breadcrumb: the ACTIVE_TAB `project_summary` sets its context to `editor` and `useActiveModel` falls back to `_lastSelected`, which opening a model sets. The old summary tab had the same residue (P-2026-11-19-2236 Notes). Fix outside the 1632 scope: treat `project_summary` as the project context.
+**Priority**: medium
+**Found in**: P-2026-11-20-1632
+**Detail**: docs/decisions.md R-MT-34
+
+## 2026-11-20 — fix: status bar in project mode over the project dashboard
+**Prompt**: `P-2026-11-20-1632`, chat check 17:04 (RC-21 recommendation adopted): `StatusBar.tsx` approved for one change, the status bar in project mode while the dashboard shows; probe step at 1600 and typecheck again
+**Files touched**: 963973425 (`StatusBar.tsx`); this commit: `docs/decisions.md` R-MT-34 (status bar sentence, probe count), this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:32 (the same lane, its status bar step)
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: yes (`StatusBar.tsx`, approved in the chat check before the change)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (mouse probe 19/19 at 1600, 0 console errors; Alfonso's visual check pending on 3121)
+**Notes**: `project_summary` joins the prefixes StatusBar reads as the project context, so `useActiveModel`'s `_lastSelected` fallback no longer reaches the breadcrumb. Closes the ticket filed by this lane. With two groups and group 2 active, a click on the app bar project label opens the dashboard (probe steps P2, P3). Typecheck 0. The R-MT-34 row was written by this lane and not yet merged, so it is corrected in place.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — close: project dashboard full screen, visual GO
+**Prompt**: `P-2026-11-20-1632`, closure: Alfonso's visual GO 2026-11-20 17:46 on 3121 («ok funziona»); Status flip, dev server on 3121 stopped
+**Files touched**: this commit: the 1632 prompt (Status), this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 17:46 on 3121; mouse probe 19/19 at 1600, 0 console errors)
+**Notes**: Closes the two entries above, whose Smoke visivo said the check was pending: they were committed before the GO instead of riding in the closure commit (P13), so the GO is recorded here and they stay as written (add-only). Last code commit 963973425.
+**Prompt document name**: 2026-11-20 16:32
+
+## 2026-11-20 — merge: multi-tab-dashboard into alfonso-frontend-jjtl (P-2026-11-20-2159)
+**Prompt**: `claude_2026-11-20_2159_prompt_merge_multi-tab-dashboard.md`, lane full (merge; 1 conflict measured, `docs/log-inbox/multi-tab.md`): bring `multi-tab-dashboard` at 27b2de300 into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d2628b041; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: e58a5d187 (merge), 13 files — `StatusBar.tsx`, `Dock.tsx`, `DockManager.tsx`, `abstract/style.scss`, `dockGroups.ts`, `dockGroups.test.ts`, `groupPersistence.ts`, `groupPersistence.test.ts`, `Navbar.tsx`, `dashboard.scss`, the 1632 prompt, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2159
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 631 passed files, 16562 passed, 0 failed and 3 skipped (16565, expected 16556 + 6): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 13, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 22:13, unattended, on the gates and Alfonso's visual GO on the branch at 17:46 on 3121; Alfonso in the morning digest)
+**Notes**: One conflict, this inbox, two hunks (shared field lines interleaved), rebuilt from the stage files by union: trunk's lane 6 entry, its ticket and the 1630 merge entry first, then the branch's four 1632 entries, verbatim. Probes as expected (R-MT-34 once, R-MT-35 none, six headings once). New tests counted on the two tabs test files: 37 trunk, 43 branch. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 21:59
+
+## 2026-11-20 — discovery: editor chrome parity, stopped before Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for canvas and text editor, D1..D7 decided by the chat; Phase 1 discovery, then Phase 2 unless a stop condition holds
+**Files touched**: 779ea395e (`docs/discovery/discovery_2026-11-20_editor_chrome_parity.md`); this commit: this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Stop conditions 1 and 2 hold: the Code pill launches the code generator (CodePanel.tsx:9), Text opens a separate txt_ tab (openTextualTab.tsx:46), Text|EBNF|Syntax switches the textual tab's content; SyntaxForm and the EBNF editor are mounted only in TextualTab. Phase 2 would also exceed ten source files. No code, no R-MT rows, no dev server. Questions in the report §7.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — feat: editor chrome parity, narrowed Phase 2 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, Phase 2 as narrowed by the chat (16:35): S1 one active-tab style, S2 shared editor bar, S3 `Diagram | Text` as a tab switch; D4, D5 move, D6 deferred; continued after a context ceiling
+**Files touched**: fc0d8987b `DockManagerStyles.scss`; f8f03322b `EditorBar.tsx`, `EditorBar.scss`, `representationSwitch.ts`, its test, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`; 4ec528ab8 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-33..36, discovery report §8, this inbox
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: yes
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 12/12 at 1600 and 1280; Split Right residual, report §8.2; Alfonso's visual check pending)
+**Notes**: 8 source files, over five: listed above; representationSwitch.ts was not in DOVE. Probe found Split Right pushed out of narrow canvas bars by the switch (−119px at 1600); 4ec528ab8 shrinks the labels first, residual −32px (R-MT-26 scroll). contextCeiling.test.ts red only under lane env. Report: docs/discovery/discovery_2026-11-20_editor_chrome_parity.md §8.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: icon-only Diagram | Text, Split Right never scrolls out (multi-tab lane edchrome)
+**Prompt**: chat decision on the Split Right residual (RC-25, unattended): switch icon-only in both bars at every width, Split Right never scrolls out, disabled Text on the existing disabled token, EBNF/Syntax cut left as is, R-MT row amended
+**Files touched**: 4ec5f6196 `EditorBar.tsx`, `EditorBar.scss`; docs: `decisions.md` R-MT-34 and R-MT-35 amended, discovery report §8.3, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe 17/17 at 1600 and 1280; Alfonso's visual check pending)
+**Notes**: Icon-only alone could not hold Split Right (the switch was already 59px where it measured −32): the left and middle zones now scroll in `.editor-bar__scroll`, the right zone and rail cell stay out. Split Right gap 443/403 alone, 59/59 left group, 35/35 right group. §8.2's «metamodel alone» rows were the left group of the split: corrected in §8.3.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — fix: one control style for both bars, identity cell removed (multi-tab lane edchrome)
+**Prompt**: Alfonso's visual check 21:59-22:07: remove the canvas bar's identity cell; Text tab filter and breadcrumb rows of one height and one bottom line; flat 28px icon buttons, one divider, no zoom pill, one secondary-text style in both bars; R-MT-34 amended
+**Files touched**: e36a00f7a `Toolbar.tsx`, `EditorBar.tsx`, `EditorBar.scss`, `TextualTab.scss`; docs: `decisions.md` R-MT-34 amended, discovery report §8.4, this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe-uni and probe-ecp 17/17 at 1600 and 1280, no console errors; Alfonso's visual check pending)
+**Notes**: The cell was also the bar's room over the rail: the rail overlay starts at y 91, inside the bar band, so without it Split Right took no click. An empty `editor-bar__rail-reserve` replaces it. Also: status dot-separated from the language, name keeps a 48px floor at 1280. Report §8.4.
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — close: editor chrome parity, visual GO (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_1610_prompt_editor-chrome-parity.md`, lane full: one chrome for the diagram canvas and the Text tab (D1-D7, R-MT-33..36), closure after Alfonso's visual GO
+**Files touched**: code fc0d8987b, f8f03322b, 4ec528ab8, 4ec5f6196, e36a00f7a, 331035777 (`DockManagerStyles.scss`, `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `representationSwitch.ts`, its test); docs: `decisions.md` R-MT-33..36, discovery report §1-§8.4; this commit: this inbox, Status of 1610
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes (8 source files, above five; `representationSwitch.ts` and its test not in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso GO 2026-11-20 22:51 on 3120; probe-ecp 17/17 and probe-uni at 1600 and 1280, 0 console errors)
+**Notes**: GO covers shared bar, neutral active tab, icon-only Diagram|Text, identity cell removed, filter and breadcrumb rows aligned, uniform controls. Partial against the prompt: Phase 2 ran as narrowed by the chat (report §8), D4 (EBNF/Syntax), D5 status move and D6 (tree, shared breadcrumb) deferred. Open finding: the rail overlay's top ignores the tab strip (report §8.4).
+**Prompt document name**: 2026-11-20 16:10
+
+## 2026-11-20 — docs: branch R-MT-33 and R-MT-34 renumbered to R-MT-37 and R-MT-38 (multi-tab lane edchrome)
+**Prompt**: `claude_2026-11-20_2305_prompt_editor-chrome-renumber.md`, lane fast: the merge lane P-2026-11-20-2257 found the trunk already holding R-MT-33 (editor groups persist, P-2026-11-19-2328) and R-MT-34 (full-screen dashboard, P-2026-11-20-1632); RC-14, the branch resolves the id collision before the merge
+**Files touched**: code comments `EditorBar.tsx`, `EditorBar.scss`, `Toolbar.tsx`, `TextualTab.tsx`, `TextualTab.scss`, `DockManagerStyles.scss`; docs: `decisions.md` (the two P-2026-11-20-1610 rows), discovery report §8, this inbox, Status of 2305
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 16:10 claude_2026-11-20_1610_prompt_editor-chrome-parity.md
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Correction to the add-only entries above: in the five entries of P-2026-11-20-1610 (discovery, feat, two fixes, close), R-MT-33 reads R-MT-37 and R-MT-34 reads R-MT-38; «R-MT-33..36» reads «R-MT-35..38». R-MT-35 and R-MT-36 keep their ids. The prompt file of 1610 keeps its text.
+**Prompt document name**: 2026-11-20 23:05
+
+## 2026-11-20 — merge: editor-chrome-parity into alfonso-frontend-jjtl (P-2026-11-20-2309)
+**Prompt**: `claude_2026-11-20_2309_prompt_merge_editor-chrome-parity.md`, lane full (merge; 2 conflicts measured, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`): bring `editor-chrome-parity` at f2e75e4ed into the trunk with one `--no-ff` merge commit of the explicit sha, merge base d4ddede1d; re-measure, probes, union, gates, hard stop for the chat's GO.
+**Files touched**: a448f35d1 (merge), 13 files — `TextualTab.scss`, `TextualTab.tsx`, `DockManagerStyles.scss`, `EditorBar.scss`, `EditorBar.tsx`, `Toolbar.tsx`, `representationSwitch.ts`, `representationSwitch.test.ts`, the editor chrome parity discovery report, the 1610 and 2305 prompts, `docs/decisions.md`, `docs/log-inbox/multi-tab.md`; docs commit — this entry, the Status of 2309
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merge: typecheck exit 0 (0 `error TS`), typecheck:scripts exit 0, vitest 3 failed | 632 passed files, 16570 passed, 0 failed and 3 skipped (16573, expected 16562 + 8): the known 3 red at import; hooks 22 files 985/985 (expected 985 + 0), build exit 0, check:docs 5/5, check:agents green, check:scripts PASS, check:addonly PASS.
+**Out-of-scope changes**: yes (above five files: the merge brings the branch's 13, listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat check 2026-11-20 23:27, unattended: 3001 answers 200 and serves the trunk's EditorBar.tsx, the code Alfonso approved visually on 3120 at 22:51; Alfonso in the morning digest)
+**Notes**: Two conflicts, one hunk each, union from the stage files: decisions R-MT-33/34 then R-MT-37/38/35/36; this inbox, trunk's ten entries then the branch's six, one blank line between, verbatim. Probes as expected (six rows once, R-MT-39 none, sixteen headings once). New tests: 8 in representationSwitch.test.ts. check:docs 5/5, not 4/4. Lane board not restarted (no change); 3001 up, not restarted. Rule 16: active log not read.
+**Prompt document name**: 2026-11-20 23:09
+
+## 2026-11-21 — feat: canvas bar keeps editing, View › Syntax and Colors, syntax chip, overflow (P-2026-11-20-2310)
+**Prompt**: `claude_2026-11-20_2310_prompt_canvas_toolbar_rationalization.md`, lane full, discovery then Phase 2 in cascade: syntax and colors leave the canvas bar for View › Syntax and View › Colors, one syntax chip per group, buttons by priority with an overflow menu, Basic and Advanced alike; no data moves.
+**Files touched**: defd1fc19 (discovery report); d8fff434d, 10 files — `canvasViewChoices.ts` (new), `ToolbarOverflow.tsx` (new), `CanvasViewControls.scss` (new), `__tests__/canvasViewChoices.test.ts` (new, 23 tests), `Toolbar.tsx`, `EditorV2.tsx`, `ColorSchemeSelector.tsx`, `tabs/EditorSwitch.tsx`, `pages/components/Navbar.tsx`, `__tests__/dataManagerPicker.test.ts`; docs commit — this entry, the ticket below, R-MT-39 in `docs/decisions.md`, the Status of 2310
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes (accepted at the GO): in a group below the 280px floor (200px, a third Split Right at 1600) the right zone fills the bar and the editing buttons, before reachable in a 109px scroll box, are out of reach; left to the splitter lane's floor. Nothing else: probe scenes a-d as specified.
+**Out-of-scope changes**: yes (above five files, listed in discovery §8; `dataManagerPicker.test.ts` outside that list: six source-text assertions on the eye remapped onto the chip)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe on 3140, scenes a-d measured from the DOM; visual GO from the project chat 2026-11-21, RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest 1 failed test beyond the 3 known import reds, contextCeiling.test.ts, an env leak of this continuation session (ticket below; green with the variable unset). Chip 85px across Structured to ER, no shift. Commit subject shortened, 89 > 72. The eye was the syntax picker, so nothing moved to View as a checkable entry. Phase 2 decisions recorded in R-MT-39, not in a discovery addendum. Rule 16: active log not read in this continuation.
+**Prompt document name**: 2026-11-20 23:10
+
+## 2026-11-21 — ticket: contextCeiling.test.ts inherits JJODEL_LANE_LOG_FROM and goes red inside a lane continuation
+**Ticket**: `frontend/scripts/hooks/__tests__/contextCeiling.test.ts`, «transcript_path wins over JJODEL_LANE_LOG», expects `deny` and gets null when `npm run test` runs in a session that exports `JJODEL_LANE_LOG_FROM`, as a lane-run continuation does. `run()` resets `JJODEL_LANE_LOG` but not `JJODEL_LANE_LOG_FROM`; `hookRunner.runScript` spawns with `{ ...process.env, ...env }`; `context-ceiling.mjs:265` then scopes the lane log to the session and offset. Measured 2026-11-21: red 3/3 with it, green with `env -u JJODEL_LANE_LOG_FROM`. An empty string does not reset it (`!== undefined` at :265): the helper has to drop the key.
+**Priority**: medium
+**Found in**: P-2026-11-20-2310
+
+## 2026-11-21 — merge: toolbar-rationalize into alfonso-frontend-jjtl (P-2026-11-21-0028)
+**Prompt**: `claude_2026-11-21_0028_prompt_merge_toolbar-rationalize.md`, direct merge by `lane-run merge --direct` (no conflicts, no file changed on both sides, trunk already merged into the branch at f15e52035), rollback tag `pre-toolbar-rationalize` on 92271b39b.
+**Files touched**: cbbae0da3 (merge), 14 files from the branch (canvas toolbar rationalization of P-2026-11-20-2310: `Toolbar.tsx`, `ToolbarOverflow.tsx`, `canvasViewChoices.ts` and its test, `CanvasViewControls.scss`, `ColorSchemeSelector.tsx`, `EditorV2.tsx`, `EditorSwitch.tsx`, `Navbar.tsx`, `dataManagerPicker.test.ts`, discovery report, prompt, decisions, this inbox); 366c6a046 (R-MT-39 header).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no in the product. Gates on the merge: typecheck 0, typecheck:scripts 0, build 0, check:docs, check:agents, check:scripts, check:addonly ok; vitest red with 2 failures beyond the 3 known import failures, both in the decisions parser gates (`docsDigest.test.ts` HeaderParseError, `decisionsQuery.test.ts` recogniser ratio): the R-MT-39 header carried a nested parenthesis and no ratification clause. Fixed in 366c6a046 by rewriting the header in the register format; both files then pass (60/60, 25/25) and check:addonly stays clean. The `contextCeiling.test.ts` failure seen in the lane did not reproduce in the merge run.
+**Out-of-scope changes**: yes (366c6a046, the R-MT-39 header of this merge's own branch).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat RC-23 on the lane shots `advanced-a-chip-popover.png`, `menu-view_notation_wireframe.png` and the DOM measures of scenes a-d, 2026-11-21 00:24; Alfonso in the morning digest)
+**Notes**: The direct worker exited `blocked` on the red vitest gate and left the merge commit in place, as designed; the chat fixed the cause on the trunk instead of rolling back.
+**Prompt document name**: 2026-11-21 00:28

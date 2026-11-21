@@ -53,9 +53,9 @@ describe('groupPersistence', () => {
         expect(back).not.toBeNull();
         const plan = pruneGroupsRecord(back, keepAll);
         const [g1, g2] = plan.layout.dockbox.children as any[];
-        expect(g1.tabs.map((t: any) => t.id)).toEqual(['project_summary', 'A', 'M']);
+        expect(g1.tabs.map((t: any) => t.id)).toEqual(['A', 'M']);
         expect(g2.tabs.map((t: any) => t.id)).toEqual(['A~tab2', 'B']);
-        expect(g1.tabs[1]).toEqual({ id: 'A', modelId: 'A', viewpointId: null });
+        expect(g1.tabs[0]).toEqual({ id: 'A', modelId: 'A', viewpointId: null });
         expect(g2.tabs[0]).toEqual({ id: 'A~tab2', modelId: 'A', viewpointId: 'vpX' });
         expect(g2.tabs[1].viewpointId).toBe('vpY');
         expect([g1.activeId, g2.activeId]).toEqual(['M', 'B']);
@@ -69,13 +69,14 @@ describe('groupPersistence', () => {
         const r = buildGroupsRecord(saved(panel('+2', ['project_summary', 'A']), panel('+3', ['doc_A', 'jjtl_t'])), '+3', { isArtifactTab, viewpointOf: () => undefined });
         expect(r.layout.dockbox.children).toHaveLength(1);
         expect(r.activeGroup).toBe(0);
-        expect((r.layout.dockbox.children[0] as any).tabs[1].viewpointId).toBeNull();
+        expect((r.layout.dockbox.children[0] as any).tabs.map((t: any) => t.id)).toEqual(['A']);
+        expect((r.layout.dockbox.children[0] as any).tabs[0].viewpointId).toBeNull();
     });
 
     it('a tab of a missing model is dropped; its group stays when it holds other tabs', () => {
         const plan = pruneGroupsRecord(twoGroups(), { ...keepAll, canOpenModel: m => m !== 'B' });
         const [g1, g2] = plan.layout.dockbox.children as any[];
-        expect(g1.tabs.map((t: any) => t.id)).toEqual(['project_summary', 'A', 'M']);
+        expect(g1.tabs.map((t: any) => t.id)).toEqual(['A', 'M']);
         expect(g2.tabs.map((t: any) => t.id)).toEqual(['A~tab2']);
         expect(g2.activeId).toBe('A~tab2');
         expect(plan.activeGroup).toBe(1);
@@ -86,7 +87,7 @@ describe('groupPersistence', () => {
         const plan = pruneGroupsRecord(twoGroups(), { ...keepAll, canOpenModel: m => m === 'M' });
         expect(plan.layout.dockbox.children).toHaveLength(1);
         expect(plan.activeGroup).toBe(0);
-        expect((plan.layout.dockbox.children[0] as any).tabs.map((t: any) => t.id)).toEqual(['project_summary', 'M']);
+        expect((plan.layout.dockbox.children[0] as any).tabs.map((t: any) => t.id)).toEqual(['M']);
         expect(plan.activeTab).toBe('M');
     });
 
@@ -97,24 +98,55 @@ describe('groupPersistence', () => {
         expect(g2.tabs[1].viewpointId).toBe('vpY');
     });
 
-    it('a record without the summary tab gets it back first in group 1', () => {
+    // P-2026-11-20-1632: the project dashboard is no tab of a group; group 1 is kept even when empty (rc-dock's panelLock).
+    it('the summary is not saved', () => {
         const r = twoGroups();
-        (r.layout.dockbox.children[0] as any).tabs.shift();
-        const plan = pruneGroupsRecord(validateGroupsRecord(r)!, keepAll);
-        expect((plan.layout.dockbox.children[0] as any).tabs[0]).toEqual({ id: 'project_summary' });
-        const none = pruneGroupsRecord(validateGroupsRecord(r)!, { ...keepAll, canOpenModel: () => false });
-        expect(none.layout.dockbox.children).toHaveLength(1);
-        expect((none.layout.dockbox.children[0] as any).tabs).toEqual([{ id: 'project_summary' }]);
-        expect(none.activeTab).toBeNull();
+        const ids = (r.layout.dockbox.children as any[]).flatMap(g => g.tabs.map((t: any) => t.id));
+        expect(ids).not.toContain('project_summary');
+        const only = buildGroupsRecord(saved(panel('+2', ['project_summary']), panel('+3', ['A'])), '+2', { isArtifactTab, viewpointOf: () => null });
+        expect(only.layout.dockbox.children).toHaveLength(1);
+        expect(only.activeGroup).toBe(0);
     });
 
-    it('an active group with only the summary notes no tab (R-MT-32)', () => {
-        const r = buildGroupsRecord(saved(panel('+2', ['project_summary']), panel('+3', ['A'])), '+2', { isArtifactTab, viewpointOf: () => null });
-        const plan = pruneGroupsRecord(r, keepAll);
+    it('a saved record that still holds the summary restores without it', () => {
+        const old = twoGroups();
+        (old.layout.dockbox.children[0] as any).tabs.unshift({ id: 'project_summary' });
+        const plan = pruneGroupsRecord(validateGroupsRecord(old)!, keepAll);
+        const [g1, g2] = plan.layout.dockbox.children as any[];
+        expect(g1.tabs.map((t: any) => t.id)).toEqual(['A', 'M']);
+        expect(g2.tabs.map((t: any) => t.id)).toEqual(['A~tab2', 'B']);
+        expect(plan.tabs.map(t => t.id)).not.toContain('project_summary');
+    });
+
+    it('group 1 is locked, so it stays when its tabs close; the others are not', () => {
+        const plan = pruneGroupsRecord(twoGroups(), keepAll);
+        const [g1, g2] = plan.layout.dockbox.children as any[];
+        expect(g1.panelLock).toEqual({});
+        expect(g2.panelLock).toBeUndefined();
+    });
+
+    it('a record left with no tab restores one empty locked group, noting no tab', () => {
+        const none = pruneGroupsRecord(twoGroups(), { ...keepAll, canOpenModel: () => false });
+        expect(none.layout.dockbox.children).toHaveLength(1);
+        expect(none.layout.dockbox.children[0]).toEqual({ tabs: [], group: 'models', panelLock: {} });
+        expect(none.activeGroup).toBe(0);
+        expect(none.activeTab).toBeNull();
+        expect(none.tabs).toEqual([]);
+    });
+
+    it('an old record whose active group held only the summary notes no tab (R-MT-32)', () => {
+        const old = { v: 1, activeGroup: 0, layout: { dockbox: { mode: 'horizontal', children: [
+            { id: '+2', group: 'models', activeId: 'project_summary', tabs: [{ id: 'project_summary' }] },
+            { id: '+3', group: 'models', activeId: 'A', tabs: [{ id: 'A', modelId: 'A', viewpointId: null }] },
+        ] } } };
+        const plan = pruneGroupsRecord(validateGroupsRecord(old)!, keepAll);
+        expect(plan.layout.dockbox.children).toHaveLength(1);
         expect(plan.activeGroup).toBe(0);
-        expect(plan.activeTab).toBeNull();
-        const r2 = buildGroupsRecord(saved(panel('+2', ['project_summary', 'A'], 'project_summary')), '+2', { isArtifactTab, viewpointOf: () => null });
-        expect(pruneGroupsRecord(r2, keepAll).activeTab).toBe('A');
+        expect(plan.activeTab).toBe('A');
+        const r2 = { ...old, layout: { dockbox: { mode: 'horizontal', children: [
+            { id: '+2', group: 'models', activeId: 'project_summary', tabs: [{ id: 'project_summary' }, { id: 'A', modelId: 'A', viewpointId: null }] },
+        ] } } };
+        expect(pruneGroupsRecord(validateGroupsRecord(r2)!, keepAll).activeTab).toBe('A');
     });
 
     it('an invalid record is ignored as a whole', () => {

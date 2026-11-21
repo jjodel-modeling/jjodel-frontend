@@ -14,7 +14,7 @@ import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
 import { modelOfTabId } from "./tabs/modelTabId";
-import { activeGroup, activeTabId, groupOfTab, modelGroups, noteActiveTab } from "./tabs/dockGroups";
+import { activeGroup, activeTabId, dashboardShown, groupOfTab, isDashboardOpen, modelGroups, noteActiveTab, setDashboardOpen, subscribeDashboard, SUMMARY_TAB_ID } from "./tabs/dockGroups";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
@@ -134,6 +134,8 @@ export function calculatePanelSizes(mode: LayoutMode): { leftSize: number; right
 
 
 const tabidprefix = "DockComponent_rightbar_";
+// The rc-dock moves that place a tab in the dock (P-2026-11-20-1632): each closes the project dashboard.
+const DOCK_PLACEMENTS = new Set(['middle', 'left', 'right', 'top', 'bottom', 'before-tab', 'after-tab']);
 let idcounter = 0;
 function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
     return tabidprefix + (++idcounter);
@@ -304,6 +306,49 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
+    // The project dashboard (P-2026-11-20-1632, R-MT-34): a full-screen view over the whole editor area, no tab of a
+    // group. It shows while open and whenever no group holds a tab; the groups stay mounted and intact underneath. A new
+    // project opens with it closed (it is not persisted), so with no tab it shows, with restored groups they do.
+    const [dashboard, setDashboard] = useState<boolean>(true);
+    useEffect(() => {
+        setDashboardOpen(false);
+        setDashboard(DockManager.isDashboardShown());
+        return subscribeDashboard(() => setDashboard(DockManager.isDashboardShown()));
+    }, []);
+
+    // While it shows the app is in summary mode (left bar, status bar, body[data-editor-type]), as the summary tab did;
+    // when it hides, the active tab of the active group is announced again, so the shell shows the groups as they were.
+    useEffect(() => {
+        if (dashboard) {
+            document.body.removeAttribute('data-active-tab');
+            window.dispatchEvent(new CustomEvent(JjodelEvents.ACTIVE_TAB, { detail: { activeId: SUMMARY_TAB_ID, tabType: null } }));
+            window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, { detail: { editorType: 'summary', modelId: SUMMARY_TAB_ID } }));
+            return;
+        }
+        const dock = DockManager.dock;
+        if (!dock) return;
+        announceActiveTab(dock.getLayout());
+        PinnableDock.instance?.forceEditorTypeBroadcast?.();
+        DockManager.refreshCanvasSplit?.();
+    }, [dashboard]);
+
+    // Esc closes the dashboard when it was opened over groups that hold tabs. Not while typing, nor while a dialog of the
+    // dashboard (ProjectEditor's) is open, nor when something else has already taken the key.
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || event.defaultPrevented || !isDashboardOpen()) return;
+            const dock = DockManager.dock;
+            if (!dock || dashboardShown(dock.getLayout(), false)) return;
+            const target = event.target as HTMLElement | null;
+            if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+            if (document.querySelector('.project-dashboard [role="dialog"], .project-dashboard .modal')) return;
+            event.preventDefault();
+            DockManager.closeDashboard();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
+
     // Editor groups persistence (G7, P-2026-11-19-2328): once, at project open, the groups the user left on this project
     // come back (`DockManager.restoreGroups`); every later change is saved, and the pending write goes out at page unload
     // and at project close (the dock unmounts).
@@ -312,6 +357,8 @@ function DockComponent(props: AllProps) {
             setTimeout(() => {
                 const dock = DockManager.dock;
                 if (!dock) return;
+                setDashboard(DockManager.isDashboardShown());
+                if (DockManager.isDashboardShown()) return;
                 announceActiveTab(dock.getLayout());
                 PinnableDock.instance?.forceEditorTypeBroadcast?.();
                 DockManager.refreshCanvasSplit();
@@ -339,7 +386,7 @@ function DockComponent(props: AllProps) {
     };
 
     const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
-    const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
+    // The project dashboard is no tab of a group any more (P-2026-11-20-1632): it is rendered over the dock, below.
     // F2 floating panels (2026-07-29): the Properties tab (`structure`) is gone from the
     // dock — Properties + Tree now render as a floating overlay (mounted in Dashboard,
     // `<PropertiesWithTreeView mode='floating'/>`). Removed here so it is never rendered
@@ -391,8 +438,9 @@ function DockComponent(props: AllProps) {
     // Note: When JjTL is active, CSS handles hiding the right panel
     const { leftSize } = calculatePanelSizes(layoutMode);
 
-    // Left panel (Models Summary / Canvas)
-    layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
+    // Left panel (Canvas): group 1, empty until an artifact opens. rc-dock's panelLock keeps it when its tabs close, as the
+    // summary tab kept it (Q4): the dock always has a group to open into (P-2026-11-20-1632).
+    layout.dockbox.children.push({tabs: [], group: 'models', panelLock: {}, size: leftSize});
 
     // F2 floating panels (2026-07-29): the right dock child (editors group — Properties,
     // Node, Console, MTM, Logger) is no longer built. Properties + Tree now render as a
@@ -411,8 +459,11 @@ function DockComponent(props: AllProps) {
     // tab its group shows next). The split of canvases is re-read after rc-dock has rendered the change.
     const handleLayoutChange = (newLayout: any, currentTabId?: string, direction?: string) => {
         if (direction !== 'remove' && currentTabId && groupOfTab(newLayout, currentTabId)) noteActiveTab(currentTabId);
+        // A tab placed in the dock (an artifact, a document, a generator opened from the dashboard) closes the dashboard.
+        if (currentTabId && direction && DOCK_PLACEMENTS.has(direction)) DockManager.closeDashboard();
+        setDashboard(dashboardShown(newLayout));
         setTimeout(() => DockManager.refreshCanvasSplit?.(), 0);
-        announceActiveTab(newLayout);
+        if (!dashboardShown(newLayout)) announceActiveTab(newLayout);
         DockManager.noteGroupsChanged?.(newLayout);
     };
 
@@ -479,10 +530,15 @@ function DockComponent(props: AllProps) {
 
     return (
         <>
-            {/* loadTab (G7): the restored groups' tabs are rebuilt from their saved ids, the summary is this one. */}
+            {/* loadTab (G7): the restored groups' tabs are rebuilt from their saved ids; an old `project_summary` is dropped. */}
             <PinnableDock ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange}
-                loadTab={(saved: any) => saved?.id === ModelsSummary.id ? ModelsSummary : DockManager.loadTab(saved) as any} />
+                loadTab={(saved: any) => DockManager.loadTab(saved) as any} />
             <TabsOverflowMenu />
+            {/* The project dashboard over the whole editor area (P-2026-11-20-1632): always mounted, as the summary tab was;
+                while it shows, the dock stays laid out underneath, hidden (dashboard.scss). */}
+            <div className={`project-dashboard${dashboard ? ' project-dashboard--shown' : ''}`} aria-hidden={!dashboard}>
+                <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>
+            </div>
         </>
     );
 }

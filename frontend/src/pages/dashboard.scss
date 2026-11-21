@@ -559,6 +559,29 @@
     }
   }
 
+  /* P-2026-11-20-1632 — the project dashboard lies over the whole editor area, all groups. The Dock stays mounted and
+     laid out underneath (tabs, viewpoints, widths, active group) but is neither painted nor reachable while it shows:
+     visibility, as the consumer Configurator above. In consumer the rule above hides the dashboard as well. */
+  .project-dock-wrapper > .project-dashboard {
+    display: none;
+  }
+
+  .project-dock-wrapper:has(> .project-dashboard--shown) {
+    position: relative;
+
+    > :not(.project-dashboard) {
+      visibility: hidden;
+    }
+
+    > .project-dashboard--shown {
+      display: block;
+      position: absolute;
+      inset: 0;
+      overflow: auto;
+      background-color: var(--color-bg-primary);
+    }
+  }
+
   /* ============================================
      DASH CONTENT AREA
      ============================================ */

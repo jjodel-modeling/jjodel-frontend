@@ -291,7 +291,8 @@ const StatusBar: React.FC = () => {
             const activeId: string = (e as CustomEvent).detail?.activeId || '';
             setActiveTabId(activeId);
 
-            if (activeId.startsWith('DockComponent_rightbar_') || activeId.startsWith('doc_')) {
+            // project_summary: the project dashboard is shown (R-MT-34, P-2026-11-20-1632), project mode.
+            if (activeId.startsWith('DockComponent_rightbar_') || activeId.startsWith('doc_') || activeId === 'project_summary') {
                 setContext('project');
                 setJjtlActive(false);
             } else if (activeId.startsWith('jjtl_')) {
