@@ -6,7 +6,7 @@ Status: da eseguire
 Lane: full (discovery then Phase 2 in cascade; editor-v2 menus, no critical zone)
 Depends: P-2026-11-21-0100 (merged, 542f8a436)
 Request: local only (~/.jjodel-lanes/P-2026-11-21-0920/request.md)
-Front: shell-ui
+Front: multi-tab
 
 ## COSA
 
@@ -81,7 +81,7 @@ another palette: the label does not move. Repeat from the `⋯` overflow. Crops 
 - No subagents, no background tasks. One probe run per tool call.
 - Commit as soon as the gates are green: `git add <specific files>` only.
 - Commit message: `fix(editor-v2): one colors submenu, never over its parent (P-2026-11-21-0920)`
-- Entry in `docs/log-inbox/shell-ui.md` (create it in the format of the other inboxes if absent); flip `Status` in
+- Entry in `docs/log-inbox/multi-tab.md`; flip `Status` in
   this file in the same docs-only commit. If a decision row is needed, copy the header shape of R-MT-39 exactly (the
   register parser rejects nested parentheses).
 - Final line: `Outcome: done | hard-stop | question | blocked`.
