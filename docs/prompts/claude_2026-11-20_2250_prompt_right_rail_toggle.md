@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-11-20-2250
 Chat: C-2026-11-20-2250
-Status: eseguito 2026-11-21 · lane fast · 49c159ed8 · verifica visiva in attesa (probe DOM passato)
+Status: eseguito 2026-11-21 · lane fast · 49c159ed8, rework 9e1233cbc (rail chiuso: solo il pulsante, niente striscia) · verifica visiva in attesa (probe DOM passato)
 Lane: fast (multi-tab follow-up on shell chrome, no critical zone)
 Depends: none
 Request: none (typed in the project chat, not an issue)

@@ -793,3 +793,16 @@ active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat check 2026-11-21 01:38 (RC-23, unattended): 3001 answers 200 and serves the trunk; the UI is unchanged by this merge and the behaviour was verified by the lane probe on 3141 (11/11 DOM steps, saved-record check). Alfonso in the morning digest.
 **Notes**: Rollback tag `pre-per-tab-view-prefs` on `bacae8815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-21-0127/result.json`.
 **Prompt document name**: 2026-11-21 01:27
+
+## 2026-11-21 — fix: collapsed rail leaves only the reopen button (P-2026-11-20-2250)
+**Prompt**: rework after Alfonso's visual check on 3008 (2026-11-21 09:06): open rail fine; collapsed, leave only the `<<` button, no vertical strip taking space. Continuation after the context ceiling, on the tree merged with the trunk (200b50060).
+**Files touched**: 9e1233cbc (`frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editor-v2/EditorBar.scss`, `frontend/src/components/editor-v2/Toolbar.tsx`, comments only in the last); the docs commit of this entry (this inbox, the prompt's Status).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-20 22:50
+**Causa**: (f)
+**Regressions**: unknown. Probe `probe-rework.mjs` at 1600 and 1280, 0 console errors: one and two panes, collapse, reload collapsed, reopen, Cmd+B, Basic and Advanced; Show rect = Hide rect, vars rail 0 / inset 0 / reopen 32 collapsed, panes margin-right 0, last-pane reserve 31, Split Right and syntax chip hit true. typecheck 0, build ok, 81/81 in the three `Toolbar` test files. Not measured: generator tab beside, kill-switch layouts, Jjodie docked.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe, DOM measures and crops `crop-rework-{1600,1280}-*.png` in `~/.jjodel-lanes/P-2026-11-20-2250/`); Alfonso's check pending
+**Notes**: Causa (f): the strip was the prompt's own item 3, the spec changed at the visual check; (a) arguable. New body var `--jj-rail-reopen-width` from the same single writer; the bar reserve takes max(rail, reopen). Button z-index 899 (one below the column, as the strip was), not the handoff's 900, so the exit still slides over it. Hover background still wins over the tint (measured rgb(233,239,246) under the pointer, rgb(248,250,252) after reload).
+**Prompt document name**: 2026-11-20 22:50
