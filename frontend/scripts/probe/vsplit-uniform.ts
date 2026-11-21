@@ -117,7 +117,7 @@ async function boot(browser: Browser, viewport: { width: number; height: number 
     const pid = await page.evaluate(String.raw`(async () => { const api = await import('/src/api/persistance/projects.ts'); const c = () => JSON.parse(localStorage.getItem('projects') || '[]').length; const b = c(); await api.ProjectsApi.importFromText(${JSON.stringify(text)}); for (let i = 0; i < 75 && c() <= b; i++) await new Promise(r => setTimeout(r, 200)); const a = JSON.parse(localStorage.getItem('projects') || '[]'); return a.length > b ? a[a.length - 1].id : null; })()`);
     if (!pid) throw new Error('import failed');
     await page.goto(`${URL}/?open=${encodeURIComponent(pid as string)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
-    const ids = await poll(page, String.raw`(() => { try { const all = Object.values(window.windoww.store.getState().idlookup).filter((d) => d && typeof d === 'object'); const a = all.find((d) => d.className === 'DModel' && d.isMetamodel && d.name === ${JSON.stringify(MM)}); const b = all.find((d) => d.className === 'DModel' && !d.isMetamodel && d.name === ${JSON.stringify(M1)}); return a && b && document.querySelectorAll('.dock-tab').length ? { mm: a.id, m1: b.id } : null; } catch { return null; } })()`, 120000) as { mm: string; m1: string } | null;
+    const ids = await poll(page, String.raw`(() => { try { const all = Object.values(window.windoww.store.getState().idlookup).filter((d) => d && typeof d === 'object'); const a = all.find((d) => d.className === 'DModel' && d.isMetamodel && d.name === ${JSON.stringify(MM)}); const b = all.find((d) => d.className === 'DModel' && !d.isMetamodel && d.name === ${JSON.stringify(M1)}); return a && b && document.querySelector('.dock-layout') ? { mm: a.id, m1: b.id } : null; } catch { return null; } })()`, 120000) as { mm: string; m1: string } | null;
     if (!ids) throw new Error('project did not load');
     await wait(page, 3000);
     await page.evaluate(H);
@@ -266,7 +266,9 @@ async function site(env: Env, name: string, s: Site) {
         if ((s.seam ?? 'center') === 'center') check(`${name}: knob inside the hit strip`, km.x0 != null && km.x0 >= Math.floor(sl) && km.x1! + 1 <= Math.ceil(sr), { x0: km.x0, x1: km.x1, strip: [sl, sr] });
         else note(`${name}: knob across the seam`, { x0: km.x0, x1: km.x1, strip: [sl, sr] });
         // The knob's columns where the pointer finds the handle: all of a centred knob, the inner half of a start / end one.
-        const grab = km.x0 == null ? null : await page.evaluate(`(() => { const el = ${P(s.sel, s.i)}; const xs = []; for (let x = ${km.x0}; x <= ${km.x1}; x++) { const t = document.elementFromPoint(x + 0.5, ${at.y}); if (t && (t === el || el.contains(t))) xs.push(x); } return xs; })()`) as number[] | null;
+        // Its layout columns, centred on the seam (at.x - 3 .. at.x + 3), not the pixel extent: on a half-pixel seam the
+        // pixels round one column right of the box (jjtl-side at 1600 after the trunk merge, P-2026-11-21-0155).
+        const grab = km.x0 == null ? null : await page.evaluate(`(() => { const el = ${P(s.sel, s.i)}; const xs = []; for (let k = 0; k < ${KNOB_W}; k++) { const x = ${at.x - KNOB_W / 2} + k + 0.5; const t = document.elementFromPoint(x, ${at.y}); if (t && (t === el || el.contains(t))) xs.push(Math.floor(x)); } return xs; })()`) as number[] | null;
         r.knobGrab = grab;
         const grabMin = (s.seam ?? 'center') === 'center' ? (s.knobMinW ?? KNOB_W) : KNOB_W / 2;
         check(`${name}: the knob takes the drag over ${(s.seam ?? 'center') === 'center' ? 'its width' : 'its inner half'} (>= ${grabMin} columns)`, !!grab && grab.length >= grabMin, { grab, x0: km.x0, x1: km.x1 });
@@ -712,8 +714,9 @@ try {
         note('jjodie dock (rail closed): the canvas topbar within 300px of the window', await page.evaluate(String.raw`(() => { const x0 = document.querySelector('.jodie-window--docked').getBoundingClientRect().x;
           return [...document.querySelectorAll('button, [role="button"], select')].filter((e) => window.__vu.vis(e) && !e.closest('.jodie-window')).map((e) => ({ el: window.__vu.desc(e), t: (e.getAttribute('title') || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 26), hp: e.getAttribute('aria-haspopup'), box: window.__vu.box(e) })).filter((d) => d.box.y > 60 && d.box.y < 140 && d.box.right > x0 - 300); })()`));
         note('jjodie dock: the palette', await page.evaluate(`(() => { const p = [...document.querySelectorAll('[class*="palette"]')].filter(window.__vu.vis).map((e) => e.getBoundingClientRect().right); return { right: p.length ? Math.round(Math.max(...p)) : null, jodieX: Math.round(document.querySelector('.jodie-window--docked').getBoundingClientRect().x) }; })()`));
-        // The canvas toolbar's rightmost dropdown (the viewpoint listbox), the rail closed.
-        await opened(env, 'canvas toolbar: viewpoint listbox', async () => { await page.evaluate(`window.__vu.pick('button.toolbar-viewpoint-trigger')?.click()`); });
+        // The canvas bar's syntax listbox, the rail closed: its chip at the start of the right zone (R-MT-39 moved the
+        // viewpoint listbox there).
+        await opened(env, 'canvas toolbar: syntax chip listbox', async () => { await page.evaluate(`window.__vu.pick('button.syntax-chip')?.click()`); });
         // The canvas context menu (position fixed, z 1000), right-clicked on the node nearest the window.
         await opened(env, 'canvas: node context menu beside the window', async () => {
             const at = await page.evaluate(`(() => { const x0 = document.querySelector('.jodie-window--docked').getBoundingClientRect().x; const n = [...document.querySelectorAll('.react-flow__node')].filter(window.__vu.vis).map((e) => e.getBoundingClientRect()).filter((r) => r.right < x0 - 4).sort((p, q) => q.right - p.right)[0]; return n ? { x: Math.round(n.right - 10), y: Math.round(n.y + 10) } : null; })()`) as any;
