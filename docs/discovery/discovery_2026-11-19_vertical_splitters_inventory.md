@@ -371,3 +371,114 @@ Under `~/.jjodel-lanes/P-2026-11-19-2200/crops/`, same file name in `before/` an
 `dock-divider-generator-beside` (+ `-hover`), `codegen-tpl-wide`, `syntax-form`, `dock-divider-plain` (+ `-hover`),
 `script-tab`. After only: the `-hover` crop of every site and `dock-canvas-split-drag`. Before only:
 `dock-divider-generator`, `codegen-tpl` (not re-shot in Phase 2).
+
+## 14. Addendum, rework 2: the floating knob (2026-11-21)
+
+Source: Alfonso's visual checks of Phase 2 and the project chat's spec (2026-11-20, RC-25, provisional, unattended),
+then two chat decisions: «su quello di destra, l'handle non è centrato» → every knob centred on its seam (2026-11-20
+22:52), and the docked-Jjodie z-order (2026-11-21, option 1 with fallback option 3). Code commit `21644454a`, on
+`e40a4e405`. Executor: Opus 5.5, four sessions, continued after context ceilings (verified handoffs).
+
+### 14.1 As built
+
+- The knob, `::after` of every site, from `_vsplit.scss`: a 6x28px capsule, fully rounded, fill `--color-panel-bg`
+  (measured white on the canvas and on the panels), 1px `--color-slate-300` border, shadow `0 1px 2px rgba(15, 23, 42,
+  0.08)`, `pointer-events: none`, centred on the seam, over the hairline. Held hover (the same 150ms delay): border
+  `--color-slate-400`, height 36px (120ms ease-out). Drag: border and fill `--color-canvas-accent`, height stays 36px.
+  `:focus-visible`: border `--color-border-focus`. The line keeps its states (1px slate-300 at rest, none where
+  `$rest: false`; 2px slate-400 hover; 2px accent drag; 2px focus).
+- Alignment: every knob sits on the vertical centre of the editor area below the app bar and the tab strips, not on its
+  own box. One parameter, `sash(..., $span: area | dock | rail)`, with the literal `$tab-strip: 34px` commented once:
+  rc-dock dividers and Jjodie's handle span the tab strip (`dock`), the Properties rail handle does not (`rail`).
+- 1px-seam sites (rc-dock hbox dividers, codegen splitter, syntax form, Script tab): the 8px strip moves to `::before`
+  (`sash-strip`, padding 3.5px each side, `background-clip: content-box`, the line its background colour), so `::after`
+  is free for the knob. No pane moves; 1px seams keep flex-basis 1px.
+- Start/end seams (rail, JjTL side and right, Jjodie): the knob is centred on the seam, so half of it lies outside the
+  pane. `knob-room` on the four clipping panes (`.properties-with-tree-view--rail`, `.jjtl-dev-env-side-panel`,
+  `.jjtl-dev-env-inferred-panel`, `.jodie-window`): inside `@supports (overflow-clip-margin: 4px)`, `overflow: clip;
+  overflow-clip-margin: 4px; min-width: 0; min-height: 0` (min-* keep the zero automatic minimum a scroll container had
+  as a flex item). Fallback where `overflow-clip-margin` is unsupported (Safari): the knob stays inside the strip
+  (`translateY(-50%)`), so it is not centred there. `JodieWindow.css` is plain CSS and repeats the block with a literal
+  4px, pointing to the partial.
+- Scroll grep (positive control: hits exist on children): no code scrolls the four panes themselves (`scrollTop`,
+  `scrollLeft`, `scrollTo`, `scrollBy`); hits only on children (`JodieWindow.tsx:175,181` `.jodie-messages`,
+  `PropertiesWithTreeView.tsx:919-920` the tree body). `clip` also stops `scrollIntoView` from scrolling these panes,
+  which `hidden` allowed: benign, none of them is meant to scroll.
+- Grab: on start/end sites the pointer takes the drag on the knob's inner half (the outer half is beyond the pane and
+  takes no pointer event); on centre sites over the knob's whole width.
+- Comments added by this lane are English; the pre-existing Italian lines of the rail comment are restored verbatim.
+
+### 14.2 Docked Jjodie z-order: option 1 measured and rejected, option 3 adopted
+
+With `z-index: auto`, the visible docked window is a stacking context (the resting `translateY(0)` of
+`.jodie-window--visible`), so its handle (z 10) is trapped in it, under the floating rail (`.properties-tree-overlay`,
+fixed, z 900), which ends on Jjodie's seam: the rail covers the knob's outer half.
+
+- `z-index: 901` on the window (part 4 audit, scenario F): the only regression found is the rail tree's context menu
+  `.tree-node__context-menu` (inline `position: fixed; z-index: 9999`, rendered inside the rail, so it paints at 900):
+  right-clicked on a class row it spans 1114..1363 x 238..276, and with 901 Jjodie painted over it (14240px of Jjodie's
+  box differ, 8437 inside menu ∩ Jjodie). Every other overlay that reaches the column measured 0px of difference.
+- Option 1 (the chat's choice): window back to z auto, `transform: none` on the visible docked window, z 901 on the
+  handle only. Pixels: 0px of difference in all nine states of scenario F, Jjodie's overflow menu included. Slide:
+  open and close move as before. **Pointer: failed.** `document.elementsFromPoint(1145, 257)` returns
+  `.jodie-dock-handle` above `.tree-node__context-menu`, and 209 of 228 points of the menu over the handle's strip and
+  the knob's outer half hit the handle, against 38 with the trunk's stacking (those 38, at x 1137-1138, hit the
+  rail's `.tree-view-panel-body` both ways). Hovering there would paint the handle's line over the menu, and a press would start a Jjodie
+  resize instead of choosing the item. Treated as a failure of check (1), whose premise is that the rail's tree menu
+  still paints over the window as today. Evidence: `~/.jjodel-lanes/P-2026-11-19-2200/vsplit-F-option1.json`,
+  `probe-vsplit-F-option1.log`. A first run had passed only because it sampled 60ms after an inline `transform` change,
+  mid-transition, while the window was still a stacking context; the probe now swaps with the transition off.
+- **Option 3, adopted** (the chat's fallback, without asking): `.jodie-window--docked` keeps `z-index: auto`, the
+  transform and the handle's z are the trunk's. The `jodie-dock` knob shows 4 of its 6px (x 1140..1143; the rail covers
+  1138..1139), a measured exception like scenario D: `knobMinW: 4` on the site, no 0.5px centring requirement. Scenario
+  F stays in the probe as the guard of the trunk's stacking (window z auto with `matrix(1, 0, 0, 1, 0, 0)`, handle z
+  10) and of the tree menu taking the pointer over the handle's strip as today.
+- `.jodie-confirm-overlay` (z 3000) is rendered by no component: no file under `frontend/src` other than
+  `JodieWindow.css` names it (positive control: the same search finds `.mm-confirm-overlay` in `MegamodelView.tsx`).
+  `ClearConfirmationDialog` is imported by no file either. Not opened, so not a check.
+- Measured: `container-type: inline-size` on `.dashboard-container` is not a stacking context in this Chromium (an
+  element at z max inside it painted over a z 1 sibling outside). Jjodie's context is the app-level fixed `div`.
+
+**Open item (ticket by the chat): option 2.** Portal the rail tree's context menus (`useClassifierContextMenu`
+`TreeViewContent.tsx` ~685, `useModelTabContextMenu` ~792) to `document.body`: today their `position: fixed;
+z-index: 9999` is stuck at the rail's 900. Once they paint at body level, Jjodie's handle can go to 901 (option 1)
+without covering them, and the `jodie-dock` knob would show whole. Out of this lane.
+
+### 14.3 Measured (probe `vsplit-uniform.ts`, port 3007, lane-run, A..F)
+
+435 PASS, 0 FAIL, 0 page errors, exit 0. Log `~/.jjodel-lanes/P-2026-11-19-2200/probe-vsplit-uniform.final.log`, JSON
+`vsplit-final.json`.
+
+| Site | Knob x (px) | Width | Centre / seam | Grab columns |
+|---|---|---|---|---|
+| dock-canvas-split | 597..602 | 6 | 600 / 600 | 6 |
+| rail | 1198..1203 | 6 | 1201 / 1201 | 4 |
+| im-outline / im-classes | 1128..1133 / 1368..1373 | 6 | 1131 / 1131.39, 1371 / 1371.39 | 6 / 6 |
+| jjtl-side / jjtl-right | 971..976 / 1194..1199 | 6 | 974 / 974.48, 1197 / 1197 | 3 / 4 |
+| jodie-dock | 1140..1143 | **4** | exception (seam 1141) | 4 |
+| rail-with-jodie | 618..623 | 6 | 621 / 621 | 4 |
+| dock-divider-generator-beside | 1287..1292 | 6 | 1290 / 1289.5 | 6 |
+| codegen-tpl-wide | 1301..1306 | 6 | 1304 / 1303.91 | 6 |
+| syntax-form | 1576..1581 | 6 | 1579 / 1578.5 | 6 |
+| dock-divider-plain (D) | 999..1002 | **4** | exception (seam 1000) | 4 |
+| script-tab | 839..844 | 6 | 842 / 841.5 | 6 |
+
+- Alignment |dy|: canvas split + rail 0, Instance Manager beside a canvas 0, Jjodie docked 0, generator beside a canvas
+  0. JjTL beside a canvas 104, noted and not checked: JjTL's panes start below its own toolbar and end above a
+  resizable bottom panel, so their editor area is not the canvas's.
+- Spill (`room()`, all four edges, 7px bands, against `overflow: hidden` forced): 0px of difference on all 20 edges
+  (rail, jjtl-side, jjtl-right, jodie-dock, rail-with-jodie); pane boxes identical with clip and hidden.
+- Mutant (part 3, `_vsplit.scss` unchanged since): the resting knob border slate-300 → slate-400, `VSPLIT_ONLY=E`: 4
+  FAIL (computed, border pixel, hover-early, back at rest); restored, `cmp` identical.
+- Gates: `npm run build` exit 0 (pre-existing warnings only: dynamic import, chunk size, Sass deprecations), `npm run typecheck`
+  exit 0, `npm run check:scripts` exit 0, `npx vitest run src/codegen/ui/__tests__/splitter.test.ts` exit 0; the probe
+  typechecks through a temporary tsconfig (`typecheck:scripts` does not include `scripts/probe/`).
+
+### 14.4 Visual check (RC-23): before/after pairs
+
+Under `~/.jjodel-lanes/P-2026-11-19-2200/crops/`, same name in `before/` and `after/` (after = this run): `dock-canvas-split`
+(Alfonso's state: two canvases split, the rail open), `rail`, `rail-with-jodie`, `jodie-dock` (the 4-of-6px knob),
+`im-outline`, `im-classes`, `jjtl-side`, `jjtl-right`, `dock-divider-generator-beside` (+ `-hover`), `codegen-tpl-wide`,
+`syntax-form`, `dock-divider-plain` (+ `-hover`), `script-tab`. After only: `-hover` of every site,
+`dock-canvas-split-drag`, and the spill crops `rail-edge`, `rail-with-jodie-edge`, `jjtl-side-edge`, `jjtl-right-edge`,
+`jodie-dock-edge` (40px x the pane's height).
