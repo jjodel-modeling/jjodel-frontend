@@ -1317,7 +1317,11 @@ body[data-active-tab="documentation"] .properties-tree-overlay,
 // dettaglio (IRForm nel terzo riquadro), quindi il rail sarebbe una seconda
 // porta sulla stessa stanza. Valore proprio, non 'documentation': nascondono la
 // stessa cosa per ragioni diverse.
-body[data-active-tab="manager"] .properties-tree-overlay {
+body[data-active-tab="manager"] .properties-tree-overlay,
+// The collapsed rail's strip (P-2026-11-20-2250) is the rail too: it goes wherever the column goes.
+body[data-layout-mode="canvas-only"] .properties-tree-strip,
+body[data-active-tab="documentation"] .properties-tree-strip,
+body[data-active-tab="manager"] .properties-tree-strip {
     display: none !important;
 }
 
@@ -1369,7 +1373,7 @@ body[data-active-tab="manager"] .properties-tree-overlay {
 // (abstract/style.scss) and the inline `right` of useCanvasPanelGap measures the first panel's edge, so the stylesheet's
 // value goes back in, past the inline one: the rail sits at the window's edge as with a single tab. `:has` cannot nest, hence
 // the two conditions on <body>.
-body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) .properties-tree-overlay {
+body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models ~ .dock-panel.dock-style-models .editor-v2):not(:has(.dock-panel .script-tab--beside)) :is(.properties-tree-overlay, .properties-tree-strip) {
     right: var(--jj-jodie-dock-width, 0px) !important;
 }
 
@@ -1387,6 +1391,85 @@ body:has(.not-strip > .dock-layout > .dock-hbox > .dock-panel.dock-style-models 
 @media (prefers-reduced-motion: reduce) {
     .properties-tree-overlay {
         transition-duration: 0ms;
+    }
+}
+
+// ─── Rail collapse toggle and the collapsed strip (P-2026-11-20-2250) ──────────
+//
+// The toggle left the canvas bar, where every pane had one, for the rail, which every
+// pane shares. In the column it is laid over the top right of whichever row comes first,
+// 4px in from the top and the right; in the strip it is the only thing there, at the same
+// 4px from the same top, so collapsing does not move it vertically. 24px hit (`--shell-hit`),
+// glyph muted at the third text level and back to the first on hover and focus, in Basic
+// and in Advanced alike. The <i> is painted by the global `i.bi` at (0,1,1), so the colour
+// goes on `.rail-collapse-toggle i.bi`, (0,2,1).
+//
+// Every `--shell-*` read carries its fallback: the tokens are declared on the six shell
+// roots only (tokens/_shell.scss), `.properties-tree-overlay` among them, and the strip is
+// portaled beside that root, not inside it. The fallbacks are the tokens' own aliases.
+.rail-collapse-toggle {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 6;   // over the sticky Filter row (5) and the row hover bands
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--shell-hit, 24px);
+    height: var(--shell-hit, 24px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--shell-radius-control, var(--radius-sm));
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: -2px;
+    }
+
+    i.bi {
+        font-size: 12px;
+        color: var(--shell-text-3, var(--color-text-placeholder));
+    }
+
+    &:is(:hover, :focus-visible) i.bi {
+        color: var(--shell-text-1, var(--color-text-primary));
+    }
+}
+
+// The rows that can come first keep their content clear of the toggle: 4 + 24 + 4.
+// The Filter row is first only when no scope bar stands above it (the scope bar is
+// outside the scroller, so the sticky Filter never rises past it).
+.properties-tree-overlay .properties-with-tree-view--rail {
+    .tree-scope-bar,
+    .tree-view-panel-container:not(:has(.tree-scope-bar)) .tree-search,
+    .rail-structurebar,
+    .rail-focusbar {
+        padding-right: 32px;
+    }
+}
+
+// The strip: the rail's tint and outer hairline, full height, the column's own top, bottom and
+// `right` (the inline gap beside a generator tab, and the two-canvas rule above). One
+// below the column, which slides out over it. Not animated.
+.properties-tree-strip {
+    position: fixed;
+    top: calc(var(--jj-appbar-height) + 1px + var(--jj-toolbar-height));
+    right: var(--jj-jodie-dock-width, 0px);
+    bottom: var(--jj-statusbar-height);
+    z-index: 899;
+    width: 28px;   // RAIL_STRIP_WIDTH in PropertiesWithTreeView.tsx
+    box-sizing: border-box;
+    background: var(--shell-surface-rail, var(--color-slate-50));
+    border-left: 1px solid var(--shell-border, var(--color-panel-border));   // the rail's own hairline (R-SHELL-3, Shell S8 below)
+
+    .rail-collapse-toggle {
+        right: 2px;
     }
 }
 

@@ -33,7 +33,6 @@ import { useEditorContextSafe } from './contexts/EditorContext';
 import EditorBar, { RepresentationSwitch } from './EditorBar';
 import { textAvailability } from './representationSwitch';
 import { JjodelEvents } from '../../events/registry';
-import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
 import { publishValidationProblems } from './problems/validationToProblems';
 import { buildVertexResolver } from './problems/vertexResolver';
@@ -780,11 +779,6 @@ function Toolbar({
         handleLayoutModeChange('split');
     }, [handleLayoutModeChange]);
 
-    // Rail chrome that lives here now: whether the right rail is on screen at all,
-    // shared with the rail itself through TreeViewPanelContext (the rail is portaled to
-    // <body>, so the two are in different subtrees and cannot share component state).
-    const { isRailVisible, toggleRail } = useTreeViewPanel();
-
     /**
      * Name of the model this editor tab is open on. Bounded walk up `father` to the
      * owning DModel — the raw D-layer read of CLAUDE.md §3.6, which does not wait on the
@@ -1380,11 +1374,15 @@ function Toolbar({
                 document.body,
             )}
             <RepresentationSwitch active="diagram" text={textEntry} onText={openTextView} />
-            {/* R-MT-38: zoom moved to the middle zone, its own box; Split Right and the rail collapse share this one,
-                so the hairline that kept zoom apart from them went with it. */}
-            <div className="toolbar-commands">
-                {/* Split Right (R-MT-30): the only way to make an editor group, as in VS Code. */}
-                {onSplitRight && (
+            {/* R-MT-38: zoom moved to the middle zone, its own box; Split Right and the rail collapse shared this one,
+                so the hairline that kept zoom apart from them went with it.
+                The rail collapse left the bar on 2026-11-21 (P-2026-11-20-2250): the rail is one column for every
+                canvas open, so its toggle lives on the rail (`.rail-collapse-toggle` in PropertiesWithTreeView.tsx),
+                and a collapsed rail leaves a strip holding the way back. It moved, it did not go (R-MT-39). The box is
+                rendered only with Split Right in it, so it never stands empty. */}
+            {onSplitRight && (
+                <div className="toolbar-commands">
+                    {/* Split Right (R-MT-30): the only way to make an editor group, as in VS Code. */}
                     <button
                         className="toolbar-commands__btn"
                         onClick={onSplitRight}
@@ -1393,37 +1391,18 @@ function Toolbar({
                     >
                         <i className="bi bi-layout-split" />
                     </button>
-                )}
-
-                {/* Rail collapse — the WHOLE column, both zones, not the inspector
-                    alone. This is where it differs from the rail header's own button,
-                    which under R-RAIL-23 commuted the inspector and left the tree
-                    standing: with the header gone, a control that empties half the
-                    column reads as broken rather than as deliberate, and the thing a
-                    user wants from the canvas is the canvas at full width.
-
-                    The tree keeps its own ⌘B, so the two zones are still independently
-                    reachable; and closing remembers the pair, so « restores what was
-                    there (see `toggleRail`). The floating reopen pill stays as a second
-                    door back, on the edge where the column used to be. */}
-                <button
-                    className="toolbar-commands__btn"
-                    onClick={toggleRail}
-                    aria-label={isRailVisible ? 'Hide the side panel' : 'Show the side panel'}
-                    aria-pressed={!isRailVisible}
-                    title={isRailVisible ? 'Hide panel' : 'Show panel'}
-                >
-                    <i className={`bi ${isRailVisible ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
-                </button>
-            </div>
+                </div>
+            )}
             </>}
             /* The identity cell at the end of the bar (revision 2b: badge, name, inert chevron) is gone at every width
                and rail state (Alfonso's visual check, P-2026-11-20-1610, R-MT-38): the tab already names the artifact
                and carries its letter badge, so the cell repeated it. Its styles stay in EditorV2.scss (Rule 9).
                What stays is the room it held: the rail overlay starts inside this bar's band (its top does not count
                the tab strip), so without an empty reserve as wide as the rail, Split Right and the rail collapse
-               would sit under the rail and take no click (measured at 1600: hit test on `.tree-scope-bar`). */
-            trailing={isRailVisible ? <span className="editor-bar__rail-reserve" aria-hidden="true" /> : undefined}
+               would sit under the rail and take no click (measured at 1600: hit test on `.tree-scope-bar`).
+               Rendered in every rail state since P-2026-11-20-2250: a collapsed rail leaves its 28px strip, and the rail
+               writer publishes that width as --jj-rail-width, so the reserve follows it with no branch here. */
+            trailing={<span className="editor-bar__rail-reserve" aria-hidden="true" />}
         />
     );
 }
