@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-25 — feat(#225): hide relations in the metamodel editor
+**Prompt**: Implement issue #225: a "Hide relation" flag on M2 references (ghost-target chip instead of an arrow) and a "Hide inheritance" context-menu item (permanent, ghost-parent chip); this session verified the uncommitted implementation
+**Files touched**: `frontend/src/model/logicWrapper/LModelElement.tsx`, `frontend/src/model/dataStructure/GraphDataElements.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/redux/__tests__/versionfixer_2230_migration.test.ts`, `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts`, `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshot.test.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/nodes/ClassNode.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (Library and Families templates; see Notes for what was not covered)
+**Notes**: Deviations from plan: no incremental-sync null-edge removal (Step 3 already drops the RF edge), no LClass.set_extends prune (Step 3 prunes hiddenExtends). Bench: removing term:childHideRelation fails only its test. Typecheck 0, build ok, vitest 4788 pass; 2 files need Chromium (absent). Live undo of a hide does not repaint the arrow, same as plain Delete inheritance (pre-existing); reopen restores it. Not checked: aggregation hide, several hidden parents, cross-MM mix, Ecore export.
+**Prompt document name**: —
+
 ## 2026-11-20 — fix(#223): reset edge waypoints when an anchor changes
 **Prompt**: When an arrow anchor point is moved, reset the arrow geometry instead of retaining the previous waypoint shape
 **Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/syncPatchIdentity.ts`, `frontend/src/components/editor-v2/utils/__tests__/syncPatchIdentity.test.ts`, this entry
