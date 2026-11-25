@@ -714,7 +714,16 @@ export function useJjomSync(
                 const s = vertexIdByModelId.get(entry.id);
                 const t = vertexIdByModelId.get(supId);
                 const ek = s && t ? `${s}→${t}` : '';
+                // #225: a hidden inheritance never gets its arrow back (ghost-parent chip instead).
+                if (s && t && (idlookup[s] as any)?.hiddenExtends?.includes(supId)) continue;
                 if (s && t && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingEdgeCount++;
+            }
+            // #225: hiddenExtends entries whose extends no longer exists are stale (the inheritance was
+            // deleted, then possibly re-created): Step 3 prunes them so a re-created inheritance is an arrow.
+            {
+                const hiddenSv = vertexIdByModelId.get(entry.id);
+                const hiddenList: any[] = (hiddenSv && (idlookup[hiddenSv] as any)?.hiddenExtends) || [];
+                if (hiddenList.some(h => !(entry.raw.extends ?? []).includes(h))) staleCrossMMEdgeCount++;
             }
             for (const refId of (entry.raw.references ?? [])) {
                 const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
@@ -783,10 +792,11 @@ export function useJjomSync(
             const currentSupIds = new Set(
                 (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
             );
+            const hiddenSupIds: any[] = (idlookup[sV] as any)?.hiddenExtends ?? [];   // #225
             for (const pe of persisted) {
                 const endV = idlookup[pe.endVertex] as any;
                 const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
-                if (!(endClassId && currentSupIds.has(endClassId))) staleInheritanceEdgeCount++;
+                if (!(endClassId && currentSupIds.has(endClassId) && !hiddenSupIds.includes(endClassId))) staleInheritanceEdgeCount++;
             }
         }
 
@@ -921,10 +931,11 @@ export function useJjomSync(
                         const currentSupIds = new Set(
                             (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
                         );
+                        const hiddenSupIds: any[] = (idlookup[extSrcVertex] as any)?.hiddenExtends ?? [];   // #225
                         const staleExtendEdges = persistedExtendEdges.filter(pe => {
                             const endV = idlookup[pe.endVertex] as any;
                             const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
-                            return !(endClassId && currentSupIds.has(endClassId));
+                            return !(endClassId && currentSupIds.has(endClassId) && !hiddenSupIds.includes(endClassId));
                         });
                         if (staleExtendEdges.length > 0) {
                             if (ownsPopulate) TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
@@ -949,9 +960,23 @@ export function useJjomSync(
                     }
                 }
 
+                // #225: prune hiddenExtends entries whose extends was deleted, so that re-creating the
+                // inheritance gives a normal arrow again. Pure SetFieldAction (no creator): §3.3-safe.
+                const hiddenOwnerVertex = vertexIdByModelId.get(entry.id);
+                const hiddenExtendsList: string[] = (hiddenOwnerVertex && (idlookup[hiddenOwnerVertex] as any)?.hiddenExtends) || [];
+                if (ownsPopulate && hiddenOwnerVertex && hiddenExtendsList.some(h => !(entry.raw.extends ?? []).includes(h))) {
+                    const keptHidden = hiddenExtendsList.filter(h => (entry.raw.extends ?? []).includes(h));
+                    TRANSACTION('Prune stale hidden inheritance', () => {
+                        SetFieldAction.new(hiddenOwnerVertex, 'hiddenExtends' as any, keptHidden as any, '', false);
+                    });
+                    hiddenExtendsList.splice(0, hiddenExtendsList.length, ...keptHidden);
+                }
+
                 // Extends (inheritance)
                 for (const supId of (entry.raw.extends ?? [])) {
                     if (typeof supId !== 'string' || supId === entry.id) continue;
+                    // #225: hidden inheritance = ghost-parent chip, no arrow.
+                    if (hiddenExtendsList.includes(supId)) continue;
                     const srcVertex = vertexIdByModelId.get(entry.id);
                     const tgtVertex = vertexIdByModelId.get(supId);
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {

@@ -161,9 +161,11 @@ function classVertexToRFNode(vertex: any, layoutKey: string): Node<ClassNodeData
     // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
     const ghostParents: GhostParentInfo[] = [];
     const ghostParentOffsetsRaw = (vertex.__raw ?? vertex).ghostParentOffsets;
+    // #225: a same-metamodel parent whose inheritance the user hid is drawn the same way.
+    const hiddenExtendsRaw: string[] = (vertex.__raw ?? vertex).hiddenExtends ?? [];
     try {
         for (const p of (lClass?.extends ?? [])) {
-            if (p?.model && p.model.id !== lClass.model.id) {
+            if (p?.model && (p.model.id !== lClass.model.id || hiddenExtendsRaw.includes(p.id))) {
                 ghostParents.push({
                     id: p.id,
                     name: p.name,

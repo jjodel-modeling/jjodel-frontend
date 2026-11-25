@@ -43,8 +43,8 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
 
     const attributes = data.attributes ?? [];
     const operations = data.operations ?? [];
-    // First iteration: render only a single external (cross-metamodel) parent.
-    const ghost = data.ghostParents?.[0];
+    // External (cross-metamodel) parents and, #225, parents whose inheritance the user hid.
+    const ghostParents = data.ghostParents ?? [];
     // Cross-metamodel reference targets, rendered as in-node stubs on the right.
     const ghostTargets = data.ghostTargets ?? [];
     // Stable signature of the cross-MM stub set, used to re-measure connector
@@ -458,19 +458,23 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     // Connector-local coords = the 12x18 viewBox (1 unit = 1 flow px).
     // (6,18) = node-top-center (node-end, stays pinned); (6,1) = chip-bottom apex
     // at rest (= the old static apex). Same offset that drives the chip transform.
-    const gpOff = ghost ? (ghostParentOffsets[ghost.id] ?? { dx: 0, dy: 0 }) : { dx: 0, dy: 0 };
-    const gpStartX = 6, gpStartY = 18;                       // node-end, fixed
-    const gpApexX = 6 + gpOff.dx, gpApexY = 1 + gpOff.dy;    // chip-end, follows drag
-    const GP_TL = 7, GP_TW = 8;                              // triangle length / base width (from static)
-    const gpAx = gpApexX - gpStartX, gpAy = gpApexY - gpStartY;
-    const gpDegenerate = gpAx === 0 && gpAy === 0;           // chip dragged onto the node-end
-    const gpAng = Math.atan2(gpAy, gpAx);
-    const gpCos = Math.cos(gpAng), gpSin = Math.sin(gpAng);
-    const gpBaseCx = gpApexX - GP_TL * gpCos, gpBaseCy = gpApexY - GP_TL * gpSin;
-    const gpPx = -gpSin, gpPy = gpCos;                       // axis perpendicular
-    const gpB1x = gpBaseCx + (GP_TW / 2) * gpPx, gpB1y = gpBaseCy + (GP_TW / 2) * gpPy;
-    const gpB2x = gpBaseCx - (GP_TW / 2) * gpPx, gpB2y = gpBaseCy - (GP_TW / 2) * gpPy;
-    const gpTriangle = `${gpApexX.toFixed(1)},${gpApexY.toFixed(1)} ${gpB1x.toFixed(1)},${gpB1y.toFixed(1)} ${gpB2x.toFixed(1)},${gpB2y.toFixed(1)}`;
+    // #225: computed per parent (the node can now show several ghost parents).
+    const gpGeometry = (parentId: string) => {
+        const gpOff = ghostParentOffsets[parentId] ?? { dx: 0, dy: 0 };
+        const gpStartX = 6, gpStartY = 18;                       // node-end, fixed
+        const gpApexX = 6 + gpOff.dx, gpApexY = 1 + gpOff.dy;    // chip-end, follows drag
+        const GP_TL = 7, GP_TW = 8;                              // triangle length / base width (from static)
+        const gpAx = gpApexX - gpStartX, gpAy = gpApexY - gpStartY;
+        const gpDegenerate = gpAx === 0 && gpAy === 0;           // chip dragged onto the node-end
+        const gpAng = Math.atan2(gpAy, gpAx);
+        const gpCos = Math.cos(gpAng), gpSin = Math.sin(gpAng);
+        const gpBaseCx = gpApexX - GP_TL * gpCos, gpBaseCy = gpApexY - GP_TL * gpSin;
+        const gpPx = -gpSin, gpPy = gpCos;                       // axis perpendicular
+        const gpB1x = gpBaseCx + (GP_TW / 2) * gpPx, gpB1y = gpBaseCy + (GP_TW / 2) * gpPy;
+        const gpB2x = gpBaseCx - (GP_TW / 2) * gpPx, gpB2y = gpBaseCy - (GP_TW / 2) * gpPy;
+        const gpTriangle = `${gpApexX.toFixed(1)},${gpApexY.toFixed(1)} ${gpB1x.toFixed(1)},${gpB1y.toFixed(1)} ${gpB2x.toFixed(1)},${gpB2y.toFixed(1)}`;
+        return { gpStartX, gpStartY, gpBaseCx, gpBaseCy, gpDegenerate, gpTriangle };
+    };
 
     return (
         <div
@@ -494,11 +498,17 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
 
             {/* Ghost parent: cross-metamodel extends drawn as an in-node overlay
                 (dashed chip + UML generalization arc), not a real ReactFlow edge. */}
-            {ghost && (
+            {ghostParents.map((ghost, ghostIdx) => {
+                const { gpStartX, gpStartY, gpBaseCx, gpBaseCy, gpDegenerate, gpTriangle } = gpGeometry(ghost.id);
+                // Several parents: spread the stubs horizontally around the node top-center.
+                const spread = ghostParents.length > 1 ? (ghostIdx - (ghostParents.length - 1) / 2) * 130 : 0;
+                return (
                 <div
+                    key={ghost.id}
                     className="ghost-parent-stub"
                     data-ghost-parent-id={ghost.id}
                     title={ghost.fullname}
+                    style={spread ? { left: `calc(50% + ${spread}px)` } : undefined}
                 >
                     {/* Draggable unit: the chip moves via an inline transform; the
                         connector below is computed and follows the dragged chip
@@ -537,7 +547,8 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                         )}
                     </svg>
                 </div>
-            )}
+                );
+            })}
 
             {/* Ghost targets: cross-metamodel references drawn as in-node
                 overlays (association arc + dashed chip on the right), not real

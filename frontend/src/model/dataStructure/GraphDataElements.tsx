@@ -1685,6 +1685,9 @@ export class DVertex extends DGraphElement { // DVoidVertex
     ghostOffsets?: { [refId: string]: { dx: number; dy: number } };
     // Persisted per-parent drag offset of cross-MM ghost-parent chips, keyed by super-type DClass id.
     ghostParentOffsets?: { [classId: string]: { dx: number; dy: number } };
+    // #225: super-type DClass ids whose inheritance arrow the user hid ("Hide inheritance"). The
+    // inheritance is then drawn as a ghost-parent chip; permanent until the extends is re-created.
+    hiddenExtends?: string[];
     // Persisted IR object-as-edge layout overrides (side pins + Manhattan waypoints),
     // carried by the hidden edge-object's vertex. undefined = fully derived routing.
     irEdgeLayout?: {
