@@ -91,7 +91,7 @@ import { InstantiationProblemSync } from './problems/InstantiationProblemSync';
 import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
 import { DcnProblemSync } from './problems/DcnProblemSync';
 import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
-import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
+import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId, clearCanvasEdgePair } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
@@ -129,7 +129,7 @@ import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/nota
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { mergeEdgeAnchorChange } from './utils/syncPatchIdentity';
-import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, DeleteElementAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -3053,6 +3053,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [setEdges, getEdges, takeSnapshot, applyDistribution, isJjomMode]
     );
 
+    // #225 "Hide inheritance": the arrow is deleted and the inheritance becomes a ghost-parent chip,
+    // permanently (the marker `DVertex.hiddenExtends` is pruned only when the `extends` itself goes).
+    // One pure-action TRANSACTION (SetFieldAction + DeleteElementAction, no creator: §3.3-safe), so a
+    // single undo step restores marker and arrow together. `extends` is NOT touched (unlike
+    // syncDeleteEdge, which removes it).
+    const hideInheritance = useCallback(
+        (edgeId: string) => {
+            if (!isJjomMode) return;
+            const edge = getEdges().find(e => e.id === edgeId);
+            if (!edge || edge.type !== 'inheritance') return;
+            const idlookup: any = (store.getState() as any).idlookup;
+            const edgeRaw = idlookup?.[edgeId];
+            const srcVertexRaw = idlookup?.[edge.source];
+            const parentClassId = idlookup?.[edge.target]?.model;
+            if (!edgeRaw || !srcVertexRaw || typeof parentClassId !== 'string') return;
+            const hidden: string[] = srcVertexRaw.hiddenExtends ?? [];
+            TRANSACTION('Hide inheritance', () => {
+                if (!hidden.includes(parentClassId)) {
+                    SetFieldAction.new(edge.source as any, 'hiddenExtends' as any, [...hidden, parentClassId] as any, '', false);
+                }
+                DeleteElementAction.new(edgeRaw);
+            });
+            clearCanvasEdgePair(edge.source, edge.target);
+            setEdges((eds) => applyDistribution(eds.filter((e) => e.id !== edgeId)));
+        },
+        [setEdges, getEdges, applyDistribution, isJjomMode]
+    );
+
     // Duplicate a node
     const duplicateNode = useCallback(
         (nodeId: string) => {
@@ -3663,7 +3691,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (contextMenu?.nodeId && contextMenu.childId && contextMenu.childKind === 'ref') {
             const refId = contextMenu.childId;
             const nodeId = contextMenu.nodeId;
+            // #225: a chip made by "Hide relation" (same-metamodel target) can be turned back into an arrow.
+            const hiddenRel: any = LPointerTargetable.fromPointer(refId);
             return [
+                ...(hiddenRel?.hideRelation ? [{
+                    label: 'Show relation',
+                    icon: 'bi-eye',
+                    onClick: () => { hiddenRel.hideRelation = false; },
+                }] : []),
                 {
                     label: 'Delete reference',
                     icon: 'bi-trash',
@@ -4152,6 +4187,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         const ref = (edgeData as ReferenceEdgeData).reference;
                         createViewInWorkbench(ref.id, ref.name ?? 'unnamed', 'DReference', edgeViewVp!.dViewpoint.id);
                     },
+                }] : []),
+                ...(isInheritance && isJjomMode ? [{
+                    label: 'Hide inheritance',
+                    icon: 'bi-eye-slash',
+                    tooltip: 'Show it as a cross-inheritance chip. Permanent: to get the arrow back, delete and re-create the inheritance.',
+                    onClick: () => hideInheritance(contextMenu.edgeId!),
                 }] : []),
                 {
                     label: isInheritance ? 'Delete inheritance' : 'Delete reference',

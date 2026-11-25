@@ -468,6 +468,7 @@ export function useJjomSync(
                     mix(refId);
                     mix('→');
                     mix(t);
+                    if (ref.hideRelation) mix('#hidden');   // #225: re-fire Step 3 on a hide/unhide toggle
                     h = (h * 31 + 7) | 0;
                 }
             }
@@ -713,11 +714,26 @@ export function useJjomSync(
                 const s = vertexIdByModelId.get(entry.id);
                 const t = vertexIdByModelId.get(supId);
                 const ek = s && t ? `${s}→${t}` : '';
+                // #225: a hidden inheritance never gets its arrow back (ghost-parent chip instead).
+                if (s && t && (idlookup[s] as any)?.hiddenExtends?.includes(supId)) continue;
                 if (s && t && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingEdgeCount++;
+            }
+            // #225: hiddenExtends entries whose extends no longer exists are stale (the inheritance was
+            // deleted, then possibly re-created): Step 3 prunes them so a re-created inheritance is an arrow.
+            {
+                const hiddenSv = vertexIdByModelId.get(entry.id);
+                const hiddenList: any[] = (hiddenSv && (idlookup[hiddenSv] as any)?.hiddenExtends) || [];
+                if (hiddenList.some(h => !(entry.raw.extends ?? []).includes(h))) staleCrossMMEdgeCount++;
             }
             for (const refId of (entry.raw.references ?? [])) {
                 const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
                 if (!refObj) continue;
+                // #225: a hidden relation is drawn as a ghost-target chip, never as an edge. It is never
+                // "missing", and a leftover persisted edge is stale (Step 3 deletes it).
+                if (refObj.hideRelation) {
+                    if (typeof refId === 'string' && (existingRefEdgesByRefId.get(refId)?.length ?? 0) > 0) staleCrossMMEdgeCount++;
+                    continue;
+                }
                 // Cross-MM retarget with a leftover persisted edge → mark it for
                 // deletion in Step 3. Detection mirrors Step 3 (get_type via L-proxy,
                 // not raw type); computed only when a persisted edge actually exists.
@@ -776,10 +792,11 @@ export function useJjomSync(
             const currentSupIds = new Set(
                 (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
             );
+            const hiddenSupIds: any[] = (idlookup[sV] as any)?.hiddenExtends ?? [];   // #225
             for (const pe of persisted) {
                 const endV = idlookup[pe.endVertex] as any;
                 const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
-                if (!(endClassId && currentSupIds.has(endClassId))) staleInheritanceEdgeCount++;
+                if (!(endClassId && currentSupIds.has(endClassId) && !hiddenSupIds.includes(endClassId))) staleInheritanceEdgeCount++;
             }
         }
 
@@ -914,10 +931,11 @@ export function useJjomSync(
                         const currentSupIds = new Set(
                             (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
                         );
+                        const hiddenSupIds: any[] = (idlookup[extSrcVertex] as any)?.hiddenExtends ?? [];   // #225
                         const staleExtendEdges = persistedExtendEdges.filter(pe => {
                             const endV = idlookup[pe.endVertex] as any;
                             const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
-                            return !(endClassId && currentSupIds.has(endClassId));
+                            return !(endClassId && currentSupIds.has(endClassId) && !hiddenSupIds.includes(endClassId));
                         });
                         if (staleExtendEdges.length > 0) {
                             if (ownsPopulate) TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
@@ -942,9 +960,23 @@ export function useJjomSync(
                     }
                 }
 
+                // #225: prune hiddenExtends entries whose extends was deleted, so that re-creating the
+                // inheritance gives a normal arrow again. Pure SetFieldAction (no creator): §3.3-safe.
+                const hiddenOwnerVertex = vertexIdByModelId.get(entry.id);
+                const hiddenExtendsList: string[] = (hiddenOwnerVertex && (idlookup[hiddenOwnerVertex] as any)?.hiddenExtends) || [];
+                if (ownsPopulate && hiddenOwnerVertex && hiddenExtendsList.some(h => !(entry.raw.extends ?? []).includes(h))) {
+                    const keptHidden = hiddenExtendsList.filter(h => (entry.raw.extends ?? []).includes(h));
+                    TRANSACTION('Prune stale hidden inheritance', () => {
+                        SetFieldAction.new(hiddenOwnerVertex, 'hiddenExtends' as any, keptHidden as any, '', false);
+                    });
+                    hiddenExtendsList.splice(0, hiddenExtendsList.length, ...keptHidden);
+                }
+
                 // Extends (inheritance)
                 for (const supId of (entry.raw.extends ?? [])) {
                     if (typeof supId !== 'string' || supId === entry.id) continue;
+                    // #225: hidden inheritance = ghost-parent chip, no arrow.
+                    if (hiddenExtendsList.includes(supId)) continue;
                     const srcVertex = vertexIdByModelId.get(entry.id);
                     const tgtVertex = vertexIdByModelId.get(supId);
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
@@ -992,7 +1024,8 @@ export function useJjomSync(
                     // must be deleted. See discovery 2026-05-30_self_loop_crossmm_retarget.md.
                     const srcModelId = (LPointerTargetable.fromPointer(entry.id) as any)?.model?.id;
                     const tgtModelId = (LPointerTargetable.fromPointer(refId) as any)?.type?.model?.id;
-                    const targetCrossMM = !!(srcModelId && tgtModelId && srcModelId !== tgtModelId);
+                    // #225: a hidden relation takes the same path — no edge, any persisted one is deleted.
+                    const targetCrossMM = !!refObj.hideRelation || !!(srcModelId && tgtModelId && srcModelId !== tgtModelId);
                     if (targetCrossMM) {
                         const staleEdges = existingRefEdgesByRefId.get(refId) ?? [];
                         const crossDecision = classifyRefEdgeReconcile(staleEdges, null, { targetCrossMM: true });

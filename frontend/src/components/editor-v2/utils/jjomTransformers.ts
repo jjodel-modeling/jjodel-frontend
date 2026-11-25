@@ -161,9 +161,11 @@ function classVertexToRFNode(vertex: any, layoutKey: string): Node<ClassNodeData
     // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
     const ghostParents: GhostParentInfo[] = [];
     const ghostParentOffsetsRaw = (vertex.__raw ?? vertex).ghostParentOffsets;
+    // #225: a same-metamodel parent whose inheritance the user hid is drawn the same way.
+    const hiddenExtendsRaw: string[] = (vertex.__raw ?? vertex).hiddenExtends ?? [];
     try {
         for (const p of (lClass?.extends ?? [])) {
-            if (p?.model && p.model.id !== lClass.model.id) {
+            if (p?.model && (p.model.id !== lClass.model.id || hiddenExtendsRaw.includes(p.id))) {
                 ghostParents.push({
                     id: p.id,
                     name: p.name,
@@ -183,7 +185,8 @@ function classVertexToRFNode(vertex: any, layoutKey: string): Node<ClassNodeData
     try {
         for (const ref of (lClass?.references ?? [])) {
             const t = ref?.type;
-            if (t?.model && t.model.id !== lClass.model.id) {
+            // #225: a reference with hideRelation is drawn as a chip even when its target is local.
+            if (t?.model && (t.model.id !== lClass.model.id || ref.hideRelation)) {
                 const lower = ref.lowerBound ?? 0;
                 const upper = ref.upperBound ?? -1;
                 ghostTargets.push({
@@ -672,6 +675,8 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
             if (refTypeModelId && srcModelId && refTypeModelId !== srcModelId) {
                 return null;
             }
+            // #225: a hidden relation is a ghost-target chip, never an edge.
+            if (refModel?.hideRelation) return null;
         } catch { /* on proxy error fall through and render normally */ }
 
         let kind: ReferenceKind = 'association';

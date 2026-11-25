@@ -140,6 +140,7 @@ function mixChild(h: number, L: Lookup, child: any): number {
     h = mixFlag(h, child.abstract); // term:childAbstract
     h = mixFlag(h, child.composition); // term:childComposition
     h = mixFlag(h, child.aggregation); // term:childAggregation
+    h = mixFlag(h, child.hideRelation); // term:childHideRelation
     h = mixStr(h, child.defaultValueLiteral); // term:childDefaultValue
     h = mixNum(h, child.value); // term:childLiteralValue
     h = mixStr(h, typeof child.opposite === 'string' ? L[child.opposite]?.name : ''); // term:childOppositeName

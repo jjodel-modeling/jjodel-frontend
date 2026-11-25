@@ -190,6 +190,7 @@ const ATTRIBUTE_IOT_FLAG: FlagDef[] = [
 const REFERENCE_FLAGS: FlagDef[] = [
     { field: 'composition', label: 'Composition', icon: 'bi-diamond-fill', hint: 'owns the target' },
     { field: 'aggregation', label: 'Aggregation', icon: 'bi-diamond',      hint: 'shares the target' },
+    { field: 'hideRelation', label: 'Hide relation', icon: 'bi-eye-slash',  hint: 'no arrow, shown as a cross-reference' },
 ];
 const CLASS_FLAGS: FlagDef[] = [
     { field: 'final',     label: 'Final',     icon: 'bi-shield-lock', hint: 'no subclasses' },
