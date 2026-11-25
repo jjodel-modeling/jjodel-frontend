@@ -90,9 +90,10 @@ function fixture(): AnyRec {
 }
 
 describe('2.229 -> 2.230: every instance is listed by its model (R-NEST-6)', () => {
-    it('the step is registered and 2.230 is the highest version', () => {
+    it('the step is registered and 2.231 (bump-only, #225) follows it as the highest version', () => {
         expect(adapters[2.229]?.n).toBe(2.23);
-        expect(VF.get_highestversion()).toBe(2.23);
+        expect(adapters[2.23]?.n).toBe(2.231);
+        expect(VF.get_highestversion()).toBe(2.231);
     });
 
     it('lists a nested child born in its slot (kills: no append to objects)', () => {

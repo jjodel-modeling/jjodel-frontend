@@ -183,7 +183,8 @@ function classVertexToRFNode(vertex: any, layoutKey: string): Node<ClassNodeData
     try {
         for (const ref of (lClass?.references ?? [])) {
             const t = ref?.type;
-            if (t?.model && t.model.id !== lClass.model.id) {
+            // #225: a reference with hideRelation is drawn as a chip even when its target is local.
+            if (t?.model && (t.model.id !== lClass.model.id || ref.hideRelation)) {
                 const lower = ref.lowerBound ?? 0;
                 const upper = ref.upperBound ?? -1;
                 ghostTargets.push({
@@ -672,6 +673,8 @@ export function jjomEdgeToRFEdge(edge: any, layoutKey?: string): Edge | null {
             if (refTypeModelId && srcModelId && refTypeModelId !== srcModelId) {
                 return null;
             }
+            // #225: a hidden relation is a ghost-target chip, never an edge.
+            if (refModel?.hideRelation) return null;
         } catch { /* on proxy error fall through and render normally */ }
 
         let kind: ReferenceKind = 'association';

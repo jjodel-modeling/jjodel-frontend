@@ -3663,7 +3663,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (contextMenu?.nodeId && contextMenu.childId && contextMenu.childKind === 'ref') {
             const refId = contextMenu.childId;
             const nodeId = contextMenu.nodeId;
+            // #225: a chip made by "Hide relation" (same-metamodel target) can be turned back into an arrow.
+            const hiddenRel: any = LPointerTargetable.fromPointer(refId);
             return [
+                ...(hiddenRel?.hideRelation ? [{
+                    label: 'Show relation',
+                    icon: 'bi-eye',
+                    onClick: () => { hiddenRel.hideRelation = false; },
+                }] : []),
                 {
                     label: 'Delete reference',
                     icon: 'bi-trash',

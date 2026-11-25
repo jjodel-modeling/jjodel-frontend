@@ -81,6 +81,7 @@ describe('vertexChildrenHash: class node (attributes, references, operations, gh
     it('childAbstract: abstract flag of a child', () => expectChange('C1', L => { L.O1.abstract = true; }));
     it('childComposition: reference made a composition', () => expectChange('C1', L => { L.R1.composition = true; }));
     it('childAggregation: reference made an aggregation', () => expectChange('C1', L => { L.R1.aggregation = true; }));
+    it('childHideRelation: reference hidden as a ghost-target chip (#225)', () => expectChange('C1', L => { L.R1.hideRelation = true; }));
     it('childDefaultValue: default value literal', () => expectChange('C1', L => { L.A1.defaultValueLiteral = '1'; }));
     it('childOppositeName: the opposite reference renamed', () => expectChange('C1', L => { L.R2.name = 'back2'; }));
     it('paramName: operation parameter renamed', () => expectChange('C1', L => { L.PA1.name = 'y'; }));

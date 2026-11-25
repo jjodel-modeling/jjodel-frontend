@@ -1400,6 +1400,11 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.230 → 2.231: introduce optional DReference.hideRelation and DVertex.hiddenExtends (#225,
+    // M2 editor "hide relation" / "Hide inheritance"). Both default-absent (read as false / []),
+    // so no per-instance seeding is needed — bump only.
+    private ['2.230 -> 2.231'](s: DState): DState { return s; }
+
 }
 
 

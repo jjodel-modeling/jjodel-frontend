@@ -4005,6 +4005,9 @@ export class DReference extends DModelElement { // DStructuralFeature
     rootable?:boolean;
     composition: boolean = false;
     aggregation: boolean = false; // exist in uml but not in ecore
+    // #225: M2 editor presentation flag — when true the reference is not drawn as an arrow but as a
+    // ghost-target chip inside the source class. Absent/false = the classic arrow.
+    hideRelation?: boolean;
     container: boolean = false;
     opposite?: Pointer<DReference>;
     target: Pointer<DClass, 0, 'N', LClass> = [];
@@ -4108,6 +4111,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     composition!: boolean; // aggregation || containment
     __info_of__composition: Info = {type: "boolean", txt: "A composed value is either an aggregation or a containment.\n In jjodel when a feature is a composition, the contained objects have their parents mapped to the containing features."}
     aggregation!: boolean;
+    hideRelation!: boolean;
+    __info_of__hideRelation: Info = {type: "boolean", txt: "When true the reference is not drawn as an arrow in the metamodel editor: it is shown inside the source class like a cross-reference."}
     containment!: boolean;
     container!: boolean;
     __info_of__container: Info = {type: 'boolean', txt: "A reference is a container if it has an opposite that is a containment."};
@@ -4279,6 +4284,16 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     protected set_aggregation(val: this["aggregation"], c: Context): boolean { return this.set_containment(val, c, 'aggregation', 'composition'); }
     protected set_composition(val: this["composition"], c: Context): boolean { return this.set_containment(val, c, 'composition', 'aggregation'); }
+
+    protected get_hideRelation(context: Context): this["hideRelation"] { return !!context.data.hideRelation; }
+    protected set_hideRelation(val: this["hideRelation"], c: Context): boolean {
+        val = !!U.fromBoolString(val);
+        if (!!c.data.hideRelation === val) return true;
+        TRANSACTION(this.get_name(c)+'.hideRelation', ()=>{
+            SetFieldAction.new(c.data, 'hideRelation', val);
+        }, c.data.hideRelation, val)
+        return true;
+    }
 
     protected get_isOpposite(c: Context): boolean { return !!this.get_opposite(c); }
     protected set_isOpposite(v: boolean, c: Context): boolean { return this.cannotSet('isOpposite'); }

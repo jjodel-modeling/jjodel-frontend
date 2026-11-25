@@ -468,6 +468,7 @@ export function useJjomSync(
                     mix(refId);
                     mix('→');
                     mix(t);
+                    if (ref.hideRelation) mix('#hidden');   // #225: re-fire Step 3 on a hide/unhide toggle
                     h = (h * 31 + 7) | 0;
                 }
             }
@@ -718,6 +719,12 @@ export function useJjomSync(
             for (const refId of (entry.raw.references ?? [])) {
                 const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
                 if (!refObj) continue;
+                // #225: a hidden relation is drawn as a ghost-target chip, never as an edge. It is never
+                // "missing", and a leftover persisted edge is stale (Step 3 deletes it).
+                if (refObj.hideRelation) {
+                    if (typeof refId === 'string' && (existingRefEdgesByRefId.get(refId)?.length ?? 0) > 0) staleCrossMMEdgeCount++;
+                    continue;
+                }
                 // Cross-MM retarget with a leftover persisted edge → mark it for
                 // deletion in Step 3. Detection mirrors Step 3 (get_type via L-proxy,
                 // not raw type); computed only when a persisted edge actually exists.
@@ -992,7 +999,8 @@ export function useJjomSync(
                     // must be deleted. See discovery 2026-05-30_self_loop_crossmm_retarget.md.
                     const srcModelId = (LPointerTargetable.fromPointer(entry.id) as any)?.model?.id;
                     const tgtModelId = (LPointerTargetable.fromPointer(refId) as any)?.type?.model?.id;
-                    const targetCrossMM = !!(srcModelId && tgtModelId && srcModelId !== tgtModelId);
+                    // #225: a hidden relation takes the same path — no edge, any persisted one is deleted.
+                    const targetCrossMM = !!refObj.hideRelation || !!(srcModelId && tgtModelId && srcModelId !== tgtModelId);
                     if (targetCrossMM) {
                         const staleEdges = existingRefEdgesByRefId.get(refId) ?? [];
                         const crossDecision = classifyRefEdgeReconcile(staleEdges, null, { targetCrossMM: true });
