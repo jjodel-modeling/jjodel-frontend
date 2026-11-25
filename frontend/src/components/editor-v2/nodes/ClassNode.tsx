@@ -17,6 +17,7 @@ import {
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
 import { JjodelEvents } from '../../../events/registry';
+import { ghostParentSpreads, ghostParentConnector } from './ghostParentGeometry';
 import { TRANSACTION, SetFieldAction } from '../../../joiner';
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
@@ -202,6 +203,26 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
         setGhostParentOffsets(next);
         persistGhostParentOffsets(next);
     }, [ghostParentOffsets, persistGhostParentOffsets]);
+
+    // Ghost-parent chip widths (flow px), measured so the chips of several parents are laid
+    // side by side without overlapping (ghostParentSpreads). Re-measured only when the
+    // parent set or a chip text changes; a drag translate does not resize the chip.
+    const ghostParentChipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const [ghostParentWidths, setGhostParentWidths] = useState<Record<string, number>>({});
+    const ghostParentSig = ghostParents.map(g => `${g.id}:${g.name}:${g.metamodelName}`).join('|');
+    useLayoutEffect(() => {
+        const zoom = getViewport().zoom || 1;
+        const next: Record<string, number> = {};
+        for (const g of ghostParents) {
+            const el = ghostParentChipRefs.current.get(g.id);
+            if (el) next[g.id] = el.getBoundingClientRect().width / zoom;
+        }
+        setGhostParentWidths(prev => {
+            const keys = Object.keys(next);
+            return keys.length === Object.keys(prev).length && keys.every(k => prev[k] === next[k]) ? prev : next;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ghostParentSig, getViewport]);
 
     // Node root + per-connector SVG refs + per-chip DOM refs, and the measured
     // per-stub geometry in flow px: the connector origin's vertical offset from
@@ -454,27 +475,11 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
         return `[${lower}..${upper}]`;
     };
 
-    // --- Ghost-parent connector geometry (follows the dragged chip) ---
-    // Connector-local coords = the 12x18 viewBox (1 unit = 1 flow px).
-    // (6,18) = node-top-center (node-end, stays pinned); (6,1) = chip-bottom apex
-    // at rest (= the old static apex). Same offset that drives the chip transform.
-    // #225: computed per parent (the node can now show several ghost parents).
-    const gpGeometry = (parentId: string) => {
-        const gpOff = ghostParentOffsets[parentId] ?? { dx: 0, dy: 0 };
-        const gpStartX = 6, gpStartY = 18;                       // node-end, fixed
-        const gpApexX = 6 + gpOff.dx, gpApexY = 1 + gpOff.dy;    // chip-end, follows drag
-        const GP_TL = 7, GP_TW = 8;                              // triangle length / base width (from static)
-        const gpAx = gpApexX - gpStartX, gpAy = gpApexY - gpStartY;
-        const gpDegenerate = gpAx === 0 && gpAy === 0;           // chip dragged onto the node-end
-        const gpAng = Math.atan2(gpAy, gpAx);
-        const gpCos = Math.cos(gpAng), gpSin = Math.sin(gpAng);
-        const gpBaseCx = gpApexX - GP_TL * gpCos, gpBaseCy = gpApexY - GP_TL * gpSin;
-        const gpPx = -gpSin, gpPy = gpCos;                       // axis perpendicular
-        const gpB1x = gpBaseCx + (GP_TW / 2) * gpPx, gpB1y = gpBaseCy + (GP_TW / 2) * gpPy;
-        const gpB2x = gpBaseCx - (GP_TW / 2) * gpPx, gpB2y = gpBaseCy - (GP_TW / 2) * gpPy;
-        const gpTriangle = `${gpApexX.toFixed(1)},${gpApexY.toFixed(1)} ${gpB1x.toFixed(1)},${gpB1y.toFixed(1)} ${gpB2x.toFixed(1)},${gpB2y.toFixed(1)}`;
-        return { gpStartX, gpStartY, gpBaseCx, gpBaseCy, gpDegenerate, gpTriangle };
-    };
+    // --- Ghost-parent geometry (pure, see ghostParentGeometry.ts) ---
+    // Every stub is anchored at the node top-center, so the connector's node-end (6,18) is
+    // the same point for all parents. The horizontal spread between several parents lives
+    // in the chip transform and in the connector apex, never in the stub position.
+    const gpSpreads = ghostParentSpreads(ghostParents.map(g => ghostParentWidths[g.id]));
 
     return (
         <div
@@ -499,27 +504,28 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
             {/* Ghost parent: cross-metamodel extends drawn as an in-node overlay
                 (dashed chip + UML generalization arc), not a real ReactFlow edge. */}
             {ghostParents.map((ghost, ghostIdx) => {
-                const { gpStartX, gpStartY, gpBaseCx, gpBaseCy, gpDegenerate, gpTriangle } = gpGeometry(ghost.id);
-                // Several parents: spread the stubs horizontally around the node top-center.
-                const spread = ghostParents.length > 1 ? (ghostIdx - (ghostParents.length - 1) / 2) * 130 : 0;
+                const spread = gpSpreads[ghostIdx] ?? 0;
+                const { startX: gpStartX, startY: gpStartY, baseCx: gpBaseCx, baseCy: gpBaseCy, degenerate: gpDegenerate, triangle: gpTriangle } =
+                    ghostParentConnector(ghostParentOffsets[ghost.id], spread);
                 return (
                 <div
                     key={ghost.id}
                     className="ghost-parent-stub"
                     data-ghost-parent-id={ghost.id}
                     title={ghost.fullname}
-                    style={spread ? { left: `calc(50% + ${spread}px)` } : undefined}
                 >
-                    {/* Draggable unit: the chip moves via an inline transform; the
-                        connector below is computed and follows the dragged chip
-                        (its node-end stays pinned at node-top-center). `nodrag`
-                        stops ReactFlow from panning the node on press. */}
+                    {/* Draggable unit: the chip moves via an inline transform (spread +
+                        drag offset); the connector below is computed and follows the
+                        chip (its node-end stays pinned at node-top-center, the same
+                        point for every parent). `nodrag` stops ReactFlow from panning
+                        the node on press. */}
                     <div
                         className="ghost-parent-stub__draggable nodrag"
-                        style={{ transform: `translate(${ghostParentOffsets[ghost.id]?.dx ?? 0}px, ${ghostParentOffsets[ghost.id]?.dy ?? 0}px)` }}
+                        style={{ transform: `translate(${spread + (ghostParentOffsets[ghost.id]?.dx ?? 0)}px, ${ghostParentOffsets[ghost.id]?.dy ?? 0}px)` }}
                     >
                         <div
                             className="ghost-parent-stub__chip"
+                            ref={(el) => { if (el) ghostParentChipRefs.current.set(ghost.id, el); else ghostParentChipRefs.current.delete(ghost.id); }}
                             title={ghost.fullname}
                             onPointerDown={(e) => onGhostParentPointerDown(e, ghost.id)}
                             onPointerMove={onGhostParentPointerMove}

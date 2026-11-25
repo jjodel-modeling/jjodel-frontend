@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-11-25 — fix(#225): ghost-parent connectors detached with several parents
+**Prompt**: In the M2 editor a class with several ghost-parent chips showed the connectors of the outer chips floating beside the node instead of starting at its top-center; fix the geometry, keep per-parent drag offsets, avoid chip overlap.
+**Files touched**: `frontend/src/components/editor-v2/nodes/ClassNode.tsx`, `frontend/src/components/editor-v2/nodes/ghostParentGeometry.ts` (new, pure), `frontend/src/components/editor-v2/nodes/__tests__/ghostParentGeometry.test.ts` (new), this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-25 14:00 (#225: hide relations in the metamodel editor)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Library template, class with 1..5 hidden parents; before/after measured in the DOM)
+**Notes**: Cause: PR #226 moved each stub sideways with `left: calc(50% + spread)`, which also moved the connector's fixed start (6,18). Now every stub stays at node top-center, the spread goes into the chip translate and the connector apex, and chips are laid side by side from their measured widths (no overlap). Before: starts at x=281/372/463/554 vs node centre 417.5; after: all 417.5. Drag moves only its own chip; offsets persist by parent id.
+**Prompt document name**: —
+
 ## 2026-11-25 — feat(#225): hide relations in the metamodel editor
 **Prompt**: Implement issue #225: a "Hide relation" flag on M2 references (ghost-target chip instead of an arrow) and a "Hide inheritance" context-menu item (permanent, ghost-parent chip); this session verified the uncommitted implementation
 **Files touched**: `frontend/src/model/logicWrapper/LModelElement.tsx`, `frontend/src/model/dataStructure/GraphDataElements.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/redux/__tests__/versionfixer_2230_migration.test.ts`, `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts`, `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshot.test.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/editor-v2/nodes/ClassNode.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, this entry
